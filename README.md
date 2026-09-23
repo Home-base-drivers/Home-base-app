@@ -7,8 +7,8 @@ a 12-hour driving route, platform forecasts, and personalized earnings analysis.
 
 Home Base is jointly owned **50/50** by:
 
-- Christopher Brouard
-- Ellie Brouard
+- Christopher Brouard (`@chrisbrouard`)
+- Elizabeth Garcia (`@ellyg1625`)
 
 This organization repository is the shared source of truth for both owners.
 Business ownership is equal regardless of which GitHub account created the

@@ -1,7 +1,8 @@
 # Home Base Ownership Record
 
-Christopher Brouard and Ellie Brouard are equal 50/50 owners of the Home Base
-application, brand direction, source code, design assets, and future development.
+Christopher Brouard (`@chrisbrouard`) and Elizabeth Garcia (`@ellyg1625`) are
+equal 50/50 owners of the Home Base application, brand direction, source code,
+design assets, and future development.
 
 GitHub account roles and repository permissions are technical access controls.
 They do not change the parties' stated equal business ownership.
