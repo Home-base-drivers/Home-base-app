@@ -81,7 +81,7 @@
     .leaflet-tile-pane{filter:brightness(.74) contrast(1.23) sepia(.15) hue-rotate(158deg) saturate(1.48)}
     .leaflet-heat-pane{mix-blend-mode:screen;opacity:.86;filter:saturate(1.16) contrast(1.04)}
     .leaflet-labels-pane{filter:brightness(1.1) contrast(1.14) sepia(.07) hue-rotate(158deg) saturate(1.12);opacity:.74}
-    .homebase-density-raster{image-rendering:auto;filter:saturate(1.12)}
+    .homebase-density-raster{image-rendering:auto;filter:saturate(1.12)}.homebase-geo-heat{mix-blend-mode:screen;pointer-events:none}
     .homebase-route-bloom{stroke-dasharray:none;animation:none;filter:drop-shadow(0 0 4px rgba(0,129,255,.62)) drop-shadow(0 0 9px rgba(0,105,255,.28))}
     .homebase-route-clean{stroke-dasharray:none;animation:none;filter:drop-shadow(0 0 2px rgba(88,221,255,.96));shape-rendering:geometricPrecision}
     .homebase-route-core{shape-rendering:geometricPrecision;filter:drop-shadow(0 0 2px rgba(230,253,255,.96))}
@@ -166,15 +166,15 @@ const app=document.getElementById('app');
 const $=s=>app.querySelector(s), $$=s=>[...app.querySelectorAll(s)];
 const demoKey=new URLSearchParams(location.search).get('demo');
 const demoLocale=demoKey==='london'?{name:'London',countryCode:'GB',lat:51.5074,lon:-.1278,timeZone:'Europe/London'}:null;
-const liveMap=L.map('liveMap',{zoomControl:true,attributionControl:true,dragging:true,scrollWheelZoom:true}).setView([39.2904,-76.6122],12);
+const liveMap=L.map('liveMap',{zoomControl:true,attributionControl:true,dragging:true,scrollWheelZoom:true,zoomAnimation:true,fadeAnimation:true,markerZoomAnimation:true}).setView([39.2904,-76.6122],12);
 liveMap.on('layeradd',event=>{const layer=event.layer;if(layer instanceof L.CircleMarker&&layer.options.fillColor==='#2563eb'){layer.setStyle({fillColor:'#08a9ff'});if(layer._path)layer._path.classList.add('homebase-gps-dot')}});
 liveMap.createPane('heatPane');liveMap.getPane('heatPane').style.zIndex=300;liveMap.getPane('heatPane').style.pointerEvents='none';
 liveMap.createPane('roadsPane');liveMap.getPane('roadsPane').style.zIndex=340;liveMap.getPane('roadsPane').style.pointerEvents='none';
 liveMap.createPane('labelsPane');liveMap.getPane('labelsPane').style.zIndex=360;liveMap.getPane('labelsPane').style.pointerEvents='none';
-const streetBaseLayer=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',{maxZoom:18,attribution:'Tiles © Esri'});
-const streetLabelLayer=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',{maxZoom:18,pane:'labelsPane',attribution:'Tiles © Esri'});
+const streetBaseLayer=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',{maxZoom:18,keepBuffer:6,updateWhenZooming:true,attribution:'Tiles © Esri'});
+const streetLabelLayer=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',{maxZoom:18,keepBuffer:6,updateWhenZooming:true,pane:'labelsPane',attribution:'Tiles © Esri'});
 const streetLayer=L.layerGroup([streetBaseLayer,streetLabelLayer]).addTo(liveMap);
-const satelliteLayer=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles © Esri'});
+const satelliteLayer=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,keepBuffer:6,updateWhenZooming:true,attribution:'Tiles © Esri'});
 function setBaseLayer(useSatellite){if(useSatellite){if(liveMap.hasLayer(streetLayer))liveMap.removeLayer(streetLayer);if(!liveMap.hasLayer(satelliteLayer))satelliteLayer.addTo(liveMap)}else{if(liveMap.hasLayer(satelliteLayer))liveMap.removeLayer(satelliteLayer);if(!liveMap.hasLayer(streetLayer))streetLayer.addTo(liveMap)}}
 let gpsMarker=null,gpsCircle=null,gpsRequestInFlight=false,lastAutoGpsRefresh=0;
 let routeLayers=[],routeStrokeLayers=[],eventMapLayers=[],highwayLayers=[],heatLayer=null,highwayRequestSerial=0,routeRequestSerial=0;
@@ -233,7 +233,20 @@ function makeDemandGrid(sources,index,when){
 }
 const heatStops=[[.105,[0,143,70]],[.22,[0,221,91]],[.36,[124,232,55]],[.49,[255,226,42]],[.62,[255,151,24]],[.75,[255,66,36]],[.88,[255,24,83]],[1,[225,0,124]]];
 function heatPixel(level){if(level<=.045)return[0,0,0,0];const value=Math.min(1,Math.max(.105,level));let low=heatStops[0],high=heatStops[heatStops.length-1];for(let i=1;i<heatStops.length;i++)if(value<=heatStops[i][0]){low=heatStops[i-1];high=heatStops[i];break}const t=Math.max(0,Math.min(1,(value-low[0])/(high[0]-low[0]||1))),smooth=t*t*(3-2*t),rgb=low[1].map((c,i)=>Math.round(c+(high[1][i]-c)*smooth)),feather=Math.min(1,(level-.045)/.11),alpha=Math.round(255*(.045+value*.48)*feather);return[...rgb,alpha]}
-function renderDemandGrid(sources,index,when){if(!heatLayer)return;heatLayer.clearLayers();const field=makeDemandGrid(sources,index,when);if(!field||!field.points)return;const [[south,west],[north,east]]=field.bounds,merc=lat=>Math.log(Math.tan(Math.PI/4+Math.max(-85,Math.min(85,lat))*Math.PI/360)),top=merc(north),bottom=merc(south),geoWidth=Math.max(.0001,east-west),geoHeight=Math.max(.0001,top-bottom),aspect=Math.max(.55,Math.min(1.8,geoWidth/geoHeight)),canvas=document.createElement('canvas'),longSide=1600;canvas.width=aspect>=1?longSide:Math.round(longSide*aspect);canvas.height=aspect>=1?Math.round(longSide/aspect):longSide;canvas.width=Math.max(720,canvas.width);canvas.height=Math.max(720,canvas.height);const ctx=canvas.getContext('2d',{alpha:true,willReadFrequently:true}),baseRadius=Math.max(38,Math.min(canvas.width,canvas.height)*.055);ctx.clearRect(0,0,canvas.width,canvas.height);ctx.globalCompositeOperation='lighter';ctx.imageSmoothingEnabled=true;field.points.forEach(point=>{const x=(point.lon-west)/geoWidth*canvas.width,y=(top-merc(point.lat))/geoHeight*canvas.height,wide=point.tags&&point.tags.liveEvent||point.cat==='event'||point.cat==='neighborhood'||point.cat==='shopping',radius=baseRadius*(wide?1.34:point.cat==='transit'||point.cat==='nightlife'?1.14:.92),strength=Math.min(.76,.18+point.intensity*.46),gradient=ctx.createRadialGradient(x,y,0,x,y,radius);gradient.addColorStop(0,`rgba(255,255,255,${strength})`);gradient.addColorStop(.26,`rgba(255,255,255,${strength*.82})`);gradient.addColorStop(.58,`rgba(255,255,255,${strength*.38})`);gradient.addColorStop(.82,`rgba(255,255,255,${strength*.1})`);gradient.addColorStop(1,'rgba(255,255,255,0)');ctx.fillStyle=gradient;ctx.fillRect(x-radius,y-radius,radius*2,radius*2)});ctx.globalCompositeOperation='source-over';const image=ctx.getImageData(0,0,canvas.width,canvas.height),data=image.data;for(let offset=0;offset<data.length;offset+=4){const density=data[offset+3]/255;if(density<=.018){data[offset+3]=0;continue}const level=Math.min(1,Math.pow(density,.68)),color=heatPixel(level);data[offset]=color[0];data[offset+1]=color[1];data[offset+2]=color[2];data[offset+3]=color[3]}ctx.putImageData(image,0,0);L.imageOverlay(canvas.toDataURL('image/png'),field.bounds,{pane:'heatPane',opacity:.9,interactive:false,className:'homebase-density-raster'}).addTo(heatLayer)}
+function renderDemandGrid(sources,index,when){
+  if(!heatLayer)return;
+  heatLayer.clearLayers();
+  const field=makeDemandGrid(sources,index,when);
+  if(!field||!field.points)return;
+  field.points.forEach(point=>{
+    const wide=point.tags&&point.tags.liveEvent||point.cat==='event'||point.cat==='neighborhood'||point.cat==='shopping';
+    const baseMeters=(wide?1650:point.cat==='transit'||point.cat==='nightlife'?1350:1100)*(.82+Math.min(1.15,point.intensity)*.25);
+    [[1,.075,.18],[.7,.12,.3],[.42,.2,.52],[.2,.38,.76]].forEach(([scale,opacity,colorLift])=>{
+      const [r,g,b]=heatPixel(Math.min(1,colorLift+point.intensity*.55));
+      L.circle([point.lat,point.lon],{pane:'heatPane',radius:baseMeters*scale,stroke:false,fill:true,fillColor:'rgb('+r+','+g+','+b+')',fillOpacity:opacity,interactive:false,className:'homebase-geo-heat'}).addTo(heatLayer)
+    })
+  })
+}
 function applyTimeForecast(index,forecastWhen){const s=activeStops[index];if(!s)return;const when=forecastWhen||s.when;updateEarnings(when);updateCityPulse(when);renderDemandGrid(activeDemandSources,index,when);selectedDestination=[s.lat,s.lon];const isNow=Math.abs(when.getTime()-Date.now())<1800000;$('#bestTime').textContent=isNow?'NOW':marketTime(when);$('#bestRoute').textContent=s.name;show(['🧭',`${isNow?'Right now':marketTime(when)} · ${s.name}`,`${demandReason(s.cat,marketParts(when).hour)}. Heat and hourly estimates now reflect this time.`, 'OPEN THIS STOP IN GOOGLE MAPS'])}
 function hourColor(when){const m=demandMultiplier(when);return m>=1.18?'#ff294f':m>=1?'#ff8a2a':m>=.86?'#ffd83d':'#2ee681'}
 function renderTimeButtons(stops){const row=$('#timeRow'),start=stops[0].when,hours=Array.from({length:12},(_,i)=>new Date(start.getTime()+i*3600000));row.innerHTML=hours.map((when,i)=>`<button style="--hour:${hourColor(when)}" data-hour="${i}" aria-pressed="${i===0}">${i===0?'NOW':marketTime(when,{hour:'numeric'})}</button>`).join('');row.querySelectorAll('[data-hour]').forEach(b=>b.addEventListener('click',()=>{row.querySelectorAll('[data-hour]').forEach(x=>x.setAttribute('aria-pressed',x===b));const hourIndex=Number(b.dataset.hour),stopIndex=Math.min(stops.length-1,Math.floor(hourIndex/2));applyTimeForecast(stopIndex,hours[hourIndex])}))}
