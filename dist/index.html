@@ -244,7 +244,7 @@ const DemandHeatLayer=L.GridLayer.extend({
     const size=this.getTileSize(),map=this._map,dpr=Math.min(1.25,Math.max(1,window.devicePixelRatio||1)),canvas=document.createElement('canvas');
     canvas.width=Math.max(1,Math.ceil(size.x*dpr));canvas.height=Math.max(1,Math.ceil(size.y*dpr));canvas.style.width=size.x+'px';canvas.style.height=size.y+'px';
     const context=canvas.getContext('2d',{alpha:true}),width=canvas.width,height=canvas.height;
-    if(!this._points.length){done(null,canvas);return canvas}
+    if(!this._points.length){requestAnimationFrame(()=>done(null,canvas));return canvas}
     const tileLeft=coords.x*size.x,tileTop=coords.y*size.y,worldSize=map.options.crs.scale(coords.z),earth=40075016.685,density=new Float32Array(width*height),hue=new Float32Array(width*height),prepared=[];
     this._points.forEach((point,index)=>{
       const p=map.project([point.lat,point.lon],coords.z);p.x+=Math.round((tileLeft+size.x/2-p.x)/worldSize)*worldSize;
@@ -260,7 +260,7 @@ const DemandHeatLayer=L.GridLayer.extend({
     prepared.forEach(source=>{const c=Math.cos(source.angle),s=Math.sin(source.angle),r=source.radius;addLobe(source,0,0,.72,source.elongation,.72,source.angle);addLobe(source,c*r*.23,s*r*.23,.18,.62,.5,source.angle+.38);addLobe(source,-s*r*.19,c*r*.19,.12,.48,.67,source.angle-.52)});
     const image=context.createImageData(width,height),pixels=image.data;
     for(let i=0;i<density.length;i++){const value=density[i];if(value<.075)continue;const total=Math.min(1,Math.pow(value/2.05,.82)),sourceTone=hue[i]/value,level=Math.min(1,total*.76+sourceTone*.24),rgb=heatPixel(level),fade=Math.min(1,(value-.075)/.25),alpha=Math.round(255*(.16+Math.min(.42,total*.45))*fade),at=i*4;pixels[at]=rgb[0];pixels[at+1]=rgb[1];pixels[at+2]=rgb[2];pixels[at+3]=alpha}
-    context.putImageData(image,0,0);done(null,canvas);return canvas
+    context.putImageData(image,0,0);requestAnimationFrame(()=>done(null,canvas));return canvas
   }
 });
 function renderDemandGrid(sources,index,when){if(heatLayer)heatLayer.setDemand(sources,index,when)}
@@ -551,7 +551,7 @@ function autoRefreshGps(){if(Date.now()-lastAutoGpsRefresh<60000)return;lastAuto
 if(!demoLocale)setTimeout(autoRefreshGps,150);
 setInterval(()=>{updateClimateAdvisory();const selected=$('[data-hour][aria-pressed="true"]');if(selected&&selected.dataset.hour==='0'&&activeStops.length)applyTimeForecast(0,new Date())},300000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-lastAutoGpsRefresh>300000)autoRefreshGps()});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=47',{updateViaCache:'none'}).then(r=>r.update()));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=50',{updateViaCache:'none'}).then(r=>r.update()));
 </script>
 </body>
 </html>
