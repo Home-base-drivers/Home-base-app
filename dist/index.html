@@ -240,11 +240,11 @@ function heatSeed(point,index){const text=String(point.name||'')+':'+String(poin
 const DemandHeatLayer=L.GridLayer.extend({
   initialize(options){L.setOptions(this,options);this._points=[];this._when=new Date()},
   setDemand(sources,index,when){const field=makeDemandGrid(sources||[],index,when||new Date());this._points=field&&field.points?field.points:[];this._when=when||new Date();this.redraw();return this},
-  createTile(coords,done){
+  createTile(coords){
     const size=this.getTileSize(),map=this._map,dpr=Math.min(1.25,Math.max(1,window.devicePixelRatio||1)),canvas=document.createElement('canvas');
     canvas.width=Math.max(1,Math.ceil(size.x*dpr));canvas.height=Math.max(1,Math.ceil(size.y*dpr));canvas.style.width=size.x+'px';canvas.style.height=size.y+'px';
     const context=canvas.getContext('2d',{alpha:true}),width=canvas.width,height=canvas.height;
-    if(!this._points.length){requestAnimationFrame(()=>done(null,canvas));return canvas}
+    if(!this._points.length)return canvas
     const tileLeft=coords.x*size.x,tileTop=coords.y*size.y,worldSize=map.options.crs.scale(coords.z),earth=40075016.685,density=new Float32Array(width*height),hue=new Float32Array(width*height),prepared=[];
     this._points.forEach((point,index)=>{
       const p=map.project([point.lat,point.lon],coords.z);p.x+=Math.round((tileLeft+size.x/2-p.x)/worldSize)*worldSize;
@@ -257,10 +257,19 @@ const DemandHeatLayer=L.GridLayer.extend({
       const cx=source.cx+dx,cy=source.cy+dy,rx=Math.max(1.3,source.sigma*scaleX),ry=Math.max(1.3,source.sigma*scaleY),cos=Math.cos(rotation),sin=Math.sin(rotation),reach=Math.ceil(Math.max(rx,ry)*3.1),minX=Math.max(0,Math.floor(cx-reach)),maxX=Math.min(width-1,Math.ceil(cx+reach)),minY=Math.max(0,Math.floor(cy-reach)),maxY=Math.min(height-1,Math.ceil(cy+reach)),amp=source.point.intensity*source.boost*amplitude;
       for(let y=minY;y<=maxY;y++){const py=y+.5-cy,row=y*width;for(let x=minX;x<=maxX;x++){const px=x+.5-cx,u=px*cos+py*sin,v=-px*sin+py*cos,q=(u*u)/(2*rx*rx)+(v*v)/(2*ry*ry);if(q>5.2)continue;const contribution=amp*Math.exp(-q);if(contribution<.003)continue;const at=row+x;density[at]+=contribution;hue[at]+=contribution*source.colorLevel}}
     };
-    prepared.forEach(source=>{const c=Math.cos(source.angle),s=Math.sin(source.angle),r=source.radius;addLobe(source,0,0,.72,source.elongation,.72,source.angle);addLobe(source,c*r*.23,s*r*.23,.18,.62,.5,source.angle+.38);addLobe(source,-s*r*.19,c*r*.19,.12,.48,.67,source.angle-.52)});
+    prepared.forEach(source=>{
+      const c=Math.cos(source.angle),s=Math.sin(source.angle),r=source.radius;
+      // Uneven overlapping lobes make a source field follow local venues and
+      // neighborhoods instead of forming a symmetric bullseye around a pin.
+      addLobe(source,0,0,.34,source.elongation,.78,source.angle);
+      addLobe(source,c*r*.34+s*r*.08,s*r*.34-c*r*.08,.31,.88,.53,source.angle+.34);
+      addLobe(source,-c*r*.27-s*r*.16,-s*r*.27+c*r*.16,.24,.62,.92,source.angle-.48);
+      addLobe(source,-s*r*.52,c*r*.52,.18,.52,.68,source.angle+.83);
+      addLobe(source,s*r*.39,c*r*.39,.16,.76,.47,source.angle-.72)
+    });
     const image=context.createImageData(width,height),pixels=image.data;
     for(let i=0;i<density.length;i++){const value=density[i];if(value<.075)continue;const total=Math.min(1,Math.pow(value/2.05,.82)),sourceTone=hue[i]/value,level=Math.min(1,total*.76+sourceTone*.24),rgb=heatPixel(level),fade=Math.min(1,(value-.075)/.25),alpha=Math.round(255*(.16+Math.min(.42,total*.45))*fade),at=i*4;pixels[at]=rgb[0];pixels[at+1]=rgb[1];pixels[at+2]=rgb[2];pixels[at+3]=alpha}
-    context.putImageData(image,0,0);requestAnimationFrame(()=>done(null,canvas));return canvas
+    context.putImageData(image,0,0);return canvas
   }
 });
 function renderDemandGrid(sources,index,when){if(heatLayer)heatLayer.setDemand(sources,index,when)}
@@ -481,7 +490,12 @@ function fallbackVenues(lat,lon,market){if(/^london$/i.test(market))return[['Wes
 function fallbackDemandSources(lat,lon,market){
   const baltimore=distanceKm([lat,lon],[39.2904,-76.6122])<48;
   if(baltimore){const places=[['Downtown','attraction',39.2904,-76.6122],['Inner Harbor','restaurant',39.2851,-76.6132],['Harbor East','restaurant',39.2831,-76.6022],['Fells Point','nightlife',39.2825,-76.5934],['Canton','restaurant',39.2803,-76.5754],['Federal Hill','nightlife',39.2750,-76.6135],['Mount Vernon','restaurant',39.2984,-76.6157],['Station North','nightlife',39.3114,-76.6162],['Charles Village','school',39.3271,-76.6190],['Johns Hopkins Medical','medical',39.2973,-76.5903],['Penn Station','transit',39.3075,-76.6156],['M&T Bank Stadium','event',39.2780,-76.6227],['Camden Yards','event',39.2838,-76.6217],['Morgan State','school',39.3448,-76.5844],['West Baltimore','neighborhood',39.2998,-76.6497],['Catonsville','shopping',39.2721,-76.7319],['Arbutus','neighborhood',39.2546,-76.6997],['Towson','shopping',39.4015,-76.6019],['Parkville','neighborhood',39.3773,-76.5397],['Pikesville','shopping',39.3743,-76.7225],['Owings Mills','transit',39.4195,-76.7803],['White Marsh','shopping',39.3837,-76.4586],['Essex','neighborhood',39.3093,-76.4750],['Dundalk','neighborhood',39.2507,-76.5205],['Glen Burnie','shopping',39.1626,-76.6247],['BWI Airport','transit',39.1774,-76.6684],['Lutherville','neighborhood',39.4212,-76.6261],['Security Square','shopping',39.3098,-76.7482]];return places.map(p=>({name:p[0],cat:p[1],lat:p[2],lon:p[3],heatOnly:true,tags:{metroBaseline:true}}))}
-  const cats=['neighborhood','transit','shopping','restaurant','school','medical','nightlife','event'],points=[];for(let ring=0;ring<3;ring++)for(let i=0;i<8;i++){const angle=(i/8*Math.PI*2)+(ring*.31),radius=.018+ring*.032;points.push({name:`${market} area ${ring*8+i+1}`,cat:cats[(i+ring*3)%cats.length],lat:lat+Math.sin(angle)*radius,lon:lon+Math.cos(angle)*radius/Math.max(.35,Math.cos(lat*Math.PI/180)),heatOnly:true,tags:{metroBaseline:true}})}return points
+  if(/^london$/i.test(market))return fallbackVenues(lat,lon,market).map(point=>({...point,heatOnly:true,tags:{metroBaseline:true}}));
+  // For other markets, render only real public event/venue/neighborhood
+  // coordinates that were actually returned by the local data query. Never
+  // manufacture evenly spaced points around GPS; those create false ring or
+  // route-shaped demand patterns.
+  return[]
 }
 function drawRoutePath(path){routeStrokeLayers.forEach(layer=>liveMap.removeLayer(layer));routeLayers=routeLayers.filter(layer=>!routeStrokeLayers.includes(layer));const casing=L.polyline(path,{color:'#00111e',weight:7,opacity:.92,interactive:false,lineCap:'round',lineJoin:'round',smoothFactor:.55}).addTo(liveMap),bloom=L.polyline(path,{color:'#006fff',weight:5,opacity:.3,interactive:false,lineCap:'round',lineJoin:'round',smoothFactor:.55,className:'homebase-route-bloom'}).addTo(liveMap),route=L.polyline(path,{color:'#14baff',weight:3.1,opacity:1,interactive:false,lineCap:'round',lineJoin:'round',smoothFactor:.55,className:'homebase-route-clean'}).addTo(liveMap),core=L.polyline(path,{color:'#dffbff',weight:.9,opacity:.9,interactive:false,lineCap:'round',lineJoin:'round',smoothFactor:.55,className:'homebase-route-core'}).addTo(liveMap);routeStrokeLayers=[casing,bloom,route,core];routeLayers.push(...routeStrokeLayers)}
 async function refineRouteToRoads(points,request){try{const coordinates=points.map(([lat,lon])=>`${lon},${lat}`).join(';'),data=await fetchJSON(`https://router.project-osrm.org/route/v1/driving/${coordinates}?overview=full&geometries=geojson&steps=false`,6000),path=data.routes&&data.routes[0]&&data.routes[0].geometry&&data.routes[0].geometry.coordinates.map(([lon,lat])=>[lat,lon]);if(request===routeRequestSerial&&path&&path.length>2)drawRoutePath(path)}catch(e){}}
@@ -551,7 +565,7 @@ function autoRefreshGps(){if(Date.now()-lastAutoGpsRefresh<60000)return;lastAuto
 if(!demoLocale)setTimeout(autoRefreshGps,150);
 setInterval(()=>{updateClimateAdvisory();const selected=$('[data-hour][aria-pressed="true"]');if(selected&&selected.dataset.hour==='0'&&activeStops.length)applyTimeForecast(0,new Date())},300000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-lastAutoGpsRefresh>300000)autoRefreshGps()});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=50',{updateViaCache:'none'}).then(r=>r.update()));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=51',{updateViaCache:'none'}).then(r=>r.update()));
 </script>
 </body>
 </html>
