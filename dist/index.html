@@ -235,7 +235,7 @@ function makeDemandGrid(sources,index,when){
 }
 const heatStops=[[0,[0,92,50]],[.16,[18,179,73]],[.32,[133,211,50]],[.48,[255,220,48]],[.63,[255,145,28]],[.79,[255,53,40]],[1,[238,0,103]]];
 function heatPixel(level){const value=Math.min(1,Math.max(0,level));let low=heatStops[0],high=heatStops[heatStops.length-1];for(let i=1;i<heatStops.length;i++)if(value<=heatStops[i][0]){low=heatStops[i-1];high=heatStops[i];break}const t=Math.max(0,Math.min(1,(value-low[0])/(high[0]-low[0]||1))),smooth=t*t*(3-2*t);return low[1].map((c,i)=>Math.round(c+(high[1][i]-c)*smooth))}
-function heatRadiusMeters(point){const radius={school:430,transit:560,event:760,nightlife:500,hotel:500,attraction:650,restaurant:360,shopping:680,neighborhood:840,medical:520};return(radius[point.cat]||500)*(.9+Math.min(1.15,point.intensity)*.13)}
+function heatRadiusMeters(point){const radius={school:720,transit:980,event:1420,nightlife:920,hotel:860,attraction:1120,restaurant:680,shopping:1260,neighborhood:1580,medical:880};return(radius[point.cat]||900)*(.92+Math.min(1.15,point.intensity)*.14)}
 function heatSeed(point,index){const text=String(point.name||'')+':'+String(point.cat||'')+':'+index;let hash=2166136261;for(let i=0;i<text.length;i++){hash^=text.charCodeAt(i);hash=Math.imul(hash,16777619)}return(hash>>>0)/4294967295}
 const DemandHeatLayer=L.GridLayer.extend({
   initialize(options){L.setOptions(this,options);this._points=[];this._when=new Date()},
@@ -268,7 +268,7 @@ const DemandHeatLayer=L.GridLayer.extend({
       addLobe(source,s*r*.39,c*r*.39,.16,.76,.47,source.angle-.72)
     });
     const image=context.createImageData(width,height),pixels=image.data;
-    for(let i=0;i<density.length;i++){const value=density[i];if(value<.075)continue;const total=Math.min(1,Math.pow(value/2.05,.82)),sourceTone=hue[i]/value,level=Math.min(1,total*.76+sourceTone*.24),rgb=heatPixel(level),fade=Math.min(1,(value-.075)/.25),alpha=Math.round(255*(.16+Math.min(.42,total*.45))*fade),at=i*4;pixels[at]=rgb[0];pixels[at+1]=rgb[1];pixels[at+2]=rgb[2];pixels[at+3]=alpha}
+    for(let i=0;i<density.length;i++){const value=density[i];if(value<.075)continue;const total=Math.min(1,Math.pow(value/1.8,.82)),sourceTone=hue[i]/value,level=Math.min(1,total*.76+sourceTone*.24),rgb=heatPixel(level),fade=Math.min(1,(value-.075)/.25),alpha=Math.round(255*(.20+Math.min(.52,total*.48))*fade),at=i*4;pixels[at]=rgb[0];pixels[at+1]=rgb[1];pixels[at+2]=rgb[2];pixels[at+3]=alpha}
     context.putImageData(image,0,0);return canvas
   }
 });
@@ -565,7 +565,7 @@ function autoRefreshGps(){if(Date.now()-lastAutoGpsRefresh<60000)return;lastAuto
 if(!demoLocale)setTimeout(autoRefreshGps,150);
 setInterval(()=>{updateClimateAdvisory();const selected=$('[data-hour][aria-pressed="true"]');if(selected&&selected.dataset.hour==='0'&&activeStops.length)applyTimeForecast(0,new Date())},300000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-lastAutoGpsRefresh>300000)autoRefreshGps()});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=51',{updateViaCache:'none'}).then(r=>r.update()));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=52',{updateViaCache:'none'}).then(r=>r.update()));
 </script>
 </body>
 </html>
