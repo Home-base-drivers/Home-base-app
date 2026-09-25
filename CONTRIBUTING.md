@@ -21,6 +21,11 @@
 - Earnings CSV personalization.
 - Map, Earnings, Alerts, Profile, and Support tabs.
 - PWA installation, icons, and offline app shell.
+- Provider credentials stay in GitHub Actions secrets; never place them in
+  `dist/`, logs, commits, screenshots, or client-side JavaScript.
+- Uber fare/surge estimates are price proxies and must not be labeled as ride
+  request volume. Booking.com lodging availability is context only, not a
+  demand count.
 
 ## Never represent modeled data as verified live pay
 
