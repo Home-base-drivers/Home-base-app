@@ -17,7 +17,7 @@
     :root{--bg:#01070b;--panel:rgba(1,7,12,.97);--text:#fff;--muted:#c9d1d7;--blue:#439ee8;--purple:#8f47f2;--pink:#ff2aa7;--green:#24e59a;--red:#ff244b;--orange:#ff7a24;--yellow:#ffd43b;--low:#28dd80;color-scheme:dark;font-family:"Arial Narrow",Arial,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
     *{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text);min-height:100%;overscroll-behavior:none;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}button{font:inherit;color:inherit}button:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
     .app{width:min(100%,760px);margin:auto;min-height:100svh;background:#07111e;position:relative;overflow:hidden;padding-bottom:max(118px,calc(104px + env(safe-area-inset-bottom)));border-inline:1px solid rgba(67,158,232,.58);box-shadow:inset 0 0 0 1px rgba(0,0,0,.9)}
-    .map{position:absolute;z-index:0;inset:0;background:#07111e;transition:transform .4s ease,filter .4s ease}.map:after{content:"";position:absolute;z-index:500;inset:0;background:linear-gradient(180deg,rgba(2,8,18,.03),transparent 52%,rgba(0,5,13,.16));pointer-events:none}.leaflet-tile-pane{filter:brightness(.82) contrast(1.08) saturate(.66)}.leaflet-heat-pane{mix-blend-mode:screen;opacity:.78}.leaflet-roads-pane{filter:none;opacity:1}.leaflet-labels-pane{filter:brightness(1.08) contrast(1.12);opacity:.86}.leaflet-tile-pane img{image-rendering:auto}.leaflet-control-attribution{font-size:9px!important;opacity:.72;background:rgba(1,8,16,.84)!important;color:#d7e2e5!important}.leaflet-control-attribution a{color:#6fb9ef!important}.leaflet-control-zoom{margin-top:230px!important}.app.layered .leaflet-tile-pane{filter:brightness(.72) contrast(1.14) saturate(1.03)}.app.layered .map{transform:perspective(850px) rotateX(17deg) scale(1.08);transform-origin:50% 58%;filter:drop-shadow(0 22px 22px rgba(0,0,0,.7))}.app.layered .leaflet-overlay-pane svg{filter:drop-shadow(0 8px 4px rgba(0,0,0,.62))}
+    .map{position:absolute;z-index:0;inset:0;background:#07111e;transition:transform .4s ease,filter .4s ease}.map:after{content:"";position:absolute;z-index:500;inset:0;background:linear-gradient(180deg,rgba(2,8,18,.03),transparent 52%,rgba(0,5,13,.16));pointer-events:none}.leaflet-tile-pane img{image-rendering:auto}.leaflet-control-attribution{font-size:9px!important;opacity:.72;background:rgba(1,8,16,.84)!important;color:#d7e2e5!important}.leaflet-control-attribution a{color:#6fb9ef!important}.leaflet-control-zoom{margin-top:230px!important}.app.layered .map{transform:perspective(850px) rotateX(17deg) scale(1.08);transform-origin:50% 58%;filter:drop-shadow(0 22px 22px rgba(0,0,0,.7))}.app.layered .leaflet-overlay-pane svg{filter:drop-shadow(0 8px 4px rgba(0,0,0,.62))}
     header{position:relative;z-index:8;padding:max(10px,env(safe-area-inset-top)) 9px 7px;background:linear-gradient(#01070b 20%,rgba(1,7,11,.93) 76%,transparent)}
     .status{display:flex;align-items:stretch;justify-content:space-between;gap:7px;margin-bottom:7px}.brand{display:flex;align-items:center;gap:9px;min-width:0;flex:1;border:1px solid rgba(67,158,232,.74);border-radius:8px;background:rgba(1,6,10,.97);padding:8px 10px;box-shadow:0 0 0 1px rgba(16,61,90,.45),0 0 16px rgba(31,132,207,.14)}.brand-logo{width:39px;height:39px;flex:0 0 auto;border-radius:8px;background:#f3f5f6;color:#061017;display:grid;place-items:center;font-weight:950;font-size:16px;box-shadow:0 0 16px rgba(255,255,255,.24)}h1{font-size:1.03rem;line-height:1.05;margin:0;font-weight:950;letter-spacing:.025em;text-shadow:0 1px 1px #000}.updated{font-size:.69rem;color:var(--muted);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.header-actions{display:flex;gap:4px}.header-action{border:1px solid rgba(67,158,232,.6);border-radius:8px;background:rgba(1,7,12,.97);padding:7px 8px;font-weight:900;font-size:.69rem;min-height:44px;box-shadow:0 0 11px rgba(45,142,213,.12)}.layer-toggle[aria-pressed="true"]{color:#06101b;background:linear-gradient(135deg,#6dbaf1,#27df91);border-color:#fff;box-shadow:0 0 15px rgba(54,170,234,.65)}.refreshing .refresh-icon{display:inline-block;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
     .conditions{display:grid;grid-template-columns:1fr auto;gap:8px;background:rgba(1,7,12,.97);border:1px solid rgba(54,129,178,.68);border-radius:8px;padding:8px 10px;box-shadow:0 0 15px rgba(21,112,170,.11)}.conditions b{font-size:.84rem}.conditions span{font-size:.7rem;color:var(--muted);display:block;margin-top:2px}.live-tag{align-self:center;color:#fff;font-weight:900;font-size:.7rem;border:1px solid var(--orange);background:rgba(70,31,8,.88);border-radius:6px;padding:7px 9px;min-height:36px;display:grid;place-items:center;cursor:default;user-select:none}.live-tag.heating{border-color:var(--red);background:rgba(92,9,25,.9);box-shadow:0 0 13px rgba(255,36,75,.25)}.live-tag.steady{border-color:var(--yellow);background:rgba(78,59,3,.9)}.live-tag.cooling{border-color:#439ee8;background:rgba(4,49,76,.92)}
@@ -31,7 +31,7 @@
     /* Refined navigation-dashboard finish */
     :root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;--panel:rgba(4,10,15,.95);--muted:#aebac2;--blue:#65a8d1;--red:#e74b50;--orange:#df873f;--yellow:#cbb84f;--low:#3cb878}
     .app{border-inline-color:rgba(111,151,174,.28);box-shadow:0 0 0 1px rgba(255,255,255,.02)}
-    .leaflet-heat-pane{mix-blend-mode:screen;opacity:.82;filter:saturate(1.1) contrast(1.03)}
+
     header{padding-inline:8px;background:linear-gradient(#03080c 26%,rgba(3,8,12,.91) 78%,transparent)}
     .brand,.conditions,.route-plan,.legend,.bottom-sheet,.panel{background:rgba(4,10,15,.95);border-color:rgba(107,151,176,.4);box-shadow:0 8px 24px rgba(0,0,0,.42)}
     .brand{border-radius:6px;padding:8px 10px}.brand-logo{border-radius:5px;background:#dfe5e8;color:#071016;box-shadow:none;font-size:.72rem;letter-spacing:.08em}h1{font-size:.95rem;letter-spacing:.055em;text-shadow:none}.updated{color:#9ba9b2;font-size:.65rem}
@@ -78,10 +78,10 @@
     /* Premium live-dispatch visual system */
     :root{--hb-blue:#16a8ff;--hb-cyan:#56ddff;--hb-violet:#b06cff;--hb-amber:#ff9d37;--hb-green:#35dc94;--hb-glass:rgba(3,13,23,.88)}
     .app{background:#030b14;border-inline-color:rgba(67,177,244,.28)}
-    .leaflet-tile-pane{filter:brightness(.74) contrast(1.23) sepia(.15) hue-rotate(158deg) saturate(1.48)}
-    .leaflet-heat-pane{mix-blend-mode:screen;opacity:.86;filter:saturate(1.16) contrast(1.04)}
-    .leaflet-labels-pane{filter:brightness(1.1) contrast(1.14) sepia(.07) hue-rotate(158deg) saturate(1.12);opacity:.74}
-    .homebase-density-raster{image-rendering:auto;filter:saturate(1.12)}.homebase-geo-heat{mix-blend-mode:screen;pointer-events:none}
+
+
+
+
     .homebase-route-bloom{stroke-dasharray:none;animation:none;filter:drop-shadow(0 0 4px rgba(0,129,255,.62)) drop-shadow(0 0 9px rgba(0,105,255,.28))}
     .homebase-route-clean{stroke-dasharray:none;animation:none;filter:drop-shadow(0 0 2px rgba(88,221,255,.96));shape-rendering:geometricPrecision}
     .homebase-route-core{shape-rendering:geometricPrecision;filter:drop-shadow(0 0 2px rgba(230,253,255,.96))}
@@ -131,6 +131,12 @@
     .time-row{padding-top:10px}.time-row button{min-height:48px;min-width:88px}.map-stage{height:690px}.route-plan{top:13px;left:0;width:min(305px,47vw);min-width:0;max-height:525px;padding:12px 13px;border-radius:14px}.route-plan h2{font-size:.79rem}.route-plan.collapsed{width:auto;min-width:178px}.event-item b,.route-stop b{font-size:.68rem}.event-item span,.route-stop span,.event-empty{font-size:.61rem}.route-stop{grid-template-columns:32px 1fr;padding:10px 0}.stop-num{width:30px;height:30px}
     .bottom-sheet{bottom:max(82px,calc(74px + env(safe-area-inset-bottom)));padding:14px 52px 15px 14px;border-radius:17px}.decision-grid{gap:8px}.decision{padding:3px 9px}.decision span{font-size:.58rem}.decision b{font-size:.78rem}.pulse-grid{gap:9px;margin-top:10px}.pulse{padding:10px;border-radius:8px}.pulse span{font-size:.58rem}.pulse b{font-size:.66rem}.sheet-top{margin-top:10px;padding-top:10px}.sheet-top b{font-size:1rem}.bottom-sheet p{font-size:.7rem}.route-row{margin-top:10px}.route{font-size:.68rem}.maps-btn{min-height:48px;padding:9px 14px}
     @media(max-width:430px){.status{grid-template-columns:minmax(0,1fr) auto;gap:5px}.brand{min-height:67px;padding:7px 8px;gap:7px;border-radius:17px}.brand-logo{width:43px;height:47px}.brand-title{font-size:.86rem;letter-spacing:.13em}.brand-tagline{font-size:.41rem;letter-spacing:.16em}.brand-location{font-size:.53rem;margin-top:5px}.updated{font-size:.48rem}.header-actions{grid-template-columns:repeat(4,34px);gap:3px}.header-action,.menu-action{width:34px;min-width:34px;height:67px;min-height:67px;border-radius:13px}.conditions{grid-template-columns:auto minmax(0,1fr) auto;gap:6px;min-height:69px;padding:9px 10px}.weather-temp{font-size:.76rem}.condition-copy b{font-size:.69rem}.condition-copy span{font-size:.54rem}.live-tag{min-width:78px;min-height:42px;font-size:.53rem}.platform{min-height:145px;padding:9px}.platform strong{font-size:.69rem}.platform .pstate{font-size:.52rem}.platform .earn{font-size:.82rem}.platform small{font-size:.51rem}.go-online{font-size:.5rem}.gross-note{font-size:.5rem}.time-row button{min-width:76px}.map-stage{height:680px}.route-plan{width:46vw;max-height:500px;padding:10px}.route-plan h2{font-size:.7rem}.event-item b,.route-stop b{font-size:.61rem}.event-item span,.route-stop span,.event-empty{font-size:.55rem}.bottom-sheet{padding:12px 42px 13px 10px}.decision{padding-inline:5px}.decision span{font-size:.5rem}.decision b{font-size:.68rem}.pulse{padding:8px}.pulse b{font-size:.59rem}.sheet-top b{font-size:.9rem}.bottom-sheet p{font-size:.62rem}.maps-btn{min-height:44px;padding-inline:11px}}
+  /* Map presentation: imagery below heat, road detail and labels above it. */
+    .leaflet-tile-pane{filter:brightness(.55) contrast(1.12) saturate(.42)}
+    .app.layered .leaflet-tile-pane{filter:brightness(.64) contrast(1.08) saturate(.55)}
+    .leaflet-heat-pane{opacity:1;mix-blend-mode:normal;filter:none;pointer-events:none}
+    .leaflet-roads-pane{opacity:.42;filter:saturate(.25);pointer-events:none}
+    .leaflet-labels-pane{opacity:.95;filter:none;pointer-events:none}
   </style>
 </head>
 <body>
@@ -173,10 +179,15 @@ liveMap.on('layeradd',event=>{const layer=event.layer;if(layer instanceof L.Circ
 liveMap.createPane('heatPane');liveMap.getPane('heatPane').style.zIndex=300;liveMap.getPane('heatPane').style.pointerEvents='none';
 liveMap.createPane('roadsPane');liveMap.getPane('roadsPane').style.zIndex=340;liveMap.getPane('roadsPane').style.pointerEvents='none';
 liveMap.createPane('labelsPane');liveMap.getPane('labelsPane').style.zIndex=360;liveMap.getPane('labelsPane').style.pointerEvents='none';
-const streetBaseLayer=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',{maxZoom:18,keepBuffer:6,updateWhenZooming:true,attribution:'Tiles © Esri'});
-const streetLabelLayer=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',{maxZoom:18,keepBuffer:6,updateWhenZooming:true,pane:'labelsPane',attribution:'Tiles © Esri'});
-const streetLayer=L.layerGroup([streetBaseLayer,streetLabelLayer]).addTo(liveMap);
-const satelliteLayer=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,keepBuffer:6,updateWhenZooming:true,attribution:'Tiles © Esri'});
+// All basemap components use the same Web Mercator tile grid as the heat.
+const esriTiles='https://server.arcgisonline.com/ArcGIS/rest/services/';
+const imageryOptions={maxZoom:19,maxNativeZoom:19,keepBuffer:3,attribution:'Imagery © Esri, Maxar, Earthstar Geographics, and the GIS User Community'};
+const streetBaseLayer=L.tileLayer(esriTiles+'World_Imagery/MapServer/tile/{z}/{y}/{x}',imageryOptions);
+function mapRoads(){return L.tileLayer(esriTiles+'Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,maxNativeZoom:19,keepBuffer:3,pane:'roadsPane',attribution:'Roads © Esri'})}
+function mapLabels(){return L.tileLayer(esriTiles+'Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,maxNativeZoom:19,keepBuffer:3,pane:'labelsPane',attribution:'Labels © Esri'})}
+const streetLabelLayer=mapLabels();
+const streetLayer=L.layerGroup([streetBaseLayer,mapRoads(),streetLabelLayer]).addTo(liveMap);
+const satelliteLayer=L.layerGroup([L.tileLayer(esriTiles+'World_Imagery/MapServer/tile/{z}/{y}/{x}',imageryOptions),mapRoads(),mapLabels()]);
 function setBaseLayer(useSatellite){if(useSatellite){if(liveMap.hasLayer(streetLayer))liveMap.removeLayer(streetLayer);if(!liveMap.hasLayer(satelliteLayer))satelliteLayer.addTo(liveMap)}else{if(liveMap.hasLayer(satelliteLayer))liveMap.removeLayer(satelliteLayer);if(!liveMap.hasLayer(streetLayer))streetLayer.addTo(liveMap)}}
 let gpsMarker=null,gpsCircle=null,gpsRequestInFlight=false,lastAutoGpsRefresh=0;
 let routeLayers=[],routeStrokeLayers=[],eventMapLayers=[],highwayLayers=[],heatLayer=null,highwayRequestSerial=0,routeRequestSerial=0;
@@ -234,43 +245,51 @@ function makeDemandGrid(sources,index,when){
   const weights=points.map(p=>p.weight).sort((a,b)=>a-b),ceiling=Math.max(weights[Math.floor(weights.length*.9)]||1,1);points.forEach(point=>{point.intensity=Math.min(1.15,Math.pow(point.weight/ceiling,.82)*demand)});
   return{points,bounds};
 }
-const heatStops=[[0,[0,92,50]],[.16,[18,179,73]],[.32,[133,211,50]],[.48,[255,220,48]],[.63,[255,145,28]],[.79,[255,53,40]],[1,[238,0,103]]];
-function heatPixel(level){const value=Math.min(1,Math.max(0,level));let low=heatStops[0],high=heatStops[heatStops.length-1];for(let i=1;i<heatStops.length;i++)if(value<=heatStops[i][0]){low=heatStops[i-1];high=heatStops[i];break}const t=Math.max(0,Math.min(1,(value-low[0])/(high[0]-low[0]||1))),smooth=t*t*(3-2*t);return low[1].map((c,i)=>Math.round(c+(high[1][i]-c)*smooth))}
+const heatStops=[[0,[30,112,66]],[.22,[67,151,65]],[.45,[204,189,66]],[.64,[225,139,47]],[.82,[221,77,43]],[1,[197,40,47]]];
+function heatPixel(level){const value=Math.min(1,Math.max(0,level));let low=heatStops[0],high=heatStops[heatStops.length-1];for(let i=1;i<heatStops.length;i++)if(value<=heatStops[i][0]){low=heatStops[i-1];high=heatStops[i];break}const t=(value-low[0])/(high[0]-low[0]||1);return low[1].map((c,i)=>Math.round(c+(high[1][i]-c)*t))}
 function heatRadiusMeters(point){if(point.tags&&Number.isFinite(Number(point.tags.uberSurgeMultiplier)))return 900;const radius={school:1100,transit:1650,event:2200,nightlife:1500,hotel:1450,attraction:1850,restaurant:1100,shopping:1900,neighborhood:2250,medical:1350};return(radius[point.cat]||1400)*(.92+Math.min(1.15,point.intensity)*.14)}
-function heatSeed(point,index){const text=String(point.name||'')+':'+String(point.cat||'')+':'+index;let hash=2166136261;for(let i=0;i<text.length;i++){hash^=text.charCodeAt(i);hash=Math.imul(hash,16777619)}return(hash>>>0)/4294967295}
 const DemandHeatLayer=L.GridLayer.extend({
-  initialize(options){L.setOptions(this,options);this._points=[];this._when=new Date()},
-  setDemand(sources,index,when){const field=makeDemandGrid(sources||[],index,when||new Date());this._points=field&&field.points?field.points:[];this._when=when||new Date();this.redraw();return this},
+  initialize(options){L.setOptions(this,options);this._points=[]},
+  setDemand(sources,index,when){const field=makeDemandGrid(sources||[],index,when||new Date());this._points=field&&field.points?field.points:[];this.redraw();return this},
   createTile(coords){
-    const size=this.getTileSize(),map=this._map,dpr=Math.min(1.25,Math.max(1,window.devicePixelRatio||1)),canvas=document.createElement('canvas');
-    canvas.width=Math.max(1,Math.ceil(size.x*dpr));canvas.height=Math.max(1,Math.ceil(size.y*dpr));canvas.style.width=size.x+'px';canvas.style.height=size.y+'px';
+    const size=this.getTileSize(),map=this._map,canvas=document.createElement('canvas');
+    // Integral pixels per tile keep adjacent tiles on one global sampling grid.
+    const resolution=Math.min(2,Math.max(1,window.devicePixelRatio||1));
+    canvas.width=Math.round(size.x*resolution);canvas.height=Math.round(size.y*resolution);
+    canvas.style.width=size.x+'px';canvas.style.height=size.y+'px';
     const context=canvas.getContext('2d',{alpha:true}),width=canvas.width,height=canvas.height;
-    if(!this._points.length)return canvas
-    const tileLeft=coords.x*size.x,tileTop=coords.y*size.y,worldSize=map.options.crs.scale(coords.z),earth=40075016.685,density=new Float32Array(width*height),hue=new Float32Array(width*height),prepared=[];
-    this._points.forEach((point,index)=>{
-      const p=map.project([point.lat,point.lon],coords.z);p.x+=Math.round((tileLeft+size.x/2-p.x)/worldSize)*worldSize;
-      const radius=heatRadiusMeters(point)*worldSize/(earth*Math.max(.2,Math.cos(point.lat*Math.PI/180))),seed=heatSeed(point,index),angle=seed*Math.PI*2;
-      const cx=(p.x-tileLeft)*dpr,cy=(p.y-tileTop)*dpr,sigma=Math.max(2,radius*.48*dpr),elongation=.72+seed*.34;
-      if(cx+radius*dpr*1.6<0||cy+radius*dpr*1.6<0||cx-radius*dpr*1.6>width||cy-radius*dpr*1.6>height)return;
-      prepared.push({point,cx,cy,radius:radius*dpr,sigma,angle,elongation,colorLevel:Math.min(1,point.intensity),boost:point.tags&&point.tags.liveEvent?1.25:1});
-    });
-    const addLobe=(source,dx,dy,amplitude,scaleX,scaleY,rotation)=>{
-      const cx=source.cx+dx,cy=source.cy+dy,rx=Math.max(1.3,source.sigma*scaleX),ry=Math.max(1.3,source.sigma*scaleY),cos=Math.cos(rotation),sin=Math.sin(rotation),reach=Math.ceil(Math.max(rx,ry)*3.1),minX=Math.max(0,Math.floor(cx-reach)),maxX=Math.min(width-1,Math.ceil(cx+reach)),minY=Math.max(0,Math.floor(cy-reach)),maxY=Math.min(height-1,Math.ceil(cy+reach)),amp=source.point.intensity*source.boost*amplitude;
-      for(let y=minY;y<=maxY;y++){const py=y+.5-cy,row=y*width;for(let x=minX;x<=maxX;x++){const px=x+.5-cx,u=px*cos+py*sin,v=-px*sin+py*cos,q=(u*u)/(2*rx*rx)+(v*v)/(2*ry*ry);if(q>5.2)continue;const contribution=amp*Math.exp(-q);if(contribution<.003)continue;const at=row+x;density[at]+=contribution;hue[at]+=contribution*source.colorLevel}}
-    };
-    prepared.forEach(source=>{
-      const c=Math.cos(source.angle),s=Math.sin(source.angle),r=source.radius;
-      // Uneven overlapping lobes make a source field follow local venues and
-      // neighborhoods instead of forming a symmetric bullseye around a pin.
-      addLobe(source,0,0,.34,source.elongation,.78,source.angle);
-      addLobe(source,c*r*.34+s*r*.08,s*r*.34-c*r*.08,.31,.88,.53,source.angle+.34);
-      addLobe(source,-c*r*.27-s*r*.16,-s*r*.27+c*r*.16,.24,.62,.92,source.angle-.48);
-      addLobe(source,-s*r*.52,c*r*.52,.18,.52,.68,source.angle+.83);
-      addLobe(source,s*r*.39,c*r*.39,.16,.76,.47,source.angle-.72)
-    });
+    if(!context||!this._points.length)return canvas;
+    const scale=width/size.x,tileLeft=coords.x*size.x,tileTop=coords.y*size.y;
+    const worldSize=map.options.crs.scale(coords.z),earth=40075016.68557849,density=new Float32Array(width*height);
+    for(const point of this._points){
+      const projected=map.project([point.lat,point.lon],coords.z);
+      projected.x+=Math.round((tileLeft+size.x/2-projected.x)/worldSize)*worldSize;
+      // A fixed metre footprint projected at the TILE zoom, never viewport pixels.
+      // Leaflet transforms this grid with the basemap throughout pan/zoom animations.
+      const metersPerPixel=earth*Math.cos(point.lat*Math.PI/180)/worldSize;
+      const sigma=heatRadiusMeters(point)*.48/metersPerPixel*scale;
+      const cx=(projected.x-tileLeft)*scale,cy=(projected.y-tileTop)*scale,reach=3*sigma;
+      if(cx+reach<0||cy+reach<0||cx-reach>width||cy-reach>height)continue;
+      const minX=Math.max(0,Math.floor(cx-reach)),maxX=Math.min(width-1,Math.ceil(cx+reach));
+      const minY=Math.max(0,Math.floor(cy-reach)),maxY=Math.min(height-1,Math.ceil(cy+reach));
+      for(let y=minY;y<=maxY;y++){
+        const dy=(y+.5-cy)/sigma,row=y*width;
+        for(let x=minX;x<=maxX;x++){
+          const dx=(x+.5-cx)/sigma,q=(dx*dx+dy*dy)/2;
+          if(q<=4.5)density[row+x]+=point.intensity*Math.exp(-q);
+        }
+      }
+    }
     const image=context.createImageData(width,height),pixels=image.data;
-    for(let i=0;i<density.length;i++){const value=density[i];if(value<.075)continue;const total=Math.min(1,Math.pow(value/1.8,.82)),sourceTone=hue[i]/value,level=Math.min(1,total*.76+sourceTone*.24),rgb=heatPixel(level),fade=Math.min(1,(value-.075)/.25),alpha=Math.round(255*(.20+Math.min(.52,total*.48))*fade),at=i*4;pixels[at]=rgb[0];pixels[at+1]=rgb[1];pixels[at+2]=rgb[2];pixels[at+3]=alpha}
-    context.putImageData(image,0,0);return canvas
+    for(let i=0;i<density.length;i++){
+      const value=density[i];if(value<=.075)continue;
+      const level=Math.min(1,Math.pow(value/1.8,.82)),rgb=heatPixel(level);
+      const fade=Math.min(1,(value-.075)/.25),at=i*4;
+      pixels[at]=rgb[0];pixels[at+1]=rgb[1];pixels[at+2]=rgb[2];
+      // Bounded alpha keeps aerial detail legible even where many sources overlap.
+      pixels[at+3]=Math.round(255*(.18+.38*level)*fade);
+    }
+    context.putImageData(image,0,0);return canvas;
   }
 });
 function renderDemandGrid(sources,index,when){if(heatLayer)heatLayer.setDemand(sources,index,when)}
@@ -513,7 +532,7 @@ function buildRoute(venues,lat,lon,market){
   }
   activeStops=stops;const verifiedDemand=venues.filter(v=>!(v.tags&&v.tags.forecast)&&!(v.tags&&v.tags.metroBaseline)),baseline=fallbackDemandSources(lat,lon,market);activeDemandSources=verifiedDemand.length>=12?verifiedDemand:[...baseline,...verifiedDemand];renderTimeButtons(stops);
   const points=[[lat,lon],...stops.map(s=>[s.lat,s.lon])];
-  heatLayer=new DemandHeatLayer({pane:'heatPane',tileSize:256,keepBuffer:1,updateWhenZooming:false,updateWhenIdle:true,opacity:1});heatLayer.addTo(liveMap);routeLayers.push(heatLayer);
+  heatLayer=new DemandHeatLayer({pane:'heatPane',tileSize:256,keepBuffer:2,updateWhenZooming:false,updateWhenIdle:true,opacity:1});heatLayer.addTo(liveMap);routeLayers.push(heatLayer);
   drawRoutePath(points);refineRouteToRoads(points,routeRequest);
   for(let i=0;i<points.length-1;i++){
     const node=L.circleMarker(points[i+1],{radius:3.2,color:'#efffff',weight:1.2,fillColor:'#00b9ff',fillOpacity:1,opacity:1,interactive:false,className:'homebase-route-node'}).addTo(liveMap);routeLayers.push(node)
@@ -567,7 +586,7 @@ function autoRefreshGps(){if(Date.now()-lastAutoGpsRefresh<60000)return;lastAuto
 if(!demoLocale)setTimeout(autoRefreshGps,150);
 setInterval(()=>{updateClimateAdvisory();const selected=$('[data-hour][aria-pressed="true"]');if(selected&&selected.dataset.hour==='0'&&activeStops.length)applyTimeForecast(0,new Date())},300000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-lastAutoGpsRefresh>300000)autoRefreshGps()});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=54',{updateViaCache:'none'}).then(r=>r.update()));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=55',{updateViaCache:'none'}).then(r=>r.update()));
 </script>
 </body>
 </html>
