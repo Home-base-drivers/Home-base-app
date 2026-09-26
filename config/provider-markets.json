@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "markets": [
+    {
+      "id": "baltimore",
+      "name": "Baltimore",
+      "center": { "lat": 39.2904, "lon": -76.6122 },
+      "radiusKm": 58,
+      "uberDestinations": [
+        { "name": "Downtown Baltimore", "lat": 39.2904, "lon": -76.6122 },
+        { "name": "BWI Airport", "lat": 39.1774, "lon": -76.6684 }
+      ],
+      "sampleAreas": [
+        { "name": "Downtown", "lat": 39.2904, "lon": -76.6122 },
+        { "name": "Towson", "lat": 39.4015, "lon": -76.6019 },
+        { "name": "White Marsh", "lat": 39.3837, "lon": -76.4586 },
+        { "name": "Dundalk", "lat": 39.2507, "lon": -76.5205 },
+        { "name": "BWI Airport", "lat": 39.1774, "lon": -76.6684 },
+        { "name": "Glen Burnie", "lat": 39.1626, "lon": -76.6247 },
+        { "name": "Columbia", "lat": 39.2037, "lon": -76.8610 },
+        { "name": "Ellicott City", "lat": 39.2673, "lon": -76.7983 },
+        { "name": "Pikesville", "lat": 39.3743, "lon": -76.7225 },
+        { "name": "Owings Mills", "lat": 39.4195, "lon": -76.7803 },
+        { "name": "Annapolis", "lat": 38.9784, "lon": -76.4922 }
+      ]
+    }
+  ]
+}
