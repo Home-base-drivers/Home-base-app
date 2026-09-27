@@ -17,8 +17,8 @@ test('Ticketmaster events require real coordinates and a start time', () => {
   assert.equal(normalizeTicketmasterEvent({ name: 'No coordinate' }, new Date('2026-09-25T12:00:00Z')), null);
 });
 
-test('Uber price estimates with no meaningful surge do not become heat sources', () => {
+test('Uber samples retain independently rated low and high price areas', () => {
   const origin = { name: 'Towson', lat: 39.4, lon: -76.6 };
-  assert.equal(normalizeUberSurge(origin, { prices: [{ surge_multiplier: 1 }, { surge_multiplier: 1.02 }] }), null);
+  assert.equal(normalizeUberSurge(origin, { prices: [{ surge_multiplier: 1 }, { surge_multiplier: 1.02 }] }).surgeMultiplier, 1.01);
   assert.equal(normalizeUberSurge(origin, { prices: [{ surge_multiplier: 1.1 }, { surge_multiplier: 1.4 }] }).surgeMultiplier, 1.25);
 });

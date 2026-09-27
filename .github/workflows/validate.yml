@@ -1,0 +1,23 @@
+name: Validate Home Base
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Validate application JavaScript
+        run: |
+          node scripts/check-index-syntax.mjs
+          node --check dist/homebase-live.js
+      - name: Test provider normalization
+        run: node --test scripts/refresh-provider-signals.test.mjs
