@@ -69,8 +69,6 @@ export function normalizeUberSurge(origin, estimates) {
   const median = values.length % 2
     ? values[(values.length - 1) / 2]
     : (values[values.length / 2 - 1] + values[values.length / 2]) / 2;
-  // Flat/near-flat Uber pricing is not painted as a demand zone.
-  if (median < 1.05) return null;
   return {
     name: origin.name,
     lat: origin.lat,
@@ -189,7 +187,7 @@ async function bookingProvider(market) {
   };
 }
 
-function retainRecent(previous, current, key, maxAgeMs = 90 * 60_000) {
+function retainRecent(previous, current, key, maxAgeMs = 25 * 60_000) {
   if (current.status === 'active') return current;
   const old = previous?.[key];
   if (old?.fetchedAt && Date.now() - Date.parse(old.fetchedAt) < maxAgeMs && old.status === 'active') {
@@ -215,7 +213,13 @@ async function main() {
       booking: retainRecent(old, booking, 'booking')
     });
   }
-  const output = { schemaVersion: 1, generatedAt: NOW.toISOString(), markets };
+  const output = {
+    schemaVersion: 2,
+    generatedAt: NOW.toISOString(),
+    refreshTargetSeconds: 300,
+    expiresAt: new Date(NOW.getTime() + 25 * 60_000).toISOString(),
+    markets
+  };
   await writeFile(OUTPUT_URL, `${JSON.stringify(output, null, 2)}\n`);
   for (const market of markets) {
     console.log(`${market.name}: Uber ${market.uber.status}, Ticketmaster ${market.ticketmaster.status}, Booking.com ${market.booking.status}`);
