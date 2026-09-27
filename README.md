@@ -60,14 +60,16 @@ signals, and the app discards expired provider data rather than presenting it as
 
 ## Accounts and community hourly rate
 
-The optional Supabase layer provides email-link login, cross-device profile and
-progress synchronization, protected trip uploads, and a separate Home Base
-community gross-hourly benchmark. Run
-`supabase/migrations/20260927_home_base_accounts.sql`, then configure the public
-GitHub Actions variables `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`; see
-`SUPABASE_SETUP.md`. Row Level Security isolates private records. Community
-benchmarks are returned only for a market/day/hour group with at least five
-consenting users and twenty trips.
+The production database schema is scaffolded in
+`supabase/migrations/20260927_home_base_accounts.sql`, but cloud transmission is
+deliberately disabled until both owners approve Supabase as the data processor
+and complete the privacy setup in `SUPABASE_SETUP.md`. The current app records a
+separate Home Base user gross-hourly rate and profit comparisons from imported
+trip rows on the driver's device. No trip row is uploaded.
+
+When approved and wired, Row Level Security will isolate private records and the
+community benchmark function will return results only for a market/day/hour
+group with at least five consenting users and twenty trips.
 
 ## Development rule
 
