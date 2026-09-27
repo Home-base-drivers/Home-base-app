@@ -37,8 +37,11 @@ https://home-base-driver-live.chrisbrouard7.chatgpt.site
 
 ## Provider data feeds
 
-`.github/workflows/provider-signals.yml` refreshes the optional Baltimore
-provider feed hourly and deploys only sanitized public results. Configure these
+`.github/workflows/provider-signals.yml` targets a five-minute refresh for the
+optional Baltimore provider feed and deploys only sanitized public results.
+GitHub can delay scheduled workflows during high load, so the app displays the
+source timestamp, checks for a new deployed snapshot every two minutes, treats
+Uber samples as live for 12 minutes, and removes them after 25 minutes. Configure these
 GitHub Actions repository secrets to enable the corresponding provider:
 
 - `TICKETMASTER_API_KEY`
@@ -53,7 +56,18 @@ event feed. Uber surge multipliers contribute only when a sampled trip estimate
 shows meaningful surge and are a price proxy, not a count of ride requests.
 Booking.com availability is shown as travel context only; it is not used as a
 rideshare-demand score. Missing credentials or provider outages do not fabricate
-signals, and the app discards provider data older than 90 minutes.
+signals, and the app discards expired provider data rather than presenting it as live.
+
+## Accounts and community hourly rate
+
+The optional Supabase layer provides email-link login, cross-device profile and
+progress synchronization, protected trip uploads, and a separate Home Base
+community gross-hourly benchmark. Run
+`supabase/migrations/20260927_home_base_accounts.sql`, then configure the public
+GitHub Actions variables `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`; see
+`SUPABASE_SETUP.md`. Row Level Security isolates private records. Community
+benchmarks are returned only for a market/day/hour group with at least five
+consenting users and twenty trips.
 
 ## Development rule
 
