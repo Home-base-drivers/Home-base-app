@@ -59,7 +59,7 @@
 
   function createLayer(L) {
     if (!L || !L.Layer || typeof L.Layer.extend !== 'function') throw new Error('Leaflet must load before the Home Base heat layer.');
-    return L.Layer.extend({
+    const HeatLayer = L.Layer.extend({
       initialize() { this._areas = []; this._when = new Date(); this._scoreSource = () => 0; this._frame = 0; },
       onAdd(map) {
         this._map = map;
@@ -176,6 +176,7 @@
         output.restore();
       }
     });
+    return new HeatLayer();
   }
 
   return { colorAt, sourceStrength, areaIntensity, sourceRadiusKm, createLayer };
