@@ -19,5 +19,8 @@ jobs:
         run: |
           node scripts/check-index-syntax.mjs
           node --check dist/homebase-live.js
+          node --check dist/homebase-heat.js
+      - name: Test demand heat rendering helpers
+        run: node --test scripts/homebase-heat.test.mjs
       - name: Test provider normalization
         run: node --test scripts/refresh-provider-signals.test.mjs
