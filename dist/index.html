@@ -169,7 +169,7 @@
   <section class="panel" id="installPanel" role="dialog" aria-modal="true" aria-labelledby="installTitle"><h2 id="installTitle">Home Base</h2><div id="installCopy"></div><button class="close" id="closePanel">Done</button></section>
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-<script src="homebase-heat.js"></script>
+<script src="homebase-heat.js?v=62"></script>
 <script>
 const app=document.getElementById('app');
 const $=s=>app.querySelector(s), $$=s=>[...app.querySelectorAll(s)];
@@ -532,9 +532,6 @@ function buildRoute(venues,lat,lon,market){
   const points=[[lat,lon],...stops.map(s=>[s.lat,s.lon])];
   routeLayers.push(heatAreaLayer);demandAreas.forEach(area=>area.sources=[]);bindDemandSources(activeDemandSources);loadBaltimoreDemandAreas(lat,lon).then(areas=>{if(routeRequest!==routeRequestSerial)return;demandAreas=areas.map(area=>({...area,sources:[]}));demandAreaSourceRef=null;renderDemandGrid(activeDemandSources,0,start)}).catch(()=>{});
   drawRoutePath(points);refineRouteToRoads(points,routeRequest);
-  for(let i=0;i<points.length-1;i++){
-    const node=L.circleMarker(points[i+1],{radius:3.2,color:'#efffff',weight:1.2,fillColor:'#00b9ff',fillOpacity:1,opacity:1,interactive:false,className:'homebase-route-node'}).addTo(liveMap);routeLayers.push(node)
-  }
   stops.forEach((s,i)=>{
     const level=i<2?'HIGH DEMAND':i<4?'MODERATE':'STEADY';
     const reason=demandReason(s.cat,marketParts(s.when).hour);
