@@ -108,28 +108,6 @@
       _drawArea(output, map, area, size, sample) {
         const feature = area && area.feature, geometry = feature && feature.geometry;
         if (!geometry || !Array.isArray(area.sources) || !area.sources.length) return;
-        const polygons = geometry.type === 'Polygon' ? [geometry.coordinates] : geometry.type === 'MultiPolygon' ? geometry.coordinates : [];
-        if (!polygons.length) return;
-
-        const path = new Path2D();
-        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-        polygons.forEach(rings => rings.forEach(ring => {
-          if (!Array.isArray(ring) || ring.length < 3) return;
-          ring.forEach(([lon, lat], index) => {
-            const point = map.latLngToContainerPoint([lat, lon]);
-            if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) return;
-            if (index === 0) path.moveTo(point.x, point.y); else path.lineTo(point.x, point.y);
-            minX = Math.min(minX, point.x); minY = Math.min(minY, point.y);
-            maxX = Math.max(maxX, point.x); maxY = Math.max(maxY, point.y);
-          });
-          path.closePath();
-        }));
-        if (!Number.isFinite(minX) || maxX < 0 || maxY < 0 || minX > size.x || minY > size.y) return;
-        minX = clamp(minX, 0, size.x); minY = clamp(minY, 0, size.y);
-        maxX = clamp(maxX, 0, size.x); maxY = clamp(maxY, 0, size.y);
-        const width = Math.max(1, maxX - minX), height = Math.max(1, maxY - minY);
-        const gridWidth = Math.max(1, Math.ceil(width / sample)), gridHeight = Math.max(1, Math.ceil(height / sample));
-        const field = new Float32Array(gridWidth * gridHeight);
         const sources = area.sources.map((source, index) => {
           const strength = sourceStrength(source, this._when, this._scoreSource);
           if (!strength || !Number.isFinite(source.lat) || !Number.isFinite(source.lon)) return null;
@@ -140,6 +118,22 @@
           return { center, strength, angle, rx: radius * (.68 + (index % 4) * .07), ry: radius * (.49 + ((index + 2) % 4) * .08) };
         }).filter(Boolean);
         if (!sources.length) return;
+
+        // Paint from geographic source coordinates rather than clipping to a
+        // neighborhood polygon. This keeps the local variation while allowing
+        // adjacent neighborhoods to overlap and feather naturally at the edge.
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        sources.forEach(source => {
+          const spread = Math.max(source.rx, source.ry) * 3.35;
+          minX = Math.min(minX, source.center.x - spread); minY = Math.min(minY, source.center.y - spread);
+          maxX = Math.max(maxX, source.center.x + spread); maxY = Math.max(maxY, source.center.y + spread);
+        });
+        if (maxX < 0 || maxY < 0 || minX > size.x || minY > size.y) return;
+        minX = clamp(minX, 0, size.x); minY = clamp(minY, 0, size.y);
+        maxX = clamp(maxX, 0, size.x); maxY = clamp(maxY, 0, size.y);
+        const width = Math.max(1, maxX - minX), height = Math.max(1, maxY - minY);
+        const gridWidth = Math.max(1, Math.ceil(width / sample)), gridHeight = Math.max(1, Math.ceil(height / sample));
+        const field = new Float32Array(gridWidth * gridHeight);
 
         sources.forEach(source => {
           const radius = Math.max(source.rx, source.ry) * 3.1;
@@ -169,7 +163,6 @@
         }
         context.putImageData(image, 0, 0);
         output.save();
-        output.clip(path, 'evenodd');
         output.imageSmoothingEnabled = true;
         output.imageSmoothingQuality = 'high';
         output.drawImage(paint, minX, minY, width, height);
