@@ -21,6 +21,6 @@ jobs:
           node --check dist/homebase-live.js
           node --check dist/homebase-heat.js
       - name: Test demand heat rendering helpers
-        run: node --test scripts/homebase-heat.test.mjs
+        run: node --test scripts/homebase-heat.test.mjs scripts/baltimore-demand-areas.test.mjs
       - name: Test provider normalization
         run: node --test scripts/refresh-provider-signals.test.mjs
