@@ -20,6 +20,9 @@ function contains(feature, lat, lon) {
 test('bundled map coverage contains the city neighborhoods and five surrounding counties', () => {
   assert.equal(areas.type, 'FeatureCollection');
   assert.ok(areas.features.filter(item => item.properties.areaType === 'neighborhood').length >= 50);
+  const zoomedNeighborhoods = areas.features.filter(item => item.properties.areaType === 'label');
+  assert.ok(zoomedNeighborhoods.length >= 250, 'detailed neighborhood labels appear at close zoom');
+  assert.ok(zoomedNeighborhoods.some(item => item.properties.areaName === 'The Orchards'));
   const countyNames = areas.features.filter(item => item.properties.areaType === 'county').map(item => item.properties.areaName);
   for (const county of ['Baltimore County', 'Anne Arundel County', 'Howard County', 'Harford County', 'Carroll County']) assert.ok(countyNames.includes(county), county);
 });

@@ -266,7 +266,7 @@ const majorDemandLabels=new Set(['downtown','inner harbor','fells point','canton
 function normalizedAreaName(name){return String(name||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim()}
 function demandAreaScore(area,when){const sources=(area.sources||[]).filter(source=>demandWeight(source,when)>0);if(!sources.length)return 0;const surges=sources.map(source=>Number(source.tags&&source.tags.uberSurgeMultiplier)).filter(Number.isFinite);if(surges.length)return Math.max(0,Math.min(1,(Math.max(...surges)-1)/.85));const total=sources.reduce((sum,source)=>sum+demandWeight(source,when),0);return 1-Math.exp(-total/18)}
 function demandAreaStyle(area){const score=demandAreaScore(area,selectedForecastTime);if(!score||area.areaType!=='neighborhood')return{stroke:false,fill:false,fillOpacity:0,opacity:0};const rgb=HomeBaseHeat.colorAt(score),color=`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;return{stroke:false,fill:true,fillColor:color,fillOpacity:.14+score*.34,className:'homebase-demand-area'}}
-function showDemandAreaLabel(name,zoom,areaType='neighborhood'){const normalized=normalizedAreaName(name);if(areaType==='county')return zoom>=9&&zoom<13;if(zoom>=15)return true;if(zoom>=13)return majorDemandLabels.has(normalized);return false}
+function showDemandAreaLabel(name,zoom,areaType='neighborhood'){const normalized=normalizedAreaName(name);if(areaType==='label')return zoom>=15;if(areaType==='county')return zoom>=9&&zoom<13;if(zoom>=15)return false;if(zoom>=13)return majorDemandLabels.has(normalized);return false}
 function renderDemandGrid(sources,index,when){
   if(when)selectedForecastTime=when;
   if(sources&&sources.length&&sources!==demandAreaSourceRef)bindDemandSources(sources);
@@ -277,7 +277,7 @@ function renderDemandGrid(sources,index,when){
   const zoom=liveMap.getZoom(),visible=liveMap.getBounds(),occupied=[];
   demandAreas.forEach(area=>{
     L.geoJSON(area.feature,{pane:'heatPane',style:()=>demandAreaStyle(area),interactive:false}).addTo(heatAreaLayer);
-    const bounds=L.geoJSON(area.feature).getBounds(),center=bounds.getCenter(),name=zoom>=15&&area.detailName?area.detailName:area.name;
+    const bounds=L.geoJSON(area.feature).getBounds(),center=bounds.getCenter(),name=area.name;
     if(!name||!showDemandAreaLabel(name,zoom,area.areaType)||!visible.contains(center))return;
     const point=liveMap.latLngToLayerPoint(center),spacing=zoom>=15?54:zoom>=13?74:140;
     if(occupied.some(existing=>existing.distanceTo(point)<spacing))return;
