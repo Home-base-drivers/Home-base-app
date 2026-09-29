@@ -148,14 +148,16 @@
           const key = `${Number(source.lat).toFixed(5)}:${Number(source.lon).toFixed(5)}:${source.name || ''}`;
           if (!seen.has(key)) { seen.add(key); sources.push(source); }
         });
-        // Keep one geographic representation at every zoom. Switching from
-        // source fields to polygon masks made hotspots appear to jump when the
-        // map crossed the former zoom threshold.
+        // Keep the metro-wide view as a continuous source field. Once the
+        // driver zooms into Baltimore neighborhoods, restore the local
+        // neighborhood demand surface from the sources assigned to each
+        // geographic boundary, then layer source-level detail over it.
+        if (map.getZoom() >= 13) this._drawAreaSurface(output, map, this._areas, size, sample);
         this._drawSources(output, map, sources, size, sample);
       },
       _drawAreaSurface(output, map, areas, size, sample) {
         const active = (areas || []).filter(area =>
-          (area.areaType === 'label' || area.areaType === 'neighborhood') &&
+          area.areaType === 'neighborhood' &&
           area.feature && area.feature.geometry && (area.sources || []).length
         );
         if (!active.length) return;
