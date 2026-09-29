@@ -170,7 +170,7 @@
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="baltimore-market.js?v=72"></script>
-<script src="homebase-heat.js?v=75"></script>
+<script src="homebase-heat.js?v=76"></script>
 <script>
 const app=document.getElementById('app');
 const $=s=>app.querySelector(s), $$=s=>[...app.querySelectorAll(s)];
@@ -197,7 +197,7 @@ let routeLayers=[],routeStrokeLayers=[],eventMapLayers=[],highwayLayers=[],heatL
 let surgeTrend='cooling';
 let activeStops=[],activeDemandSources=[];
 let currentRainChance=0,currentEventCount=0;
-let providerUberPoints=[],providerBookingNote='',currentEventData=[],currentMarketName='Baltimore';
+let providerUberPoints=[],providerFlightPoints=[],providerBookingNote='',currentEventData=[],currentMarketName='Baltimore';
 let selectedForecastTime=new Date();
 let marketTimeZone=demoLocale&&demoLocale.timeZone;
 let currentMoney={symbol:'US$',code:'USD',suffix:''};
@@ -256,6 +256,12 @@ function demandWeight(source,when){
   const parts=marketParts(when),h=parts.hour+when.getMinutes()/60,surge=Number(source.tags&&source.tags.uberSurgeMultiplier),amenity=String(source.tags&&source.tags.amenity||'').toLowerCase();
   // A live Uber signal is authoritative, including at a food location.
   if(Number.isFinite(surge))return Math.max(0,(surge-1)*30);
+  if(source.tags&&source.tags.airportActivity){
+    const hourStart=Date.parse(source.tags.flightHour),time=when.getTime();
+    if(!Number.isFinite(hourStart)||time<hourStart||time>=hourStart+3600000)return 0;
+    const arrivals=Math.max(0,Number(source.tags.arrivals)||0),departures=Math.max(0,Number(source.tags.departures)||0);
+    return Math.min(30,arrivals*1.7+departures*.8);
+  }
   // This is a passenger-ride map. Fast-food POIs remain useful for a future
   // delivery layer, but they do not create passenger demand by themselves.
   if(source.tags&&source.tags.publicVenue&&amenity==='fast_food')return 0;
@@ -532,11 +538,15 @@ function knownBaltimoreVenue(name){const value=eventToken(name);if(/m t bank sta
 function findEventVenue(name,venues){const tokens=eventToken(name).split(' ').filter(x=>x.length>3),scored=venues.map(v=>({v,score:tokens.filter(t=>eventToken(v.name).includes(t)).length})).sort((a,b)=>b.score-a.score);return scored[0]&&scored[0].score?scored[0].v:null}
 async function loadEspnEvents(lat,lon,market,venues){const now=new Date(),date=`${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`,leagues=[['football','nfl'],['basketball','nba'],['basketball','wnba'],['hockey','nhl'],['basketball','mens-college-basketball'],['football','college-football']],settled=await Promise.allSettled(leagues.map(([sport,league])=>fetchJSON(`https://site.api.espn.com/apis/site/v2/sports/${sport}/${league}/scoreboard?dates=${date}`,3200))),marketName=eventToken(market),events=[];settled.forEach(result=>{if(result.status!=='fulfilled')return;(result.value.events||[]).forEach(event=>{const competition=event.competitions&&event.competitions[0],state=event.status&&event.status.type&&event.status.type.state;if(!competition||state==='post')return;const start=new Date(event.date),venueName=competition.venue&&competition.venue.fullName||'',city=eventToken(competition.venue&&competition.venue.address&&competition.venue.address.city),match=findEventVenue(venueName,venues);if(!match&&!(city&&marketName&&(city.includes(marketName)||marketName.includes(city))))return;const place=knownBaltimoreVenue(venueName)||match;if(!place)return;events.push({name:`${event.shortName||event.name} · ${marketTime(start)}`,cat:'event',lat:place.lat,lon:place.lon,eventStart:start,eventEnd:new Date(start.getTime()+3*3600000),eventState:state==='in'?'Live':'Preview',tags:{liveEvent:true,source:'public sports feed'}})})});return events.filter(v=>(isGreaterBaltimoreLocation(lat,lon)?isGreaterBaltimoreLocation(v.lat,v.lon):distanceKm([lat,lon],[v.lat,v.lon])<=90)&&v.eventStart.getTime()>=Date.now()-7200000)}
 async function loadProviderSignals(lat,lon,market){
-  providerUberPoints=[];providerBookingNote='';
+  providerUberPoints=[];providerFlightPoints=[];providerBookingNote='';
   try{
     const response=await fetch(`./provider-signals.json?ts=${Date.now()}`,{cache:'no-store',headers:{Accept:'application/json'}});if(!response.ok)throw Error('provider feed unavailable');
     const payload=await response.json(),match=(payload.markets||[]).find(item=>String(item.name||'').toLowerCase()===String(market||'').toLowerCase()||distanceKm([lat,lon],[item.center.lat,item.center.lon])<=Number(item.radiusKm||0));
     if(!match||!payload.generatedAt||Date.now()-Date.parse(payload.generatedAt)>25*60000)return null;
+    const flight=match.flightaware;
+    if(flight&&['active','stale'].includes(flight.status)&&Array.isArray(flight.activityByHour)){
+      providerFlightPoints=flight.activityByHour.map(bucket=>({name:`BWI flight activity · ${bucket.hour}`,cat:'transit',lat:Number(bucket.lat),lon:Number(bucket.lon),heatOnly:true,tags:{providerSignal:true,airportActivity:true,flightHour:bucket.hour,arrivals:Number(bucket.arrivals)||0,departures:Number(bucket.departures)||0,source:'FlightAware AeroAPI'}})).filter(point=>Number.isFinite(point.lat)&&Number.isFinite(point.lon));
+    }
     const uber=match.uber;
     if(uber&&['active','stale'].includes(uber.status)&&Date.now()-Date.parse(uber.fetchedAt||0)<=25*60000)providerUberPoints=(uber.samples||[]).filter(item=>Number.isFinite(Number(item.surgeMultiplier))).map(item=>({name:`Uber pricing · ${item.name}`,cat:'neighborhood',lat:Number(item.lat),lon:Number(item.lon),heatOnly:true,tags:{providerSignal:true,uberSurgeMultiplier:Number(item.surgeMultiplier),providerSampledAt:item.sampledAt,source:'Uber price estimate proxy'}})).filter(item=>Number.isFinite(item.lat)&&Number.isFinite(item.lon));
     const booking=match.booking;if(booking&&['active','stale'].includes(booking.status)&&Array.isArray(booking.areas)){const zones=booking.areas.filter(area=>Number(area.returnedListings)>0).length;providerBookingNote=`${zones} metro areas had lodging listings returned for ${booking.checkin||'the next-night sample'}`;}
@@ -584,7 +594,7 @@ function buildRoute(venues,lat,lon,market){
     const pick=candidates[0];if(!pick)break;
     used.add(pick.name);pick.when=when;pick.color=categoryColor(pick.cat);stops.push(pick);prior=[pick.lat,pick.lon];
   }
-  activeStops=stops;const verifiedDemand=regionalVenues.filter(v=>!(v.tags&&v.tags.forecast)&&!(v.tags&&v.tags.metroBaseline)),baseline=fallbackDemandSources(lat,lon,market);activeDemandSources=mergeDemandSources(baseline,verifiedDemand);renderTimeButtons(stops);
+  activeStops=stops;const verifiedDemand=regionalVenues.filter(v=>!(v.tags&&v.tags.forecast)&&!(v.tags&&v.tags.metroBaseline)),baseline=fallbackDemandSources(lat,lon,market);activeDemandSources=mergeDemandSources(baseline,[...verifiedDemand,...providerFlightPoints]);renderTimeButtons(stops);
   const points=[[lat,lon],...stops.map(s=>[s.lat,s.lon])];
   routeLayers.push(heatAreaLayer);demandAreas.forEach(area=>area.sources=[]);bindDemandSources(activeDemandSources);loadBaltimoreDemandAreas(lat,lon).then(areas=>{if(routeRequest!==routeRequestSerial)return;demandAreas=areas.map(area=>({...area,sources:[]}));activeDemandSources=mergeDemandSources(activeDemandSources,createAreaCoverageSources(demandAreas));demandAreaSourceRef=null;bindDemandSources(activeDemandSources);renderDemandGrid(activeDemandSources,0,start)}).catch(()=>{});
   drawRoutePath(points);refineRouteToRoads(points,routeRequest);
@@ -640,13 +650,13 @@ async function refreshLiveDemandLayer(){
   const publicEvents=currentEventData.filter(event=>!(event.tags&&event.tags.providerEvent)),seen=new Set(),events=[];
   [...publicEvents,...(provider.events||[])].forEach(event=>{const key=`${eventToken(event.name.split(' · ')[0])}:${Number(event.lat).toFixed(3)}:${Number(event.lon).toFixed(3)}`;if(!seen.has(key)){seen.add(key);events.push(event)}});
   const publicSources=activeDemandSources.filter(source=>!(source.tags&&(source.tags.providerSignal||source.tags.providerEvent)));
-  activeDemandSources=mergeDemandSources(publicSources,[...events,...providerUberPoints]);
+  activeDemandSources=mergeDemandSources(publicSources,[...events,...providerUberPoints,...providerFlightPoints]);
   renderEvents(events);renderDemandGrid(activeDemandSources,0,new Date());$('#updated').textContent=`Demand refreshed · ${marketTime(new Date())}`
 }
 if(!demoLocale)setTimeout(autoRefreshGps,150);
 setInterval(()=>{updateClimateAdvisory();const selected=$('[data-hour][aria-pressed="true"]');if(selected&&selected.dataset.hour==='0'&&activeStops.length)applyTimeForecast(0,new Date());refreshLiveDemandLayer()},300000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-lastAutoGpsRefresh>300000)autoRefreshGps()});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=75',{updateViaCache:'none'}).then(r=>r.update()));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=76',{updateViaCache:'none'}).then(r=>r.update()));
 </script>
 <script src="homebase-live.js"></script>
 </body>
