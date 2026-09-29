@@ -35,8 +35,14 @@
   function sourceStrength(source, when, scoreSource) {
     const weight = Number(scoreSource(source, when));
     if (!Number.isFinite(weight) || weight <= 0) return 0;
-    const strength = weight / 13;
-    return clamp(source.tags && source.tags.forecast ? strength * .55 : strength, 0, 1.25);
+    let strength = weight / 13;
+    const tags = source.tags || {};
+    // Public points describe activity density, not verified ride requests. They
+    // become useful when several nearby places overlap, without turning every
+    // restaurant or school into a red hotspot by itself.
+    if (tags.publicVenue) strength *= tags.place ? .28 : .2;
+    if (tags.metroBaseline || tags.forecast) strength *= .5;
+    return clamp(strength, 0, 1.25);
   }
 
   function areaIntensity(weightedValue) {
@@ -45,6 +51,15 @@
 
   function sourceRadiusKm(category) {
     return RADII_KM[String(category || '').toLowerCase()] || 1.5;
+  }
+
+  function sourceFootprintKm(source) {
+    const tags = source.tags || {};
+    if (tags.providerSignal) return 1.35;
+    if (tags.metroBaseline) return source.cat === 'neighborhood' ? 1.05 : sourceRadiusKm(source.cat) * .72;
+    if (tags.publicVenue) return source.cat === 'neighborhood' ? 1.0 : sourceRadiusKm(source.cat) * .62;
+    if (source.cat === 'event') return 1.35;
+    return sourceRadiusKm(source.cat);
   }
 
   function stableAngle(source, index) {
@@ -102,20 +117,29 @@
         output.clearRect(0, 0, size.x, size.y);
         if (!this._areas.length) return;
 
-        const sample = map.getZoom() < 10 ? 2 : 3;
-        this._areas.forEach(area => this._drawArea(output, map, area, size, sample));
+        const sample = map.getZoom() < 10 ? 2.5 : 2;
+        const seen = new Set(), sources = [];
+        this._areas.forEach(area => (area.sources || []).forEach(source => {
+          const key = `${Number(source.lat).toFixed(5)}:${Number(source.lon).toFixed(5)}:${source.name || ''}`;
+          if (!seen.has(key)) { seen.add(key); sources.push(source); }
+        }));
+        this._drawSources(output, map, sources, size, sample);
       },
-      _drawArea(output, map, area, size, sample) {
-        const feature = area && area.feature, geometry = feature && feature.geometry;
-        if (!geometry || !Array.isArray(area.sources) || !area.sources.length) return;
-        const sources = area.sources.map((source, index) => {
+      _drawSources(output, map, sourceData, size, sample) {
+        if (!Array.isArray(sourceData) || !sourceData.length) return;
+        const sources = sourceData.map((source, index) => {
           const strength = sourceStrength(source, this._when, this._scoreSource);
           if (!strength || !Number.isFinite(source.lat) || !Number.isFinite(source.lon)) return null;
           const center = map.latLngToContainerPoint([source.lat, source.lon]);
-          const km = sourceRadiusKm(source.cat), north = map.latLngToContainerPoint([source.lat + km / 111.32, source.lon]);
+          const km = sourceFootprintKm(source), north = map.latLngToContainerPoint([source.lat + km / 111.32, source.lon]);
           const radius = Math.max(1.25, Math.abs(center.y - north.y));
           const angle = stableAngle(source, index);
-          return { center, strength, angle, rx: radius * (.68 + (index % 4) * .07), ry: radius * (.49 + ((index + 2) % 4) * .08) };
+          return {
+            center, strength, angle,
+            rx: radius * (.62 + (index % 5) * .055),
+            ry: radius * (.43 + ((index + 2) % 5) * .06),
+            skew: ((index % 7) - 3) * .045
+          };
         }).filter(Boolean);
         if (!sources.length) return;
 
@@ -146,8 +170,18 @@
             const px = minX + (x + .5) * sample, py = minY + (y + .5) * sample;
             const dx = px - source.center.x, dy = py - source.center.y;
             const rx = (dx * cos + dy * sin) / source.rx, ry = (-dx * sin + dy * cos) / source.ry;
-            const distance = rx * rx + ry * ry;
-            if (distance < 18) field[y * gridWidth + x] += source.strength * Math.exp(-distance * .5);
+            // Two close, asymmetrical lobes keep the interpolation geographic
+            // but avoid the artificial bullseye/ring effect of a single radial
+            // gradient. Real nearby venue points then overlap into block-scale
+            // shade changes across the same neighborhood.
+            const primary = rx * rx + ry * ry;
+            const shoulderA = (rx - .48) ** 2 / 1.18 + (ry + source.skew) ** 2 / .82;
+            const shoulderB = (rx + .34) ** 2 / .9 + (ry - .3 - source.skew) ** 2 / 1.12;
+            if (primary < 18) field[y * gridWidth + x] += source.strength * (
+              .66 * Math.exp(-primary * .72) +
+              .2 * Math.exp(-shoulderA * 1.05) +
+              .14 * Math.exp(-shoulderB * 1.2)
+            );
           }
         });
 
@@ -159,7 +193,7 @@
           if (value < .018) continue;
           const level = areaIntensity(value), rgb = colorAt(level), offset = i * 4;
           pixels[offset] = rgb[0]; pixels[offset + 1] = rgb[1]; pixels[offset + 2] = rgb[2];
-          pixels[offset + 3] = Math.round(255 * (.1 + level * .42));
+          pixels[offset + 3] = Math.round(255 * (.08 + level * .5));
         }
         context.putImageData(image, 0, 0);
         output.save();
@@ -172,5 +206,5 @@
     return new HeatLayer();
   }
 
-  return { colorAt, sourceStrength, areaIntensity, sourceRadiusKm, createLayer };
+  return { colorAt, sourceStrength, areaIntensity, sourceRadiusKm, sourceFootprintKm, createLayer };
 });

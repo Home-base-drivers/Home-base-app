@@ -27,3 +27,18 @@ test('hotspot footprint changes by source category', () => {
   assert.ok(heat.sourceRadiusKm('transit') > heat.sourceRadiusKm('restaurant'));
   assert.notEqual(heat.sourceRadiusKm('event'), heat.sourceRadiusKm('school'));
 });
+
+test('public place density stays subordinate to live demand signals', () => {
+  const live = heat.sourceStrength({ tags: {} }, new Date(), () => 13);
+  const publicVenue = heat.sourceStrength({ tags: { publicVenue: true } }, new Date(), () => 13);
+  const baseline = heat.sourceStrength({ tags: { metroBaseline: true } }, new Date(), () => 13);
+  assert.ok(publicVenue < baseline);
+  assert.ok(baseline < live);
+});
+
+test('provider samples remain local while baseline communities feather wider', () => {
+  const provider = heat.sourceFootprintKm({ cat: 'neighborhood', tags: { providerSignal: true } });
+  const baseline = heat.sourceFootprintKm({ cat: 'neighborhood', tags: { metroBaseline: true } });
+  assert.ok(provider > baseline);
+  assert.ok(provider < heat.sourceRadiusKm('transit'));
+});
