@@ -59,9 +59,14 @@ confirmed rideshare requests.
 Uber client credentials also require the non-secret repository variable
 `UBER_ESTIMATES_SCOPE`, set to the estimates scope approved for the Uber app.
 Provider access must be approved by the provider. The app never receives API
-credentials. Ticketmaster events add verified event locations to the existing
-event feed. Uber surge multipliers contribute only when a sampled trip estimate
-shows meaningful surge and are a price proxy, not a count of ride requests.
+credentials. The public map inputs are Open-Meteo weather forecasts,
+OpenStreetMap venue/neighborhood features queried through Overpass, current MLB
+and ESPN event schedules, and OSRM road routes. They refresh from their public
+endpoints when the app refreshes; provider availability and rate limits can vary.
+Ticketmaster adds dated event locations when its secret is configured. FlightAware
+adds BWI scheduled-flight counts by hour when its secret is configured. Uber
+surge multipliers contribute only when an authorized sampled trip estimate shows
+meaningful surge; this is a price proxy, not a count of ride requests.
 Booking.com availability is shown as travel context only; it is not used as a
 rideshare-demand score. Missing credentials or provider outages do not fabricate
 signals, and the app discards expired provider data rather than presenting it as live.

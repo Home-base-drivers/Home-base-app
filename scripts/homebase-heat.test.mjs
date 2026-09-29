@@ -64,3 +64,8 @@ test('provider samples remain local while baseline communities feather wider', (
     'community categories retain different geographic footprints'
   );
 });
+
+test('heat opacity remains transparent enough to keep satellite streets visible', () => {
+  assert.ok(heat.compositeOpacity(100) <= .48);
+  assert.ok(heat.compositeOpacity(.1) < heat.compositeOpacity(10));
+});
