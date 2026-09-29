@@ -61,7 +61,10 @@
   }
 
   function compositeOpacity(value) {
-    return clamp(areaIntensity(Math.max(0, Number(value) || 0)) * .58, 0, .62);
+    // Keep locally scored demand legible above the dark basemap. Opacity still
+    // falls to zero with the measured field, so this does not manufacture a
+    // surrounding low-demand ring.
+    return clamp(areaIntensity(Math.max(0, Number(value) || 0)) * .74, 0, .76);
   }
 
   function sourceRadiusKm(category) {
@@ -95,7 +98,7 @@
         this._map = map;
         this._canvas = L.DomUtil.create('canvas', 'homebase-demand-canvas');
         this._canvas.setAttribute('aria-hidden', 'true');
-        this._canvas.style.cssText = 'position:absolute;pointer-events:none;image-rendering:auto;';
+        this._canvas.style.cssText = 'position:absolute;pointer-events:none;image-rendering:auto;opacity:1;visibility:visible;';
         map.getPane('heatPane').appendChild(this._canvas);
         map.on('moveend zoomend resize', this._schedule, this);
         this._schedule();
@@ -172,7 +175,7 @@
           if (amount <= 0) return;
           const level = compositeLevel(amount, weightedShade);
           const rgb = colorAt(level);
-          const opacity = clamp(.08 + compositeOpacity(amount) * .64, .08, .42);
+          const opacity = clamp(.12 + compositeOpacity(amount) * .72, .12, .58);
           const geometry = area.feature.geometry;
           const polygons = geometry.type === 'Polygon' ? [geometry.coordinates] : geometry.type === 'MultiPolygon' ? geometry.coordinates : [];
           if (!polygons.length) return;
@@ -219,8 +222,8 @@
             center, strength, angle, rx, ry,
             blockShape: (source.heatAreaType === 'label' || source.heatAreaType === 'neighborhood') && Array.isArray(bounds),
             shade: sourceShade(strength),
-            detailOpacity: source.tags && (source.tags.providerSignal || source.tags.providerEvent || source.tags.liveEvent) ? .82 :
-              source.heatAreaType === 'label' ? .22 : source.heatAreaType === 'neighborhood' ? .3 : .78,
+            detailOpacity: source.tags && (source.tags.providerSignal || source.tags.providerEvent || source.tags.liveEvent) ? .96 :
+              source.heatAreaType === 'label' ? .46 : source.heatAreaType === 'neighborhood' ? .56 : .9,
             skew: ((index % 7) - 3) * .045
           };
         }).filter(Boolean);
