@@ -16,6 +16,16 @@ test('heat palette includes green, amber, red, and magenta demand levels', () =>
   assert.ok(magenta[0] > magenta[1] && magenta[2] > magenta[1]);
 });
 
+test('the heat map exposes distinct persistent color patterns without changing demand strength', () => {
+  const classic = heat.colorAt(.7);
+  assert.deepEqual(heat.paletteNames, ['classic', 'ocean', 'ember']);
+  assert.equal(heat.setPalette('ocean'), 'ocean');
+  assert.notDeepEqual(heat.colorAt(.7), classic);
+  assert.equal(heat.getPalette(), 'ocean');
+  assert.equal(heat.setPalette('unknown'), 'ocean');
+  heat.setPalette('classic');
+});
+
 test('a strong local source fades in opacity without creating green and yellow rings', () => {
   const strongShade = heat.sourceShade(1);
   const center = heat.compositeLevel(1, strongShade);
@@ -63,4 +73,9 @@ test('provider samples remain local while baseline communities feather wider', (
     heat.sourceFootprintKm({ cat: 'restaurant', tags: { metroBaseline: true } }),
     'community categories retain different geographic footprints'
   );
+});
+
+test('heat opacity remains transparent enough to keep satellite streets visible', () => {
+  assert.ok(heat.compositeOpacity(100) <= .48);
+  assert.ok(heat.compositeOpacity(.1) < heat.compositeOpacity(10));
 });

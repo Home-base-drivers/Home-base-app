@@ -5,15 +5,12 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const STOPS = [
-    [0, [7, 91, 45]],
-    [.16, [19, 148, 57]],
-    [.32, [137, 188, 49]],
-    [.48, [250, 207, 43]],
-    [.64, [255, 132, 28]],
-    [.8, [242, 45, 43]],
-    [1, [222, 26, 133]]
-  ];
+  const PALETTES = {
+    classic: [[0,[7,91,45]],[.16,[19,148,57]],[.32,[137,188,49]],[.48,[250,207,43]],[.64,[255,132,28]],[.8,[242,45,43]],[1,[222,26,133]]],
+    ocean: [[0,[7,55,111]],[.16,[7,112,169]],[.32,[20,179,193]],[.48,[116,216,168]],[.64,[243,220,91]],[.8,[243,139,69]],[1,[192,82,190]]],
+    ember: [[0,[74,47,111]],[.16,[111,49,156]],[.32,[174,54,139]],[.48,[224,73,94]],[.64,[246,123,55]],[.8,[250,181,48]],[1,[255,230,112]]]
+  };
+  let activePalette = 'classic';
   const RADII_KM = {
     school: 1.45, k12: 1.45, university: 1.8, transit: 2.1, event: 1.7, nightlife: 1.2,
     restaurant: 1.15, hotel: 1.5, attraction: 1.6,
@@ -21,8 +18,15 @@
   };
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
+  function setPalette(name) {
+    if (!Object.prototype.hasOwnProperty.call(PALETTES, name)) return activePalette;
+    activePalette = name;
+    return activePalette;
+  }
+
   function colorAt(level) {
     const value = clamp(Number(level) || 0, 0, 1);
+    const STOPS = PALETTES[activePalette];
     let low = STOPS[0], high = STOPS[STOPS.length - 1];
     for (let i = 1; i < STOPS.length; i++) {
       if (value <= STOPS[i][0]) { low = STOPS[i - 1]; high = STOPS[i]; break; }
@@ -71,7 +75,7 @@
     // Keep locally scored demand legible above the dark basemap. Opacity still
     // falls to zero with the measured field, so this does not manufacture a
     // surrounding low-demand ring.
-    return clamp(areaIntensity(Math.max(0, Number(value) || 0)) * .74, 0, .76);
+    return clamp(areaIntensity(Math.max(0, Number(value) || 0)) * .52, 0, .48);
   }
 
   function sourceRadiusKm(category) {
@@ -168,6 +172,7 @@
           area.feature && area.feature.geometry && (area.sources || []).length
         );
         if (!active.length) return;
+        const zoomFactor = map.getZoom() >= 15 ? .62 : map.getZoom() >= 13 ? .78 : 1;
         const width = Math.max(1, Math.ceil(size.x / sample));
         const height = Math.max(1, Math.ceil(size.y / sample));
         const paint = document.createElement('canvas');
@@ -192,7 +197,7 @@
           if (amount <= 0) return;
           const level = compositeLevel(amount, weightedShade);
           const rgb = colorAt(level);
-          const opacity = clamp(.12 + compositeOpacity(amount) * .72, .12, .58);
+          const opacity = clamp(.045 + compositeOpacity(amount) * .43, .055, .27) * zoomFactor;
           const geometry = area.feature.geometry;
           const polygons = geometry.type === 'Polygon' ? [geometry.coordinates] : geometry.type === 'MultiPolygon' ? geometry.coordinates : [];
           if (!polygons.length) return;
@@ -215,6 +220,7 @@
       },
       _drawSources(output, map, sourceData, size, sample) {
         if (!Array.isArray(sourceData) || !sourceData.length) return;
+        const zoomFactor = map.getZoom() >= 15 ? .62 : map.getZoom() >= 13 ? .78 : 1;
         const sources = sourceData.map((source, index) => {
           // Label/county anchors exist only to name areas. Neighborhood
           // coverage anchors remain fixed geographic sources at every zoom.
@@ -245,8 +251,8 @@
             center, strength, angle, rx, ry,
             blockShape: (source.heatAreaType === 'label' || source.heatAreaType === 'neighborhood') && Array.isArray(bounds),
             shade: sourceShade(strength),
-            detailOpacity: source.tags && (source.tags.providerSignal || source.tags.providerEvent || source.tags.liveEvent) ? .96 :
-              source.heatAreaType === 'label' ? .46 : source.heatAreaType === 'neighborhood' ? .56 : .9,
+            detailOpacity: source.tags && (source.tags.providerSignal || source.tags.providerEvent || source.tags.liveEvent) ? .76 :
+              source.heatAreaType === 'label' ? .34 : source.heatAreaType === 'neighborhood' ? .40 : .68,
             skew: ((index % 7) - 3) * .045
           };
         }).filter(Boolean);
@@ -316,7 +322,7 @@
           if (value < .018) continue;
           const level = compositeLevel(value, shadeField[i]), rgb = colorAt(level), offset = i * 4;
           pixels[offset] = rgb[0]; pixels[offset + 1] = rgb[1]; pixels[offset + 2] = rgb[2];
-          pixels[offset + 3] = Math.round(255 * compositeOpacity(value));
+          pixels[offset + 3] = Math.round(255 * compositeOpacity(value) * zoomFactor);
         }
         context.putImageData(image, 0, 0);
         output.save();
@@ -329,5 +335,5 @@
     return new HeatLayer();
   }
 
-  return { colorAt, sourceStrength, areaIntensity, sourceShade, compositeLevel, compositeOpacity, sourceRadiusKm, sourceFootprintKm, createLayer };
+  return { colorAt, setPalette, getPalette: () => activePalette, paletteNames: Object.keys(PALETTES), sourceStrength, areaIntensity, sourceShade, compositeLevel, compositeOpacity, sourceRadiusKm, sourceFootprintKm, createLayer };
 });

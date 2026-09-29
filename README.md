@@ -38,22 +38,38 @@ https://home-base-driver-live.chrisbrouard7.chatgpt.site
 ## Provider data feeds
 
 `.github/workflows/provider-signals.yml` targets a five-minute refresh for the
-optional Baltimore provider feed and deploys only sanitized public results.
+Baltimore provider signals and deploys only sanitized public results.
+Public sources and the Ticketmaster, Uber, and FlightAware connectors are core data inputs and stay enabled in the pipeline; provider feeds return unavailable status until their owner-authorized credentials are saved in GitHub Actions secrets.
 GitHub can delay scheduled workflows during high load, so the app displays the
 source timestamp, checks for a new deployed snapshot every two minutes, treats
 Uber samples as live for 12 minutes, and removes them after 25 minutes. Configure these
-GitHub Actions repository secrets to enable the corresponding provider:
+GitHub Actions repository secrets for the required provider feeds:
 
 - `TICKETMASTER_API_KEY`
 - `UBER_CLIENT_ID` and `UBER_CLIENT_SECRET` (or `UBER_ACCESS_TOKEN`)
-- `BOOKING_API_KEY` and `BOOKING_AFFILIATE_ID`
+- `FLIGHTAWARE_API_KEY` — AeroAPI access for BWI scheduled airline arrivals and departures
+
+Booking.com credentials can be added separately for travel context; they do not
+feed the rideshare-demand score.
+
+The FlightAware workflow publishes only hourly aggregate arrival/departure counts
+and source freshness; it does not publish flight identifiers or tracks. Each
+five-minute provider refresh makes one scheduled-arrivals query and one
+scheduled-departures query for KBWI when the FlightAware secret is configured.
+The FlightAware score is an airport activity proxy, not passenger counts or
+confirmed rideshare requests.
 
 Uber client credentials also require the non-secret repository variable
 `UBER_ESTIMATES_SCOPE`, set to the estimates scope approved for the Uber app.
 Provider access must be approved by the provider. The app never receives API
-credentials. Ticketmaster events add verified event locations to the existing
-event feed. Uber surge multipliers contribute only when a sampled trip estimate
-shows meaningful surge and are a price proxy, not a count of ride requests.
+credentials. The public map inputs are Open-Meteo weather forecasts,
+OpenStreetMap venue/neighborhood features queried through Overpass, current MLB
+and ESPN event schedules, and OSRM road routes. They refresh from their public
+endpoints when the app refreshes; provider availability and rate limits can vary.
+Ticketmaster adds dated event locations when its secret is configured. FlightAware
+adds BWI scheduled-flight counts by hour when its secret is configured. Uber
+surge multipliers contribute only when an authorized sampled trip estimate shows
+meaningful surge; this is a price proxy, not a count of ride requests.
 Booking.com availability is shown as travel context only; it is not used as a
 rideshare-demand score. Missing credentials or provider outages do not fabricate
 signals, and the app discards expired provider data rather than presenting it as live.
@@ -73,8 +89,9 @@ group with at least five consenting users and twenty trips.
 
 ## Development rule
 
-Create a branch, open a pull request, and have the other owner review material
-feature, data, branding, or design changes before merging into `main`.
+Contributors may publish directly to `main` without waiting for a pull-request
+review. Run the repository checks before publishing; pull requests remain
+available for discussion, and GitHub Pages deploys changes from `main`.
 
 ## Data honesty
 
