@@ -38,15 +38,13 @@ test('geographic anchors stay in Baltimore metro and exclude Washington and Virg
   assert.equal(containingArea(38.8048, -77.0469), undefined, 'Alexandria, Virginia is a separate market');
 });
 
-test('demand rendering blends fine neighborhood geography with a feathered metro surface', () => {
+test('demand rendering uses one map-anchored geographic surface at every zoom', () => {
   assert.match(indexHtml, /areaType==='label'.+areaType==='neighborhood'.+areaType==='county'/s);
   assert.match(indexHtml, /heatLayer\.setData\(demandAreas,selectedForecastTime,demandWeight,demandAreaSources\)/);
-  assert.match(heatRenderer, /_drawAreaSurface/);
-  assert.match(heatRenderer, /context\.filter = `blur/);
   assert.match(indexHtml, /createAreaCoverageSources/);
   assert.match(indexHtml, /areaCoverageAnchor:true/);
   assert.match(heatRenderer, /source\.tags\.areaCoverageAnchor/);
-  assert.match(heatRenderer, /map\.getZoom\(\) >= 12\) this\._drawAreaSurface/);
+  assert.doesNotMatch(heatRenderer, /map\.getZoom\(\) >= 12\) this\._drawAreaSurface/);
   assert.match(heatRenderer, /source\.heatAreaType !== 'neighborhood'/);
 });
 
@@ -62,4 +60,15 @@ test('K–12 pickup and university demand use different timing models', () => {
   assert.match(indexHtml, /weekday&&h>=13&&h<19\?7/);
   assert.match(indexHtml, /K–12 pickup and dismissal window/);
   assert.match(indexHtml, /All-day campus activity/);
+  assert.match(indexHtml, /h>=15\.75&&h<16\.5/);
+  assert.match(indexHtml, /h>=16\.5&&h<17/);
+  assert.match(indexHtml, /h>=15\.5&&h<20/);
+});
+
+test('stadium heat and route stops require a dated verified event', () => {
+  assert.match(indexHtml, /source\.cat==='event'&&!source\.eventStart/);
+  assert.match(indexHtml, /v\.cat!=='event'\|\|v\.eventStart/);
+  assert.match(indexHtml, /heatOnly:source\.cat==='event'/);
+  assert.match(indexHtml, /function eventScale/);
+  assert.match(indexHtml, /function rainDemandBoost/);
 });
