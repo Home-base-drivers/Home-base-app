@@ -29,6 +29,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+      - name: Test provider normalization
+        run: node --test tests/*.test.mjs
       - name: Fetch provider signals
         run: node scripts/refresh-provider-signals.mjs
         env:
