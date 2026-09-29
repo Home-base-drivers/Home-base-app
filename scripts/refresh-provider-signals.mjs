@@ -187,6 +187,80 @@ async function bookingProvider(market) {
   };
 }
 
+
+function flightRows(payload, candidates) {
+  if (Array.isArray(payload)) return payload;
+  for (const key of candidates) if (Array.isArray(payload?.[key])) return payload[key];
+  return [];
+}
+
+function flightTime(value) {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    const date = new Date(value < 10_000_000_000 ? value * 1000 : value);
+    return Number.isFinite(date.getTime()) ? date : null;
+  }
+  if (typeof value !== 'string' || !value) return null;
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) ? date : null;
+}
+
+export function normalizeFlightAwareActivity(arrivalPayload, departurePayload, airport, now = NOW) {
+  const byHour = new Map();
+  const lowerBound = now.getTime() - 30 * 60_000;
+  const upperBound = now.getTime() + 12 * 60 * 60_000;
+  const addFlights = (rows, direction) => {
+    const seen = new Set();
+    for (const flight of rows) {
+      const candidateTimes = direction === 'arrival'
+        ? [flight.estimated_in, flight.scheduled_in, flight.actual_in, flight.estimated_arrival, flight.scheduled_arrival]
+        : [flight.scheduled_out, flight.estimated_out, flight.actual_out, flight.scheduled_departure, flight.estimated_departure];
+      const time = candidateTimes.map(flightTime).find(Boolean);
+      if (!time || time.getTime() < lowerBound || time.getTime() > upperBound) continue;
+      const key = String(flight.fa_flight_id || flight.ident || '') + ':' + time.toISOString();
+      if (key === ':' || seen.has(key)) continue;
+      seen.add(key);
+      const hour = new Date(time);
+      hour.setUTCMinutes(0, 0, 0);
+      const isoHour = hour.toISOString();
+      const bucket = byHour.get(isoHour) || { hour: isoHour, arrivals: 0, departures: 0 };
+      bucket[direction === 'arrival' ? 'arrivals' : 'departures']++;
+      byHour.set(isoHour, bucket);
+    }
+  };
+  addFlights(flightRows(arrivalPayload, ['scheduled_arrivals', 'arrivals', 'flights']), 'arrival');
+  addFlights(flightRows(departurePayload, ['scheduled_departures', 'departures', 'flights']), 'departure');
+  return [...byHour.values()].sort((a, b) => a.hour.localeCompare(b.hour)).map(bucket => ({
+    ...bucket, lat: airport.lat, lon: airport.lon, name: airport.name
+  }));
+}
+
+async function flightAwareRequest(airport, direction, key) {
+  const url = new URL(`https://aeroapi.flightaware.com/aeroapi/airports/${encodeURIComponent(airport.id)}/flights/scheduled_${direction}s`);
+  url.search = new URLSearchParams({ type: 'Airline', max_pages: '1' });
+  return readJson(await boundedFetch(url, {
+    headers: { 'x-apikey': key, Accept: 'application/json; charset=UTF-8' }
+  }));
+}
+
+async function flightAwareProvider(market) {
+  const key = process.env.FLIGHTAWARE_API_KEY;
+  const airport = market.flightawareAirport;
+  if (!airport) return { status: 'not_supported', fetchedAt: null, airport: null, activityByHour: [] };
+  if (!key) return { status: 'not_configured', fetchedAt: null, airport, activityByHour: [] };
+  try {
+    const [arrivals, departures] = await Promise.all([
+      flightAwareRequest(airport, 'arrival', key),
+      flightAwareRequest(airport, 'departure', key)
+    ]);
+    return {
+      status: 'active', fetchedAt: NOW.toISOString(), airport,
+      activityByHour: normalizeFlightAwareActivity(arrivals, departures, airport)
+    };
+  } catch (error) {
+    return { status: safeStatus(error), fetchedAt: NOW.toISOString(), airport, activityByHour: [] };
+  }
+}
+
 function retainRecent(previous, current, key, maxAgeMs = 25 * 60_000) {
   if (current.status === 'active') return current;
   const old = previous?.[key];
@@ -202,19 +276,20 @@ async function main() {
   try { previous = JSON.parse(await readFile(OUTPUT_URL, 'utf8')); } catch { /* first run */ }
   const markets = [];
   for (const market of config.markets) {
-    const [uber, ticketmaster, booking] = await Promise.all([
-      uberProvider(market), ticketmasterProvider(market), bookingProvider(market)
+    const [uber, ticketmaster, booking, flightaware] = await Promise.all([
+      uberProvider(market), ticketmasterProvider(market), bookingProvider(market), flightAwareProvider(market)
     ]);
     const old = previous.markets?.find((entry) => entry.id === market.id);
     markets.push({
       id: market.id, name: market.name, center: market.center, radiusKm: market.radiusKm,
       uber: retainRecent(old, uber, 'uber'),
       ticketmaster: retainRecent(old, ticketmaster, 'ticketmaster'),
-      booking: retainRecent(old, booking, 'booking')
+      booking: retainRecent(old, booking, 'booking'),
+      flightaware: retainRecent(old, flightaware, 'flightaware')
     });
   }
   const output = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     generatedAt: NOW.toISOString(),
     refreshTargetSeconds: 300,
     expiresAt: new Date(NOW.getTime() + 25 * 60_000).toISOString(),
@@ -222,7 +297,7 @@ async function main() {
   };
   await writeFile(OUTPUT_URL, `${JSON.stringify(output, null, 2)}\n`);
   for (const market of markets) {
-    console.log(`${market.name}: Uber ${market.uber.status}, Ticketmaster ${market.ticketmaster.status}, Booking.com ${market.booking.status}`);
+    console.log(`${market.name}: Uber ${market.uber.status}, Ticketmaster ${market.ticketmaster.status}, Booking.com ${market.booking.status}, FlightAware ${market.flightaware.status}`);
   }
 }
 
