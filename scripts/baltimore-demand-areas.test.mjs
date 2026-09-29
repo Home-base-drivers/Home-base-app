@@ -45,7 +45,9 @@ test('demand rendering blends fine neighborhood geography with a feathered metro
   assert.match(heatRenderer, /context\.filter = `blur/);
   assert.match(indexHtml, /createAreaCoverageSources/);
   assert.match(indexHtml, /areaCoverageAnchor:true/);
-  assert.match(heatRenderer, /areaCoverageAnchor\) return null/);
+  assert.match(heatRenderer, /source\.tags\.areaCoverageAnchor/);
+  assert.match(heatRenderer, /map\.getZoom\(\) >= 12\) this\._drawAreaSurface/);
+  assert.match(heatRenderer, /source\.heatAreaType !== 'neighborhood'/);
 });
 
 test('K–12 pickup and university demand use different timing models', () => {
