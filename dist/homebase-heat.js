@@ -40,7 +40,14 @@
     // Public points describe activity density, not verified ride requests. They
     // become useful when several nearby places overlap, without turning every
     // restaurant or school into a red hotspot by itself.
-    if (tags.publicVenue) strength *= tags.place ? .28 : .2;
+    if (tags.publicVenue) {
+      const foodAmenity = String(tags.amenity || '').toLowerCase();
+      // Single restaurant POIs are not reliable passenger-demand evidence;
+      // retain only a light background contribution. Fast-food POIs are
+      // filtered from the ride score upstream and stay available as delivery
+      // context for a future Uber Eats layer.
+      strength *= foodAmenity === 'restaurant' || foodAmenity === 'cafe' ? .08 : tags.place ? .28 : .2;
+    }
     if (tags.metroBaseline || tags.forecast) strength *= .82;
     return clamp(strength, 0, 1.25);
   }
