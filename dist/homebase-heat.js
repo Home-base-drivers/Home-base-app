@@ -74,7 +74,13 @@
   function sourceFootprintKm(source) {
     const tags = source.tags || {};
     if (tags.providerSignal) return 1.35;
-    if (tags.metroBaseline) return source.cat === 'neighborhood' ? 1.05 : sourceRadiusKm(source.cat) * .72;
+    if (tags.metroBaseline) {
+      // Community anchors represent an area, not a single address. Wider,
+      // category-specific footprints connect county demand without turning it
+      // into one city-centered oval.
+      const metro = { neighborhood: 3.25, shopping: 3.1, transit: 3.45, restaurant: 2.7, university: 2.9, k12: 2.15, event: 2.55, hotel: 2.8, medical: 2.65 };
+      return metro[source.cat] || 2.75;
+    }
     if (tags.publicVenue) return source.cat === 'neighborhood' ? 1.0 : sourceRadiusKm(source.cat) * .62;
     if (source.cat === 'event') return 1.35;
     return sourceRadiusKm(source.cat);
@@ -182,7 +188,8 @@
           context.save();
           // A blurred geographic mask keeps the neighborhood influence of the
           // provider reference without displaying a polygon edge or cell grid.
-          context.filter = `blur(${area.areaType === 'label' ? 4.5 : 7}px)`;
+          const blur = map.getZoom() <= 11 ? (area.areaType === 'label' ? 15 : 20) : (area.areaType === 'label' ? 8 : 11);
+          context.filter = `blur(${blur}px)`;
           context.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${opacity})`;
           context.beginPath();
           polygons.forEach(rings => rings.forEach(traceRing));

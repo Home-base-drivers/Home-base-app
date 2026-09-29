@@ -56,6 +56,11 @@ test('public place density stays subordinate to live demand signals', () => {
 test('provider samples remain local while baseline communities feather wider', () => {
   const provider = heat.sourceFootprintKm({ cat: 'neighborhood', tags: { providerSignal: true } });
   const baseline = heat.sourceFootprintKm({ cat: 'neighborhood', tags: { metroBaseline: true } });
-  assert.ok(provider > baseline);
-  assert.ok(provider < heat.sourceRadiusKm('transit'));
+  assert.ok(provider < baseline);
+  assert.ok(baseline >= 3, 'county community anchors cover a meaningful neighborhood area');
+  assert.notEqual(
+    heat.sourceFootprintKm({ cat: 'transit', tags: { metroBaseline: true } }),
+    heat.sourceFootprintKm({ cat: 'restaurant', tags: { metroBaseline: true } }),
+    'community categories retain different geographic footprints'
+  );
 });
