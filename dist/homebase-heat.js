@@ -6,7 +6,7 @@
   'use strict';
 
   const PALETTES = {
-    classic: [[0,[7,91,45]],[.16,[19,148,57]],[.32,[137,188,49]],[.48,[250,207,43]],[.64,[255,132,28]],[.8,[242,45,43]],[1,[222,26,133]]],
+    classic: [[0,[10,66,92]],[.14,[16,158,120]],[.3,[62,196,73]],[.47,[255,220,42]],[.64,[255,146,31]],[.82,[247,52,49]],[1,[222,25,180]]],
     ocean: [[0,[7,55,111]],[.16,[7,112,169]],[.32,[20,179,193]],[.48,[116,216,168]],[.64,[243,220,91]],[.8,[243,139,69]],[1,[192,82,190]]],
     ember: [[0,[74,47,111]],[.16,[111,49,156]],[.32,[174,54,139]],[.48,[224,73,94]],[.64,[246,123,55]],[.8,[250,181,48]],[1,[255,230,112]]]
   };
@@ -172,7 +172,7 @@
           area.feature && area.feature.geometry && (area.sources || []).length
         );
         if (!active.length) return;
-        const zoomFactor = map.getZoom() >= 15 ? .62 : map.getZoom() >= 13 ? .78 : 1;
+        const zoomFactor = map.getZoom() >= 15 ? .78 : map.getZoom() >= 13 ? .92 : 1;
         const width = Math.max(1, Math.ceil(size.x / sample));
         const height = Math.max(1, Math.ceil(size.y / sample));
         const paint = document.createElement('canvas');
@@ -197,14 +197,14 @@
           if (amount <= 0) return;
           const level = compositeLevel(amount, weightedShade);
           const rgb = colorAt(level);
-          const opacity = clamp(.045 + compositeOpacity(amount) * .43, .055, .27) * zoomFactor;
+          const opacity = clamp(.17 + compositeOpacity(amount) * .86, .17, .46) * zoomFactor;
           const geometry = area.feature.geometry;
           const polygons = geometry.type === 'Polygon' ? [geometry.coordinates] : geometry.type === 'MultiPolygon' ? geometry.coordinates : [];
           if (!polygons.length) return;
           context.save();
           // A blurred geographic mask keeps the neighborhood influence of the
           // provider reference without displaying a polygon edge or cell grid.
-          const blur = map.getZoom() <= 11 ? (area.areaType === 'label' ? 15 : 20) : (area.areaType === 'label' ? 8 : 11);
+          const blur = map.getZoom() >= 15 ? 2.5 : 4.5;
           context.filter = `blur(${blur}px)`;
           context.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${opacity})`;
           context.beginPath();
@@ -252,7 +252,7 @@
             blockShape: (source.heatAreaType === 'label' || source.heatAreaType === 'neighborhood') && Array.isArray(bounds),
             shade: sourceShade(strength),
             detailOpacity: source.tags && (source.tags.providerSignal || source.tags.providerEvent || source.tags.liveEvent) ? .76 :
-              source.heatAreaType === 'label' ? .34 : source.heatAreaType === 'neighborhood' ? .40 : .68,
+              source.heatAreaType === 'label' ? .34 : source.heatAreaType === 'neighborhood' ? .54 : .68,
             skew: ((index % 7) - 3) * .045
           };
         }).filter(Boolean);
