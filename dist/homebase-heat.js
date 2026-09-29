@@ -41,7 +41,7 @@
     // become useful when several nearby places overlap, without turning every
     // restaurant or school into a red hotspot by itself.
     if (tags.publicVenue) strength *= tags.place ? .28 : .2;
-    if (tags.metroBaseline || tags.forecast) strength *= .7;
+    if (tags.metroBaseline || tags.forecast) strength *= .82;
     return clamp(strength, 0, 1.25);
   }
 
