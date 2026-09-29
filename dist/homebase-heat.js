@@ -90,7 +90,7 @@
   function createLayer(L) {
     if (!L || !L.Layer || typeof L.Layer.extend !== 'function') throw new Error('Leaflet must load before the Home Base heat layer.');
     const HeatLayer = L.Layer.extend({
-      initialize() { this._areas = []; this._when = new Date(); this._scoreSource = () => 0; this._frame = 0; },
+      initialize() { this._areas = []; this._sources = []; this._when = new Date(); this._scoreSource = () => 0; this._frame = 0; },
       onAdd(map) {
         this._map = map;
         this._canvas = L.DomUtil.create('canvas', 'homebase-demand-canvas');
@@ -106,8 +106,9 @@
         this._canvas.remove();
         this._canvas = null;
       },
-      setData(areas, when, scoreSource) {
+      setData(areas, when, scoreSource, sources) {
         this._areas = Array.isArray(areas) ? areas : [];
+        this._sources = Array.isArray(sources) ? sources : [];
         this._when = when || new Date();
         this._scoreSource = typeof scoreSource === 'function' ? scoreSource : () => 0;
         this._schedule();
@@ -134,11 +135,62 @@
 
         const sample = map.getZoom() < 10 ? 2.5 : 2;
         const seen = new Set(), sources = [];
-        this._areas.forEach(area => (area.sources || []).forEach(source => {
+        [...this._sources, ...this._areas.flatMap(area => area.sources || [])].forEach(source => {
           const key = `${Number(source.lat).toFixed(5)}:${Number(source.lon).toFixed(5)}:${source.name || ''}`;
           if (!seen.has(key)) { seen.add(key); sources.push(source); }
-        }));
+        });
+        this._drawAreaSurface(output, map, this._areas, size, sample);
         this._drawSources(output, map, sources, size, sample);
+      },
+      _drawAreaSurface(output, map, areas, size, sample) {
+        const active = (areas || []).filter(area =>
+          (area.areaType === 'label' || area.areaType === 'neighborhood') &&
+          area.feature && area.feature.geometry && (area.sources || []).length
+        );
+        if (!active.length) return;
+        const width = Math.max(1, Math.ceil(size.x / sample));
+        const height = Math.max(1, Math.ceil(size.y / sample));
+        const paint = document.createElement('canvas');
+        paint.width = width; paint.height = height;
+        const context = paint.getContext('2d');
+        const traceRing = ring => {
+          ring.forEach((coordinate, index) => {
+            const point = map.latLngToContainerPoint([coordinate[1], coordinate[0]]);
+            const x = point.x / sample, y = point.y / sample;
+            if (index) context.lineTo(x, y); else context.moveTo(x, y);
+          });
+          context.closePath();
+        };
+        active.forEach(area => {
+          let amount = 0, weightedShade = 0;
+          (area.sources || []).forEach(source => {
+            const strength = sourceStrength(source, this._when, this._scoreSource);
+            if (!strength) return;
+            amount += strength;
+            weightedShade += strength * sourceShade(strength);
+          });
+          if (amount <= 0) return;
+          const level = compositeLevel(amount, weightedShade);
+          const rgb = colorAt(level);
+          const opacity = clamp(.08 + compositeOpacity(amount) * .64, .08, .42);
+          const geometry = area.feature.geometry;
+          const polygons = geometry.type === 'Polygon' ? [geometry.coordinates] : geometry.type === 'MultiPolygon' ? geometry.coordinates : [];
+          if (!polygons.length) return;
+          context.save();
+          // A blurred geographic mask keeps the neighborhood influence of the
+          // provider reference without displaying a polygon edge or cell grid.
+          context.filter = `blur(${area.areaType === 'label' ? 4.5 : 7}px)`;
+          context.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${opacity})`;
+          context.beginPath();
+          polygons.forEach(rings => rings.forEach(traceRing));
+          context.fill('evenodd');
+          context.restore();
+        });
+        output.save();
+        output.imageSmoothingEnabled = true;
+        output.imageSmoothingQuality = 'high';
+        output.drawImage(paint, 0, 0, size.x, size.y);
+        output.restore();
       },
       _drawSources(output, map, sourceData, size, sample) {
         if (!Array.isArray(sourceData) || !sourceData.length) return;
@@ -155,7 +207,7 @@
           // neighborhood. This retains the useful neighborhood-block character
           // without restoring hard polygon edges or separate city/county maps.
           const bounds = source.heatAreaBounds;
-          if (source.heatAreaType === 'neighborhood' && Array.isArray(bounds) && bounds.length === 4) {
+          if ((source.heatAreaType === 'label' || source.heatAreaType === 'neighborhood') && Array.isArray(bounds) && bounds.length === 4) {
             const nw = map.latLngToContainerPoint([bounds[2], bounds[1]]);
             const se = map.latLngToContainerPoint([bounds[0], bounds[3]]);
             const areaRx = clamp(Math.abs(se.x - nw.x) * .28, radius * .55, radius * 2.35);
@@ -165,8 +217,10 @@
           }
           return {
             center, strength, angle, rx, ry,
-            blockShape: source.heatAreaType === 'neighborhood' && Array.isArray(bounds),
+            blockShape: (source.heatAreaType === 'label' || source.heatAreaType === 'neighborhood') && Array.isArray(bounds),
             shade: sourceShade(strength),
+            detailOpacity: source.tags && (source.tags.providerSignal || source.tags.providerEvent || source.tags.liveEvent) ? .82 :
+              source.heatAreaType === 'label' ? .22 : source.heatAreaType === 'neighborhood' ? .3 : .78,
             skew: ((index % 7) - 3) * .045
           };
         }).filter(Boolean);
@@ -214,7 +268,8 @@
               .66 * Math.exp(-primary * .72) +
               .2 * Math.exp(-shoulderA * 1.05) +
               .14 * Math.exp(-shoulderB * 1.2);
-              const contribution = source.strength * profile;
+              const texture = clamp(.82 + .11 * Math.sin(rx * 3.3 + source.angle * 5) + .08 * Math.cos(ry * 4.1 - source.angle * 3), .62, 1.04);
+              const contribution = source.strength * profile * texture * source.detailOpacity;
               const offset = y * gridWidth + x;
               field[offset] += contribution;
               // Color belongs to each locally measured source, while distance

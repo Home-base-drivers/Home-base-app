@@ -26,6 +26,13 @@ test('a strong local source fades in opacity without creating green and yellow r
   assert.ok(heat.sourceShade(.22) < .35, 'a separate lower-demand source can remain independently green/yellow');
 });
 
+test('the same geographic area can change shade when its time-based score changes', () => {
+  const area = { tags: {} };
+  const quietStrength = heat.sourceStrength(area, new Date('2026-09-28T10:00:00Z'), () => 3);
+  const eventStrength = heat.sourceStrength(area, new Date('2026-09-28T23:00:00Z'), () => 12);
+  assert.ok(heat.sourceShade(eventStrength) > heat.sourceShade(quietStrength));
+});
+
 test('forecast-only sources are more subdued than equivalent live signals', () => {
   const live = heat.sourceStrength({ tags: {} }, new Date(), () => 13);
   const forecast = heat.sourceStrength({ tags: { forecast: true } }, new Date(), () => 13);

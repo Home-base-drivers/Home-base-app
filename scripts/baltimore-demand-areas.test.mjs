@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const areas = JSON.parse(await readFile(new URL('../dist/baltimore-demand-areas.geojson', import.meta.url), 'utf8'));
+const indexHtml = await readFile(new URL('../dist/index.html', import.meta.url), 'utf8');
+const heatRenderer = await readFile(new URL('../dist/homebase-heat.js', import.meta.url), 'utf8');
 function inRing(lon, lat, ring) {
   let inside = false;
   for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
@@ -34,4 +36,11 @@ test('geographic anchors stay in Baltimore metro and exclude Washington and Virg
   assert.ok(containingArea(38.98, -76.49), 'Annapolis is in Anne Arundel County coverage');
   assert.equal(containingArea(38.9072, -77.0369), undefined, 'Washington, DC is a separate market');
   assert.equal(containingArea(38.8048, -77.0469), undefined, 'Alexandria, Virginia is a separate market');
+});
+
+test('demand rendering blends fine neighborhood geography with a feathered metro surface', () => {
+  assert.match(indexHtml, /areaType==='label'.+areaType==='neighborhood'.+areaType==='county'/s);
+  assert.match(indexHtml, /heatLayer\.setData\(demandAreas,selectedForecastTime,demandWeight,demandAreaSources\)/);
+  assert.match(heatRenderer, /_drawAreaSurface/);
+  assert.match(heatRenderer, /context\.filter = `blur/);
 });
