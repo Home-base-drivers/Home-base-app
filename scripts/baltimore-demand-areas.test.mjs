@@ -43,4 +43,16 @@ test('demand rendering blends fine neighborhood geography with a feathered metro
   assert.match(indexHtml, /heatLayer\.setData\(demandAreas,selectedForecastTime,demandWeight,demandAreaSources\)/);
   assert.match(heatRenderer, /_drawAreaSurface/);
   assert.match(heatRenderer, /context\.filter = `blur/);
+  assert.match(indexHtml, /createAreaCoverageSources/);
+  assert.match(indexHtml, /areaCoverageAnchor:true/);
+  assert.match(heatRenderer, /areaCoverageAnchor\) return null/);
+});
+
+test('K–12 pickup and university demand use different timing models', () => {
+  assert.match(indexHtml, /amenity==='school'.+return'k12'/s);
+  assert.match(indexHtml, /amenity==='college'.+return'university'/s);
+  assert.match(indexHtml, /\['Morgan State University','university'/);
+  assert.match(indexHtml, /\['Baltimore City College','k12'/);
+  assert.match(indexHtml, /K–12 pickup and dismissal window/);
+  assert.match(indexHtml, /All-day campus activity/);
 });

@@ -15,7 +15,7 @@
     [1, [222, 26, 133]]
   ];
   const RADII_KM = {
-    school: 1.45, transit: 2.1, event: 1.7, nightlife: 1.2,
+    school: 1.45, k12: 1.45, university: 1.8, transit: 2.1, event: 1.7, nightlife: 1.2,
     restaurant: 1.15, hotel: 1.5, attraction: 1.6,
     medical: 1.55, neighborhood: 1.65, shopping: 1.8
   };
@@ -198,6 +198,9 @@
       _drawSources(output, map, sourceData, size, sample) {
         if (!Array.isArray(sourceData) || !sourceData.length) return;
         const sources = sourceData.map((source, index) => {
+          // Coverage anchors color their real neighborhood polygons above.
+          // Do not also draw a circular point lobe at the polygon centroid.
+          if (source.tags && source.tags.areaCoverageAnchor) return null;
           const strength = sourceStrength(source, this._when, this._scoreSource);
           if (!strength || !Number.isFinite(source.lat) || !Number.isFinite(source.lon)) return null;
           const center = map.latLngToContainerPoint([source.lat, source.lon]);
