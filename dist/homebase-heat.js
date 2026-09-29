@@ -148,10 +148,9 @@
           const key = `${Number(source.lat).toFixed(5)}:${Number(source.lon).toFixed(5)}:${source.name || ''}`;
           if (!seen.has(key)) { seen.add(key); sources.push(source); }
         });
-        // At metro zoom, use overlapping geographic community fields. Drawing
-        // hundreds of neighborhood polygons at once reads as a rectangular
-        // city mask. Close zoom keeps the actual neighborhood geometry.
-        if (map.getZoom() >= 12) this._drawAreaSurface(output, map, this._areas, size, sample);
+        // Keep one geographic representation at every zoom. Switching from
+        // source fields to polygon masks made hotspots appear to jump when the
+        // map crossed the former zoom threshold.
         this._drawSources(output, map, sources, size, sample);
       },
       _drawAreaSurface(output, map, areas, size, sample) {
@@ -208,10 +207,10 @@
       _drawSources(output, map, sourceData, size, sample) {
         if (!Array.isArray(sourceData) || !sourceData.length) return;
         const sources = sourceData.map((source, index) => {
-          // Coverage anchors color their real neighborhood polygons above.
-          // Do not also draw a circular point lobe at the polygon centroid.
+          // Label/county anchors exist only to name areas. Neighborhood
+          // coverage anchors remain fixed geographic sources at every zoom.
           if (source.tags && source.tags.areaCoverageAnchor) {
-            if (map.getZoom() >= 12 || source.heatAreaType !== 'neighborhood') return null;
+            if (source.heatAreaType !== 'neighborhood') return null;
           }
           const strength = sourceStrength(source, this._when, this._scoreSource);
           if (!strength || !Number.isFinite(source.lat) || !Number.isFinite(source.lon)) return null;
