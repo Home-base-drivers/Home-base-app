@@ -170,7 +170,7 @@
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="baltimore-market.js?v=72"></script>
-<script src="homebase-heat.js?v=74"></script>
+<script src="homebase-heat.js?v=75"></script>
 <script>
 const app=document.getElementById('app');
 const $=s=>app.querySelector(s), $$=s=>[...app.querySelectorAll(s)];
@@ -576,7 +576,7 @@ function drawRoutePath(path){routeStrokeLayers.forEach(layer=>liveMap.removeLaye
 async function refineRouteToRoads(points,request){try{const coordinates=points.map(([lat,lon])=>`${lon},${lat}`).join(';'),data=await fetchJSON(`https://router.project-osrm.org/route/v1/driving/${coordinates}?overview=full&geometries=geojson&steps=false`,9000),route=data.routes&&data.routes[0],path=route&&route.geometry&&route.geometry.coordinates.map(([lon,lat])=>[lat,lon]);if(request!==routeRequestSerial||!route)return;if(path&&path.length>2)drawRoutePath(path);(route.legs||[]).forEach((leg,i)=>{if(activeStops[i]){activeStops[i].driveDistanceKm=Number(leg.distance)/1000;activeStops[i].driveMinutes=Number(leg.duration)/60}});const totalKm=(route.distance||0)/1000,totalMinutes=(route.duration||0)/60;$('#routeStops').innerHTML=activeStops.map((s,i)=>`<div class="route-stop"><div class="stop-num" style="--stop:${s.color}">${categoryIcon(s.cat)}</div><div><b>${marketTime(s.when)} · ${safeText(s.name)}</b><span>${Number.isFinite(s.driveDistanceKm)?`${(s.driveDistanceKm*.621371).toFixed(1)} mi · ${Math.round(s.driveMinutes)} min drive · `:''}${demandReason(s.cat,marketParts(s.when).hour)}</span></div></div>`).join('');$('.route-source').textContent=`Suggested by timed local demand · ${ (totalKm*.621371).toFixed(1)} mi total · ${Math.round(totalMinutes)} min driving`; }catch(e){}}
 function buildRoute(venues,lat,lon,market){
   routeLayers.forEach(x=>liveMap.removeLayer(x));routeLayers=[];routeStrokeLayers=[];if(heatAreaLayer)liveMap.removeLayer(heatAreaLayer);heatAreaLayer=L.layerGroup().addTo(liveMap);demandAreaSourceRef=null;if(!heatLayer)heatLayer=HomeBaseHeat.createLayer(L).addTo(liveMap);
-  const routeRequest=++routeRequestSerial,start=new Date(),used=new Set(),stops=[],regionalVenues=isGreaterBaltimoreLocation(lat,lon)?venues.filter(v=>isGreaterBaltimoreLocation(v.lat,v.lon)):venues,validDestinations=regionalVenues.filter(v=>(!v.heatOnly||v.tags&&v.tags.providerSignal)&&Number.isFinite(v.lat)&&Number.isFinite(v.lon)&&(v.cat!=='event'||v.eventStart)),pool=validDestinations;
+  const routeRequest=++routeRequestSerial,start=new Date(),used=new Set(),stops=[],regionalVenues=isGreaterBaltimoreLocation(lat,lon)?venues.filter(v=>isGreaterBaltimoreLocation(v.lat,v.lon)):venues,validDestinations=regionalVenues.filter(v=>(!v.heatOnly||v.tags&&v.tags.providerSignal)&&!(v.tags&&v.tags.deliveryRelevant)&&Number.isFinite(v.lat)&&Number.isFinite(v.lon)&&(v.cat!=='event'||v.eventStart)),pool=validDestinations;
   let prior=[lat,lon];
   for(let i=0;i<6;i++){
     const when=new Date(start.getTime()+i*2*3600000),h=marketParts(when).hour;
@@ -646,7 +646,7 @@ async function refreshLiveDemandLayer(){
 if(!demoLocale)setTimeout(autoRefreshGps,150);
 setInterval(()=>{updateClimateAdvisory();const selected=$('[data-hour][aria-pressed="true"]');if(selected&&selected.dataset.hour==='0'&&activeStops.length)applyTimeForecast(0,new Date());refreshLiveDemandLayer()},300000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-lastAutoGpsRefresh>300000)autoRefreshGps()});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=74',{updateViaCache:'none'}).then(r=>r.update()));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=75',{updateViaCache:'none'}).then(r=>r.update()));
 </script>
 <script src="homebase-live.js"></script>
 </body>
