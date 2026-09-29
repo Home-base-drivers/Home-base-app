@@ -16,6 +16,16 @@ test('heat palette includes green, amber, red, and magenta demand levels', () =>
   assert.ok(magenta[0] > magenta[1] && magenta[2] > magenta[1]);
 });
 
+test('a strong local source fades in opacity without creating green and yellow rings', () => {
+  const strongShade = heat.sourceShade(1);
+  const center = heat.compositeLevel(1, strongShade);
+  const featheredEdge = heat.compositeLevel(.05, strongShade * .05);
+  assert.ok(center > featheredEdge);
+  assert.ok(featheredEdge > .5, 'the edge retains the source shade instead of becoming a low-demand ring');
+  assert.ok(heat.compositeOpacity(.05) < heat.compositeOpacity(1), 'the retained shade still feathers through transparency');
+  assert.ok(heat.sourceShade(.22) < .35, 'a separate lower-demand source can remain independently green/yellow');
+});
+
 test('forecast-only sources are more subdued than equivalent live signals', () => {
   const live = heat.sourceStrength({ tags: {} }, new Date(), () => 13);
   const forecast = heat.sourceStrength({ tags: { forecast: true } }, new Date(), () => 13);

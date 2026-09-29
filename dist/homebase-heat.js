@@ -49,6 +49,21 @@
     return 1 - Math.exp(-Math.max(0, weightedValue) * 1.65);
   }
 
+  function sourceShade(strength) {
+    return clamp(areaIntensity((Number(strength) || 0) * .82), .035, 1);
+  }
+
+  function compositeLevel(value, weightedShade) {
+    const amount = Math.max(0, Number(value) || 0);
+    if (!amount) return 0;
+    const localShade = (Number(weightedShade) || 0) / Math.max(amount, .0001);
+    return clamp(localShade + Math.min(.2, areaIntensity(amount) * .2), .035, 1);
+  }
+
+  function compositeOpacity(value) {
+    return clamp(areaIntensity(Math.max(0, Number(value) || 0)) * .58, 0, .62);
+  }
+
   function sourceRadiusKm(category) {
     return RADII_KM[String(category || '').toLowerCase()] || 1.5;
   }
@@ -134,10 +149,24 @@
           const km = sourceFootprintKm(source), north = map.latLngToContainerPoint([source.lat + km / 111.32, source.lon]);
           const radius = Math.max(1.25, Math.abs(center.y - north.y));
           const angle = stableAngle(source, index);
+          let rx = radius * (.62 + (index % 5) * .055);
+          let ry = radius * (.43 + ((index + 2) % 5) * .06);
+          // Blend the organic point field with the footprint of the containing
+          // neighborhood. This retains the useful neighborhood-block character
+          // without restoring hard polygon edges or separate city/county maps.
+          const bounds = source.heatAreaBounds;
+          if (source.heatAreaType === 'neighborhood' && Array.isArray(bounds) && bounds.length === 4) {
+            const nw = map.latLngToContainerPoint([bounds[2], bounds[1]]);
+            const se = map.latLngToContainerPoint([bounds[0], bounds[3]]);
+            const areaRx = clamp(Math.abs(se.x - nw.x) * .28, radius * .55, radius * 2.35);
+            const areaRy = clamp(Math.abs(se.y - nw.y) * .28, radius * .55, radius * 2.35);
+            rx = rx * .58 + areaRx * .42;
+            ry = ry * .58 + areaRy * .42;
+          }
           return {
-            center, strength, angle,
-            rx: radius * (.62 + (index % 5) * .055),
-            ry: radius * (.43 + ((index + 2) % 5) * .06),
+            center, strength, angle, rx, ry,
+            blockShape: source.heatAreaType === 'neighborhood' && Array.isArray(bounds),
+            shade: sourceShade(strength),
             skew: ((index % 7) - 3) * .045
           };
         }).filter(Boolean);
@@ -158,6 +187,7 @@
         const width = Math.max(1, maxX - minX), height = Math.max(1, maxY - minY);
         const gridWidth = Math.max(1, Math.ceil(width / sample)), gridHeight = Math.max(1, Math.ceil(height / sample));
         const field = new Float32Array(gridWidth * gridHeight);
+        const shadeField = new Float32Array(gridWidth * gridHeight);
 
         sources.forEach(source => {
           const radius = Math.max(source.rx, source.ry) * 3.1;
@@ -174,14 +204,26 @@
             // but avoid the artificial bullseye/ring effect of a single radial
             // gradient. Real nearby venue points then overlap into block-scale
             // shade changes across the same neighborhood.
-            const primary = rx * rx + ry * ry;
+            const primary = source.blockShape
+              ? Math.pow(Math.pow(Math.abs(rx), 2.8) + Math.pow(Math.abs(ry), 2.8), 2 / 2.8)
+              : rx * rx + ry * ry;
             const shoulderA = (rx - .48) ** 2 / 1.18 + (ry + source.skew) ** 2 / .82;
             const shoulderB = (rx + .34) ** 2 / .9 + (ry - .3 - source.skew) ** 2 / 1.12;
-            if (primary < 18) field[y * gridWidth + x] += source.strength * (
+            if (primary < 18) {
+              const profile =
               .66 * Math.exp(-primary * .72) +
               .2 * Math.exp(-shoulderA * 1.05) +
-              .14 * Math.exp(-shoulderB * 1.2)
-            );
+              .14 * Math.exp(-shoulderB * 1.2);
+              const contribution = source.strength * profile;
+              const offset = y * gridWidth + x;
+              field[offset] += contribution;
+              // Color belongs to each locally measured source, while distance
+              // controls opacity. A red source therefore feathers to clear
+              // instead of manufacturing automatic yellow and green rings.
+              // Independent lower-demand sources can still create green or
+              // yellow areas beside, inside, or away from a red area.
+              shadeField[offset] += contribution * source.shade;
+            }
           }
         });
 
@@ -191,9 +233,9 @@
         for (let i = 0; i < field.length; i++) {
           const value = field[i];
           if (value < .018) continue;
-          const level = areaIntensity(value), rgb = colorAt(level), offset = i * 4;
+          const level = compositeLevel(value, shadeField[i]), rgb = colorAt(level), offset = i * 4;
           pixels[offset] = rgb[0]; pixels[offset + 1] = rgb[1]; pixels[offset + 2] = rgb[2];
-          pixels[offset + 3] = Math.round(255 * (.08 + level * .5));
+          pixels[offset + 3] = Math.round(255 * compositeOpacity(value));
         }
         context.putImageData(image, 0, 0);
         output.save();
@@ -206,5 +248,5 @@
     return new HeatLayer();
   }
 
-  return { colorAt, sourceStrength, areaIntensity, sourceRadiusKm, sourceFootprintKm, createLayer };
+  return { colorAt, sourceStrength, areaIntensity, sourceShade, compositeLevel, compositeOpacity, sourceRadiusKm, sourceFootprintKm, createLayer };
 });
