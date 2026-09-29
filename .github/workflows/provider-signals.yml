@@ -39,6 +39,7 @@ jobs:
           UBER_ESTIMATES_SCOPE: ${{ vars.UBER_ESTIMATES_SCOPE }}
           BOOKING_API_KEY: ${{ secrets.BOOKING_API_KEY }}
           BOOKING_AFFILIATE_ID: ${{ secrets.BOOKING_AFFILIATE_ID }}
+          FLIGHTAWARE_API_KEY: ${{ secrets.FLIGHTAWARE_API_KEY }}
       - name: Build public runtime configuration
         run: node scripts/write-runtime-config.mjs
         env:
