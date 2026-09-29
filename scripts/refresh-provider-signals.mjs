@@ -216,8 +216,10 @@ export function normalizeFlightAwareActivity(arrivalPayload, departurePayload, a
         : [flight.scheduled_out, flight.estimated_out, flight.actual_out, flight.scheduled_departure, flight.estimated_departure];
       const time = candidateTimes.map(flightTime).find(Boolean);
       if (!time || time.getTime() < lowerBound || time.getTime() > upperBound) continue;
-      const key = String(flight.fa_flight_id || flight.ident || '') + ':' + time.toISOString();
-      if (key === ':' || seen.has(key)) continue;
+      const flightId = String(flight.fa_flight_id || flight.ident || '').trim();
+      if (!flightId) continue;
+      const key = flightId + ':' + time.toISOString();
+      if (seen.has(key)) continue;
       seen.add(key);
       const hour = new Date(time);
       hour.setUTCMinutes(0, 0, 0);
