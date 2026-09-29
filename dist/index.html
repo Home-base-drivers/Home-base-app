@@ -179,7 +179,7 @@
 <script src="homebase-heat.js?v=78"></script>
 <script>
 const app=document.getElementById('app');
-const $=s=>app.querySelector(s), $=s=>[...app.querySelectorAll(s)];
+const $=s=>app.querySelector(s), $$=s=>[...app.querySelectorAll(s)];
 const heatPaletteNames=HomeBaseHeat.paletteNames;
 let heatPaletteIndex=(()=>{try{const stored=localStorage.getItem('homeBaseHeatPalette');const index=heatPaletteNames.indexOf(stored);return index<0?0:index}catch{return 0}})();
 HomeBaseHeat.setPalette(heatPaletteNames[heatPaletteIndex]);
