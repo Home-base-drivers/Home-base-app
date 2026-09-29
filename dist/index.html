@@ -254,10 +254,11 @@ function updateClock(){const now=new Date();$('#clock').textContent=now.toLocale
 updateClock();setInterval(updateClock,30000);
 function demandWeight(source,when){
   const parts=marketParts(when),h=parts.hour+when.getMinutes()/60,surge=Number(source.tags&&source.tags.uberSurgeMultiplier),amenity=String(source.tags&&source.tags.amenity||'').toLowerCase();
+  // A live Uber signal is authoritative, including at a food location.
+  if(Number.isFinite(surge))return Math.max(0,(surge-1)*30);
   // This is a passenger-ride map. Fast-food POIs remain useful for a future
   // delivery layer, but they do not create passenger demand by themselves.
   if(source.tags&&source.tags.publicVenue&&amenity==='fast_food')return 0;
-  if(Number.isFinite(surge))return Math.max(0,(surge-1)*30);
   // A venue is not demand by itself. Stadium and arena heat only activates
   // when a dated event feed supplies an eventStart value.
   if(source.cat==='event'&&!source.eventStart)return 0;
