@@ -54,7 +54,12 @@ test('K–12 pickup and university demand use different timing models', () => {
   assert.match(indexHtml, /amenity==='school'.+return'k12'/s);
   assert.match(indexHtml, /amenity==='college'.+return'university'/s);
   assert.match(indexHtml, /\['Morgan State University','university'/);
+  assert.match(indexHtml, /\['Johns Hopkins University','university'/);
   assert.match(indexHtml, /\['Baltimore City College','k12'/);
+  assert.match(indexHtml, /\['Dulaney High School','k12'/);
+  assert.match(indexHtml, /\['Towson High School','k12'/);
+  assert.match(indexHtml, /\['Phoenix','neighborhood'/);
+  assert.match(indexHtml, /weekday&&h>=13&&h<19\?7/);
   assert.match(indexHtml, /K–12 pickup and dismissal window/);
   assert.match(indexHtml, /All-day campus activity/);
 });
