@@ -169,8 +169,8 @@
   <section class="panel" id="installPanel" role="dialog" aria-modal="true" aria-labelledby="installTitle"><h2 id="installTitle">Home Base</h2><div id="installCopy"></div><button class="close" id="closePanel">Done</button></section>
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-<script src="baltimore-market.js?v=65"></script>
-<script src="homebase-heat.js?v=65"></script>
+<script src="baltimore-market.js?v=66"></script>
+<script src="homebase-heat.js?v=66"></script>
 <script>
 const app=document.getElementById('app');
 const $=s=>app.querySelector(s), $$=s=>[...app.querySelectorAll(s)];
@@ -263,7 +263,7 @@ function demandWeight(source,when){
 function pointInRing(lon,lat,ring){let inside=false;for(let i=0,j=ring.length-1;i<ring.length;j=i++){const a=ring[i],b=ring[j];if(((a[1]>lat)!==(b[1]>lat))&&(lon<(b[0]-a[0])*(lat-a[1])/(b[1]-a[1]||1e-12)+a[0]))inside=!inside}return inside}
 function pointInArea(lon,lat,geometry){if(!geometry)return false;const polygons=geometry.type==='Polygon'?[geometry.coordinates]:geometry.type==='MultiPolygon'?geometry.coordinates:[];return polygons.some(rings=>rings.length&&pointInRing(lon,lat,rings[0])&&!rings.slice(1).some(ring=>pointInRing(lon,lat,ring)))}
 function geometryBounds(geometry){let minLat=Infinity,minLon=Infinity,maxLat=-Infinity,maxLon=-Infinity;const visit=value=>{if(!Array.isArray(value))return;if(value.length>=2&&Number.isFinite(value[0])&&Number.isFinite(value[1])){minLon=Math.min(minLon,value[0]);maxLon=Math.max(maxLon,value[0]);minLat=Math.min(minLat,value[1]);maxLat=Math.max(maxLat,value[1]);return}value.forEach(visit)};visit(geometry&&geometry.coordinates);return Number.isFinite(minLat)?[minLat,minLon,maxLat,maxLon]:null}
-function bindDemandSources(sources){demandAreaSources=(sources||[]).filter(s=>Number.isFinite(s.lat)&&Number.isFinite(s.lon));demandAreas.forEach(area=>area.sources=[]);demandAreaSources.forEach(source=>{const area=demandAreas.find(a=>a.areaType==='neighborhood'&&pointInArea(source.lon,source.lat,a.feature.geometry))||demandAreas.find(a=>a.areaType==='county'&&pointInArea(source.lon,source.lat,a.feature.geometry));source.heatAreaType=area&&area.areaType||'';source.heatAreaBounds=area&&area.areaType==='neighborhood'?geometryBounds(area.feature.geometry):null;if(area)area.sources.push(source)});demandAreaSourceRef=sources}
+function bindDemandSources(sources){demandAreaSources=(sources||[]).filter(s=>Number.isFinite(s.lat)&&Number.isFinite(s.lon));demandAreas.forEach(area=>area.sources=[]);demandAreaSources.forEach(source=>{const area=demandAreas.find(a=>a.areaType==='label'&&pointInArea(source.lon,source.lat,a.feature.geometry))||demandAreas.find(a=>a.areaType==='neighborhood'&&pointInArea(source.lon,source.lat,a.feature.geometry))||demandAreas.find(a=>a.areaType==='county'&&pointInArea(source.lon,source.lat,a.feature.geometry));source.heatAreaType=area&&area.areaType||'';source.heatAreaBounds=area&&(area.areaType==='label'||area.areaType==='neighborhood')?geometryBounds(area.feature.geometry):null;if(area)area.sources.push(source)});demandAreaSourceRef=sources}
 const majorDemandLabels=new Set(['downtown','inner harbor','fells point','canton','federal hill','mount vernon','charles village','station north','west baltimore','towson','pikesville','owings mills','white marsh','essex','dundalk','catonsville','arbutus','glen burnie','parkville','lutherville']);
 function normalizedAreaName(name){return String(name||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim()}
 function demandAreaScore(area,when){const sources=(area.sources||[]).filter(source=>demandWeight(source,when)>0);if(!sources.length)return 0;const surges=sources.map(source=>Number(source.tags&&source.tags.uberSurgeMultiplier)).filter(Number.isFinite);if(surges.length)return Math.max(0,Math.min(1,(Math.max(...surges)-1)/.85));const total=sources.reduce((sum,source)=>sum+demandWeight(source,when),0);return 1-Math.exp(-total/18)}
@@ -275,10 +275,11 @@ function renderDemandGrid(sources,index,when){
   if(!heatAreaLayer)return;
   heatAreaLayer.clearLayers();
   if(!heatLayer)heatLayer=HomeBaseHeat.createLayer(L).addTo(liveMap);
-  // Render one metro-wide field. Boundaries are label metadata only, so city
-  // neighborhoods and surrounding counties cannot split into separate maps or
-  // discard a hotspot that sits on the edge of a polygon.
-  heatLayer.setData([{sources:demandAreaSources}],selectedForecastTime,demandWeight);
+  // Render one continuous demand surface. Fine neighborhood polygons guide
+  // the surface inside Baltimore, while point interpolation carries the same
+  // visual language through surrounding counties. Neither layer creates a
+  // second map or clips a source sitting on a boundary.
+  heatLayer.setData(demandAreas,selectedForecastTime,demandWeight,demandAreaSources);
   const zoom=liveMap.getZoom(),visible=liveMap.getBounds(),occupied=[];
   demandAreas.forEach(area=>{
     const bounds=L.geoJSON(area.feature).getBounds(),center=bounds.getCenter(),name=area.name;
