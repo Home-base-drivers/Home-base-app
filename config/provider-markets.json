@@ -6,6 +6,12 @@
       "name": "Baltimore",
       "center": { "lat": 39.2904, "lon": -76.6122 },
       "radiusKm": 58,
+      "flightawareAirport": {
+        "id": "KBWI",
+        "name": "BWI Airport",
+        "lat": 39.1774,
+        "lon": -76.6684
+      },
       "uberDestinations": [
         { "name": "Downtown Baltimore", "lat": 39.2904, "lon": -76.6122 },
         { "name": "BWI Airport", "lat": 39.1774, "lon": -76.6684 }
