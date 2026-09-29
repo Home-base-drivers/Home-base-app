@@ -170,7 +170,7 @@
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="baltimore-market.js?v=72"></script>
-<script src="homebase-heat.js?v=73"></script>
+<script src="homebase-heat.js?v=74"></script>
 <script>
 const app=document.getElementById('app');
 const $=s=>app.querySelector(s), $$=s=>[...app.querySelectorAll(s)];
@@ -253,7 +253,10 @@ function renderEvents(events){const box=$('#todayEvents'),pulse=$('#eventPulse')
 function updateClock(){const now=new Date();$('#clock').textContent=now.toLocaleDateString([],{weekday:'short',month:'short',day:'numeric',timeZone:marketTimeZone||undefined})+' · '+marketTime(now)}
 updateClock();setInterval(updateClock,30000);
 function demandWeight(source,when){
-  const parts=marketParts(when),h=parts.hour+when.getMinutes()/60,surge=Number(source.tags&&source.tags.uberSurgeMultiplier);
+  const parts=marketParts(when),h=parts.hour+when.getMinutes()/60,surge=Number(source.tags&&source.tags.uberSurgeMultiplier),amenity=String(source.tags&&source.tags.amenity||'').toLowerCase();
+  // This is a passenger-ride map. Fast-food POIs remain useful for a future
+  // delivery layer, but they do not create passenger demand by themselves.
+  if(source.tags&&source.tags.publicVenue&&amenity==='fast_food')return 0;
   if(Number.isFinite(surge))return Math.max(0,(surge-1)*30);
   // A venue is not demand by itself. Stadium and arena heat only activates
   // when a dated event feed supplies an eventStart value.
@@ -520,7 +523,7 @@ async function loadHighways(lat,lon){const request=++highwayRequestSerial;render
 async function overpassMarketQuery(q){const mirrors=['https://overpass-api.de/api/interpreter?data=','https://overpass.kumi.systems/api/interpreter?data='];for(const base of mirrors)try{return await fetchJSON(base+encodeURIComponent(q),10500)}catch(e){}return{elements:[]}}
 async function loadVenues(lat,lon){
   const anchors=`[out:json][timeout:14];(node(around:65000,${lat},${lon})[name][amenity~"school|kindergarten|college|university|nightclub|bar|pub|theatre|cinema|casino|bus_station|marketplace|hospital|clinic|community_centre|arts_centre|library|social_centre"];node(around:65000,${lat},${lon})[name][tourism~"hotel|attraction"];node(around:65000,${lat},${lon})[name][railway=station];node(around:65000,${lat},${lon})[name][place~"neighbourhood|suburb|quarter|town"];node(around:65000,${lat},${lon})[name][shop=mall];way(around:65000,${lat},${lon})[name][leisure=stadium];way(around:65000,${lat},${lon})[name][landuse~"commercial|retail"];);out center tags 1800;`,food=`[out:json][timeout:14];node(around:55000,${lat},${lon})[name][amenity~"restaurant|cafe|fast_food"];out center tags 1400;`,results=await Promise.all([overpassMarketQuery(anchors),overpassMarketQuery(food)]),seen=new Set();
-  return results.flatMap(data=>data.elements||[]).map(x=>{const original=x.tags||{},tags={...original,publicVenue:true},point={name:tags.name,lat:x.lat||(x.center&&x.center.lat),lon:x.lon||(x.center&&x.center.lon),cat:category(tags),tags,heatOnly:!!(tags.place||tags.landuse)};point.key=`${point.name}|${Number(point.lat).toFixed(4)}|${Number(point.lon).toFixed(4)}`;return point}).filter(x=>x.name&&x.lat&&x.lon&&!seen.has(x.key)&&seen.add(x.key))
+  return results.flatMap(data=>data.elements||[]).map(x=>{const original=x.tags||{},tags={...original,publicVenue:true,deliveryRelevant:String(original.amenity||'').toLowerCase()==='fast_food'},point={name:tags.name,lat:x.lat||(x.center&&x.center.lat),lon:x.lon||(x.center&&x.center.lon),cat:category(tags),tags,heatOnly:!!(tags.place||tags.landuse)};point.key=`${point.name}|${Number(point.lat).toFixed(4)}|${Number(point.lon).toFixed(4)}`;return point}).filter(x=>x.name&&x.lat&&x.lon&&!seen.has(x.key)&&seen.add(x.key))
 }
 async function loadTodaySports(lat,lon){const now=new Date(),date=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`,data=await fetchJSON(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${date}&hydrate=venue(location)`,2800),games=(data.dates&&data.dates[0]&&data.dates[0].games)||[];return games.map(g=>{const coords=g.venue&&g.venue.location&&g.venue.location.defaultCoordinates,start=new Date(g.gameDate),state=g.status&&g.status.abstractGameState;return{name:`${g.teams.away.team.name} at ${g.teams.home.team.name} · ${start.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}`,cat:'event',lat:coords&&Number(coords.latitude),lon:coords&&Number(coords.longitude),eventStart:start,eventState:state,tags:{liveEvent:true}}}).filter(v=>v.lat&&v.lon&&(isGreaterBaltimoreLocation(lat,lon)?isGreaterBaltimoreLocation(v.lat,v.lon):distanceKm([lat,lon],[v.lat,v.lon])<=90)&&(v.eventState==='Live'||(v.eventState==='Preview'&&v.eventStart.getTime()>=Date.now()-1800000)))}
 function eventToken(value){return String(value||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim()}
@@ -642,7 +645,7 @@ async function refreshLiveDemandLayer(){
 if(!demoLocale)setTimeout(autoRefreshGps,150);
 setInterval(()=>{updateClimateAdvisory();const selected=$('[data-hour][aria-pressed="true"]');if(selected&&selected.dataset.hour==='0'&&activeStops.length)applyTimeForecast(0,new Date());refreshLiveDemandLayer()},300000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-lastAutoGpsRefresh>300000)autoRefreshGps()});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=73',{updateViaCache:'none'}).then(r=>r.update()));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=74',{updateViaCache:'none'}).then(r=>r.update()));
 </script>
 <script src="homebase-live.js"></script>
 </body>
