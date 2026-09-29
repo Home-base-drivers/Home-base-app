@@ -47,6 +47,14 @@ GitHub Actions repository secrets to enable the corresponding provider:
 - `TICKETMASTER_API_KEY`
 - `UBER_CLIENT_ID` and `UBER_CLIENT_SECRET` (or `UBER_ACCESS_TOKEN`)
 - `BOOKING_API_KEY` and `BOOKING_AFFILIATE_ID`
+- `FLIGHTAWARE_API_KEY` — AeroAPI access for BWI scheduled airline arrivals and departures
+
+The FlightAware workflow publishes only hourly aggregate arrival/departure counts
+and source freshness; it does not publish flight identifiers or tracks. Each
+five-minute provider refresh makes one scheduled-arrivals query and one
+scheduled-departures query for KBWI when the FlightAware secret is configured.
+The FlightAware score is an airport activity proxy, not passenger counts or
+confirmed rideshare requests.
 
 Uber client credentials also require the non-secret repository variable
 `UBER_ESTIMATES_SCOPE`, set to the estimates scope approved for the Uber app.
