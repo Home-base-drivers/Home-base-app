@@ -134,7 +134,7 @@
   /* Map presentation: imagery below heat, road detail and labels above it. */
     .leaflet-tile-pane{filter:brightness(.55) contrast(1.12) saturate(.42)}
     .app.satellite .layer-toggle{color:#fff}
-    .leaflet-heat-pane{opacity:1;mix-blend-mode:normal;filter:none;pointer-events:none}
+    .leaflet-heat-pane{opacity:1!important;visibility:visible!important;mix-blend-mode:normal;filter:none;pointer-events:none}
     .leaflet-roads-pane{opacity:.42;filter:saturate(.25);pointer-events:none}
     .leaflet-labels-pane{opacity:.95;filter:none;pointer-events:none}
   </style>
@@ -169,8 +169,8 @@
   <section class="panel" id="installPanel" role="dialog" aria-modal="true" aria-labelledby="installTitle"><h2 id="installTitle">Home Base</h2><div id="installCopy"></div><button class="close" id="closePanel">Done</button></section>
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-<script src="baltimore-market.js?v=66"></script>
-<script src="homebase-heat.js?v=66"></script>
+<script src="baltimore-market.js?v=67"></script>
+<script src="homebase-heat.js?v=67"></script>
 <script>
 const app=document.getElementById('app');
 const $=s=>app.querySelector(s), $$=s=>[...app.querySelectorAll(s)];
@@ -178,7 +178,7 @@ const demoKey=new URLSearchParams(location.search).get('demo');
 const demoLocale=demoKey==='london'?{name:'London',countryCode:'GB',lat:51.5074,lon:-.1278,timeZone:'Europe/London'}:null;
 const liveMap=L.map('liveMap',{zoomControl:true,attributionControl:true,dragging:true,scrollWheelZoom:true,zoomAnimation:true,fadeAnimation:true,markerZoomAnimation:true}).setView([39.2904,-76.6122],12);
 liveMap.on('layeradd',event=>{const layer=event.layer;if(layer instanceof L.CircleMarker&&layer.options.fillColor==='#2563eb'){layer.setStyle({fillColor:'#08a9ff'});if(layer._path)layer._path.classList.add('homebase-gps-dot')}});
-liveMap.createPane('heatPane');liveMap.getPane('heatPane').style.zIndex=300;liveMap.getPane('heatPane').style.pointerEvents='none';
+liveMap.createPane('heatPane');liveMap.getPane('heatPane').style.zIndex=320;liveMap.getPane('heatPane').style.pointerEvents='none';
 liveMap.createPane('roadsPane');liveMap.getPane('roadsPane').style.zIndex=340;liveMap.getPane('roadsPane').style.pointerEvents='none';
 liveMap.createPane('labelsPane');liveMap.getPane('labelsPane').style.zIndex=360;liveMap.getPane('labelsPane').style.pointerEvents='none';
 // All basemap components use the same Web Mercator tile grid as the heat.
