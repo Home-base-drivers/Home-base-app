@@ -38,16 +38,19 @@ https://home-base-driver-live.chrisbrouard7.chatgpt.site
 ## Provider data feeds
 
 `.github/workflows/provider-signals.yml` targets a five-minute refresh for the
-optional Baltimore provider feed and deploys only sanitized public results.
+Baltimore provider signals and deploys only sanitized public results.
+Public sources and the Ticketmaster, Uber, and FlightAware connectors are core data inputs and stay enabled in the pipeline; provider feeds return unavailable status until their owner-authorized credentials are saved in GitHub Actions secrets.
 GitHub can delay scheduled workflows during high load, so the app displays the
 source timestamp, checks for a new deployed snapshot every two minutes, treats
 Uber samples as live for 12 minutes, and removes them after 25 minutes. Configure these
-GitHub Actions repository secrets to enable the corresponding provider:
+GitHub Actions repository secrets for the required provider feeds:
 
 - `TICKETMASTER_API_KEY`
 - `UBER_CLIENT_ID` and `UBER_CLIENT_SECRET` (or `UBER_ACCESS_TOKEN`)
-- `BOOKING_API_KEY` and `BOOKING_AFFILIATE_ID`
 - `FLIGHTAWARE_API_KEY` — AeroAPI access for BWI scheduled airline arrivals and departures
+
+Booking.com credentials can be added separately for travel context; they do not
+feed the rideshare-demand score.
 
 The FlightAware workflow publishes only hourly aggregate arrival/departure counts
 and source freshness; it does not publish flight identifiers or tracks. Each
@@ -86,8 +89,9 @@ group with at least five consenting users and twenty trips.
 
 ## Development rule
 
-Create a branch, open a pull request, and have the other owner review material
-feature, data, branding, or design changes before merging into `main`.
+Contributors may publish directly to `main` without waiting for a pull-request
+review. Run the repository checks before publishing; pull requests remain
+available for discussion, and GitHub Pages deploys changes from `main`.
 
 ## Data honesty
 

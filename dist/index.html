@@ -137,6 +137,11 @@
     .leaflet-heat-pane{opacity:1!important;visibility:visible!important;mix-blend-mode:normal;filter:none;pointer-events:none}
     .leaflet-roads-pane{opacity:.42;filter:saturate(.25);pointer-events:none}
     .leaflet-labels-pane{opacity:.95;filter:none;pointer-events:none}
+    .map-style-controls{display:flex;align-items:center;gap:7px;padding:5px 2px 1px;pointer-events:auto}
+    .map-style-control{min-height:34px;border:1px solid rgba(67,158,232,.46);border-radius:999px;background:rgba(2,13,22,.94);color:#b8cbd7;padding:5px 11px;font-size:.57rem;font-weight:850;letter-spacing:.09em;cursor:pointer}
+    .map-style-control[aria-pressed="true"]{color:#d8f3ff;border-color:rgba(78,179,236,.75);background:rgba(10,44,66,.92)}
+    .app.heat-hidden .homebase-demand-canvas{visibility:hidden!important}
+    @media(max-width:430px){.map-style-controls{padding-top:4px}.map-style-control{min-height:32px;font-size:.53rem}}
   </style>
 </head>
 <body>
@@ -148,6 +153,7 @@
       <div class="header-actions"><button class="header-action menu-action" id="panelsBtn" aria-pressed="false" aria-label="Hide information panels"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1"/><path d="M9 9h6v6H9z"/></svg></button><button class="header-action layer-toggle" id="layerBtn" aria-pressed="false" aria-label="Show satellite map"><svg viewBox="0 0 24 24"><path d="m4 8 8-4 8 4-8 4-8-4Zm0 4 8 4 8-4M4 16l8 4 8-4"/></svg><small>SAT</small></button><button class="header-action" id="refreshBtn" aria-label="Refresh GPS"><svg class="refresh-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></button><button class="header-action" id="installBtn" aria-label="Add Home Base to Home Screen"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><small>ADD</small></button></div>
     </div>
     <div class="conditions"><div class="weather-symbol"><svg viewBox="0 0 24 24"><path d="M7 16h10a4 4 0 0 0 0-8 6 6 0 0 0-11-1 4.5 4.5 0 0 0 1 9Z"/><path d="m8 19-1 2M12 19l-1 2M16 19l-1 2"/></svg></div><div class="weather-temp" id="weatherTemp">--</div><div class="condition-copy"><b id="weatherTitle">LOCAL CONDITIONS</b><span id="weatherText">RIDE DEMAND + EVENTS + BEST AREAS</span></div><div class="live-tag cooling" id="climateBadge" role="status" aria-live="polite" title="Automatic market advisory based on time, weather and current events">↘ COOLING</div></div>
+    <div class="map-style-controls" aria-label="Map display options"><button class="map-style-control" id="heatToggle" type="button" aria-pressed="true" aria-label="Hide demand heat map">HEAT · ON</button><button class="map-style-control" id="paletteToggle" type="button" aria-label="Change heat map colors">COLORS · CLASSIC</button></div>
   </header>
   <main>
     <div class="platforms" aria-label="Platform comparison">
@@ -159,7 +165,7 @@
     <div class="time-row" id="timeRow" aria-label="Hourly demand forecast"></div>
     <section class="map-stage local-only" aria-label="Local ride-demand forecast">
       <aside class="route-plan" id="routePlan" hidden><div class="route-head"><h2>EVENTS + ROUTE</h2><button class="panel-mini" id="routeToggle" aria-expanded="true">−</button></div><div class="route-body"><div id="todayEvents"><div class="event-empty">Checking current-day events…</div></div><div class="panel-subhead" id="routePlanTitle">NEXT 12 HOURS</div><div id="routeStops"></div><div class="route-source">GPS + current time + weather + public venue data</div></div></aside>
-      <aside class="legend collapsed" id="legend" aria-label="Demand and map icon legend"><button class="legend-toggle" id="legendToggle" aria-expanded="false">KEY</button><div class="legend-content"><span><i class="dot" style="background:var(--red);color:var(--red)"></i>Very high</span><span><i class="dot" style="background:var(--orange);color:var(--orange)"></i>High</span><span><i class="dot" style="background:var(--yellow);color:var(--yellow)"></i>Moderate</span><span><i class="dot" style="background:var(--low);color:var(--low)"></i>Lower</span><div class="icon-key"><span>E · Event</span><span>S · School</span><span>T · Transit</span><span>N · Nightlife</span><span>D · Dining</span><span>H · Hotel</span></div><span class="data-source-note">PUBLIC · Open-Meteo weather · OpenStreetMap venues · ESPN/MLB schedules · OSRM routes</span><span class="data-source-note">OPTIONAL CONNECTORS · Ticketmaster events · Uber price proxy · FlightAware BWI activity (when authorized)</span></div></aside>
+      <aside class="legend collapsed" id="legend" aria-label="Demand and map icon legend"><button class="legend-toggle" id="legendToggle" aria-expanded="false">KEY</button><div class="legend-content"><span><i class="dot" style="background:var(--red);color:var(--red)"></i>Very high</span><span><i class="dot" style="background:var(--orange);color:var(--orange)"></i>High</span><span><i class="dot" style="background:var(--yellow);color:var(--yellow)"></i>Moderate</span><span><i class="dot" style="background:var(--low);color:var(--low)"></i>Lower</span><div class="icon-key"><span>E · Event</span><span>S · School</span><span>T · Transit</span><span>N · Nightlife</span><span>D · Dining</span><span>H · Hotel</span></div><span class="data-source-note">PUBLIC LIVE SOURCES · Open-Meteo weather · OpenStreetMap venues · ESPN/MLB schedules · OSRM routes</span><span class="data-source-note">REQUIRED RIDE SIGNAL FEEDS · Ticketmaster events · Uber price proxy · FlightAware BWI activity. Provider authorization is required; no signal is fabricated when a feed is unavailable.</span></div></aside>
     </section>
   </main>
   <section class="bottom-sheet" id="bottomSheet" aria-live="polite"><button class="sheet-toggle" id="sheetToggle" aria-expanded="true" aria-label="Collapse bottom briefing">⌄</button><div class="decision-grid"><div class="decision"><span>BEST TIME</span><b id="bestTime">NOW</b></div><div class="decision"><span>BEST ROUTE</span><b id="bestRoute">Connecting GPS…</b></div><div class="decision"><span>BEST PLATFORM</span><b id="bestPlatform">Uber first</b></div></div><div class="pulse-grid"><div class="pulse"><span>CITY PULSE</span><b id="cityPulse">Reading commute, schools, dining and nightlife…</b></div><div class="pulse"><span>EVENT WATCH</span><b id="eventPulse">Checking active and upcoming events…</b></div></div><div class="sheet-top"><div class="sheet-icon" id="detailIcon">•</div><div><b id="detailTitle">Connecting to your current market</b><p id="detailText">GPS starts automatically and builds today’s route from schools, weather and nearby public venues.</p></div></div><div class="route-row"><div class="route" id="route">AUTO-CONNECTING GPS · Route appears immediately</div><button class="maps-btn" id="mapsBtn">GOOGLE MAPS ↗</button></div></section>
@@ -170,10 +176,15 @@
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="baltimore-market.js?v=72"></script>
-<script src="homebase-heat.js?v=77"></script>
+<script src="homebase-heat.js?v=78"></script>
 <script>
 const app=document.getElementById('app');
-const $=s=>app.querySelector(s), $$=s=>[...app.querySelectorAll(s)];
+const $=s=>app.querySelector(s), $=s=>[...app.querySelectorAll(s)];
+const heatPaletteNames=HomeBaseHeat.paletteNames;
+let heatPaletteIndex=(()=>{try{const stored=localStorage.getItem('homeBaseHeatPalette');const index=heatPaletteNames.indexOf(stored);return index<0?0:index}catch{return 0}})();
+HomeBaseHeat.setPalette(heatPaletteNames[heatPaletteIndex]);
+const initialHeatVisible=(()=>{try{return localStorage.getItem('homeBaseHeatVisible')!=='false'}catch{return true}})();
+app.classList.toggle('heat-hidden',!initialHeatVisible);
 const demoKey=new URLSearchParams(location.search).get('demo');
 const demoLocale=demoKey==='london'?{name:'London',countryCode:'GB',lat:51.5074,lon:-.1278,timeZone:'Europe/London'}:null;
 const liveMap=L.map('liveMap',{zoomControl:true,attributionControl:true,dragging:true,scrollWheelZoom:true,zoomAnimation:true,fadeAnimation:true,markerZoomAnimation:true}).setView([39.2904,-76.6122],12);
@@ -473,6 +484,11 @@ renderSupport=function(message=''){baseRenderSupportV35(message);enhanceSupport(
 setTimeout(()=>showHomeBaseOnboarding(false),650);
 $('#installBtn').addEventListener('click',requestHomeScreenInstall);
 $('#layerBtn').addEventListener('click',()=>{const on=!app.classList.contains('satellite');app.classList.toggle('satellite',on);$('#layerBtn').setAttribute('aria-pressed',String(on));$('#layerBtn').setAttribute('aria-label',on?'Show dark street map':'Show satellite map');setBaseLayer(on);show(['▱',on?'Satellite map on':'Dark street map on',on?'Satellite imagery is active with no map tilt.':'The premium dark navigation map is active.','MAP VIEW · Route, heat and destinations are unchanged'])});
+$('#heatToggle').setAttribute('aria-pressed',String(initialHeatVisible));$('#heatToggle').textContent=`HEAT · ${initialHeatVisible?'ON':'OFF'}`;$('#heatToggle').setAttribute('aria-label',initialHeatVisible?'Hide demand heat map':'Show demand heat map');
+$('#heatToggle').addEventListener('click',()=>{const on=app.classList.contains('heat-hidden');app.classList.toggle('heat-hidden',!on);$('#heatToggle').setAttribute('aria-pressed',String(on));$('#heatToggle').textContent=`HEAT · ${on?'ON':'OFF'}`;$('#heatToggle').setAttribute('aria-label',on?'Hide demand heat map':'Show demand heat map');try{localStorage.setItem('homeBaseHeatVisible',String(on))}catch{}});
+function updatePaletteButton(){const name=heatPaletteNames[heatPaletteIndex];$('#paletteToggle').textContent=`COLORS · ${name.toUpperCase()}`;$('#paletteToggle').setAttribute('aria-label',`Heat colors: ${name}. Change heat map colors.`)}
+updatePaletteButton();
+$('#paletteToggle').addEventListener('click',()=>{heatPaletteIndex=(heatPaletteIndex+1)%heatPaletteNames.length;const name=HomeBaseHeat.setPalette(heatPaletteNames[heatPaletteIndex]);try{localStorage.setItem('homeBaseHeatPalette',name)}catch{}updatePaletteButton();renderDemandGrid(activeDemandSources,0,selectedForecastTime)});
 $('#legendToggle').addEventListener('click',()=>{const legend=$('#legend'),collapsed=!legend.classList.contains('collapsed');legend.classList.toggle('collapsed',collapsed);$('#legendToggle').textContent=collapsed?'KEY':'KEY ×';$('#legendToggle').setAttribute('aria-expanded',String(!collapsed))});
 $('#routeToggle').addEventListener('click',()=>{const route=$('#routePlan'),collapsed=!route.classList.contains('collapsed');route.classList.toggle('collapsed',collapsed);$('#routeToggle').textContent=collapsed?'›':'−';$('#routeToggle').setAttribute('aria-expanded',String(!collapsed))});
 $('#sheetToggle').addEventListener('click',()=>{const sheet=$('#bottomSheet'),collapsed=!sheet.classList.contains('collapsed');sheet.classList.toggle('collapsed',collapsed);$('#sheetToggle').textContent=collapsed?'⌃':'⌄';$('#sheetToggle').setAttribute('aria-expanded',String(!collapsed))});

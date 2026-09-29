@@ -1,18 +1,19 @@
 # Working Together
 
-## Normal workflow
+## Publish workflow
 
-1. Create a short branch from `main`.
-2. Make and test one coherent change.
-3. Open a pull request describing what changed and what was verified.
-4. Request review from the other owner for material changes.
-5. Merge into `main` only after review.
-6. GitHub Pages deploys the merged version automatically.
+1. Make one coherent change and run the repository checks.
+2. Contributors with write access may commit or push directly to `main`.
+3. Pull requests are available for discussion, but review is not required to publish.
+4. GitHub Pages deploys changes from `main` automatically.
 
 ## Preserve these systems
 
 - GPS and market detection.
 - Public venue, weather, and verified-event inputs.
+- Ticketmaster, Uber, and FlightAware are required ride-signal connectors; keep
+  their refresh paths enabled. Their provider-issued credentials belong in
+  GitHub Actions secrets and unavailable feeds must be labeled honestly.
 - City-and-county demand heat independent of the route.
 - Geographically anchored heat that does not drift during zoom.
 - True-Interstate-only gold highway highlighting.

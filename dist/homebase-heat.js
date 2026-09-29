@@ -5,15 +5,12 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const STOPS = [
-    [0, [7, 91, 45]],
-    [.16, [19, 148, 57]],
-    [.32, [137, 188, 49]],
-    [.48, [250, 207, 43]],
-    [.64, [255, 132, 28]],
-    [.8, [242, 45, 43]],
-    [1, [222, 26, 133]]
-  ];
+  const PALETTES = {
+    classic: [[0,[7,91,45]],[.16,[19,148,57]],[.32,[137,188,49]],[.48,[250,207,43]],[.64,[255,132,28]],[.8,[242,45,43]],[1,[222,26,133]]],
+    ocean: [[0,[7,55,111]],[.16,[7,112,169]],[.32,[20,179,193]],[.48,[116,216,168]],[.64,[243,220,91]],[.8,[243,139,69]],[1,[192,82,190]]],
+    ember: [[0,[74,47,111]],[.16,[111,49,156]],[.32,[174,54,139]],[.48,[224,73,94]],[.64,[246,123,55]],[.8,[250,181,48]],[1,[255,230,112]]]
+  };
+  let activePalette = 'classic';
   const RADII_KM = {
     school: 1.45, k12: 1.45, university: 1.8, transit: 2.1, event: 1.7, nightlife: 1.2,
     restaurant: 1.15, hotel: 1.5, attraction: 1.6,
@@ -21,8 +18,15 @@
   };
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
+  function setPalette(name) {
+    if (!Object.prototype.hasOwnProperty.call(PALETTES, name)) return activePalette;
+    activePalette = name;
+    return activePalette;
+  }
+
   function colorAt(level) {
     const value = clamp(Number(level) || 0, 0, 1);
+    const STOPS = PALETTES[activePalette];
     let low = STOPS[0], high = STOPS[STOPS.length - 1];
     for (let i = 1; i < STOPS.length; i++) {
       if (value <= STOPS[i][0]) { low = STOPS[i - 1]; high = STOPS[i]; break; }
@@ -331,5 +335,5 @@
     return new HeatLayer();
   }
 
-  return { colorAt, sourceStrength, areaIntensity, sourceShade, compositeLevel, compositeOpacity, sourceRadiusKm, sourceFootprintKm, createLayer };
+  return { colorAt, setPalette, getPalette: () => activePalette, paletteNames: Object.keys(PALETTES), sourceStrength, areaIntensity, sourceShade, compositeLevel, compositeOpacity, sourceRadiusKm, sourceFootprintKm, createLayer };
 });
