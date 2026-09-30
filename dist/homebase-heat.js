@@ -80,7 +80,7 @@
     // bonus lifted nearly every modeled neighborhood into yellow, even when
     // its individual signals were weak. Low areas now stay teal/green; only
     // stronger and overlapping sources enter yellow, orange, red and magenta.
-    const normalized = clamp((localShade - .025) / .58, 0, 1);
+    const normalized = clamp((localShade - .03) / .4, 0, 1);
     return clamp(Math.pow(normalized, .78), .025, 1);
   }
 
