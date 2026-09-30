@@ -102,8 +102,8 @@
       // Community anchors represent an area, not a single address. Wider,
       // category-specific footprints connect county demand without turning it
       // into one city-centered oval.
-      const metro = { neighborhood: 3.25, shopping: 3.1, transit: 3.45, restaurant: 2.7, university: 2.9, k12: 2.15, event: 2.55, hotel: 2.8, medical: 2.65 };
-      return metro[source.cat] || 2.75;
+      const metro = { neighborhood: .85, shopping: 1.15, transit: 1.25, restaurant: .8, university: 1.05, k12: .8, event: 1.35, hotel: .9, medical: .85 };
+      return metro[source.cat] || .9;
     }
     if (tags.publicVenue) return source.cat === 'neighborhood' ? 1.0 : sourceRadiusKm(source.cat) * .62;
     if (source.cat === 'event') return 1.35;
@@ -210,7 +210,7 @@
           if (amount <= 0) return;
           const level = compositeLevel(amount, weightedShade);
           const rgb = colorAt(level);
-          const opacity = clamp(.04 + compositeOpacity(amount) * .78, .04, .5) * zoomFactor;
+          const opacity = clamp(.012 + compositeOpacity(amount) * .24, .012, .15) * zoomFactor;
           const geometry = area.feature.geometry;
           const polygons = geometry.type === 'Polygon' ? [geometry.coordinates] : geometry.type === 'MultiPolygon' ? geometry.coordinates : [];
           if (!polygons.length) return;
