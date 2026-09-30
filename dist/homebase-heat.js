@@ -17,6 +17,10 @@
     medical: 1.55, neighborhood: 1.65, shopping: 1.8
   };
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+  const HEAT_OPACITY_GAIN = 1.05;
+  function anchoredGridOrigin(position, geographicAnchor, step) {
+    return geographicAnchor + Math.floor((position - geographicAnchor) / step) * step;
+  }
 
   function setPalette(name) {
     if (!Object.prototype.hasOwnProperty.call(PALETTES, name)) return activePalette;
@@ -89,7 +93,7 @@
     // Keep locally scored demand legible above the dark basemap. Opacity still
     // falls to zero with the measured field, so this does not manufacture a
     // surrounding low-demand ring.
-    return clamp(areaIntensity(Math.max(0, Number(value) || 0)) * 1.32, 0, .82);
+    return clamp(areaIntensity(Math.max(0, Number(value) || 0)) * 1.32 * HEAT_OPACITY_GAIN, 0, .86);
   }
 
   function sourceRadiusKm(category) {
@@ -256,7 +260,10 @@
             output.beginPath();
             tracePolygon(rings);
             output.clip('evenodd');
-            for (let y = minY; y < maxY; y += cell) for (let x = minX; x < maxX; x += cell) {
+            const geographicAnchor = map.latLngToContainerPoint([0, 0]);
+            const gridLeft = anchoredGridOrigin(minX, geographicAnchor.x, cell);
+            const gridTop = anchoredGridOrigin(minY, geographicAnchor.y, cell);
+            for (let y = gridTop; y < maxY; y += cell) for (let x = gridLeft; x < maxX; x += cell) {
               const px = x + cell / 2, py = y + cell / 2;
               let amount = 0, weightedShade = 0;
               sources.forEach(source => {
@@ -348,20 +355,23 @@
         if (maxX < 0 || maxY < 0 || minX > size.x || minY > size.y) return;
         minX = clamp(minX, 0, size.x); minY = clamp(minY, 0, size.y);
         maxX = clamp(maxX, 0, size.x); maxY = clamp(maxY, 0, size.y);
-        const width = Math.max(1, maxX - minX), height = Math.max(1, maxY - minY);
-        const gridWidth = Math.max(1, Math.ceil(width / sample)), gridHeight = Math.max(1, Math.ceil(height / sample));
+        const geographicAnchor = map.latLngToContainerPoint([0, 0]);
+        const gridLeft = anchoredGridOrigin(minX, geographicAnchor.x, sample);
+        const gridTop = anchoredGridOrigin(minY, geographicAnchor.y, sample);
+        const gridWidth = Math.max(1, Math.ceil((maxX - gridLeft) / sample)), gridHeight = Math.max(1, Math.ceil((maxY - gridTop) / sample));
+        const width = gridWidth * sample, height = gridHeight * sample;
         const field = new Float32Array(gridWidth * gridHeight);
         const shadeField = new Float32Array(gridWidth * gridHeight);
 
         sources.forEach(source => {
           const radius = Math.max(source.rx, source.ry) * 3.1;
-          const left = Math.max(0, Math.floor((source.center.x - radius - minX) / sample));
-          const right = Math.min(gridWidth - 1, Math.ceil((source.center.x + radius - minX) / sample));
-          const top = Math.max(0, Math.floor((source.center.y - radius - minY) / sample));
-          const bottom = Math.min(gridHeight - 1, Math.ceil((source.center.y + radius - minY) / sample));
+          const left = Math.max(0, Math.floor((source.center.x - radius - gridLeft) / sample));
+          const right = Math.min(gridWidth - 1, Math.ceil((source.center.x + radius - gridLeft) / sample));
+          const top = Math.max(0, Math.floor((source.center.y - radius - gridTop) / sample));
+          const bottom = Math.min(gridHeight - 1, Math.ceil((source.center.y + radius - gridTop) / sample));
           const cos = Math.cos(source.angle), sin = Math.sin(source.angle);
           for (let y = top; y <= bottom; y++) for (let x = left; x <= right; x++) {
-            const px = minX + (x + .5) * sample, py = minY + (y + .5) * sample;
+            const px = gridLeft + (x + .5) * sample, py = gridTop + (y + .5) * sample;
             const dx = px - source.center.x, dy = py - source.center.y;
             const rx = (dx * cos + dy * sin) / source.rx, ry = (-dx * sin + dy * cos) / source.ry;
             // Two close, asymmetrical lobes keep the interpolation geographic
@@ -406,12 +416,12 @@
         output.save();
         output.imageSmoothingEnabled = true;
         output.imageSmoothingQuality = 'high';
-        output.drawImage(paint, minX, minY, width, height);
+        output.drawImage(paint, gridLeft, gridTop, width, height);
         output.restore();
       }
     });
     return new HeatLayer();
   }
 
-  return { colorAt, setPalette, getPalette: () => activePalette, paletteNames: Object.keys(PALETTES), sourceStrength, areaIntensity, sourceShade, compositeLevel, compositeOpacity, sourceRadiusKm, sourceFootprintKm, createLayer };
+  return { colorAt, setPalette, getPalette: () => activePalette, paletteNames: Object.keys(PALETTES), sourceStrength, areaIntensity, sourceShade, compositeLevel, compositeOpacity, sourceRadiusKm, sourceFootprintKm, anchoredGridOrigin, createLayer };
 });

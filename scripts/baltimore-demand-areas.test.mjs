@@ -48,6 +48,18 @@ test('demand rendering uses one map-anchored geographic surface at every zoom', 
   assert.match(heatRenderer, /source\.heatAreaType !== 'neighborhood'/);
 });
 
+test('each forecast hour has up to twelve destination options and custom event icons', () => {
+  assert.match(indexHtml, /for\(let i=0;i<12;i\+\+\)/);
+  assert.match(indexHtml, /if\(options\.length===12\)break/);
+  assert.match(indexHtml, /hourlyDestinations\.push\(options\)/);
+  assert.match(indexHtml, /renderTimeButtons\(stops,hourlyDestinations\)/);
+  assert.match(indexHtml, /function eventIconSvg\(event\)/);
+  assert.match(indexHtml, /function eventPopupContent\(event\)/);
+  assert.match(indexHtml, /event-icon-key" id="eventIconKey"/);
+  assert.match(heatRenderer, /HEAT_OPACITY_GAIN = 1\.05/);
+  assert.match(heatRenderer, /function anchoredGridOrigin/);
+});
+
 test('K–12 pickup and university demand use different timing models', () => {
   assert.match(indexHtml, /amenity==='school'.+return'k12'/s);
   assert.match(indexHtml, /amenity==='college'.+return'university'/s);

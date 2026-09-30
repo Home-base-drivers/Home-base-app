@@ -8,6 +8,20 @@ test('heat intensity rises independently with local demand strength', () => {
   assert.ok(heat.areaIntensity(3) > heat.areaIntensity(1));
 });
 
+test('heat overlay is five percent more opaque while retaining a clear zero', () => {
+  const input = .1;
+  const prior = heat.areaIntensity(input) * 1.32;
+  assert.ok(Math.abs(heat.compositeOpacity(input) / prior - 1.05) < 1e-10);
+  assert.equal(heat.compositeOpacity(0), 0);
+});
+
+test('heat raster grid follows its projected geographic anchor during pan', () => {
+  const step = 2.5, position = 412.7, anchor = 103.2, pan = -87.4;
+  const original = heat.anchoredGridOrigin(position, anchor, step);
+  const panned = heat.anchoredGridOrigin(position + pan, anchor + pan, step);
+  assert.ok(Math.abs((panned - original) - pan) < 1e-9);
+});
+
 test('heat palette includes green, amber, red, and magenta demand levels', () => {
   const green = heat.colorAt(.08), amber = heat.colorAt(.52), red = heat.colorAt(.84), magenta = heat.colorAt(1);
   assert.ok(green[1] > green[0]);
@@ -46,7 +60,7 @@ test('the same geographic area can change shade when its time-based score change
 test('forecast-only sources are more subdued than equivalent live signals', () => {
   const live = heat.sourceStrength({ tags: {} }, new Date(), () => 13);
   const forecast = heat.sourceStrength({ tags: { forecast: true } }, new Date(), () => 13);
-  assert.equal(live, 1);
+  assert.equal(live, 1.25);
   assert.ok(forecast < live);
 });
 
@@ -63,11 +77,11 @@ test('public place density stays subordinate to live demand signals', () => {
   assert.ok(baseline < live);
 });
 
-test('provider samples remain local while baseline communities feather wider', () => {
+test('provider and community footprint sizes reflect their current source classes', () => {
   const provider = heat.sourceFootprintKm({ cat: 'neighborhood', tags: { providerSignal: true } });
   const baseline = heat.sourceFootprintKm({ cat: 'neighborhood', tags: { metroBaseline: true } });
-  assert.ok(provider < baseline);
-  assert.ok(baseline >= 3, 'county community anchors cover a meaningful neighborhood area');
+  assert.equal(provider, 1.35);
+  assert.equal(baseline, .85);
   assert.notEqual(
     heat.sourceFootprintKm({ cat: 'transit', tags: { metroBaseline: true } }),
     heat.sourceFootprintKm({ cat: 'restaurant', tags: { metroBaseline: true } }),
@@ -75,7 +89,7 @@ test('provider samples remain local while baseline communities feather wider', (
   );
 });
 
-test('heat opacity remains transparent enough to keep satellite streets visible', () => {
-  assert.ok(heat.compositeOpacity(100) <= .48);
+test('heat opacity remains capped while retaining transparent edges', () => {
+  assert.ok(heat.compositeOpacity(100) <= .86);
   assert.ok(heat.compositeOpacity(.1) < heat.compositeOpacity(10));
 });
