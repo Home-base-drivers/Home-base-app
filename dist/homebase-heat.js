@@ -76,12 +76,13 @@
     const amount = Math.max(0, Number(value) || 0);
     if (!amount) return 0;
     const localShade = (Number(weightedShade) || 0) / Math.max(amount, .0001);
-    // Map measured local activity onto the full palette. The former density
-    // bonus lifted nearly every modeled neighborhood into yellow, even when
-    // its individual signals were weak. Low areas now stay teal/green; only
-    // stronger and overlapping sources enter yellow, orange, red and magenta.
-    const normalized = clamp((localShade - .025) / .3, 0, 1);
-    return clamp(Math.pow(normalized, .78), .025, 1);
+    // Blend signal strength with nearby source density. The center of a
+    // strong area reaches orange/red, while its fading edge naturally moves
+    // through yellow and green instead of keeping one purple hue in a blob.
+    const signalQuality = clamp((localShade - .025) / .58, 0, 1);
+    const localActivity = 1 - Math.exp(-amount * 2.4);
+    const intensity = clamp(localActivity * .72 + signalQuality * .28, 0, 1);
+    return clamp(Math.pow(intensity, .9), .025, 1);
   }
 
   function compositeOpacity(value) {
