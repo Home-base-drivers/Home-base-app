@@ -1,4 +1,4 @@
-const CACHE='home-base-v95';
+const CACHE='home-base-v96';
 const ASSETS=['./','index.html','manifest.webmanifest','favicon.svg','icon-192.png','icon-512.png','homebase-logo.png','baltimore-map.jpg','provider-signals.json','homebase-live.js','baltimore-market.js?v=72','homebase-heat.js?v=94','baltimore-demand-areas.geojson'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));

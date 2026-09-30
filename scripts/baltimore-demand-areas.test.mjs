@@ -60,6 +60,22 @@ test('each forecast hour has up to twelve destination options and custom event i
   assert.match(heatRenderer, /function anchoredGridOrigin/);
 });
 
+test('hourly destination markers are on the selected route and open an information card', () => {
+  assert.match(indexHtml, /function traceDestinationRoute\(options\)/);
+  assert.match(indexHtml, /traceDestinationRoute\(destinations\)/);
+  assert.match(indexHtml, /marker\.openPopup\(\)/);
+  assert.match(indexHtml, /class="event-popup"/);
+  assert.match(indexHtml, /bottomSheet'\)\.classList\.remove\('collapsed'\)/);
+});
+
+test('passenger destinations aggregate restaurant activity into busy-time districts', () => {
+  assert.match(indexHtml, /function restaurantDistrictCandidates/);
+  assert.match(indexHtml, /cat:'restaurant_district'/);
+  assert.match(indexHtml, /v\.cat!=='restaurant'/);
+  assert.match(indexHtml, /hour>=11&&hour<14\|\|hour>=17&&hour<22/);
+  assert.match(indexHtml, /ARTS:'🎨'.+MUSIC:'🎵'.+THEATER:'🎭'.+NIGHTLIFE:'🍸'.+FESTIVAL:'🎉'/s);
+});
+
 test('K–12 pickup and university demand use different timing models', () => {
   assert.match(indexHtml, /amenity==='school'.+return'k12'/s);
   assert.match(indexHtml, /amenity==='college'.+return'university'/s);
