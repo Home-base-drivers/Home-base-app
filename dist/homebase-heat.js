@@ -51,16 +51,16 @@
       // rides, while letting nightlife, transit, universities and verified
       // events create visible demand fields. Fast food stays excluded upstream.
       const venueScale = {
-        restaurant: .08, cafe: .08, nightlife: .82, event: .86,
-        transit: .7, university: .52, shopping: .32, hotel: .3,
+        restaurant: .08, cafe: .08, nightlife: 1.08, event: 1.18,
+        transit: .82, university: .66, shopping: .32, hotel: .3,
         medical: .25, school: .3, k12: .25, neighborhood: .38
       };
       strength *= venueScale[category] ?? (tags.place ? .28 : foodAmenity === 'fast_food' ? 0 : .24);
     }
     // The synthetic neighborhood anchor supplies only a restrained baseline;
     // it must not make every polygon glow like an active hotspot.
-    if (tags.areaCoverageAnchor) strength *= .28;
-    if (tags.metroBaseline || tags.forecast) strength *= .82;
+    if (tags.areaCoverageAnchor) strength *= .16;
+    if (tags.metroBaseline || tags.forecast) strength *= .65;
     return clamp(strength, 0, 1.25);
   }
 
@@ -76,10 +76,12 @@
     const amount = Math.max(0, Number(value) || 0);
     if (!amount) return 0;
     const localShade = (Number(weightedShade) || 0) / Math.max(amount, .0001);
-    const measuredLevel = clamp(localShade + Math.min(.2, areaIntensity(amount) * .2), .035, 1);
-    // Expand the useful middle of the model range so ordinary green areas,
-    // transitional yellow fields and genuine high-demand peaks remain distinct.
-    return clamp(Math.pow(measuredLevel, .72), .035, 1);
+    // Map measured local activity onto the full palette. The former density
+    // bonus lifted nearly every modeled neighborhood into yellow, even when
+    // its individual signals were weak. Low areas now stay teal/green; only
+    // stronger and overlapping sources enter yellow, orange, red and magenta.
+    const normalized = clamp((localShade - .025) / .58, 0, 1);
+    return clamp(Math.pow(normalized, .78), .025, 1);
   }
 
   function compositeOpacity(value) {
