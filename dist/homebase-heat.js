@@ -176,76 +176,124 @@
         // driver zooms into Baltimore neighborhoods, restore the local
         // neighborhood demand surface from the sources assigned to each
         // geographic boundary, then layer source-level detail over it.
-        if (map.getZoom() >= 13) this._drawAreaSurface(output, map, this._areas, size, sample);
-        this._drawSources(output, map, sources, size, sample);
+        const zoom = map.getZoom();
+        const hasNeighborhoods = this._areas.some(area =>
+          area.areaType === 'neighborhood' && area.feature && area.feature.geometry && (area.sources || []).length
+        );
+        if (zoom >= 13 && hasNeighborhoods) {
+          this._drawAreaSurface(output, map, this._areas, size, sample);
+          // Nearby points are already painted into their own neighborhood
+          // cells. Keep only non-neighborhood sources here, such as airports.
+          this._drawSources(output, map, sources.filter(source =>
+            source.heatAreaType !== 'neighborhood' && !(source.tags && source.tags.areaCoverageAnchor)
+          ), size, sample);
+        } else {
+          this._drawSources(output, map, sources, size, sample);
+        }
       },
       _drawAreaSurface(output, map, areas, size, sample) {
         const active = (areas || []).filter(area =>
           area.areaType === 'neighborhood' &&
           area.feature && area.feature.geometry && (area.sources || []).length
         );
-        if (!active.length) return;
-        const zoomFactor = 1;
-        const width = Math.max(1, Math.ceil(size.x / sample));
-        const height = Math.max(1, Math.ceil(size.y / sample));
-        const paint = document.createElement('canvas');
-        paint.width = width; paint.height = height;
-        const context = paint.getContext('2d');
-        const traceRing = ring => {
-          ring.forEach((coordinate, index) => {
-            const point = map.latLngToContainerPoint([coordinate[1], coordinate[0]]);
-            const x = point.x / sample, y = point.y / sample;
-            if (index) context.lineTo(x, y); else context.moveTo(x, y);
-          });
-          context.closePath();
-        };
-        active.forEach(area => {
-          let amount = 0, weightedShade = 0;
-          (area.sources || []).forEach(source => {
+        if (!active.length) return false;
+
+        // Paint local demand into small map-anchored cells, clipped to each
+        // actual neighborhood boundary. Every cell scores only nearby sources,
+        // so one busy venue cannot turn its entire neighborhood purple.
+        const zoom = map.getZoom();
+        const cell = clamp(Math.round(40 - zoom * 2), 9, 16);
+        const prepared = active.map(area => {
+          const sources = (area.sources || []).map((source, index) => {
             const strength = sourceStrength(source, this._when, this._scoreSource);
-            if (!strength) return;
-            amount += strength;
-            weightedShade += strength * sourceShade(strength);
-          });
-          if (amount <= 0) return;
-          const level = compositeLevel(amount, weightedShade);
-          const rgb = colorAt(level);
-          const opacity = clamp(.018 + compositeOpacity(amount) * .24, .018, .18) * zoomFactor;
-          const geometry = area.feature.geometry;
-          const polygons = geometry.type === 'Polygon' ? [geometry.coordinates] : geometry.type === 'MultiPolygon' ? geometry.coordinates : [];
-          if (!polygons.length) return;
-          context.save();
-          // A blurred geographic mask keeps the neighborhood influence of the
-          // provider reference without displaying a polygon edge or cell grid.
-          const blur = map.getZoom() >= 15 ? 3.5 : 7.5;
-          context.filter = `blur(${blur}px)`;
-          context.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${opacity})`;
-          context.beginPath();
-          polygons.forEach(rings => rings.forEach(traceRing));
-          context.fill('evenodd');
-          context.restore();
-        });
-        output.save();
-        output.imageSmoothingEnabled = true;
-        output.imageSmoothingQuality = 'high';
-        output.drawImage(paint, 0, 0, size.x, size.y);
-        if (map.getZoom() >= 13) {
-          // Subtle local boundary lines and the matching GeoJSON labels keep
-          // the heat readable as neighborhood-based data when zoomed in.
-          output.lineWidth = .65;
-          output.strokeStyle = 'rgba(192,225,255,.18)';
-          output.beginPath();
-          active.forEach(area => {
-            const geometry = area.feature.geometry;
-            const polygons = geometry.type === 'Polygon' ? [geometry.coordinates] : geometry.type === 'MultiPolygon' ? geometry.coordinates : [];
-            polygons.forEach(rings => rings.forEach(ring => ring.forEach((coordinate, index) => {
+            if (!strength || !Number.isFinite(source.lat) || !Number.isFinite(source.lon)) return null;
+            const center = map.latLngToContainerPoint([source.lat, source.lon]);
+            const km = sourceFootprintKm(source);
+            const north = map.latLngToContainerPoint([source.lat + km / 111.32, source.lon]);
+            const east = map.latLngToContainerPoint([
+              source.lat,
+              source.lon + km / (111.32 * Math.max(.2, Math.cos(source.lat * Math.PI / 180)))
+            ]);
+            return {
+              center, strength,
+              rx: Math.max(3, Math.abs(east.x - center.x) * (.72 + (index % 3) * .08)),
+              ry: Math.max(3, Math.abs(north.y - center.y) * (.72 + ((index + 1) % 3) * .08)),
+              shade: sourceShade(strength),
+              opacity: source.tags && (source.tags.providerSignal || source.tags.providerEvent || source.tags.liveEvent) ? .9 : .78
+            };
+          }).filter(Boolean);
+          return { area, sources };
+        }).filter(entry => entry.sources.length);
+
+        const tracePolygon = rings => {
+          rings.forEach(ring => {
+            ring.forEach((coordinate, index) => {
               const point = map.latLngToContainerPoint([coordinate[1], coordinate[0]]);
               if (index) output.lineTo(point.x, point.y); else output.moveTo(point.x, point.y);
-            })));
+            });
+            output.closePath();
           });
-          output.stroke();
-        }
+        };
+
+        prepared.forEach(({ area, sources }) => {
+          const geometry = area.feature.geometry;
+          const polygons = geometry.type === 'Polygon' ? [geometry.coordinates] :
+            geometry.type === 'MultiPolygon' ? geometry.coordinates : [];
+          polygons.forEach(rings => {
+            if (!rings || !rings.length) return;
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            rings[0].forEach(coordinate => {
+              const point = map.latLngToContainerPoint([coordinate[1], coordinate[0]]);
+              minX = Math.min(minX, point.x); minY = Math.min(minY, point.y);
+              maxX = Math.max(maxX, point.x); maxY = Math.max(maxY, point.y);
+            });
+            minX = clamp(Math.floor(minX), 0, size.x); minY = clamp(Math.floor(minY), 0, size.y);
+            maxX = clamp(Math.ceil(maxX), 0, size.x); maxY = clamp(Math.ceil(maxY), 0, size.y);
+            if (maxX <= minX || maxY <= minY) return;
+
+            output.save();
+            output.beginPath();
+            tracePolygon(rings);
+            output.clip('evenodd');
+            for (let y = minY; y < maxY; y += cell) for (let x = minX; x < maxX; x += cell) {
+              const px = x + cell / 2, py = y + cell / 2;
+              let amount = 0, weightedShade = 0;
+              sources.forEach(source => {
+                const dx = (px - source.center.x) / source.rx;
+                const dy = (py - source.center.y) / source.ry;
+                const distance = dx * dx + dy * dy;
+                if (distance > 8) return;
+                const profile = Math.exp(-distance * 1.05);
+                const contribution = source.strength * profile * source.opacity;
+                amount += contribution;
+                weightedShade += contribution * source.shade;
+              });
+              if (amount < .012) continue;
+              const level = compositeLevel(amount, weightedShade);
+              const rgb = colorAt(level);
+              const alpha = compositeOpacity(amount);
+              if (alpha < .018) continue;
+              output.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${alpha})`;
+              output.fillRect(x, y, cell + .35, cell + .35);
+            }
+            output.restore();
+          });
+        });
+
+        // Fine boundary lines keep neighborhood edges readable beneath labels.
+        output.save();
+        output.lineWidth = .75;
+        output.strokeStyle = 'rgba(174,220,255,.24)';
+        output.beginPath();
+        prepared.forEach(({ area }) => {
+          const geometry = area.feature.geometry;
+          const polygons = geometry.type === 'Polygon' ? [geometry.coordinates] :
+            geometry.type === 'MultiPolygon' ? geometry.coordinates : [];
+          polygons.forEach(rings => tracePolygon(rings));
+        });
+        output.stroke();
         output.restore();
+        return true;
       },
       _drawSources(output, map, sourceData, size, sample) {
         if (!Array.isArray(sourceData) || !sourceData.length) return;
