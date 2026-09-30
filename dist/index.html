@@ -146,6 +146,10 @@
 .workspace-tools{display:flex;align-items:center;gap:7px}.workspace-minimize{width:40px;height:40px;border:1px solid rgba(79,187,247,.34);border-radius:12px;background:#071a29;font-size:1.15rem;color:#dff6ff}
 .workspace-view.is-minimized{top:max(10px,env(safe-area-inset-top));bottom:auto;height:auto;min-height:0;max-height:78px;overflow:hidden;padding:10px 14px;border:1px solid rgba(79,187,247,.42);border-radius:16px;box-shadow:0 12px 35px rgba(0,0,0,.58);transform:translateX(-50%)}
 .workspace-view.is-minimized .workspace-head{margin:0;align-items:center}.workspace-view.is-minimized #workspaceContent{display:none}
+  /* Home Base style uses real, georeferenced imagery across the whole map. */
+  .app.map-reference .leaflet-tile-pane{filter:brightness(.82) contrast(1.16) saturate(.9)}
+  .app.satellite .leaflet-tile-pane{filter:brightness(1.02) contrast(1.06) saturate(1.08)}
+  .app.dark .leaflet-tile-pane{filter:brightness(1.1) contrast(1.08) saturate(.8)}
 </style>
 </head>
 <body>
@@ -180,8 +184,7 @@
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="baltimore-market.js?v=72"></script>
-<script src="homebase-heat.js?v=92"></script>
-<script src="homebase-reference-map.js?v=1"></script>
+<script src="homebase-heat.js?v=93"></script>
 <script>
 const app=document.getElementById('app');
 const $=s=>app.querySelector(s), $$=s=>[...app.querySelectorAll(s)];
@@ -197,7 +200,6 @@ liveMap.on('layeradd',event=>{const layer=event.layer;if(layer instanceof L.Circ
 liveMap.createPane('heatPane');liveMap.getPane('heatPane').style.zIndex=320;liveMap.getPane('heatPane').style.pointerEvents='none';
 liveMap.createPane('roadsPane');liveMap.getPane('roadsPane').style.zIndex=340;liveMap.getPane('roadsPane').style.pointerEvents='none';
 liveMap.createPane('labelsPane');liveMap.getPane('labelsPane').style.zIndex=360;liveMap.getPane('labelsPane').style.pointerEvents='none';
-liveMap.createPane('referenceMapPane');liveMap.getPane('referenceMapPane').style.zIndex=250;liveMap.getPane('referenceMapPane').style.pointerEvents='none';
 // All basemap components use the same Web Mercator tile grid as the heat.
 const esriTiles='https://server.arcgisonline.com/ArcGIS/rest/services/';
 const imageryOptions={maxZoom:19,maxNativeZoom:19,keepBuffer:3,attribution:'Imagery © Esri, Maxar, Earthstar Geographics, and the GIS User Community'};
@@ -208,34 +210,31 @@ function mapLabels(){return L.tileLayer(esriTiles+'Reference/World_Boundaries_an
 const streetLabelLayer=L.tileLayer(esriTiles+'Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',{...darkMapOptions,pane:'labelsPane',attribution:'Labels © Esri'});
 const streetLayer=L.layerGroup([streetBaseLayer,streetLabelLayer]);
 const satelliteLayer=L.layerGroup([L.tileLayer(esriTiles+'World_Imagery/MapServer/tile/{z}/{y}/{x}',imageryOptions),mapRoads(),mapLabels()]);
-const referenceMapBounds=L.latLngBounds([39.266,-76.642],[39.333,-76.578]);
-const referenceMapLayer=L.imageOverlay(window.HOMEBASE_REFERENCE_MAP,referenceMapBounds,{pane:'referenceMapPane',opacity:1,interactive:false,alt:'Home Base Baltimore reference basemap'});
 const initialBaseMap=(()=>{try{return localStorage.getItem('homeBaseBaseMapMode')||'reference'}catch{return'reference'}})();
 let activeBaseMapMode='reference';
-function setBaseLayer(mode,fitReference=false){
+function setBaseLayer(mode){
   const baseMode=['reference','satellite','dark'].includes(mode)?mode:'reference';
-  if(liveMap.hasLayer(referenceMapLayer))liveMap.removeLayer(referenceMapLayer);
   if(liveMap.hasLayer(streetLayer))liveMap.removeLayer(streetLayer);
   if(liveMap.hasLayer(streetBaseLayer))liveMap.removeLayer(streetBaseLayer);
   if(liveMap.hasLayer(satelliteLayer))liveMap.removeLayer(satelliteLayer);
-  if(baseMode==='satellite'){
+  if(baseMode==='satellite'||baseMode==='reference'){
     satelliteLayer.addTo(liveMap);
   }else{
-    if(baseMode==='reference'){streetBaseLayer.addTo(liveMap);referenceMapLayer.addTo(liveMap)}
-    else streetLayer.addTo(liveMap);
+    streetLayer.addTo(liveMap);
   }
   activeBaseMapMode=baseMode;
-  const labels={reference:'Home Base reference map',satellite:'Satellite map',dark:'Dark street map'};
+  const labels={reference:'Home Base styled map',satellite:'Satellite map',dark:'Dark street map'};
   const shortLabels={reference:'REF',satellite:'SAT',dark:'DARK'};
   app.classList.toggle('satellite',baseMode==='satellite');
+  app.classList.toggle('map-reference',baseMode==='reference');
+  app.classList.toggle('dark',baseMode==='dark');
   const button=$('#layerBtn');
   button.setAttribute('aria-pressed',String(baseMode!=='dark'));
   button.setAttribute('aria-label',labels[baseMode]+' active. Tap to change map base.');
   const small=button.querySelector('small');if(small)small.textContent=shortLabels[baseMode];
   try{localStorage.setItem('homeBaseBaseMapMode',baseMode)}catch{}
-  if(baseMode==='reference'&&fitReference)liveMap.fitBounds(referenceMapBounds,{animate:false});
 }
-setBaseLayer(initialBaseMap,initialBaseMap==='reference');
+setBaseLayer(initialBaseMap);
 let gpsMarker=null,gpsCircle=null,gpsRequestInFlight=false,lastAutoGpsRefresh=0;
 let routeLayers=[],routeStrokeLayers=[],eventMapLayers=[],highwayLayers=[],heatLayer=null,heatAreaLayer=null,demandAreas=[],demandAreaSources=[],demandAreaSourceRef=null,highwayRequestSerial=0,routeRequestSerial=0;
 let surgeTrend='cooling';
@@ -331,7 +330,7 @@ const majorDemandLabels=new Set(['downtown','inner harbor','fells point','canton
 function normalizedAreaName(name){return String(name||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim()}
 function demandAreaScore(area,when){const sources=(area.sources||[]).filter(source=>demandWeight(source,when)>0);if(!sources.length)return 0;const surges=sources.map(source=>Number(source.tags&&source.tags.uberSurgeMultiplier)).filter(Number.isFinite);if(surges.length)return Math.max(0,Math.min(1,(Math.max(...surges)-1)/.85));const total=sources.reduce((sum,source)=>sum+demandWeight(source,when),0);return 1-Math.exp(-total/18)}
 function demandAreaStyle(){return{stroke:false,fill:false,fillOpacity:0,opacity:0}}
-function showDemandAreaLabel(name,zoom,areaType='neighborhood'){if(areaType==='label')return zoom>=15;if(areaType==='county')return zoom>=9&&zoom<13;return areaType==='neighborhood'&&zoom>=13}
+function showDemandAreaLabel(name,zoom,areaType='neighborhood'){if(areaType==='label')return zoom>=15;if(areaType==='county')return zoom>=9&&zoom<13;return areaType==='neighborhood'&&zoom>=12}
 function renderDemandGrid(sources,index,when){
   if(when)selectedForecastTime=when;
   if(sources&&sources.length&&sources!==demandAreaSourceRef)bindDemandSources(sources);
@@ -547,7 +546,7 @@ renderSupport=function(message=''){baseRenderSupportV35(message);enhanceSupport(
 ['navMap','navEarn','navAlerts','navProfile','navSupport'].forEach(id=>$('#'+id)?.addEventListener('click',()=>{if(readProductPrefs().localAnalytics)hbTrack('navigation',{tab:id.replace('nav','').toLowerCase()})}));
 setTimeout(()=>showHomeBaseOnboarding(false),650);
 $('#installBtn').addEventListener('click',requestHomeScreenInstall);
-$('#layerBtn').addEventListener('click',()=>{const modes=['reference','satellite','dark'];const next=modes[(modes.indexOf(activeBaseMapMode)+1)%modes.length];setBaseLayer(next,next==='reference');const names={reference:'Home Base reference map',satellite:'Satellite imagery',dark:'Dark street map'};show(['▱',names[next]+' on',next==='reference'?'Reference map includes its original sample heat and venue labels. Live route and app controls remain available.':next==='satellite'?'Satellite imagery is active.':'The dark street map is active.','MAP BASE · Tap to cycle map styles'])});
+$('#layerBtn').addEventListener('click',()=>{const modes=['reference','satellite','dark'];const next=modes[(modes.indexOf(activeBaseMapMode)+1)%modes.length];setBaseLayer(next);const names={reference:'Home Base styled map',satellite:'Satellite imagery',dark:'Dark street map'};show(['▱',names[next]+' on',next==='reference'?'Full-area styled satellite tiles with aligned streets, live routes and demand overlays.':next==='satellite'?'Natural satellite imagery is active.':'The dark street map is active.','MAP BASE · Tap to cycle map styles'])});
 $('#heatToggle').setAttribute('aria-pressed',String(initialHeatVisible));$('#heatToggle').textContent=`HEAT · ${initialHeatVisible?'ON':'OFF'}`;$('#heatToggle').setAttribute('aria-label',initialHeatVisible?'Hide demand heat map':'Show demand heat map');
 $('#heatToggle').addEventListener('click',()=>{const on=app.classList.contains('heat-hidden');app.classList.toggle('heat-hidden',!on);$('#heatToggle').setAttribute('aria-pressed',String(on));$('#heatToggle').textContent=`HEAT · ${on?'ON':'OFF'}`;$('#heatToggle').setAttribute('aria-label',on?'Hide demand heat map':'Show demand heat map');try{localStorage.setItem('homeBaseHeatVisible',String(on))}catch{}});
 function updatePaletteButton(){const name=heatPaletteNames[heatPaletteIndex];$('#paletteToggle').textContent=`COLORS · ${name.toUpperCase()}`;$('#paletteToggle').setAttribute('aria-label',`Heat colors: ${name}. Change heat map colors.`)}
@@ -750,7 +749,7 @@ async function refreshLiveDemandLayer(){
 if(!demoLocale)setTimeout(autoRefreshGps,150);
 setInterval(()=>{updateClimateAdvisory();const selected=$('[data-hour][aria-pressed="true"]');if(selected&&selected.dataset.hour==='0'&&activeStops.length)applyTimeForecast(0,new Date());refreshLiveDemandLayer()},300000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-lastAutoGpsRefresh>300000)autoRefreshGps()});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=83',{updateViaCache:'none'}).then(r=>r.update()));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=84',{updateViaCache:'none'}).then(r=>r.update()));
 </script>
 <script src="homebase-live.js"></script>
 </body>
