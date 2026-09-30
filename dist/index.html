@@ -180,7 +180,7 @@
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="baltimore-market.js?v=72"></script>
-<script src="homebase-heat.js?v=80"></script>
+<script src="homebase-heat.js?v=81"></script>
 <script>
 const app=document.getElementById('app');
 const $=s=>app.querySelector(s), $$=s=>[...app.querySelectorAll(s)];
@@ -665,7 +665,16 @@ function buildRoute(venues,lat,lon,market){
     m.on('click',()=>{selectedDestination=[s.lat,s.lon];$('#bestTime').textContent=marketTime(s.when);$('#bestRoute').textContent=s.name;show(['🧭',s.name,reason,'OPEN THIS AREA IN GOOGLE MAPS'])});routeLayers.push(m);
   });
   const cityPoints=activeDemandSources.filter(v=>Number.isFinite(v.lat)&&Number.isFinite(v.lon)).map(v=>[v.lat,v.lon]),viewPoints=cityPoints.length>=12?[[lat,lon],...cityPoints]:points;
-  liveMap.once('moveend',()=>renderDemandGrid(activeDemandSources,0,start));liveMap.fitBounds(L.latLngBounds(viewPoints).pad(.04),{padding:[34,34],maxZoom:11});setTimeout(()=>renderDemandGrid(activeDemandSources,0,start),650);
+  liveMap.once('moveend',()=>renderDemandGrid(activeDemandSources,0,start));
+  if(isGreaterBaltimoreLocation(lat,lon)){
+    // Keep Baltimore's initial view on the driver's current neighborhood.
+    // Fitting every county anchor and distant 12-hour route stop zoomed out to
+    // county scale, which prevented the neighborhood layer from appearing.
+    liveMap.setView([lat,lon],13.5,{animate:false});
+  }else{
+    liveMap.fitBounds(L.latLngBounds(viewPoints).pad(.04),{padding:[34,34],maxZoom:11});
+  }
+  setTimeout(()=>renderDemandGrid(activeDemandSources,0,start),650);
   $('#routePlanTitle').textContent=`EVENTS + ${market.toUpperCase()} ROUTE`;
   $('#routeStops').innerHTML=stops.map((s,i)=>`<div class="route-stop"><div class="stop-num" style="--stop:${s.color}">${categoryIcon(s.cat)}</div><div><b>${marketTime(s.when)} · ${safeText(s.name)}</b><span>${demandReason(s.cat,marketParts(s.when).hour)}</span></div></div>`).join('');
   $('#routePlan').hidden=false;selectedDestination=[stops[0].lat,stops[0].lon];
@@ -714,7 +723,7 @@ async function refreshLiveDemandLayer(){
 if(!demoLocale)setTimeout(autoRefreshGps,150);
 setInterval(()=>{updateClimateAdvisory();const selected=$('[data-hour][aria-pressed="true"]');if(selected&&selected.dataset.hour==='0'&&activeStops.length)applyTimeForecast(0,new Date());refreshLiveDemandLayer()},300000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-lastAutoGpsRefresh>300000)autoRefreshGps()});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=80',{updateViaCache:'none'}).then(r=>r.update()));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=81',{updateViaCache:'none'}).then(r=>r.update()));
 </script>
 <script src="homebase-live.js"></script>
 </body>
