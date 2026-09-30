@@ -180,7 +180,7 @@
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="baltimore-market.js?v=72"></script>
-<script src="homebase-heat.js?v=79"></script>
+<script src="homebase-heat.js?v=80"></script>
 <script>
 const app=document.getElementById('app');
 const $=s=>app.querySelector(s), $$=s=>[...app.querySelectorAll(s)];
@@ -304,7 +304,7 @@ const majorDemandLabels=new Set(['downtown','inner harbor','fells point','canton
 function normalizedAreaName(name){return String(name||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim()}
 function demandAreaScore(area,when){const sources=(area.sources||[]).filter(source=>demandWeight(source,when)>0);if(!sources.length)return 0;const surges=sources.map(source=>Number(source.tags&&source.tags.uberSurgeMultiplier)).filter(Number.isFinite);if(surges.length)return Math.max(0,Math.min(1,(Math.max(...surges)-1)/.85));const total=sources.reduce((sum,source)=>sum+demandWeight(source,when),0);return 1-Math.exp(-total/18)}
 function demandAreaStyle(){return{stroke:false,fill:false,fillOpacity:0,opacity:0}}
-function showDemandAreaLabel(name,zoom,areaType='neighborhood'){const normalized=normalizedAreaName(name);if(areaType==='label')return zoom>=15;if(areaType==='county')return zoom>=9&&zoom<13;if(zoom>=15)return false;if(zoom>=13)return majorDemandLabels.has(normalized);return false}
+function showDemandAreaLabel(name,zoom,areaType='neighborhood'){if(areaType==='label')return zoom>=15;if(areaType==='county')return zoom>=9&&zoom<13;return areaType==='neighborhood'&&zoom>=13}
 function renderDemandGrid(sources,index,when){
   if(when)selectedForecastTime=when;
   if(sources&&sources.length&&sources!==demandAreaSourceRef)bindDemandSources(sources);
@@ -320,7 +320,7 @@ function renderDemandGrid(sources,index,when){
   demandAreas.forEach(area=>{
     const bounds=L.geoJSON(area.feature).getBounds(),center=bounds.getCenter(),name=area.name;
     if(!name||!showDemandAreaLabel(name,zoom,area.areaType)||!visible.contains(center))return;
-    const point=liveMap.latLngToLayerPoint(center),spacing=zoom>=15?54:zoom>=13?74:140;
+    const point=liveMap.latLngToLayerPoint(center),spacing=zoom>=16?42:zoom>=15?56:zoom>=14?68:78;
     if(occupied.some(existing=>existing.distanceTo(point)<spacing))return;
     occupied.push(point);
     L.marker(center,{pane:'markerPane',interactive:false,keyboard:false,icon:L.divIcon({className:'heat-area-label',html:safeText(name),iconSize:null})}).addTo(heatAreaLayer);
@@ -714,7 +714,7 @@ async function refreshLiveDemandLayer(){
 if(!demoLocale)setTimeout(autoRefreshGps,150);
 setInterval(()=>{updateClimateAdvisory();const selected=$('[data-hour][aria-pressed="true"]');if(selected&&selected.dataset.hour==='0'&&activeStops.length)applyTimeForecast(0,new Date());refreshLiveDemandLayer()},300000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-lastAutoGpsRefresh>300000)autoRefreshGps()});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=79',{updateViaCache:'none'}).then(r=>r.update()));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=80',{updateViaCache:'none'}).then(r=>r.update()));
 </script>
 <script src="homebase-live.js"></script>
 </body>
