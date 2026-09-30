@@ -181,7 +181,7 @@
         const hasNeighborhoods = this._areas.some(area =>
           area.areaType === 'neighborhood' && area.feature && area.feature.geometry && (area.sources || []).length
         );
-        if (zoom >= 13 && hasNeighborhoods) {
+        if (zoom >= 9 && hasNeighborhoods) {
           this._drawAreaSurface(output, map, this._areas, size, sample);
           // Nearby points are already painted into their own neighborhood
           // cells. Keep only non-neighborhood sources here, such as airports.
