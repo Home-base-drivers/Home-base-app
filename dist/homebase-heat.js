@@ -60,7 +60,7 @@
     // The synthetic neighborhood anchor supplies only a restrained baseline;
     // it must not make every polygon glow like an active hotspot.
     if (tags.areaCoverageAnchor) strength *= .16;
-    if (tags.metroBaseline || tags.forecast) strength *= .65;
+    if (tags.metroBaseline || tags.forecast) strength *= .35;
     return clamp(strength, 0, 1.25);
   }
 
