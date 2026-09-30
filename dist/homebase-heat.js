@@ -60,7 +60,7 @@
     // The synthetic neighborhood anchor supplies only a restrained baseline;
     // it must not make every polygon glow like an active hotspot.
     if (tags.areaCoverageAnchor) strength *= .16;
-    if (tags.metroBaseline || tags.forecast) strength *= .35;
+    if (tags.metroBaseline || tags.forecast) strength *= .65;
     return clamp(strength, 0, 1.25);
   }
 
@@ -88,7 +88,7 @@
     // Keep locally scored demand legible above the dark basemap. Opacity still
     // falls to zero with the measured field, so this does not manufacture a
     // surrounding low-demand ring.
-    return clamp(areaIntensity(Math.max(0, Number(value) || 0)) * .68, 0, .54);
+    return clamp(areaIntensity(Math.max(0, Number(value) || 0)) * 1.15, 0, .72);
   }
 
   function sourceRadiusKm(category) {
@@ -210,7 +210,7 @@
           if (amount <= 0) return;
           const level = compositeLevel(amount, weightedShade);
           const rgb = colorAt(level);
-          const opacity = clamp(.012 + compositeOpacity(amount) * .24, .012, .15) * zoomFactor;
+          const opacity = clamp(.025 + compositeOpacity(amount) * .4, .025, .25) * zoomFactor;
           const geometry = area.feature.geometry;
           const polygons = geometry.type === 'Polygon' ? [geometry.coordinates] : geometry.type === 'MultiPolygon' ? geometry.coordinates : [];
           if (!polygons.length) return;
