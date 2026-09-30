@@ -6,7 +6,7 @@
   'use strict';
 
   const PALETTES = {
-    classic: [[0,[10,66,92]],[.14,[16,158,120]],[.3,[62,196,73]],[.47,[255,220,42]],[.64,[255,146,31]],[.82,[247,52,49]],[1,[222,25,180]]],
+    classic: [[0,[10,66,92]],[.12,[16,158,120]],[.27,[62,196,73]],[.42,[255,220,42]],[.57,[255,146,31]],[.7,[247,52,49]],[.82,[235,38,128]],[.92,[190,39,214]],[1,[133,62,255]]],
     ocean: [[0,[7,55,111]],[.16,[7,112,169]],[.32,[20,179,193]],[.48,[116,216,168]],[.64,[243,220,91]],[.8,[243,139,69]],[1,[192,82,190]]],
     ember: [[0,[74,47,111]],[.16,[111,49,156]],[.32,[174,54,139]],[.48,[224,73,94]],[.64,[246,123,55]],[.8,[250,181,48]],[1,[255,230,112]]]
   };
@@ -39,7 +39,7 @@
   function sourceStrength(source, when, scoreSource) {
     const weight = Number(scoreSource(source, when));
     if (!Number.isFinite(weight) || weight <= 0) return 0;
-    let strength = weight / 13;
+    let strength = weight / 10;
     const tags = source.tags || {};
     // Public points describe activity density, not verified ride requests. They
     // become useful when several nearby places overlap, without turning every
@@ -51,9 +51,9 @@
       // rides, while letting nightlife, transit, universities and verified
       // events create visible demand fields. Fast food stays excluded upstream.
       const venueScale = {
-        restaurant: .08, cafe: .08, nightlife: 1.08, event: 1.18,
-        transit: .82, university: .66, shopping: .32, hotel: .3,
-        medical: .25, school: .3, k12: .25, neighborhood: .38
+        restaurant: .14, cafe: .14, nightlife: 1.12, event: 1.2,
+        transit: .9, university: .72, shopping: .38, hotel: .36,
+        medical: .3, school: .36, k12: .3, neighborhood: .48
       };
       strength *= venueScale[category] ?? (tags.place ? .28 : foodAmenity === 'fast_food' ? 0 : .24);
     }
@@ -65,7 +65,7 @@
   }
 
   function areaIntensity(weightedValue) {
-    return 1 - Math.exp(-Math.max(0, weightedValue) * 1.65);
+    return 1 - Math.exp(-Math.max(0, weightedValue) * 2.05);
   }
 
   function sourceShade(strength) {
@@ -82,14 +82,14 @@
     const signalQuality = clamp((localShade - .025) / .58, 0, 1);
     const localActivity = 1 - Math.exp(-amount * 4.2);
     const intensity = clamp(localActivity * .72 + signalQuality * .28, 0, 1);
-    return clamp(Math.pow(intensity, .9), .025, 1);
+    return clamp(Math.pow(intensity, .78), .025, 1);
   }
 
   function compositeOpacity(value) {
     // Keep locally scored demand legible above the dark basemap. Opacity still
     // falls to zero with the measured field, so this does not manufacture a
     // surrounding low-demand ring.
-    return clamp(areaIntensity(Math.max(0, Number(value) || 0)) * 1.15, 0, .72);
+    return clamp(areaIntensity(Math.max(0, Number(value) || 0)) * 1.32, 0, .82);
   }
 
   function sourceRadiusKm(category) {
