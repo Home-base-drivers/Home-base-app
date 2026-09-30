@@ -83,7 +83,7 @@
     // Keep locally scored demand legible above the dark basemap. Opacity still
     // falls to zero with the measured field, so this does not manufacture a
     // surrounding low-demand ring.
-    return clamp(areaIntensity(Math.max(0, Number(value) || 0)) * .52, 0, .48);
+    return clamp(areaIntensity(Math.max(0, Number(value) || 0)) * .68, 0, .54);
   }
 
   function sourceRadiusKm(category) {
@@ -180,7 +180,7 @@
           area.feature && area.feature.geometry && (area.sources || []).length
         );
         if (!active.length) return;
-        const zoomFactor = map.getZoom() >= 15 ? .84 : map.getZoom() >= 13 ? .94 : 1;
+        const zoomFactor = 1;
         const width = Math.max(1, Math.ceil(size.x / sample));
         const height = Math.max(1, Math.ceil(size.y / sample));
         const paint = document.createElement('canvas');
@@ -205,7 +205,7 @@
           if (amount <= 0) return;
           const level = compositeLevel(amount, weightedShade);
           const rgb = colorAt(level);
-          const opacity = clamp(.08 + compositeOpacity(amount) * .9, .08, .48) * zoomFactor;
+          const opacity = clamp(.08 + compositeOpacity(amount) * .9, .08, .54) * zoomFactor;
           const geometry = area.feature.geometry;
           const polygons = geometry.type === 'Polygon' ? [geometry.coordinates] : geometry.type === 'MultiPolygon' ? geometry.coordinates : [];
           if (!polygons.length) return;
@@ -244,7 +244,7 @@
       },
       _drawSources(output, map, sourceData, size, sample) {
         if (!Array.isArray(sourceData) || !sourceData.length) return;
-        const zoomFactor = map.getZoom() >= 15 ? .62 : map.getZoom() >= 13 ? .78 : 1;
+        const zoomFactor = 1;
         const sources = sourceData.map((source, index) => {
           // Label/county anchors exist only to name areas. Neighborhood
           // coverage anchors remain fixed geographic sources at every zoom.
@@ -276,7 +276,7 @@
             blockShape: (source.heatAreaType === 'label' || source.heatAreaType === 'neighborhood') && Array.isArray(bounds),
             shade: sourceShade(strength),
             detailOpacity: source.tags && (source.tags.providerSignal || source.tags.providerEvent || source.tags.liveEvent) ? .76 :
-              source.heatAreaType === 'label' ? .34 : source.heatAreaType === 'neighborhood' ? .54 : .68,
+              source.heatAreaType === 'label' ? .34 : source.heatAreaType === 'neighborhood' ? .78 : .68,
             skew: ((index % 7) - 3) * .045
           };
         }).filter(Boolean);
