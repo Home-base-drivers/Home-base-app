@@ -46,11 +46,16 @@
     // restaurant or school into a red hotspot by itself.
     if (tags.publicVenue) {
       const foodAmenity = String(tags.amenity || '').toLowerCase();
-      // Single restaurant POIs are not reliable passenger-demand evidence;
-      // retain only a light background contribution. Fast-food POIs are
-      // filtered from the ride score upstream and stay available as delivery
-      // context for a future Uber Eats layer.
-      strength *= foodAmenity === 'restaurant' || foodAmenity === 'cafe' ? .08 : tags.place ? .28 : .2;
+      const category = String(source.cat || '').toLowerCase();
+      // Keep individual restaurants and cafes as faint context for passenger
+      // rides, while letting nightlife, transit, universities and verified
+      // events create visible demand fields. Fast food stays excluded upstream.
+      const venueScale = {
+        restaurant: .08, cafe: .08, nightlife: .82, event: .86,
+        transit: .7, university: .52, shopping: .32, hotel: .3,
+        medical: .25, school: .3, k12: .25, neighborhood: .38
+      };
+      strength *= venueScale[category] ?? (tags.place ? .28 : foodAmenity === 'fast_food' ? 0 : .24);
     }
     if (tags.metroBaseline || tags.forecast) strength *= .82;
     return clamp(strength, 0, 1.25);
@@ -68,7 +73,10 @@
     const amount = Math.max(0, Number(value) || 0);
     if (!amount) return 0;
     const localShade = (Number(weightedShade) || 0) / Math.max(amount, .0001);
-    return clamp(localShade + Math.min(.2, areaIntensity(amount) * .2), .035, 1);
+    const measuredLevel = clamp(localShade + Math.min(.2, areaIntensity(amount) * .2), .035, 1);
+    // Expand the useful middle of the model range so ordinary green areas,
+    // transitional yellow fields and genuine high-demand peaks remain distinct.
+    return clamp(Math.pow(measuredLevel, .72), .035, 1);
   }
 
   function compositeOpacity(value) {
@@ -172,7 +180,7 @@
           area.feature && area.feature.geometry && (area.sources || []).length
         );
         if (!active.length) return;
-        const zoomFactor = map.getZoom() >= 15 ? .78 : map.getZoom() >= 13 ? .92 : 1;
+        const zoomFactor = map.getZoom() >= 15 ? .84 : map.getZoom() >= 13 ? .94 : 1;
         const width = Math.max(1, Math.ceil(size.x / sample));
         const height = Math.max(1, Math.ceil(size.y / sample));
         const paint = document.createElement('canvas');
@@ -197,14 +205,14 @@
           if (amount <= 0) return;
           const level = compositeLevel(amount, weightedShade);
           const rgb = colorAt(level);
-          const opacity = clamp(.17 + compositeOpacity(amount) * .86, .17, .46) * zoomFactor;
+          const opacity = clamp(.08 + compositeOpacity(amount) * .9, .08, .48) * zoomFactor;
           const geometry = area.feature.geometry;
           const polygons = geometry.type === 'Polygon' ? [geometry.coordinates] : geometry.type === 'MultiPolygon' ? geometry.coordinates : [];
           if (!polygons.length) return;
           context.save();
           // A blurred geographic mask keeps the neighborhood influence of the
           // provider reference without displaying a polygon edge or cell grid.
-          const blur = map.getZoom() >= 15 ? 2.5 : 4.5;
+          const blur = map.getZoom() >= 15 ? 3.5 : 7.5;
           context.filter = `blur(${blur}px)`;
           context.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${opacity})`;
           context.beginPath();
@@ -216,6 +224,22 @@
         output.imageSmoothingEnabled = true;
         output.imageSmoothingQuality = 'high';
         output.drawImage(paint, 0, 0, size.x, size.y);
+        if (map.getZoom() >= 13) {
+          // Subtle local boundary lines and the matching GeoJSON labels keep
+          // the heat readable as neighborhood-based data when zoomed in.
+          output.lineWidth = .65;
+          output.strokeStyle = 'rgba(192,225,255,.18)';
+          output.beginPath();
+          active.forEach(area => {
+            const geometry = area.feature.geometry;
+            const polygons = geometry.type === 'Polygon' ? [geometry.coordinates] : geometry.type === 'MultiPolygon' ? geometry.coordinates : [];
+            polygons.forEach(rings => rings.forEach(ring => ring.forEach((coordinate, index) => {
+              const point = map.latLngToContainerPoint([coordinate[1], coordinate[0]]);
+              if (index) output.lineTo(point.x, point.y); else output.moveTo(point.x, point.y);
+            })));
+          });
+          output.stroke();
+        }
         output.restore();
       },
       _drawSources(output, map, sourceData, size, sample) {
