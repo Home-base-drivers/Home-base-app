@@ -80,7 +80,7 @@
     // strong area reaches orange/red, while its fading edge naturally moves
     // through yellow and green instead of keeping one purple hue in a blob.
     const signalQuality = clamp((localShade - .025) / .58, 0, 1);
-    const localActivity = 1 - Math.exp(-amount * 2.4);
+    const localActivity = 1 - Math.exp(-amount * 4.2);
     const intensity = clamp(localActivity * .72 + signalQuality * .28, 0, 1);
     return clamp(Math.pow(intensity, .9), .025, 1);
   }
