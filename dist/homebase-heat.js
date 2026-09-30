@@ -57,6 +57,9 @@
       };
       strength *= venueScale[category] ?? (tags.place ? .28 : foodAmenity === 'fast_food' ? 0 : .24);
     }
+    // The synthetic neighborhood anchor supplies only a restrained baseline;
+    // it must not make every polygon glow like an active hotspot.
+    if (tags.areaCoverageAnchor) strength *= .28;
     if (tags.metroBaseline || tags.forecast) strength *= .82;
     return clamp(strength, 0, 1.25);
   }
@@ -205,7 +208,7 @@
           if (amount <= 0) return;
           const level = compositeLevel(amount, weightedShade);
           const rgb = colorAt(level);
-          const opacity = clamp(.08 + compositeOpacity(amount) * .9, .08, .54) * zoomFactor;
+          const opacity = clamp(.04 + compositeOpacity(amount) * .78, .04, .5) * zoomFactor;
           const geometry = area.feature.geometry;
           const polygons = geometry.type === 'Polygon' ? [geometry.coordinates] : geometry.type === 'MultiPolygon' ? geometry.coordinates : [];
           if (!polygons.length) return;
