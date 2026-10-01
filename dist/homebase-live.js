@@ -179,21 +179,14 @@
       const miles = rowsWithMileage.reduce((sum, row) => sum + row.distanceMiles, 0);
       if (miles > 0) tips.push(`Your recorded gross is ${formatMoney(gross / miles)} per mile; compare distant route suggestions against this baseline.`);
     }
-    if (!tips.length) tips.push('Log a few completed shifts to unlock your strongest time blocks, platform comparisons and gross-per-mile coaching.');
+    if (!tips.length) tips.push('Import an earnings CSV to unlock your strongest time blocks, platform comparisons and gross-per-mile coaching. Manual entry is a last resort.');
     return tips.slice(0, 3);
   }
   function injectLocalRate() {
     const root = document.getElementById('workspaceContent');
     if (!root || document.getElementById('localRateSection')) return;
-    const shifts = completedShifts(), hours = shifts.reduce((sum, row) => sum + (Number(row.hours) || 0), 0), gross = shifts.reduce((sum, row) => sum + (Number(row.gross) || 0), 0), ownRate = hours ? gross / hours : null, loggedRows = loggedTripRows();
-    root.insertAdjacentHTML('beforeend', '<section class="workspace-section" id="localRateSection"><div class="section-head"><h3>HOME BASE DRIVER RATE</h3><span class="section-tag">ON THIS DEVICE</span></div><div class="earnings-grid"><div class="earnings-metric"><span>YOUR TRACKED GROSS / HR</span><b>' + formatMoney(ownRate) + (ownRate ? '/hr' : '') + '</b></div><div class="earnings-metric"><span>COMPLETED SHIFTS</span><b>' + shifts.length.toLocaleString() + '</b></div></div><p class="workspace-note">Calculated from your Home Base shift log, separately from modeled platform forecasts. Your entries stay in this browser and are not uploaded.</p><div class="callout"><b>PROFIT COACH</b><br>' + profitTips([...savedTrips(), ...loggedRows]).map(safeText).join('<br>') + '</div><div class="status-line" id="localRateStatus"></div></section>');
-    document.getElementById('earningsCsv')?.addEventListener('change', async event => {
-      const file = event.target.files?.[0];
-      if (!file) return;
-      const rows = parseLocalTrips(await file.text(), file.name);
-      saveTrips(rows);
-      setStatus(document.getElementById('localRateStatus'), `Saved ${rows.length} trip row${rows.length === 1 ? '' : 's'} for on-device hourly and profit comparisons.`);
-    });
+    const shifts = completedShifts(), imported = safeParse(localStorage.getItem('homeBaseEarningsProfile'), {}) || {}, hours = Number(imported.totalHours) || shifts.reduce((sum, row) => sum + (Number(row.hours) || 0), 0), gross = Number(imported.totalGross) || shifts.reduce((sum, row) => sum + (Number(row.gross) || 0), 0), ownRate = hours ? gross / hours : null, historyCount = Number(imported.rows) || shifts.length, loggedRows = loggedTripRows();
+    root.insertAdjacentHTML('beforeend', '<section class="workspace-section" id="localRateSection"><div class="section-head"><h3>HOME BASE DRIVER RATE</h3><span class="section-tag">ON THIS DEVICE</span></div><div class="earnings-grid"><div class="earnings-metric"><span>YOUR IMPORTED / TRACKED GROSS / HR</span><b>' + formatMoney(ownRate) + (ownRate ? '/hr' : '') + '</b></div><div class="earnings-metric"><span>IMPORTED ROWS / SHIFTS</span><b>' + historyCount.toLocaleString() + '</b></div></div><p class="workspace-note">Calculated from imported earnings or Home Base shift entries, separately from modeled platform forecasts. Your data stays in this browser and is not uploaded.</p><div class="callout"><b>PROFIT COACH</b><br>' + profitTips([...savedTrips(), ...loggedRows]).map(safeText).join('<br>') + '</div><div class="status-line" id="localRateStatus"></div></section>');
   }
   function injectReadinessAudit() {
     const root = document.getElementById('workspaceContent');
