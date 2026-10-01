@@ -62,3 +62,8 @@ test('invalid saved period falls back to the current week',()=>{
   assert.equal(view([row('2025-01-01',40)],{period:'constructor'}).period,'week');
   assert.equal(view([row('2025-01-01',40)],{period:'constructor'}).rows.length,0);
 });
+test('a missing GPS timezone uses the device timezone and keeps Earnings available',()=>{
+  const result=earnings.historyView([row('2026-10-01',40)],{now,timezone:null});
+  assert.equal(result.totals.gross,40);
+  assert.equal(earnings.dayKey(now,null),earnings.dayKey(now,Intl.DateTimeFormat().resolvedOptions().timeZone));
+});

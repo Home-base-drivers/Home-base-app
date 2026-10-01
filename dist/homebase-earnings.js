@@ -8,6 +8,8 @@
   const periods={week:'This week',month:'This month',year:'This year',all:'All history'};
   const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   function dayKey(value,timezone='America/New_York'){
+    // GPS permission can be denied before a market timezone has been selected.
+    timezone=timezone||Intl.DateTimeFormat().resolvedOptions().timeZone||'America/New_York';
     const parts=new Intl.DateTimeFormat('en-CA',{timeZone:timezone,year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(value));
     const part=name=>parts.find(p=>p.type===name).value;
     return part('year')+'-'+part('month')+'-'+part('day');
@@ -88,7 +90,7 @@
     if(sync){sync.querySelector('b').textContent=importedCount?'CSV history saved':'Automatic file detection';sync.querySelector('span').textContent='Select one or more files. Platforms and columns are detected, and repeat imports skip matching records. Files stay on this device.';}
     const old=root.querySelector('.dashboard-hero');if(old)old.remove();
     root.querySelectorAll('.workspace-section').forEach(node=>{if(node.querySelector('h3')?.textContent==='PLATFORM PERFORMANCE')node.remove();});
-    const history=root.querySelector('#combinedLedger');history.innerHTML='';history.className='recorded-earnings';
+    const history=root.querySelector('#combinedLedger');history.className='recorded-earnings';
     // Actual history is the main earnings view; planning forecasts remain available separately.
     const forecasts=root.querySelector('.forecast-strip');if(forecasts){const details=document.createElement('details');details.className='earnings-fallback';details.innerHTML='<summary>Planning forecasts</summary>';forecasts.before(details);details.append(forecasts);history.after(details);}
     for(const [id,label] of [['automaticCalibration','Forecast learning'],['backupCard','Backup & restore']]){
