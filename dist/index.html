@@ -570,7 +570,7 @@ function collapseManualEarningsFallback(){
   section.after(fallback);if(readShift())fallback.open=true;
 }
 const baseRenderEarningsV35=renderEarningsPanel;
-renderEarningsPanel=function(message='',isError=false){baseRenderEarningsV35(message,isError);enhanceEarnings();collapseManualEarningsFallback();window.HomeBaseLive?.refreshEarnings?.();hbTrack('view_earnings')};
+renderEarningsPanel=function(message='',isError=false){baseRenderEarningsV35(message,isError);enhanceEarnings();collapseManualEarningsFallback();workspaceContent.querySelectorAll('.earnings-tracker > details.earnings-entry-details').forEach(node=>node.remove());window.HomeBaseLive?.refreshEarnings?.();hbTrack('view_earnings')};
 
 function showHomeBaseOnboarding(force=false){
   if(!force&&localStorage.getItem('homeBaseOnboardingDone')==='true')return;
@@ -800,7 +800,7 @@ async function refreshLiveDemandLayer(){
 if(!demoLocale)setTimeout(autoRefreshGps,150);
 setInterval(()=>{updateClimateAdvisory();const selected=$('[data-hour][aria-pressed="true"]');if(selected&&selected.dataset.hour==='0'&&activeStops.length)applyTimeForecast(0,new Date());refreshLiveDemandLayer()},300000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-lastAutoGpsRefresh>300000)autoRefreshGps()});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=94',{updateViaCache:'none'}).then(r=>r.update()));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=95',{updateViaCache:'none'}).then(r=>r.update()));
 </script>
 <script src="homebase-live.js?v=37"></script>
 </body>
