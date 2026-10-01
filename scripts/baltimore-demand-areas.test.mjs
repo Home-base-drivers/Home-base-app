@@ -5,6 +5,7 @@ import { readFile } from 'node:fs/promises';
 const areas = JSON.parse(await readFile(new URL('../dist/baltimore-demand-areas.geojson', import.meta.url), 'utf8'));
 const indexHtml = await readFile(new URL('../dist/index.html', import.meta.url), 'utf8');
 const heatRenderer = await readFile(new URL('../dist/homebase-heat.js', import.meta.url), 'utf8');
+const liveRuntime = await readFile(new URL('../dist/homebase-live.js', import.meta.url), 'utf8');
 function inRing(lon, lat, ring) {
   let inside = false;
   for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
@@ -92,6 +93,10 @@ test('Home Base tracks earnings directly and provides a Gridwise-style performan
   assert.match(indexHtml, /import is required/i);
   assert.match(indexHtml, /function summarizeGridwiseCsv\(text,filename,source\)/);
   assert.match(indexHtml, /OPTIONAL EARNINGS HISTORY/);
+  assert.match(liveRuntime, /YOUR TRACKED GROSS \/ HR/);
+  assert.match(liveRuntime, /completedShifts\(\)/);
+  assert.match(liveRuntime, /Log a few completed shifts/);
+  assert.doesNotMatch(liveRuntime, /YOUR UPLOADED RATE|calculated only from your uploaded trip data|Upload trip data with date\/time/);
   assert.match(indexHtml, /localStorage\.setItem\('homeBaseEarningsProfile',JSON\.stringify\(earningsProfile\)\)/);
   assert.doesNotMatch(indexHtml, /gridwise\.io\/api|api\.gridwise/i);
 });

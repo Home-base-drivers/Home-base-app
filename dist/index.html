@@ -569,7 +569,7 @@ function enhanceEarnings(){
   workspaceContent.querySelector('#accuracySave').addEventListener('click',()=>{const actual=Math.max(0,Number(workspaceContent.querySelector('#accuracyActual').value)||0);if(!actual){workspaceContent.querySelector('#accuracyStatus').textContent='Enter your actual gross hourly rate first.';return}const rows=readAccuracy();rows.push({forecast:forecastRate,actual,rating:workspaceContent.querySelector('#accuracyRating').value,market:readProfile().market||$('#marketHeading').textContent,at:new Date().toISOString()});localStorage.setItem('homeBaseForecastAccuracy',JSON.stringify(rows.slice(-365)));hbTrack('forecast_checkin',{forecast:forecastRate,actual});renderEarningsPanel('Forecast check-in saved.')});
 }
 const baseRenderEarningsV35=renderEarningsPanel;
-renderEarningsPanel=function(message='',isError=false){baseRenderEarningsV35(message,isError);enhanceEarnings();hbTrack('view_earnings')};
+renderEarningsPanel=function(message='',isError=false){baseRenderEarningsV35(message,isError);enhanceEarnings();window.HomeBaseLive?.refreshEarnings?.();hbTrack('view_earnings')};
 
 function showHomeBaseOnboarding(force=false){
   if(!force&&localStorage.getItem('homeBaseOnboardingDone')==='true')return;

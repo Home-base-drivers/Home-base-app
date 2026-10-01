@@ -131,6 +131,16 @@
     }).filter(Boolean);
   }
   function savedTrips() { return safeParse(localStorage.getItem('homeBaseTripRows'), []) || []; }
+  function completedShifts() { return safeParse(localStorage.getItem('homeBaseShifts'), []) || []; }
+  function loggedTripRows() {
+    return completedShifts().map(row => ({
+      startedAt: row.startedAt || (row.date ? `${row.date}T12:00:00` : null),
+      durationMinutes: Number(row.hours) > 0 ? Number(row.hours) * 60 : null,
+      grossEarnings: Number(row.gross) || 0,
+      distanceMiles: Number(row.miles) || null,
+      platform: row.platform || 'Other'
+    }));
+  }
   function saveTrips(rows) {
     const combined = [...savedTrips(), ...rows].slice(-5000);
     localStorage.setItem('homeBaseTripRows', JSON.stringify(combined));
@@ -154,22 +164,29 @@
     const tips = [];
     const best = bestBlock(rows);
     if (best) tips.push(`Your strongest recorded block is ${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][best.day]} around ${new Date(2000,0,1,best.hour).toLocaleTimeString([], { hour: 'numeric' })} at ${formatMoney(best.gross / best.hours)}/hr.`);
-    const platforms = Object.entries(earningsProfile?.platforms || {}).filter(([, value]) => value.rate).sort((a, b) => b[1].rate - a[1].rate);
-    if (platforms[0]) tips.push(`${platforms[0][0]} is your strongest uploaded platform at ${formatMoney(platforms[0][1].rate)}/hr.`);
+    const platformTotals = {};
+    rows.forEach(row => {
+      if (!row.platform || !row.durationMinutes) return;
+      const item = platformTotals[row.platform] || (platformTotals[row.platform] = { gross: 0, hours: 0 });
+      item.gross += Number(row.grossEarnings) || 0;
+      item.hours += Number(row.durationMinutes) / 60;
+    });
+    const platforms = Object.entries(platformTotals).filter(([, value]) => value.hours).map(([name, value]) => [name, value.gross / value.hours]).sort((a, b) => b[1] - a[1]);
+    if (platforms[0]) tips.push(`${platforms[0][0]} is your strongest tracked platform at ${formatMoney(platforms[0][1])}/hr.`);
     const rowsWithMileage = rows.filter(row => Number.isFinite(row.distanceMiles) && row.durationMinutes);
     if (rowsWithMileage.length >= 3) {
       const gross = rowsWithMileage.reduce((sum, row) => sum + row.grossEarnings, 0);
       const miles = rowsWithMileage.reduce((sum, row) => sum + row.distanceMiles, 0);
       if (miles > 0) tips.push(`Your recorded gross is ${formatMoney(gross / miles)} per mile; compare distant route suggestions against this baseline.`);
     }
-    if (!tips.length) tips.push('Upload trip data with date/time and online-hours columns to unlock local profit recommendations.');
+    if (!tips.length) tips.push('Log a few completed shifts to unlock your strongest time blocks, platform comparisons and gross-per-mile coaching.');
     return tips.slice(0, 3);
   }
   function injectLocalRate() {
     const root = document.getElementById('workspaceContent');
     if (!root || document.getElementById('localRateSection')) return;
-    const ownRate = earningsProfile?.totalHours ? earningsProfile.totalGross / earningsProfile.totalHours : null;
-    root.insertAdjacentHTML('beforeend', '<section class="workspace-section" id="localRateSection"><div class="section-head"><h3>HOME BASE USER RATE</h3><span class="section-tag">THIS DEVICE</span></div><div class="earnings-grid"><div class="earnings-metric"><span>YOUR UPLOADED RATE</span><b>' + formatMoney(ownRate) + (ownRate ? '/hr' : '') + '</b></div><div class="earnings-metric"><span>TRIP ROWS SAVED</span><b>' + savedTrips().length.toLocaleString() + '</b></div></div><p class="workspace-note">This is separate from the platform forecast and is calculated only from your uploaded trip data. It remains on this device while cloud accounts await owner approval.</p><div class="callout"><b>PROFIT COACH</b><br>' + profitTips(savedTrips()).map(safeText).join('<br>') + '</div><div class="status-line" id="localRateStatus"></div></section>');
+    const shifts = completedShifts(), hours = shifts.reduce((sum, row) => sum + (Number(row.hours) || 0), 0), gross = shifts.reduce((sum, row) => sum + (Number(row.gross) || 0), 0), ownRate = hours ? gross / hours : null, loggedRows = loggedTripRows();
+    root.insertAdjacentHTML('beforeend', '<section class="workspace-section" id="localRateSection"><div class="section-head"><h3>HOME BASE DRIVER RATE</h3><span class="section-tag">ON THIS DEVICE</span></div><div class="earnings-grid"><div class="earnings-metric"><span>YOUR TRACKED GROSS / HR</span><b>' + formatMoney(ownRate) + (ownRate ? '/hr' : '') + '</b></div><div class="earnings-metric"><span>COMPLETED SHIFTS</span><b>' + shifts.length.toLocaleString() + '</b></div></div><p class="workspace-note">Calculated from your Home Base shift log, separately from modeled platform forecasts. Your entries stay in this browser and are not uploaded.</p><div class="callout"><b>PROFIT COACH</b><br>' + profitTips([...savedTrips(), ...loggedRows]).map(safeText).join('<br>') + '</div><div class="status-line" id="localRateStatus"></div></section>');
     document.getElementById('earningsCsv')?.addEventListener('change', async event => {
       const file = event.target.files?.[0];
       if (!file) return;
@@ -208,5 +225,5 @@
   ensureFreshnessBadge();
   setInterval(refreshLiveDemand, LIVE_POLL_MS);
   setTimeout(refreshLiveDemand, 2500);
-  window.HomeBaseLive = { refreshDemand: refreshLiveDemand };
+  window.HomeBaseLive = { refreshDemand: refreshLiveDemand, refreshEarnings: injectLocalRate };
 })();
