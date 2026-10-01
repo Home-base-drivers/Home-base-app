@@ -6,6 +6,8 @@ Updated October 1, 2026.
 
 ChatGPT connectors help maintain the repository and work with connected services in a conversation. Home Base drivers need connections inside the app, backed by a private account service. Installing a ChatGPT plugin does not activate Home Base earnings sync.
 
+The Supabase plugin is now connected, and the **Homebase** organization is accessible. The private backend release is prepared in [BACKEND.md](BACKEND.md); a hosted project and production account integration still need provisioning and verification.
+
 The current available-tool and plugin-directory checks did not identify an Uber, Lyft, Empower, Gridwise, or Argyle earnings connector. Directory results are not exhaustive: https://chatgpt.com/plugins.
 
 ## Earnings: evaluate one connection provider first
