@@ -566,7 +566,7 @@ function collapseManualEarningsFallback(){
   if(!shiftCard&&!entryDetails)return;
   const fallback=document.createElement('details');fallback.className='manual-earnings-fallback';fallback.innerHTML='<summary>Manual fallback · use only when sync or CSV is unavailable</summary><p class="workspace-note">You do not need to enter every trip. Log a completed shift or use the odometer tracker only when your platform cannot provide an earnings export.</p>';
   if(shiftCard)fallback.append(shiftCard);
-  if(entryDetails){const form=entryDetails.querySelector('form');if(form){const replacement=document.createElement('div');replacement.className='earnings-entry-details';replacement.append(form);fallback.append(replacement)}else fallback.append(entryDetails)}
+  if(entryDetails){const form=entryDetails.querySelector('form');if(form){const replacement=document.createElement('div');replacement.className='earnings-entry-details';replacement.append(form);fallback.append(replacement);entryDetails.remove()}else fallback.append(entryDetails)}
   section.after(fallback);if(readShift())fallback.open=true;
 }
 const baseRenderEarningsV35=renderEarningsPanel;
@@ -800,7 +800,7 @@ async function refreshLiveDemandLayer(){
 if(!demoLocale)setTimeout(autoRefreshGps,150);
 setInterval(()=>{updateClimateAdvisory();const selected=$('[data-hour][aria-pressed="true"]');if(selected&&selected.dataset.hour==='0'&&activeStops.length)applyTimeForecast(0,new Date());refreshLiveDemandLayer()},300000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-lastAutoGpsRefresh>300000)autoRefreshGps()});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=93',{updateViaCache:'none'}).then(r=>r.update()));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=94',{updateViaCache:'none'}).then(r=>r.update()));
 </script>
 <script src="homebase-live.js?v=37"></script>
 </body>
