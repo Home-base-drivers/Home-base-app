@@ -195,6 +195,7 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="baltimore-market.js?v=72"></script>
 <script src="homebase-heat.js?v=94"></script>
+<script src="homebase-planner.js?v=106"></script>
 <script>
 const app=document.getElementById('app');
 const $=s=>app.querySelector(s), $$=s=>[...app.querySelectorAll(s)];
@@ -729,15 +730,16 @@ function mergeDemandSources(baseline,verified){
 function drawRoutePath(path){routeStrokeLayers.forEach(layer=>liveMap.removeLayer(layer));routeLayers=routeLayers.filter(layer=>!routeStrokeLayers.includes(layer));const casing=L.polyline(path,{color:'#00111e',weight:7,opacity:.92,interactive:false,lineCap:'round',lineJoin:'round',smoothFactor:.55}).addTo(liveMap),bloom=L.polyline(path,{color:'#006fff',weight:5,opacity:.3,interactive:false,lineCap:'round',lineJoin:'round',smoothFactor:.55,className:'homebase-route-bloom'}).addTo(liveMap),route=L.polyline(path,{color:'#14baff',weight:3.1,opacity:1,interactive:false,lineCap:'round',lineJoin:'round',smoothFactor:.55,className:'homebase-route-clean'}).addTo(liveMap),core=L.polyline(path,{color:'#dffbff',weight:.9,opacity:.9,interactive:false,lineCap:'round',lineJoin:'round',smoothFactor:.55,className:'homebase-route-core'}).addTo(liveMap);routeStrokeLayers=[casing,bloom,route,core];routeLayers.push(...routeStrokeLayers)}
 function restaurantDistrictCandidates(lat,lon,when){if(!isGreaterBaltimoreLocation(lat,lon))return[];const parts=marketParts(when),hour=parts.hour+when.getMinutes()/60,weekend=parts.day===0||parts.day===6,busy=hour>=11&&hour<14||hour>=17&&hour<22||weekend&&hour>=14&&hour<23;if(!busy)return[];const districts=[['Inner Harbor dining district',39.2851,-76.6132],['Harbor East dining district',39.2831,-76.6022],['Fells Point dining district',39.2825,-76.5934],['Canton dining district',39.2803,-76.5754],['Towson dining district',39.4015,-76.6019],['Catonsville dining district',39.2721,-76.7319],['Columbia dining district',39.2037,-76.8610],['Glen Burnie dining district',39.1626,-76.6247]];return districts.map(([name,pointLat,pointLon])=>({name,cat:'restaurant_district',lat:pointLat,lon:pointLon,tags:{aggregateDistrict:true,modelEstimate:true}})).map(point=>({...point,distance:distanceKm([lat,lon],[point.lat,point.lon])})).filter(point=>point.distance<=8).sort((a,b)=>a.distance-b.distance).slice(0,3)}
 function buildRoute(venues,lat,lon,market){
+  hourlyDestinations=[];
   routeLayers.forEach(x=>liveMap.removeLayer(x));routeLayers=[];routeStrokeLayers=[];if(heatAreaLayer)liveMap.removeLayer(heatAreaLayer);heatAreaLayer=L.layerGroup().addTo(liveMap);demandAreaSourceRef=null;if(!heatLayer)heatLayer=HomeBaseHeat.createLayer(L).addTo(liveMap);
   const routeRequest=++routeRequestSerial,start=new Date(),stops=[],regionalVenues=isGreaterBaltimoreLocation(lat,lon)?venues.filter(v=>isGreaterBaltimoreLocation(v.lat,v.lon)):venues,validDestinations=regionalVenues.filter(v=>(!v.heatOnly||v.tags&&v.tags.providerSignal)&&!(v.tags&&v.tags.deliveryRelevant)&&v.cat!=='restaurant'&&['event','k12','school','nightlife','transit','university','hotel'].includes(v.cat)&&Number.isFinite(v.lat)&&Number.isFinite(v.lon)&&(v.cat!=='event'||v.eventStart)),pool=validDestinations;
   for(let i=0;i<12;i++){
-    const when=new Date(start.getTime()+i*3600000),destinations=[...pool,...restaurantDistrictCandidates(lat,lon,when)],candidates=destinations.map(v=>({...v,score:v.tags&&v.tags.aggregateDistrict?8:demandWeight(v,when)+(v.tags&&v.tags.providerSignal?18:0)})).filter(v=>v.score>0).sort((a,b)=>b.score-a.score),seen=new Set(),options=[];
+    const when=new Date(start.getTime()+i*3600000),destinations=[...pool,...restaurantDistrictCandidates(lat,lon,when)],candidates=HomeBasePlanner.rankCandidates(destinations.map(v=>({...v,score:v.tags&&v.tags.aggregateDistrict?8:demandWeight(v,when)+(v.tags&&v.tags.providerSignal?18:0)})),{origin:[lat,lon],radiusMiles:Number(readProfile().radius)||25,hourlyRate:currentApps[0]?.base||23,costPerMile:Number(readCostPrefs().reserveRate)||.2}),seen=new Set(),options=[];
     for(const candidate of candidates){const key=`${candidate.lat.toFixed(5)}|${candidate.lon.toFixed(5)}`;if(seen.has(key))continue;seen.add(key);candidate.when=when;candidate.color=categoryColor(candidate.cat);options.push(candidate);if(options.length===12)break}
     if(!options.length)break;
     hourlyDestinations.push(options);stops.push(options[0]);
   }
-  activeStops=stops;publicSignalsRefreshedAt=new Date();renderDemandCoach();const verifiedDemand=regionalVenues.filter(v=>!(v.tags&&v.tags.forecast)&&!(v.tags&&v.tags.metroBaseline)),baseline=fallbackDemandSources(lat,lon,market);activeDemandSources=mergeDemandSources(baseline,[...verifiedDemand,...providerFlightPoints]);renderTimeButtons(stops,hourlyDestinations);
+  activeStops=stops;if(!stops.length){activeDemandSources=mergeDemandSources(fallbackDemandSources(lat,lon,market),regionalVenues);renderDestinationPoints([]);$('#routeStops').textContent='No suitable pickup areas within your working radius for the selected hours.';$('#bestRoute').textContent='No destination available';renderDemandGrid(activeDemandSources,0,start);return;}publicSignalsRefreshedAt=new Date();renderDemandCoach();const verifiedDemand=regionalVenues.filter(v=>!(v.tags&&v.tags.forecast)&&!(v.tags&&v.tags.metroBaseline)),baseline=fallbackDemandSources(lat,lon,market);activeDemandSources=mergeDemandSources(baseline,[...verifiedDemand,...providerFlightPoints]);renderTimeButtons(stops,hourlyDestinations);
   const points=[[lat,lon],...stops.map(s=>[s.lat,s.lon])];
   routeLayers.push(heatAreaLayer);demandAreas.forEach(area=>area.sources=[]);bindDemandSources(activeDemandSources);loadBaltimoreDemandAreas(lat,lon).then(areas=>{if(routeRequest!==routeRequestSerial)return;demandAreas=areas.map(area=>({...area,sources:[]}));activeDemandSources=mergeDemandSources(activeDemandSources,createAreaCoverageSources(demandAreas));demandAreaSourceRef=null;bindDemandSources(activeDemandSources);renderDemandGrid(activeDemandSources,0,start)}).catch(()=>{});
   renderDestinationPoints(hourlyDestinations[0]||stops);
@@ -800,8 +802,9 @@ async function refreshLiveDemandLayer(){
 if(!demoLocale)setTimeout(autoRefreshGps,150);
 setInterval(()=>{updateClimateAdvisory();const selected=$('[data-hour][aria-pressed="true"]');if(selected&&selected.dataset.hour==='0'&&activeStops.length)applyTimeForecast(0,new Date());refreshLiveDemandLayer()},300000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-lastAutoGpsRefresh>300000)autoRefreshGps()});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=95',{updateViaCache:'none'}).then(r=>r.update()));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=106',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';}));
 </script>
 <script src="homebase-live.js?v=37"></script>
 </body>
 </html>
+

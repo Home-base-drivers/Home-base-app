@@ -1,0 +1,190 @@
+(function(root,factory){
+  const api=factory();
+  if(typeof module==='object'&&module.exports)module.exports=api;
+  else {root.HomeBasePlanner=api;if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>api.boot());else api.boot();}
+})(typeof window==='undefined'?globalThis:window,function(){
+  'use strict';
+  const key=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+  const num=s=>{let v=String(s??'').trim();if(!v)return null;const negative=/^\(.*\)$/.test(v);v=v.replace(/[^0-9.\-]/g,'');if(!v)return null;const n=Number(v);return Number.isFinite(n)?(negative?-Math.abs(n):n):null;};
+  function csv(text){
+    const first=text.replace(/^\uFEFF/,'').split(/\r?\n/)[0],delimiter=[',',';','\t'].sort((a,b)=>first.split(b).length-first.split(a).length)[0];
+    const rows=[];let row=[],cell='',quoted=false;
+    text=text.replace(/^\uFEFF/,'');
+    for(let i=0;i<text.length;i++){const c=text[i];if(c==='"'){if(quoted&&text[i+1]==='"'){cell+='"';i++;}else quoted=!quoted;}else if(c===delimiter&&!quoted){row.push(cell.trim());cell='';}else if((c==='\n'||c==='\r')&&!quoted){if(c==='\r'&&text[i+1]==='\n')i++;row.push(cell.trim());if(row.some(Boolean))rows.push(row);row=[];cell='';}else cell+=c;}
+    if(quoted)throw Error('The CSV has an unfinished quoted field. Export the file again.');
+    row.push(cell.trim());if(row.some(Boolean))rows.push(row);return rows;
+  }
+  function hours(value,header){
+    const s=String(value||'').trim().toLowerCase();if(!s)return null;
+    if(s.includes(':')){const p=s.split(':').map(Number);return p.every(Number.isFinite)&&p.length>=2&&p.length<=3?p[0]+p[1]/60+(p[2]||0)/3600:null;}
+    const h=s.match(/([\d.]+)\s*h/),m=s.match(/([\d.]+)\s*m/);if(h||m)return Number(h?.[1]||0)+Number(m?.[1]||0)/60;
+    const n=num(s);if(n===null||n<0)return null;return /second/.test(header)?n/3600:/minute/.test(header)?n/60:n;
+  }
+  function platform(value,filename=''){
+    const s=String(value||filename).toLowerCase();if(/uber.?eats/.test(s))return'Uber Eats';if(/uber/.test(s))return'Uber';if(/lyft/.test(s))return'Lyft';if(/empow/.test(s))return'Empower';return value?String(value).trim().slice(0,60):'Other';
+  }
+  function dateValue(value){
+    const s=String(value||'').trim();if(!s)return {date:null,startedAt:null,timePrecision:false};
+    const iso=s.match(/^(\d{4})-(\d{2})-(\d{2})(?:$|[T ])/),us=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:$|[T ])/);
+    let d;if(iso)d=iso[1]+'-'+iso[2]+'-'+iso[3];else if(us&&Number(us[1])<=12&&Number(us[2])<=31)d=us[3]+'-'+us[1].padStart(2,'0')+'-'+us[2].padStart(2,'0');else return {date:null,startedAt:null,timePrecision:false};
+    const local=new Date(d+'T12:00:00');if(!Number.isFinite(local.getTime())||local.getFullYear()!==Number(d.slice(0,4))||local.getMonth()+1!==Number(d.slice(5,7))||local.getDate()!==Number(d.slice(8)))return {date:null,startedAt:null,timePrecision:false};
+    const precise=/\d{1,2}:\d{2}/.test(s),parsed=precise?new Date(s):local;
+    return {date:d,startedAt:Number.isFinite(parsed.getTime())?parsed.toISOString():local.toISOString(),timePrecision:precise&&Number.isFinite(parsed.getTime())};
+  }
+  function fingerprint(row){return JSON.stringify([row.platform,row.date,row.timePrecision?row.startedAt:null,row.earnings,row.hours,row.hoursType,row.miles,row.trips,row.payType]);}
+  function parseImport(text,filename,override='Auto'){
+    const raw=csv(text);if(raw.length<2)throw Error('Choose an earnings CSV with a header and at least one earnings row.');
+    const headers=raw[0].map(key),find=names=>{for(const n of names){const i=headers.indexOf(key(n));if(i>=0)return i;}return-1;};
+    let pay=find(['gross earnings','total earnings','earnings','gross pay','total pay','total income','income','fare amount','fare','amount']);
+    let payType='gross';if(pay<0){pay=find(['net earnings','net pay','net income','payout','net payout','pay']);payType='payout';}
+    const base=find(['base pay','base earnings','trip earnings']),tips=find(['tips','tip','tip amount']),bonus=find(['bonuses','bonus','promotions','promotion']);
+    if(pay<0&&base<0)throw Error('This file has no recognized earnings column. Supported: Earnings, Total Earnings, Gross Pay, Payout, or Base Pay. Mileage-only files are not earnings exports.');
+    let duration=find(['online hours','hours online','online time','online minutes','online seconds']);let hoursType='online';
+    if(duration<0){duration=find(['active hours','active time','engaged hours','booked hours','trip duration','duration minutes','duration seconds']);hoursType='active';}
+    if(duration<0){duration=find(['hours','duration']);hoursType='unknown';}
+    const source=find(['platform','app','provider','service','source']),date=find(['start time','started at','pickup time','trip date','earnings date','start date','date','day']);
+    const miles=find(['distance miles','miles','trip mileage','mileage']),trips=find(['completed trips','trips','rides','deliveries']),id=find(['trip id','ride id','transaction id','record id']);
+    const occurrences=new Map(),records=[];let skipped=0,undated=0;
+    for(const line of raw.slice(1)){
+      if(/^(total|subtotal|grand total)$/i.test(String(date>=0?line[date]:line[0]||'').trim())){skipped++;continue;}
+      const earning=pay>=0?num(line[pay]):num(line[base]);if(earning===null){skipped++;continue;}
+      const amount=pay>=0?earning:earning+(num(line[tips])||0)+(num(line[bonus])||0);
+      const dt=dateValue(date>=0?line[date]:'');if(!dt.date)undated++;
+      const name=source>=0&&line[source]?platform(line[source]):override!=='Auto'?platform(override):platform('',filename);
+      const row={...dt,platform:name,earnings:amount,hours:duration>=0?hours(line[duration],raw[0][duration].toLowerCase()):null,hoursType,miles:miles>=0?num(line[miles]):null,trips:trips>=0?num(line[trips]):id>=0?1:null,payType,filename,importedAt:Date.now()};
+      if(row.hours!==null&&(row.hours<0||row.hours>744))throw Error('A duration is outside the supported range. Check whether this export uses hours, minutes, or seconds.');
+      const f=fingerprint(row),n=(occurrences.get(f)||0)+1;occurrences.set(f,n);
+      row.id=id>=0&&line[id]?'provider:'+name+':'+line[id]:'row:'+f+':'+n;
+      records.push(row);
+    }
+    if(!records.length)throw Error('No usable earnings rows found. Existing history has been kept.');
+    return{records,skipped,undated,platforms:[...new Set(records.map(r=>r.platform))]};
+  }
+  function mergeRecords(existing,incoming){
+    const map=new Map(existing.map(r=>[r.id,r]));let added=0,duplicates=0,updated=0;
+    for(const row of incoming){const old=map.get(row.id);if(!old){added++;map.set(row.id,row);}else if(fingerprint(old)!==fingerprint(row)){updated++;map.set(row.id,row);}else duplicates++;}
+    return{records:[...map.values()],added,duplicates,updated};
+  }
+  function summarize(records,filename='Imported history'){
+    const summary={filename,source:'Combined earnings CSV',importedAt:Date.now(),rows:records.length,totalGross:0,totalHours:0,totalTrips:0,days:[],platforms:{},months:{},hasHours:false,hasTrips:false};const days=new Set();
+    for(const r of records){const p=summary.platforms[r.platform]||(summary.platforms[r.platform]={gross:0,hours:0,trips:0,rate:null,onlineGross:0,calibrationHours:0});summary.totalGross+=r.earnings;p.gross+=r.earnings;if(r.hoursType==='online'&&r.hours>0){summary.hasHours=true;summary.totalHours+=r.hours;p.hours+=r.hours;if(r.payType==='gross'){p.onlineGross+=r.earnings;p.calibrationHours+=r.hours;}}if(r.trips!==null){summary.hasTrips=true;summary.totalTrips+=r.trips;p.trips+=r.trips;}if(r.date){days.add(r.date);const m=summary.months[r.date.slice(0,7)]||(summary.months[r.date.slice(0,7)]={gross:0,hours:0,trips:0,rows:0});m.gross+=r.earnings;m.hours+=r.hoursType==='online'?r.hours||0:0;m.trips+=r.trips||0;m.rows++;}}
+    summary.days=[...days];for(const p of Object.values(summary.platforms))p.rate=p.calibrationHours>0?p.onlineGross/p.calibrationHours:null;return summary;
+  }
+  function learnedRate(records,name,when=new Date(),timezone='America/New_York'){
+    timezone=timezone||Intl.DateTimeFormat().resolvedOptions().timeZone||'America/New_York';
+    const parts=d=>{const p=new Intl.DateTimeFormat('en-US',{timeZone:timezone,weekday:'short',hour:'numeric',hourCycle:'h23'}).formatToParts(d);return{day:p.find(x=>x.type==='weekday').value,hour:Number(p.find(x=>x.type==='hour').value)};};
+    const now=parts(when),recent=records.filter(r=>r.platform.toLowerCase()===name.toLowerCase()&&r.payType==='gross'&&r.hoursType==='online'&&r.hours>0&&r.earnings>=0&&r.date&&new Date(r.startedAt||r.date+'T12:00:00')<=when&&when-new Date(r.startedAt||r.date+'T12:00:00')<=90*86400000);
+    const block=recent.filter(r=>r.timePrecision&&parts(new Date(r.startedAt)).day===now.day&&Math.abs(parts(new Date(r.startedAt)).hour-now.hour)<=2);
+    const valid=rows=>new Set(rows.map(r=>r.date)).size>=3&&rows.reduce((n,r)=>n+r.hours,0)>=6;
+    const selected=valid(block)?block:valid(recent)?recent:[];if(!selected.length)return null;
+    const totalHours=selected.reduce((n,r)=>n+r.hours,0),gross=selected.reduce((n,r)=>n+r.earnings,0);
+    return {rate:gross/totalHours,hours:totalHours,days:new Set(selected.map(r=>r.date)).size,scope:selected===block?'similar time blocks':'platform history'};
+  }
+  function distance(a,b){const rad=Math.PI/180,dlat=(b[0]-a[0])*rad,dlon=(b[1]-a[1])*rad,v=Math.sin(dlat/2)**2+Math.cos(a[0]*rad)*Math.cos(b[0]*rad)*Math.sin(dlon/2)**2;return 6371*2*Math.atan2(Math.sqrt(v),Math.sqrt(1-v));}
+  function rankCandidates(candidates,options={}){
+    const origin=options.origin,radius=Number(options.radiusMiles)||25,rate=Math.max(0,Number(options.hourlyRate)||0),cost=Math.max(0,Number(options.costPerMile)||0);
+    return candidates.filter(r=>Number.isFinite(r.lat)&&Number.isFinite(r.lon)&&r.score>0).map(r=>{const miles=origin?distance(origin,[r.lat,r.lon])*.621371*1.25:0,minutes=miles/22*60,travelCost=miles*cost,timeCost=minutes/60*rate;return{...r,estimatedMiles:miles,estimatedMinutes:minutes,relocationCost:travelCost+timeCost,planningScore:r.score-minutes*.25-(travelCost+timeCost)*.4};}).filter(r=>r.estimatedMiles<=radius).sort((a,b)=>b.planningScore-a.planningScore||a.estimatedMinutes-b.estimatedMinutes);
+  }
+  function evaluateForecasts(records,snapshots){
+    const matches=[];for(const r of records){if(!r.timePrecision||r.hoursType!=='online'||r.payType!=='gross'||!(r.hours>0))continue;const start=Date.parse(r.startedAt),end=start+r.hours*3600000;if(end>Date.now())continue;
+      const s=snapshots.filter(s=>s.platform===r.platform&&s.rate>0&&Date.parse(s.at)<=start&&start-Date.parse(s.at)<=3600000).sort((a,b)=>Date.parse(b.at)-Date.parse(a.at))[0];
+      if(s)matches.push({id:r.id,forecast:s.rate,actual:r.earnings/r.hours,at:s.at,error:Math.abs(s.rate-r.earnings/r.hours)});
+    }return {matches,count:matches.length,mae:matches.length?matches.reduce((n,r)=>n+r.error,0)/matches.length:null};
+  }
+  function boot(){
+    if(typeof window==='undefined'||typeof renderEarningsPanel!=='function')return;
+    const read=(k,f)=>{try{return JSON.parse(localStorage.getItem(k))??f;}catch{return f;}};
+    const write=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+    function commit(state){const prior={};Object.keys(state).forEach(k=>prior[k]=localStorage.getItem(k));try{for(const[k,v]of Object.entries(state))write(k,v);}catch(error){for(const[k,v]of Object.entries(prior)){if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v);}throw Error('Device storage is full or unavailable. Save a backup and free space before importing.');}}
+    const ledger=()=>read('homeBaseLedger',[]);
+    const allRecords=()=>[...ledger(),...read('homeBaseShifts',[]).map((r,i)=>({...dateValue(r.date||r.startedAt||r.endedAt),startedAt:r.startedAt||dateValue(r.date).startedAt,timePrecision:!!r.startedAt,id:'shift:'+i,platform:r.platform||'Other',earnings:Number(r.gross)||0,hours:Number(r.hours)||0,hoursType:'online',miles:Number(r.miles)||0,trips:Number(r.trips)||0,costs:Number(r.costs)||0,payType:'gross'}))];
+    const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const money2=n=>new Intl.NumberFormat(undefined,{style:'currency',currency:currentMoney.code,maximumFractionDigits:2}).format(n);
+    const message=(title,copy)=>{document.getElementById('installTitle').textContent=title;document.getElementById('installCopy').innerHTML=copy;document.getElementById('installPanel').classList.add('open');document.getElementById('backdrop').classList.add('open');};
+    const style=document.createElement('style');style.textContent=`
+      .planner-toolbar{display:flex;gap:7px;flex-wrap:wrap;padding:7px 10px;background:rgba(3,16,28,.85);border-bottom:1px solid #26475e}.planner-toolbar button{border:1px solid #41738e;border-radius:12px;background:#071c2c;color:#bceaff;padding:9px 11px;font-size:12px;font-weight:750;min-height:44px}.planner-status{width:100%;font-size:11px;color:#a9bdca}.planner-status:empty{display:none}.planner-card{border:1px solid #3c7995;background:rgba(2,20,33,.96);border-radius:16px;padding:14px;margin:10px 0}.planner-card h3{font-size:13px;letter-spacing:.08em;margin:0 0 8px}.planner-card p,.planner-card small{color:#aebec9;font-size:12px;line-height:1.5}.planner-card strong{display:block;font-size:18px;margin:8px 0}.planner-card button{min-height:44px;margin:5px 6px 0 0}.planner-card label{display:block;font-size:12px;color:#b5d1df;margin:8px 0}.planner-card input,.planner-card select{padding:10px;width:100%;background:#0a2333;color:#fff;border:1px solid #41738e;border-radius:9px}.planner-controls{display:flex;gap:8px;flex-wrap:wrap}.planner-drive .platform-row,.planner-drive .platforms,.planner-drive .app-cards,.planner-drive #timeRow,.planner-drive #routePlan,.planner-drive #bottomSheet,.planner-drive .weather-row,.planner-drive .local-conditions,.planner-drive .condition-row,.planner-drive .conditions,.planner-drive .forecast-note,.planner-drive .forecast-strip,.planner-drive #legend,.planner-drive .map-options,.planner-drive #feedSignal,.planner-drive #demandFreshness{display:none!important}.planner-drive .map-stage{flex:1;min-height:55svh}.planner-drive .planner-card{margin:8px 10px}.planner-drive .planner-toolbar{position:relative;z-index:900}.planner-drive .live-brief{display:none!important}.planner-drive #nextMoveCard strong{font-size:21px}.planner-drive #nextMoveCard button{font-size:15px;padding:12px 16px}.planner-empty{color:#a6b8c5;font-size:12px}.planner-metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.planner-metrics div{border:1px solid #284c62;border-radius:10px;padding:10px}.planner-metrics span{font-size:11px;color:#a9bfcb}.planner-metrics b{display:block;font-size:18px;margin-top:5px}.planner-style-button[aria-pressed=true]{outline:2px solid #2ac4ff}.planner-select{display:flex;flex-wrap:wrap;gap:8px}.planner-select button{padding:13px;border-radius:10px;background:#102c3e;color:#c6efff;border:1px solid #427a94}.planner-network{font-size:12px;color:#ffcf75}.planner-drive #mainContent>.platform-row{display:none!important}.planner-drive #mainContent{pointer-events:none}.planner-drive #nextMoveCard,.planner-drive .planner-toolbar{pointer-events:auto}
+    `;document.head.appendChild(style);
+    const toolbar=document.createElement('div');toolbar.className='planner-toolbar';toolbar.innerHTML='<button id="driveViewToggle" type="button" aria-pressed="false">Driving view</button><button id="demandDetails" type="button">Demand details</button><span class="planner-status" id="plannerStatus" role="status"></span>';
+    document.querySelector('.map-stage').before(toolbar);
+    const status=text=>{document.getElementById('plannerStatus').textContent=text;};
+    const layer=document.getElementById('layerBtn'),newLayer=layer.cloneNode(true);layer.replaceWith(newLayer);newLayer.querySelector('small').textContent='MAP';newLayer.setAttribute('aria-label','Choose map style');
+    newLayer.addEventListener('click',()=>{message('Map style','<p>Choose how the map looks. Demand zones, streets and destinations stay anchored in every view.</p><div class="planner-select">'+[['reference','Home Base'],['satellite','Satellite'],['dark','Streets']].map(([mode,label])=>'<button class="planner-style-button" data-map-style="'+mode+'" aria-pressed="'+(activeBaseMapMode===mode)+'">'+label+'</button>').join('')+'</div>');document.querySelectorAll('[data-map-style]').forEach(b=>b.addEventListener('click',()=>{setBaseLayer(b.dataset.mapStyle);newLayer.querySelector('small').textContent='MAP';newLayer.setAttribute('aria-label','Choose map style · '+b.textContent+' active');close();status(b.textContent+' map selected.');}));});
+    const install=document.getElementById('installBtn'),newInstall=install.cloneNode(true);install.replaceWith(newInstall);newInstall.querySelector('small').textContent='INSTALL';newInstall.setAttribute('aria-label','Install Home Base on your Home Screen');
+    const installed=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+    const updateInstall=()=>{newInstall.hidden=installed();};updateInstall();window.addEventListener('appinstalled',()=>{newInstall.hidden=true;close();status('Home Base installed.');});
+    requestHomeScreenInstall=async function(){installHelp();if(installed())return;const prompt=deferredPrompt;if(!prompt)return;deferredPrompt=null;try{await prompt.prompt();const result=await prompt.userChoice;if(result.outcome==='accepted'){close();status('Home Base installation accepted.');}else status('Installation cancelled. Home Screen instructions are available.');}catch{status('Use the Home Screen instructions to install Home Base.');}};
+    newInstall.addEventListener('click',requestHomeScreenInstall);
+    function feedDetails(){
+      const age=providerSnapshotAt?Math.max(0,Math.round((Date.now()-providerSnapshotAt)/60000)):null;
+      const pretty=s=>({active:'Recent provider input',stale:'Stale — do not treat as live',not_configured:'Not connected',unknown:'Not available',unavailable:'Unavailable',rate_limited:'Temporarily rate limited',error:'Unavailable'}[s]||s);
+      message('Demand sources & confidence','<p><b>Heat colors show relative modeled demand. They do not represent guaranteed surge payments or confirmed ride requests.</b></p><p>Model refreshed: '+escape(publicSignalsRefreshedAt?marketTime(publicSignalsRefreshedAt):'Pending')+'. Provider snapshot: '+(age===null?'Unavailable':age+' minutes old')+'.</p><ul>'+Object.entries(providerStatuses).map(([name,value])=>'<li>'+escape(name)+': '+escape(pretty(value))+'</li>').join('')+'</ul><p>Uber pricing is a price proxy. Flight activity is an airport activity proxy. Dated events are event context. Venues and routine school or nightlife patterns are estimates.</p><p><b>Confidence:</b> lower for routine patterns; medium for a dated event or recent provider proxy. Home Base has no measured probability of receiving a ride. Expired provider samples are excluded.</p>');
+    }
+    document.getElementById('demandDetails').addEventListener('click',feedDetails);
+    const drive=document.getElementById('driveViewToggle');let compact=false;
+    drive.addEventListener('click',()=>{compact=!compact;app.classList.toggle('planner-drive',compact);drive.textContent=compact?'Full view':'Driving view';drive.setAttribute('aria-pressed',String(compact));document.querySelectorAll('[data-slot]').forEach(e=>e.style.display=compact?'none':'');document.querySelector('.weather')?.style.setProperty('display',compact?'none':'');closeWorkspace();renderMove();setTimeout(()=>liveMap.invalidateSize(),100);});
+    let chosen=null;
+    function ranked(){const selected=document.querySelector('[data-hour][aria-pressed=true]'),index=Number(selected?.dataset.hour||0),candidates=hourlyDestinations[index]||activeStops.slice(0,1),cost=readCostPrefs(),pref=readProfile(),rate=learnedRate(allRecords(),currentApps[0]?.name||'Uber',selectedForecastTime,marketTimeZone)?.rate||currentApps[0]?.base||0;return rankCandidates(candidates,{origin:currentLocation,radiusMiles:Number(pref.radius)||25,hourlyRate:rate,costPerMile:Number(cost.reserveRate)||.2});}
+    function renderMove(){
+      let card=document.getElementById('nextMoveCard');if(!card){card=document.createElement('section');card.id='nextMoveCard';card.className='planner-card';toolbar.after(card);}
+      const options=ranked();chosen=options[0];if(!chosen){card.innerHTML='<h3>NEXT PICKUP AREA</h3><p>No usable destination is available in your working radius. Refresh location or check a later hour.</p>';return;}
+      const reason=demandReason(chosen.cat,marketParts(chosen.when||selectedForecastTime).hour),model=chosen.tags?.providerEvent||chosen.eventStart?'Dated event context':'Modeled activity',position=gpsMarker?.getTooltip?.()?.getContent?.();
+      card.innerHTML='<h3>NEXT PICKUP AREA · '+escape(model)+'</h3><strong>'+escape(chosen.name)+'</strong><p>'+escape(reason)+'</p><p>About '+Math.round(chosen.estimatedMinutes)+' min · '+chosen.estimatedMiles.toFixed(1)+' mi · '+money2(chosen.relocationCost)+' travel cost + time value.</p><small>Distance and time are estimates from '+(position==='You are here'?'your GPS position':'the displayed map position')+'. Ranking weighs demand, travel time, distance and your working radius. Tolls and wait time are not included.</small><div class="planner-controls"><button class="primary-action" id="plannerNavigate">Navigate</button><button class="secondary-action" id="plannerAlternatives">Other nearby areas</button></div>';
+      document.getElementById('plannerNavigate').onclick=()=>{selectedDestination=[chosen.lat,chosen.lon];document.getElementById('mapsBtn').click();};
+      document.getElementById('plannerAlternatives').onclick=()=>{message('Nearby pickup areas',options.slice(0,5).map((r,i)=>'<p><b>'+escape(r.name)+'</b> · ~'+Math.round(r.estimatedMinutes)+' min · '+money2(r.relocationCost)+' relocation estimate <button data-pick="'+i+'">Choose</button></p>').join(''));document.querySelectorAll('[data-pick]').forEach(b=>b.onclick=()=>{chosen=options[Number(b.dataset.pick)];selectedDestination=[chosen.lat,chosen.lon];close();card.querySelector('strong').textContent=chosen.name;card.querySelector('p').textContent=demandReason(chosen.cat,marketParts(chosen.when||selectedForecastTime).hour);card.querySelectorAll('p')[1].textContent='About '+Math.round(chosen.estimatedMinutes)+' min · '+chosen.estimatedMiles.toFixed(1)+' mi · '+money2(chosen.relocationCost)+' travel cost + time value.';});};
+    }
+    const originalApply=applyTimeForecast;applyTimeForecast=function(...args){originalApply(...args);renderMove();};
+    const originalBuild=buildRoute;buildRoute=function(...args){const result=originalBuild(...args);renderMove();return result;};
+    const originalUpdate=updateEarnings;
+    // Never learn an online hourly rate from active-trip durations or net payouts.
+    personalizedBase=function(){return null;};
+    updateEarnings=function(when=selectedForecastTime){originalUpdate(when);const records=allRecords();for(let i=0;i<currentApps.length;i++){const item=currentApps[i],learned=learnedRate(records,item.name,when,marketTimeZone);if(!learned)continue;document.getElementById('app'+i+'Earn').textContent='≈ '+money2(learned.rate)+'/hr';document.getElementById('app'+i+'Range').textContent=learned.days+' days · '+learned.scope;document.getElementById('app'+i+'State').textContent='HISTORY ESTIMATE · GROSS';}const comparison=currentApps.map((item,i)=>({name:item.name,rate:num(document.getElementById('app'+i+'Earn').textContent.split('/')[0]),learned:!!learnedRate(records,item.name,when,marketTimeZone)})).sort((a,b)=>b.rate-a.rate);const best=comparison[0];if(best)document.getElementById('bestPlatform').textContent=best.name+' · '+(best.learned?'history estimate':'modeled estimate');}
+    function captureForecast(){if(Math.abs(selectedForecastTime-Date.now())>1800000)return;const snapshots=read('homeBaseForecastSnapshots',[]);for(let i=0;i<currentApps.length;i++){const platform=currentApps[i].name,rate=num(document.getElementById('app'+i+'Earn').textContent.split('/')[0]);if(!(rate>0))continue;const at=new Date().toISOString();if(!snapshots.some(s=>s.platform===platform&&Date.now()-Date.parse(s.at)<15*60000))snapshots.push({platform,rate,at});}write('homeBaseForecastSnapshots',snapshots.filter(s=>Date.now()-Date.parse(s.at)<90*86400000).slice(-6000));}
+    function renderLedger(root){
+      const records=allRecords(),summary=summarize(records),today=new Date(),date=localDate(today),week=new Date(today);week.setHours(0,0,0,0);week.setDate(week.getDate()-((week.getDay()+6)%7));const weekKey=localDate(week);
+      const sums=rows=>rows.reduce((a,r)=>({earnings:a.earnings+r.earnings,hours:a.hours+(r.hoursType==='online'?r.hours||0:0),miles:a.miles+(r.miles||0),costs:a.costs+(r.costs||0)}),{earnings:0,hours:0,miles:0,costs:0});
+      const weekly=sums(records.filter(r=>r.date&&r.date>=weekKey&&r.date<=date)),monthly=sums(records.filter(r=>r.date?.slice(0,7)===date.slice(0,7))),year=sums(records.filter(r=>r.date?.slice(0,4)===date.slice(0,4))),cost=readCostPrefs();
+      const total=sums(records),reserve=total.miles*(Number(cost.reserveRate)||0),profit=total.earnings-total.costs-reserve;
+      root.querySelector('.earnings-tracker')?.remove();root.querySelector('#localRateSection')?.remove();root.querySelectorAll('.earnings-trend').forEach(e=>e.remove());
+      const hero=root.querySelector('.dashboard-hero');if(hero&&records.length){hero.querySelector('strong').textContent=money2(total.earnings);hero.querySelector('small').textContent='Combined reported earnings · '+records.length+' imported / tracked records';hero.querySelector('.hero-pill').textContent='RECORDED';}
+      const section=document.createElement('section');section.className='planner-card';section.id='combinedLedger';
+      section.innerHTML='<h3>YOUR EARNINGS · COMBINED HISTORY</h3><div class="planner-metrics">'+[['This week',weekly.earnings],['This month',monthly.earnings],['This year',year.earnings],['All recorded earnings',total.earnings]].map(([label,value])=>'<div><span>'+label+'</span><b>'+money2(value)+'</b></div>').join('')+'</div><p>'+records.length+' records · '+ledger().length+' imported · '+read('homeBaseShifts',[]).length+' manual shifts. Imports accumulate; matching records are skipped.</p><p>Reported income may include payouts. '+total.hours.toFixed(1)+' explicitly online hours. '+records.filter(r=>!r.date).length+' undated records appear only in all-time totals. Active-trip hours are excluded from online hourly rates.</p>'+(total.hours?'<p>Operating result before tax: '+money2(profit)+' after recorded costs and '+money2(reserve)+' mileage reserve. Unreported expenses are not included.</p>':'')+Object.entries(summary.platforms).map(([name,p])=>'<p><b>'+escape(name)+'</b> · '+money2(p.gross)+'</p>').join('');
+      root.querySelector('.platform-connection-status')?.closest('section')?.after(section);if(!ledger().length&&earningsProfile){const note=document.createElement('p');note.textContent='Previous import summary retained: '+money2(earningsProfile.totalGross||0)+'. Reimport its CSV to add dated records to this combined history.';section.prepend(note);}
+      // Remove older summary cards whose shift-only or mixed-hour totals disagree with the combined ledger.
+      root.querySelectorAll('.metric-grid,.cost-summary').forEach(e=>e.remove());
+      const learned=currentApps.map(p=>({name:p.name,value:learnedRate(records,p.name,new Date(),marketTimeZone)})).filter(p=>p.value),accuracy=evaluateForecasts(records,read('homeBaseForecastSnapshots',[]));
+      root.querySelectorAll('.workspace-section').forEach(e=>{if(e.querySelector('h3')?.textContent==='FORECAST ACCURACY')e.remove();});
+      const calibration=document.createElement('section');calibration.className='planner-card';calibration.id='automaticCalibration';calibration.innerHTML='<h3>AUTOMATIC FORECAST LEARNING</h3><p>'+(learned.length?learned.map(p=>escape(p.name)+': '+money2(p.value.rate)+'/online hr from '+p.value.days+' days').join('<br>'):'Learning begins with at least 3 recorded days and 6 online hours for a platform within the last 90 days.')+'</p><p>No forecast check-in form is needed. Only gross earnings and explicitly online hours are used. Files with precise timestamps can personalize similar time blocks.</p><p>'+accuracy.count+' actual records matched to a forecast saved before the shift. '+(accuracy.mae!==null?'Mean absolute difference: '+money2(accuracy.mae)+'/hr.':'Accuracy is not yet measured. Historical imports cannot validate forecasts that were never saved.')+'</p>';
+      section.after(calibration);
+    }
+    function localDate(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+    const originalRender=renderEarningsPanel;
+    renderEarningsPanel=function(...args){originalRender(...args);const root=workspaceContent,input=root.querySelector('#earningsCsv');if(!input)return;
+      root.querySelector('#localRateSection')?.remove();const fresh=input.cloneNode(true);fresh.multiple=true;input.replaceWith(fresh);
+      const source=root.querySelector('#earningsSource');if(source){source.insertAdjacentHTML('afterbegin','<option value="Auto">Detect automatically</option>');source.value='Auto';const wrapper=source.parentNode,details=document.createElement('details');details.innerHTML='<summary>Optional platform override</summary>';wrapper.before(details);details.append(wrapper);}
+      const sync=root.querySelector('.gridwise-sync-status span');if(sync)sync.textContent='Import one or more files. Platform and columns are detected; matching records are skipped. Direct account sync is not connected.';
+      fresh.addEventListener('change',async()=>{const files=[...fresh.files||[]];if(!files.length)return;const override=source?.value||'Auto';try{let records=ledger(),added=0,duplicates=0,updated=0,undated=0;for(const file of files){const parsed=parseImport(await file.text(),file.name,override),merged=mergeRecords(records,parsed.records);records=merged.records;added+=merged.added;duplicates+=merged.duplicates;updated+=merged.updated;undated+=parsed.undated;}
+        // Commit only after every selected file parses successfully.
+        const nextProfile=summarize(records,files.map(f=>f.name).join(', '));commit({homeBaseLedger:records,homeBaseEarningsProfile:nextProfile});earningsProfile=nextProfile;updateEarnings();renderEarningsPanel(added+' added · '+duplicates+' duplicates skipped · '+updated+' updated.'+(undated?' '+undated+' undated rows are kept in all-time totals.':'')+' Saved on this device.');renderMove();
+      }catch(error){renderEarningsPanel(error.message+' Your existing history has been kept.',true);}});
+      const reset=root.querySelector('#earningsReset');if(reset){const clean=reset.cloneNode(true);reset.replaceWith(clean);clean.onclick=()=>{if(!confirm('Remove imported CSV records from this device? Manual shifts stay saved. Export a backup first if you need a copy.'))return;localStorage.removeItem('homeBaseLedger');localStorage.removeItem('homeBaseTripRows');localStorage.removeItem('homeBaseEarningsProfile');earningsProfile=null;updateEarnings();renderEarningsPanel('Imported records removed.');};}
+      renderLedger(root);backupControls(root);
+    };
+    const backupKeys=['homeBaseLedger','homeBaseEarningsProfile','homeBaseTripRows','homeBaseShifts','homeBaseDriverProfile','homeBaseCostPrefs','homeBaseAlertPrefs','homeBaseProductPrefs','homeBaseForecastSnapshots','homeBaseForecastAccuracy'];
+    function backupControls(root){if(root.querySelector('#backupCard'))return;const section=document.createElement('section');section.id='backupCard';section.className='planner-card';section.innerHTML='<h3>BACKUP & RESTORE</h3><p>Your records are stored on this device. Save a backup to keep a copy or move to another device. Cloud backup is not connected.</p><button class="secondary-action" id="downloadBackup">Save backup</button><label>Restore Home Base backup<input id="restoreBackup" type="file" accept=".json,application/json"></label><p id="backupStatus" role="status"></p>';root.append(section);
+      section.querySelector('#downloadBackup').onclick=()=>{const state={};backupKeys.forEach(k=>{const v=read(k,null);if(v!==null)state[k]=v;});hbDownload('home-base-backup.json','application/json',JSON.stringify({format:'home-base-backup',version:1,exportedAt:new Date().toISOString(),state},null,2));section.querySelector('#backupStatus').textContent='Backup downloaded. Keep it private; it contains your earnings and profile.';};
+      section.querySelector('#restoreBackup').onchange=async e=>{try{const file=e.target.files?.[0];if(!file)return;if(file.size>20*1024*1024)throw Error('Backup is too large.');const data=JSON.parse(await file.text());if(data.format!=='home-base-backup'||data.version!==1||!data.state||typeof data.state!=='object')throw Error('Choose a backup exported by Home Base.');for(const k of Object.keys(data.state))if(!backupKeys.includes(k))throw Error('Backup contains unsupported settings.');for(const k of ['homeBaseLedger','homeBaseTripRows','homeBaseShifts','homeBaseForecastSnapshots','homeBaseForecastAccuracy'])if(k in data.state&&!Array.isArray(data.state[k]))throw Error('Invalid backup history.');for(const k of ['homeBaseDriverProfile','homeBaseCostPrefs','homeBaseAlertPrefs','homeBaseProductPrefs','homeBaseEarningsProfile'])if(k in data.state&&(!data.state[k]||typeof data.state[k]!=='object'||Array.isArray(data.state[k])))throw Error('Invalid backup settings.');const invalid=(data.state.homeBaseLedger||[]).some(r=>!r||typeof r.id!=='string'||!Number.isFinite(r.earnings)||typeof r.platform!=='string'||!['online','active','unknown'].includes(r.hoursType)||!['gross','payout'].includes(r.payType)||(r.hours!==null&&!Number.isFinite(r.hours)));if(invalid)throw Error('Invalid earnings record.');if(!confirm('Restore this backup? Imported earnings will merge with duplicate protection. Other saved settings and manual shifts will be replaced by the backup.'))return;const state=data.state;if(state.homeBaseLedger)state.homeBaseLedger=mergeRecords(ledger(),state.homeBaseLedger).records;const restoredProfile=state.homeBaseLedger?summarize(state.homeBaseLedger,'Restored history'):state.homeBaseEarningsProfile||read('homeBaseEarningsProfile',null);if(restoredProfile)state.homeBaseEarningsProfile=restoredProfile;commit(state);earningsProfile=restoredProfile;updateEarnings();renderEarningsPanel('Backup restored on this device. Reload to apply restored profile and display preferences.');}catch(error){section.querySelector('#backupStatus').textContent=error.message+' Existing records were kept.';}};
+    }
+    const originalSupport=renderSupport;renderSupport=function(...args){originalSupport(...args);backupControls(workspaceContent);};
+    const originalProfile=renderProfile;renderProfile=function(...args){originalProfile(...args);backupControls(workspaceContent);};
+    function networkStatus(){status(navigator.onLine?'':'Offline · saved app available. Weather, events and routing cannot refresh.');}window.addEventListener('online',()=>{status('Connection restored · refreshing demand.');window.HomeBaseLive?.refreshDemand();});window.addEventListener('offline',networkStatus);networkStatus();
+    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){updateInstall();renderMove();captureForecast();}});
+    // Historical trip rows from the former parser remain untouched in backups;
+    // they are not guessed into dated gross/online earnings records.
+    if(read('homeBaseEarningsProfile',null)&&!ledger().length)status('Existing earnings summary kept. Reimport its CSV to enable dated history and duplicate protection.');
+    renderMove();updateEarnings();captureForecast();setInterval(()=>{renderMove();captureForecast();},60000);
+    const navEarn=document.getElementById('navEarn');navEarn.addEventListener('click',()=>setTimeout(()=>{document.getElementById('localRateSection')?.remove();},0));
+    // Correct older readiness copy that overstated the manual mileage tracker.
+    document.getElementById('navSupport')?.addEventListener('click',()=>setTimeout(()=>{document.querySelectorAll('#readinessAudit .integration-row').forEach(row=>{const title=row.querySelector('b');if(title?.textContent==='Automatic mileage + shift tracking'){title.textContent='Mileage + shift tracking';row.querySelector('em').textContent='MANUAL FALLBACK';}});},10));
+  }
+  return {csv,num,hours,dateValue,parseImport,mergeRecords,summarize,learnedRate,rankCandidates,evaluateForecasts,boot};
+});
