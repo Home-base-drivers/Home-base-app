@@ -90,12 +90,14 @@ test('Home Base tracks earnings directly and provides a Gridwise-style performan
   assert.match(indexHtml, /name="costs"/);
   assert.match(indexHtml, /localStorage\.setItem\('homeBaseShifts',JSON\.stringify\(updated\.slice\(-730\)\)\)/);
   assert.match(indexHtml, /data-remove-earning/);
-  assert.match(indexHtml, /import is required/i);
+  assert.match(indexHtml, /earnings CSV to build your earnings history/i);
   assert.match(indexHtml, /function summarizeGridwiseCsv\(text,filename,source\)/);
-  assert.match(indexHtml, /OPTIONAL EARNINGS HISTORY/);
-  assert.match(liveRuntime, /YOUR TRACKED GROSS \/ HR/);
+  assert.match(indexHtml, /EARNINGS CONNECTIONS/);
+  assert.match(indexHtml, /Manual fallback · use only when sync or CSV is unavailable/);
+  assert.match(indexHtml, /Direct earnings sync is not configured yet/);
+  assert.match(liveRuntime, /YOUR IMPORTED \/ TRACKED GROSS \/ HR/);
   assert.match(liveRuntime, /completedShifts\(\)/);
-  assert.match(liveRuntime, /Log a few completed shifts/);
+  assert.match(liveRuntime, /Import an earnings CSV/);
   assert.doesNotMatch(liveRuntime, /YOUR UPLOADED RATE|calculated only from your uploaded trip data|Upload trip data with date\/time/);
   assert.match(indexHtml, /localStorage\.setItem\('homeBaseEarningsProfile',JSON\.stringify\(earningsProfile\)\)/);
   assert.doesNotMatch(indexHtml, /gridwise\.io\/api|api\.gridwise/i);
