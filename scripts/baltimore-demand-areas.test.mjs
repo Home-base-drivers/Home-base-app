@@ -44,8 +44,9 @@ test('demand rendering uses one map-anchored geographic surface at every zoom', 
   assert.match(indexHtml, /createAreaCoverageSources/);
   assert.match(indexHtml, /areaCoverageAnchor:true/);
   assert.match(heatRenderer, /source\.tags\.areaCoverageAnchor/);
-  assert.doesNotMatch(heatRenderer, /map\.getZoom\(\) >= 12\) this\._drawAreaSurface/);
-  assert.match(heatRenderer, /source\.heatAreaType !== 'neighborhood'/);
+  assert.match(heatRenderer, /const sample = map\.getZoom\(\) < 10 \? 2\.5 : 1\.75/);
+  assert.match(heatRenderer, /this\._drawSources\(output, map, sources, size, sample\)/);
+  assert.doesNotMatch(heatRenderer, /this\._drawAreaSurface\(output, map, this\._areas/);
 });
 
 test('each forecast hour has up to twelve destination options and custom event icons', () => {
@@ -74,6 +75,25 @@ test('passenger destinations aggregate restaurant activity into busy-time distri
   assert.match(indexHtml, /v\.cat!=='restaurant'/);
   assert.match(indexHtml, /hour>=11&&hour<14\|\|hour>=17&&hour<22/);
   assert.match(indexHtml, /ARTS:'🎨'.+MUSIC:'🎵'.+THEATER:'🎭'.+NIGHTLIFE:'🍸'.+FESTIVAL:'🎉'/s);
+});
+
+test('Home Base tracks earnings directly and provides a Gridwise-style performance dashboard', () => {
+  assert.match(indexHtml, /MY EARNINGS TRACKER/);
+  assert.match(indexHtml, /THIS WEEK · GROSS/);
+  assert.match(indexHtml, /THIS MONTH · GROSS/);
+  assert.match(indexHtml, /YEAR TO DATE/);
+  assert.match(indexHtml, /MONTHLY GROSS · LAST 6 MONTHS/);
+  assert.match(indexHtml, /name="tips"/);
+  assert.match(indexHtml, /name="bonuses"/);
+  assert.match(indexHtml, /name="trips"/);
+  assert.match(indexHtml, /name="costs"/);
+  assert.match(indexHtml, /localStorage\.setItem\('homeBaseShifts',JSON\.stringify\(updated\.slice\(-730\)\)\)/);
+  assert.match(indexHtml, /data-remove-earning/);
+  assert.match(indexHtml, /import is required/i);
+  assert.match(indexHtml, /function summarizeGridwiseCsv\(text,filename,source\)/);
+  assert.match(indexHtml, /OPTIONAL EARNINGS HISTORY/);
+  assert.match(indexHtml, /localStorage\.setItem\('homeBaseEarningsProfile',JSON\.stringify\(earningsProfile\)\)/);
+  assert.doesNotMatch(indexHtml, /gridwise\.io\/api|api\.gridwise/i);
 });
 
 test('K–12 pickup and university demand use different timing models', () => {

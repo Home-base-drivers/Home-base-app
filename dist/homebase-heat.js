@@ -171,7 +171,9 @@
         output.clearRect(0, 0, size.x, size.y);
         if (!this._areas.length) return;
 
-        const sample = map.getZoom() < 10 ? 2.5 : 2;
+        // Render a finer geographic field at neighborhood zooms so adjacent
+        // demand surfaces melt together instead of reading as chunky tiles.
+        const sample = map.getZoom() < 10 ? 2.5 : 1.75;
         const seen = new Set(), sources = [];
         [...this._sources, ...this._areas.flatMap(area => area.sources || [])].forEach(source => {
           const key = `${Number(source.lat).toFixed(5)}:${Number(source.lon).toFixed(5)}:${source.name || ''}`;
@@ -186,12 +188,11 @@
           area.areaType === 'neighborhood' && area.feature && area.feature.geometry && (area.sources || []).length
         );
         if (zoom >= 9 && hasNeighborhoods) {
-          this._drawAreaSurface(output, map, this._areas, size, sample);
-          // Nearby points are already painted into their own neighborhood
-          // cells. Keep only non-neighborhood sources here, such as airports.
-          this._drawSources(output, map, sources.filter(source =>
-            source.heatAreaType !== 'neighborhood' && !(source.tags && source.tags.areaCoverageAnchor)
-          ), size, sample);
+          // Keep each signal fixed to its real coordinate, but composite all
+          // neighborhood contributions in one continuous field. This gives
+          // the Uber-like layered transitions without circles, hard polygon
+          // seams, or heat that drifts as the map is panned or zoomed.
+          this._drawSources(output, map, sources, size, sample);
         } else {
           this._drawSources(output, map, sources, size, sample);
         }
