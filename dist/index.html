@@ -483,8 +483,6 @@ renderEarningsPanel=function(message='',isError=false){
   const source=document.createElement('label');source.className='earnings-source';source.innerHTML='CSV SOURCE<select id="earningsSource"><option value="Gridwise">Gridwise · combined earnings</option><option value="Uber">Uber earnings export</option><option value="Lyft">Lyft earnings export</option><option value="Empower">Empower earnings export</option><option value="Other">Other platform CSV</option></select>';section.insertBefore(source,upload);
   const select=source.querySelector('select');if(earningsProfile?.source?.startsWith('Uber'))select.value='Uber';else if(earningsProfile?.source?.startsWith('Lyft'))select.value='Lyft';else if(earningsProfile?.source?.startsWith('Empower'))select.value='Empower';else if(earningsProfile?.source?.startsWith('Other'))select.value='Other';
   if(earningsProfile?.months&&Object.keys(earningsProfile.months).length){const months=Object.entries(earningsProfile.months).sort((a,b)=>a[0].localeCompare(b[0])).slice(-6),max=Math.max(1,...months.map(([,value])=>Number(value.gross)||0)),trend=document.createElement('section');trend.className='earnings-trend';trend.innerHTML='<div class="earnings-trend-head"><b>IMPORTED EARNINGS HISTORY · MONTHLY</b><span>'+safeText(savedSource)+'</span></div>'+months.map(([key,value])=>'<div class="earnings-month"><span class="earnings-month-label">'+safeText(key.slice(5)+'/'+key.slice(0,4))+'</span><div class="earnings-month-track"><i style="width:'+Math.max(1,Math.round((Number(value.gross)||0)/max*100))+'%"></i></div><strong>'+money(value.gross)+'</strong></div>').join('');section.parentNode.insertBefore(trend,section);}
-  const entryDetails=workspaceContent.querySelector('.earnings-entry-details');if(entryDetails){const form=entryDetails.querySelector('form');if(form){const replacement=document.createElement('div');replacement.className='earnings-entry-details';replacement.append(form);entryDetails.replaceWith(replacement);}}
-  const shiftCard=workspaceContent.querySelector('.shift-card');if(shiftCard){const fallback=document.createElement('details');fallback.className='manual-earnings-fallback';fallback.innerHTML='<summary>Manual fallback · use only when sync or CSV is unavailable</summary><p class="workspace-note">You do not need to enter every trip. Log a completed shift or use the odometer tracker only when your platform cannot provide an earnings export.</p>';fallback.append(shiftCard);const entry=workspaceContent.querySelector('.earnings-entry-details');if(entry)fallback.append(entry);section.after(fallback);if(active)fallback.open=true;}
   if(input){const fresh=input.cloneNode(true);input.replaceWith(fresh);fresh.addEventListener('change',async()=>{const file=fresh.files&&fresh.files[0];if(!file)return;const dataSource=select.value;renderEarningsPanel('Reading '+dataSource+' export on this device…');try{earningsProfile=summarizeGridwiseCsv(await file.text(),file.name,dataSource);localStorage.setItem('homeBaseEarningsProfile',JSON.stringify(earningsProfile));updateEarnings();renderEarningsPanel('Imported '+earningsProfile.rows+' earnings rows from '+dataSource+'. No data was uploaded.')}catch(error){renderEarningsPanel(error.message||'The CSV could not be read.',true)}});}
 };
 
@@ -572,8 +570,17 @@ function enhanceEarnings(){
   const shiftExport=workspaceContent.querySelector('#shiftExport');if(shifts.length)shiftExport.addEventListener('click',()=>{const rows=[['started_at','ended_at','hours','miles','gross','costs','net','trips','platform','market'],...shifts.map(row=>[row.startedAt,row.endedAt,Number(row.hours||0).toFixed(2),Number(row.miles||0).toFixed(1),row.gross,row.costs,Math.max(0,row.gross-row.costs),row.trips,row.platform,row.market])];hbDownload('home-base-shifts.csv','text/csv',rows.map(row=>row.map(value=>String(value??'').replaceAll(',',' ')).join(',')).join('\n'));hbTrack('shift_log_exported',{rows:shifts.length})});
   workspaceContent.querySelector('#accuracySave').addEventListener('click',()=>{const actual=Math.max(0,Number(workspaceContent.querySelector('#accuracyActual').value)||0);if(!actual){workspaceContent.querySelector('#accuracyStatus').textContent='Enter your actual gross hourly rate first.';return}const rows=readAccuracy();rows.push({forecast:forecastRate,actual,rating:workspaceContent.querySelector('#accuracyRating').value,market:readProfile().market||$('#marketHeading').textContent,at:new Date().toISOString()});localStorage.setItem('homeBaseForecastAccuracy',JSON.stringify(rows.slice(-365)));hbTrack('forecast_checkin',{forecast:forecastRate,actual});renderEarningsPanel('Forecast check-in saved.')});
 }
+function collapseManualEarningsFallback(){
+  const section=workspaceContent.querySelector('.workspace-section');if(!section)return;
+  const shiftCard=workspaceContent.querySelector('.shift-card'),entryDetails=workspaceContent.querySelector('.earnings-entry-details');
+  if(!shiftCard&&!entryDetails)return;
+  const fallback=document.createElement('details');fallback.className='manual-earnings-fallback';fallback.innerHTML='<summary>Manual fallback · use only when sync or CSV is unavailable</summary><p class="workspace-note">You do not need to enter every trip. Log a completed shift or use the odometer tracker only when your platform cannot provide an earnings export.</p>';
+  if(shiftCard)fallback.append(shiftCard);
+  if(entryDetails){const form=entryDetails.querySelector('form');if(form){const replacement=document.createElement('div');replacement.className='earnings-entry-details';replacement.append(form);fallback.append(replacement)}else fallback.append(entryDetails)}
+  section.after(fallback);if(readShift())fallback.open=true;
+}
 const baseRenderEarningsV35=renderEarningsPanel;
-renderEarningsPanel=function(message='',isError=false){baseRenderEarningsV35(message,isError);enhanceEarnings();window.HomeBaseLive?.refreshEarnings?.();hbTrack('view_earnings')};
+renderEarningsPanel=function(message='',isError=false){baseRenderEarningsV35(message,isError);enhanceEarnings();collapseManualEarningsFallback();window.HomeBaseLive?.refreshEarnings?.();hbTrack('view_earnings')};
 
 function showHomeBaseOnboarding(force=false){
   if(!force&&localStorage.getItem('homeBaseOnboardingDone')==='true')return;
@@ -803,7 +810,7 @@ async function refreshLiveDemandLayer(){
 if(!demoLocale)setTimeout(autoRefreshGps,150);
 setInterval(()=>{updateClimateAdvisory();const selected=$('[data-hour][aria-pressed="true"]');if(selected&&selected.dataset.hour==='0'&&activeStops.length)applyTimeForecast(0,new Date());refreshLiveDemandLayer()},300000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-lastAutoGpsRefresh>300000)autoRefreshGps()});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=91',{updateViaCache:'none'}).then(r=>r.update()));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=92',{updateViaCache:'none'}).then(r=>r.update()));
 </script>
 <script src="homebase-live.js?v=37"></script>
 </body>
