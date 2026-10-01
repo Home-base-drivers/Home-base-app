@@ -21,6 +21,9 @@
 - Platform forecasts and official Go Online links.
 - Earnings CSV personalization.
 - Map, Earnings, Alerts, Profile, and Support tabs.
+- Every panel and tab remains hideable. Driving view hides navigation tabs by
+  default; Map only clears the interface with a visible Show controls recovery
+  button. Demand detail dialogs must stay inside the visible viewport.
 - PWA installation, icons, and offline app shell.
 - Provider credentials stay in GitHub Actions secrets; never place them in
   `dist/`, logs, commits, screenshots, or client-side JavaScript.
