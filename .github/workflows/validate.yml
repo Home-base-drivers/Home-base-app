@@ -20,8 +20,10 @@ jobs:
           node scripts/check-index-syntax.mjs
           node --check dist/homebase-live.js
           node --check dist/homebase-planner.js
+          node --check dist/homebase-earnings.js
           node --check dist/homebase-heat.js
       - name: Test demand heat rendering helpers
-        run: node --test scripts/homebase-planner.test.mjs scripts/homebase-heat.test.mjs scripts/baltimore-demand-areas.test.mjs
+        run: node --test scripts/homebase-earnings.test.mjs scripts/homebase-planner.test.mjs scripts/homebase-heat.test.mjs scripts/baltimore-demand-areas.test.mjs
       - name: Test provider normalization
         run: node --test scripts/refresh-provider-signals.test.mjs
+

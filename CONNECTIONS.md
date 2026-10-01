@@ -18,7 +18,7 @@ The current available-tool and plugin-directory checks did not identify an Uber,
 4. Prepare Home Base account login and a private backend. The app's [Supabase setup](SUPABASE_SETUP.md) requires both owners' processor/privacy approval before private data transmission is wired.
 5. After provider approval, implement account linking, connection status, reconnect/revoke controls, authenticated data retrieval, background refresh/webhooks, and stable-ID deduplication. Store private records per signed-in driver. An earnings record with active-trip hours must not be treated as an online-hour record.
 
-The intended driver flow is: choose **Connect Uber/Lyft**, complete the provider's consent flow, and let Home Base update earnings automatically. CSV is the fallback for unsupported or temporarily disconnected services. Manual entry remains the last fallback. This flow is not yet activated in the production app.
+The intended driver flow is: choose **Connect Uber/Lyft**, complete the provider's consent flow, and let Home Base update earnings automatically. CSV is the fallback for unsupported or temporarily disconnected services. Manual entry remains the last fallback. This flow is not yet activated in the production app. The Earnings screen now provides interactive Uber, Lyft, and Empower connection options with honest availability status, a CSV fallback, and a separate manual fallback. No connection button claims to have linked an account.
 
 For a direct Uber integration, the [Driver API](https://developer.uber.com/docs/drivers/references/api) exposes driver profiles, payments, and trips but requires limited-access approval. The existing Uber price-estimates feed does not authorize access to driver earnings. Empower requires an authorized integration or confirmed aggregator coverage; do not assume a public earnings API exists.
 
@@ -39,3 +39,7 @@ Provider data has different meanings: Uber estimates are a price proxy; flight s
 ## Map controls to preserve
 
 All workspace tabs offer minimize and close controls. Driving view hides navigation tabs by default; **Show tabs** restores them. The pickup card has **Hide** and **Show pickup** controls. **Map only** hides the panels, header, and navigation; **Show controls** restores the chosen view. These display preferences persist on the device. Shared detail dialogs must stay in the visible viewport and support closing with **Done**, the backdrop, or Escape.
+
+## Recorded earnings view
+
+The Earnings screen separates recorded gross income from planning forecasts and payouts. Week (Monday start), month, year, and all-history views can be filtered by platform. Precise timestamps use the current market timezone. Undated rows are included only in all history; future-dated rows are excluded from recorded totals. Gross hourly rates use only gross records with explicitly online hours. Active-trip duration does not count as online time. Forecast learning, costs, backup, and manual entry are collapsed until needed. Earnings-period and platform choices are saved on the device and included in backups.
