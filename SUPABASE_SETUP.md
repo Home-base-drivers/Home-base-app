@@ -2,9 +2,10 @@
 
 This is an approval and deployment checklist for secure email-link login,
 cross-device progress, protected trip uploads, and a privacy-thresholded local
-hourly-rate benchmark. Cloud transmission is not wired into the live app. It
-must remain off until both owners approve Supabase as the data processor and
-complete the steps below.
+hourly-rate benchmark. Both owners' approval of Supabase as the data processor
+was confirmed by Christopher on October 2, 2026. Cloud transmission is not yet
+wired into the live app; complete Auth/email configuration and verified browser
+integration below before activating it for drivers.
 
 The Home Base project has been created in the Homebase organization:
 https://supabase.com/dashboard/project/nixihmurdtfcbffgvpij.
@@ -27,8 +28,10 @@ still pending; see [BACKEND.md](BACKEND.md).
    Variables** and add:
    - `SUPABASE_URL` — the project URL
    - `SUPABASE_PUBLISHABLE_KEY` — the publishable browser key
-6. Review the privacy notice, retention period, breach-response process, and
-   deletion workflow with both owners before wiring the browser client.
+6. Both-owner data-processor approval is confirmed. Keep the privacy notice,
+   retention period, breach-response process, and deletion workflow aligned
+   with the shipped account functionality; data deletion is not Auth-account
+   deletion or provider revocation.
 7. After approval, wire the reviewed account client in a separate pull request,
    then run **Refresh live provider signals** from the repository Actions tab.
 

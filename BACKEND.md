@@ -85,8 +85,10 @@ reads are paginated; the interface must read all pages when restoring history.
   empty database; retain these ownership/filter indexes pending real workloads.
   Reference: https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index
 - No driver earnings were imported. Browser cloud transmission remains off.
+- Christopher confirmed both owners' approval of Supabase as the data
+  processor on October 2, 2026.
 - Pending: Auth URL/email configuration, end-to-end Auth/REST verification with
-  a consenting account, both-owner privacy approval, and browser integration.
+  a consenting account, and browser integration.
   Provider earnings adapters remain separate and inactive.
 
 1. Confirm the organization for project creation. Proposed: **Homebase**.
