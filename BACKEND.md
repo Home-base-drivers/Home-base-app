@@ -2,7 +2,8 @@
 
 The backend release provides Supabase Auth integration, a private earnings
 ledger, saved progress with version conflict detection, and server-managed
-platform connection status. The Supabase project has not been provisioned yet.
+platform connection status. The hosted project was provisioned on October 2,
+2026 in the Homebase organization, in US East/Virginia (`us-east-1`).
 The live app continues to store records on the device; the new client bundle
 is not loaded by `index.html` and does not transmit anything automatically.
 
@@ -64,6 +65,29 @@ Earlier successful requests will be skipped rather than duplicated. Earnings
 reads are paginated; the interface must read all pages when restoring history.
 
 ## Provisioning
+
+### Hosted release status — October 2, 2026
+
+- Project: **Home Base**, reference `nixihmurdtfcbffgvpij`.
+- Dashboard: https://supabase.com/dashboard/project/nixihmurdtfcbffgvpij
+- API URL: https://nixihmurdtfcbffgvpij.supabase.co
+- Supabase quoted and confirmed **$0/month** at creation; this is not a
+  guarantee of future plan or usage charges.
+- Both migrations applied successfully: hosted versions `20261002181517`
+  (`home_base_accounts`) and `20261002181527` (`earnings_backend`). The platform
+  assigned these hosted timestamps; source migration filenames are unchanged.
+- Hosted SQL checks passed: anonymous denial, owner isolation, cross-owner
+  write rejection, repeat-import deduplication, stale-save rejection,
+  server-only connection writes, and deletion scoped to the signed-in driver.
+  Synthetic users and rows existed only inside a rolled-back transaction.
+- All seven public tables have RLS enabled. The security advisor returned no
+  findings. Performance findings were informational unused indexes on the new,
+  empty database; retain these ownership/filter indexes pending real workloads.
+  Reference: https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index
+- No driver earnings were imported. Browser cloud transmission remains off.
+- Pending: Auth URL/email configuration, end-to-end Auth/REST verification with
+  a consenting account, both-owner privacy approval, and browser integration.
+  Provider earnings adapters remain separate and inactive.
 
 1. Confirm the organization for project creation. Proposed: **Homebase**.
 2. Obtain that organization's project cost through Supabase and complete its

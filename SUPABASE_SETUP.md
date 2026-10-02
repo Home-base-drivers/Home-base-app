@@ -6,7 +6,13 @@ hourly-rate benchmark. Cloud transmission is not wired into the live app. It
 must remain off until both owners approve Supabase as the data processor and
 complete the steps below.
 
-1. Create a Supabase project owned by the Home Base organization.
+The Home Base project has been created in the Homebase organization:
+https://supabase.com/dashboard/project/nixihmurdtfcbffgvpij.
+Both migrations below are already applied and hosted database checks passed.
+Do not reapply them manually. Auth configuration and browser activation are
+still pending; see [BACKEND.md](BACKEND.md).
+
+1. Create a Supabase project owned by the Home Base organization (completed).
 2. Open **SQL Editor**, paste the complete contents of
    `supabase/migrations/20260927_home_base_accounts.sql`, and choose **Run**.
    Then apply `supabase/migrations/20261001212925_earnings_backend.sql`.
