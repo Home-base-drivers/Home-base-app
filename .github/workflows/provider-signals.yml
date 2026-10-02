@@ -28,9 +28,11 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
       - name: Test provider normalization
-        run: node --test tests/*.test.mjs
+        # Backend suites require installed SDK/Postgres dependencies and run in
+        # validate.yml. Keep this five-minute refresh focused on its providers.
+        run: node --test tests/flightaware.test.mjs scripts/refresh-provider-signals.test.mjs
       - name: Fetch provider signals
         run: node scripts/refresh-provider-signals.mjs
         env:
