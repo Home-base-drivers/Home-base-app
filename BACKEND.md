@@ -87,8 +87,13 @@ reads are paginated; the interface must read all pages when restoring history.
 - No driver earnings were imported. Browser cloud transmission remains off.
 - Christopher confirmed both owners' approval of Supabase as the data
   processor on October 2, 2026.
-- Pending: Auth URL/email configuration, end-to-end Auth/REST verification with
-  a consenting account, and browser integration.
+- Auth URL configuration was saved and verified on October 2, 2026: Site URL
+  and the single exact allowed redirect both point to
+  `https://home-base-drivers.github.io/Home-base-app/`.
+- Custom SMTP is disabled. The default mail service is restricted to project
+  team addresses and is not a public-driver email delivery setup.
+- Pending: a configured SMTP provider and verified sending domain, end-to-end
+  Auth/REST verification with a consenting account, and browser integration.
   Provider earnings adapters remain separate and inactive.
 
 1. Confirm the organization for project creation. Proposed: **Homebase**.
