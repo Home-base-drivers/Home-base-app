@@ -14,7 +14,14 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
+          cache: npm
+      - name: Install pinned backend dependencies
+        run: npm ci --ignore-scripts
+      - name: Verify the backend browser bundle
+        run: |
+          npm run build:backend-client
+          git diff --exit-code -- dist/homebase-backend.js
       - name: Validate application JavaScript
         run: |
           node scripts/check-index-syntax.mjs
@@ -22,8 +29,5 @@ jobs:
           node --check dist/homebase-planner.js
           node --check dist/homebase-earnings.js
           node --check dist/homebase-heat.js
-      - name: Test demand heat rendering helpers
-        run: node --test scripts/homebase-earnings.test.mjs scripts/homebase-planner.test.mjs scripts/homebase-heat.test.mjs scripts/baltimore-demand-areas.test.mjs
-      - name: Test provider normalization
-        run: node --test scripts/refresh-provider-signals.test.mjs
-
+      - name: Test the app and private account backend
+        run: npm test
