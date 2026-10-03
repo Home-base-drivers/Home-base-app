@@ -147,8 +147,7 @@
 .workspace-tools{display:flex;align-items:center;gap:7px}.workspace-minimize{width:40px;height:40px;border:1px solid rgba(79,187,247,.34);border-radius:12px;background:#071a29;font-size:1.15rem;color:#dff6ff}
 .workspace-view.is-minimized{top:max(10px,env(safe-area-inset-top));bottom:auto;height:auto;min-height:0;max-height:78px;overflow:hidden;padding:10px 14px;border:1px solid rgba(79,187,247,.42);border-radius:16px;box-shadow:0 12px 35px rgba(0,0,0,.58);transform:translateX(-50%)}
 .workspace-view.is-minimized .workspace-head{margin:0;align-items:center}.workspace-view.is-minimized #workspaceContent{display:none}
-  /* Home Base style uses real, georeferenced imagery across the whole map. */
-  .app.map-reference .leaflet-tile-pane{filter:brightness(.82) contrast(1.16) saturate(.9)}
+  .panel-head{position:sticky;top:-16px;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:12px;background:#051522;padding:8px 0;margin-bottom:10px}.panel-head h2{margin:0}.panel-hide,.workspace-close{width:auto;min-width:58px;min-height:44px;padding:8px 12px;font-size:.82rem;border:1px solid #41738e;border-radius:10px;background:#071c2c;color:#bceaff;font-weight:750}
   .app.satellite .leaflet-tile-pane{filter:brightness(1.02) contrast(1.06) saturate(1.08)}
   .app.dark .leaflet-tile-pane{filter:brightness(1.1) contrast(1.08) saturate(.8)}
 </style>
@@ -190,7 +189,7 @@
   <div class="panel-backdrop" id="backdrop"></div>
   <section class="workspace-view" id="workspaceView" aria-live="polite" hidden><div class="workspace-head"><div><div class="workspace-kicker">HOME BASE</div><h2 id="workspaceTitle">Earnings</h2></div><div class="workspace-tools"><button class="workspace-minimize" id="workspaceMinimize" aria-expanded="true" aria-label="Minimize this tab">−</button><button class="workspace-close" id="workspaceClose" aria-label="Return to map">×</button></div></div><div id="workspaceContent"></div></section>
   <nav class="home-nav" aria-label="Home Base navigation"><button class="nav-btn" id="navMap" aria-current="page"><svg viewBox="0 0 24 24"><path d="m3 6 5-3 8 3 5-3v15l-5 3-8-3-5 3Z"/><path d="M8 3v15M16 6v15"/></svg><span>MAP</span></button><button class="nav-btn" id="navEarn"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20V7"/></svg><span>EARNINGS</span></button><button class="nav-btn" id="navAlerts"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg><span>ALERTS</span></button><button class="nav-btn" id="navProfile"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-5 3-8 8-8s8 3 8 8"/></svg><span>PROFILE</span></button><button class="nav-btn" id="navSupport"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 9a4 4 0 0 1 8 1c0 3-4 3-4 6M12 19h.01"/></svg><span>SUPPORT</span></button></nav>
-  <section class="panel" id="installPanel" role="dialog" aria-modal="true" aria-labelledby="installTitle"><h2 id="installTitle">Home Base</h2><div id="installCopy"></div><button class="close" id="closePanel">Done</button></section>
+  <section class="panel" id="installPanel" role="dialog" aria-modal="true" aria-labelledby="installTitle"><div class="panel-head"><h2 id="installTitle">Home Base</h2><button type="button" class="panel-hide" id="hidePanel" aria-label="Hide this panel">Hide</button></div><div id="installCopy"></div><button class="close" id="closePanel">Done</button></section>
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="baltimore-market.js?v=72"></script>
@@ -199,7 +198,7 @@
 <link rel="stylesheet" href="homebase-growth.css?v=111">
 <script src="homebase-earnings.js?v=110"></script>
 <script src="homebase-demand-history.js?v=112"></script>
-<script src="homebase-planner.js?v=112"></script>
+<script src="homebase-planner.js?v=113"></script>
 <script src="homebase-config.js?v=111"></script>
 <script src="homebase-backend.js?v=112"></script>
 <script src="homebase-growth.js?v=112"></script>
@@ -228,23 +227,23 @@ function mapLabels(){return L.tileLayer(esriTiles+'Reference/World_Boundaries_an
 const streetLabelLayer=L.tileLayer(esriTiles+'Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',{...darkMapOptions,pane:'labelsPane',attribution:'Labels © Esri'});
 const streetLayer=L.layerGroup([streetBaseLayer,streetLabelLayer]);
 const satelliteLayer=L.layerGroup([L.tileLayer(esriTiles+'World_Imagery/MapServer/tile/{z}/{y}/{x}',imageryOptions),mapRoads(),mapLabels()]);
-const initialBaseMap=(()=>{try{return localStorage.getItem('homeBaseBaseMapMode')||'reference'}catch{return'reference'}})();
-let activeBaseMapMode='reference';
+const initialBaseMap=(()=>{try{return localStorage.getItem('homeBaseBaseMapMode')||'satellite'}catch{return'satellite'}})();
+let activeBaseMapMode='satellite';
 function setBaseLayer(mode){
-  const baseMode=['reference','satellite','dark'].includes(mode)?mode:'reference';
+  const baseMode=mode==='dark'?'dark':'satellite';
   if(liveMap.hasLayer(streetLayer))liveMap.removeLayer(streetLayer);
   if(liveMap.hasLayer(streetBaseLayer))liveMap.removeLayer(streetBaseLayer);
   if(liveMap.hasLayer(satelliteLayer))liveMap.removeLayer(satelliteLayer);
-  if(baseMode==='satellite'||baseMode==='reference'){
+  if(baseMode==='satellite'){
     satelliteLayer.addTo(liveMap);
   }else{
     streetLayer.addTo(liveMap);
   }
   activeBaseMapMode=baseMode;
-  const labels={reference:'Home Base styled map',satellite:'Satellite map',dark:'Dark street map'};
-  const shortLabels={reference:'REF',satellite:'SAT',dark:'DARK'};
+  const labels={satellite:'Satellite map',dark:'Dark street map'};
+  const shortLabels={satellite:'SAT',dark:'DARK'};
   app.classList.toggle('satellite',baseMode==='satellite');
-  app.classList.toggle('map-reference',baseMode==='reference');
+  app.classList.remove('map-reference');
   app.classList.toggle('dark',baseMode==='dark');
   const button=$('#layerBtn');
   button.setAttribute('aria-pressed',String(baseMode!=='dark'));
@@ -614,7 +613,7 @@ renderSupport=function(message=''){baseRenderSupportV35(message);enhanceSupport(
 ['navMap','navEarn','navAlerts','navProfile','navSupport'].forEach(id=>$('#'+id)?.addEventListener('click',()=>{if(readProductPrefs().localAnalytics)hbTrack('navigation',{tab:id.replace('nav','').toLowerCase()})}));
 setTimeout(()=>showHomeBaseOnboarding(false),650);
 $('#installBtn').addEventListener('click',requestHomeScreenInstall);
-$('#layerBtn').addEventListener('click',()=>{const modes=['reference','satellite','dark'];const next=modes[(modes.indexOf(activeBaseMapMode)+1)%modes.length];setBaseLayer(next);const names={reference:'Home Base styled map',satellite:'Satellite imagery',dark:'Dark street map'};show(['▱',names[next]+' on',next==='reference'?'Full-area styled satellite tiles with aligned streets, live routes and demand overlays.':next==='satellite'?'Natural satellite imagery is active.':'The dark street map is active.','MAP BASE · Tap to cycle map styles'])});
+$('#layerBtn').addEventListener('click',()=>{const next=activeBaseMapMode==='satellite'?'dark':'satellite';setBaseLayer(next);show(['▱',next==='satellite'?'Satellite imagery on':'Street map on','Streets, routes and demand overlays stay aligned.','MAP BASE · Tap to change map style'])});
 $('#heatToggle').setAttribute('aria-pressed',String(initialHeatVisible));$('#heatToggle').textContent=`HEAT · ${initialHeatVisible?'ON':'OFF'}`;$('#heatToggle').setAttribute('aria-label',initialHeatVisible?'Hide demand heat map':'Show demand heat map');
 $('#heatToggle').addEventListener('click',()=>{const on=app.classList.contains('heat-hidden');app.classList.toggle('heat-hidden',!on);$('#heatToggle').setAttribute('aria-pressed',String(on));$('#heatToggle').textContent=`HEAT · ${on?'ON':'OFF'}`;$('#heatToggle').setAttribute('aria-label',on?'Hide demand heat map':'Show demand heat map');try{localStorage.setItem('homeBaseHeatVisible',String(on))}catch{}});
 function updatePaletteButton(){const name=heatPaletteNames[heatPaletteIndex];$('#paletteToggle').textContent=`COLORS · ${name.toUpperCase()}`;$('#paletteToggle').setAttribute('aria-label',`Heat colors: ${name}. Change heat map colors.`)}
@@ -632,7 +631,7 @@ $('#navProfile').addEventListener('click',()=>{openWorkspace('Profile',$('#navPr
 $('#navSupport').addEventListener('click',()=>{openWorkspace('Support',$('#navSupport'));renderSupport()});
 $('#workspaceClose').addEventListener('click',closeWorkspace);
 $('#workspaceMinimize').addEventListener('click',()=>{const minimized=workspace.classList.toggle('is-minimized'),button=$('#workspaceMinimize');button.textContent=minimized?'+':'−';button.setAttribute('aria-expanded',String(!minimized));button.setAttribute('aria-label',minimized?'Expand this tab':'Minimize this tab')});
-$('#closePanel').addEventListener('click',close);backdrop.addEventListener('click',close);
+$('#closePanel').addEventListener('click',close);$('#hidePanel').addEventListener('click',close);backdrop.addEventListener('click',close);
 function marketFor(lat,lon){const markets=[['Baltimore',39.2904,-76.6122],['Washington, DC',38.9072,-77.0369],['Philadelphia',39.9526,-75.1652],['New York City',40.7128,-74.006],['Richmond',37.5407,-77.436]];let best=markets[0],distance=Infinity;markets.forEach(m=>{const d=(lat-m[1])**2+(lon-m[2])**2;if(d<distance){distance=d;best=m}});return distance<1?best[0]:'Local market'}
 async function fetchJSON(url,timeout=3500){const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeout);try{const r=await fetch(url,{signal:controller.signal,headers:{Accept:'application/json'}});if(!r.ok)throw Error(`HTTP ${r.status}`);return await r.json()}finally{clearTimeout(timer)}}
 async function detectMarket(lat,lon){try{const r=await fetchJSON(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=10&addressdetails=1`,1800),a=r.address||{};return{name:a.city||a.town||a.municipality||a.county||marketFor(lat,lon),countryCode:(a.country_code||'US').toUpperCase()}}catch(e){return{name:marketFor(lat,lon),countryCode:'US'}}}
@@ -816,7 +815,7 @@ async function refreshLiveDemandLayer(){
 if(!demoLocale)setTimeout(autoRefreshGps,150);
 setInterval(()=>{updateClimateAdvisory();const selected=$('[data-hour][aria-pressed="true"]');if(selected&&selected.dataset.hour==='0'&&activeStops.length)applyTimeForecast(0,new Date());refreshLiveDemandLayer()},300000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-lastAutoGpsRefresh>300000)autoRefreshGps()});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=111',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';}));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=113',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';}));
 </script>
 <script src="homebase-live.js?v=37"></script>
 </body>
