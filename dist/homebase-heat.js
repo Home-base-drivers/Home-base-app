@@ -61,9 +61,9 @@
       };
       strength *= venueScale[category] ?? (tags.place ? .28 : foodAmenity === 'fast_food' ? 0 : .24);
     }
-    // The synthetic neighborhood anchor supplies only a restrained baseline;
-    // it must not make every polygon glow like an active hotspot.
-    if (tags.areaCoverageAnchor) strength *= .16;
+    // Census-weighted neighborhood anchors supply a visible low-to-moderate base;
+    // timed events, nightlife and other local signals create the stronger peaks.
+    if (tags.areaCoverageAnchor) strength *= .42;
     if (tags.metroBaseline || tags.forecast) strength *= .85;
     return clamp(strength, 0, 1.25);
   }
@@ -107,7 +107,7 @@
       // Community anchors represent an area, not a single address. Wider,
       // category-specific footprints connect county demand without turning it
       // into one city-centered oval.
-      const metro = { neighborhood: .85, shopping: 1.15, transit: 1.25, restaurant: .8, university: 1.05, k12: .8, event: 1.35, hotel: .9, medical: .85 };
+      const metro = { neighborhood: 1.25, shopping: 1.15, transit: 1.25, restaurant: .8, university: 1.05, k12: .8, event: 1.35, hotel: .9, medical: .85 };
       return metro[source.cat] || .9;
     }
     if (tags.publicVenue) return source.cat === 'neighborhood' ? 1.0 : sourceRadiusKm(source.cat) * .62;
