@@ -17,7 +17,7 @@
     medical: 1.55, neighborhood: 1.65, shopping: 1.8
   };
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
-  const HEAT_OPACITY_GAIN = 1.05;
+  const HEAT_OPACITY_GAIN = 1.2;
   function anchoredGridOrigin(position, geographicAnchor, step) {
     return geographicAnchor + Math.floor((position - geographicAnchor) / step) * step;
   }
@@ -55,7 +55,7 @@
       // rides, while letting nightlife, transit, universities and verified
       // events create visible demand fields. Fast food stays excluded upstream.
       const venueScale = {
-        restaurant: .14, cafe: .14, nightlife: 1.12, event: 1.2,
+        restaurant: .14, cafe: .14, nightlife: 1.28, event: 1.38,
         transit: .9, university: .72, shopping: .38, hotel: .36,
         medical: .3, school: .36, k12: .3, neighborhood: .48
       };
@@ -84,7 +84,7 @@
     // strong area reaches orange/red, while its fading edge naturally moves
     // through yellow and green instead of keeping one purple hue in a blob.
     const signalQuality = clamp((localShade - .025) / .58, 0, 1);
-    const localActivity = 1 - Math.exp(-amount * 4.2);
+    const localActivity = 1 - Math.exp(-amount * 5.25);
     const intensity = clamp(localActivity * .72 + signalQuality * .28, 0, 1);
     return clamp(Math.pow(intensity, .78), .025, 1);
   }
@@ -93,7 +93,7 @@
     // Keep locally scored demand legible above the dark basemap. Opacity still
     // falls to zero with the measured field, so this does not manufacture a
     // surrounding low-demand ring.
-    return clamp(areaIntensity(Math.max(0, Number(value) || 0)) * 1.32 * HEAT_OPACITY_GAIN, 0, .86);
+    return clamp(areaIntensity(Math.max(0, Number(value) || 0)) * 1.42 * HEAT_OPACITY_GAIN, 0, .9);
   }
 
   function sourceRadiusKm(category) {
