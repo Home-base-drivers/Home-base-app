@@ -28,6 +28,21 @@ before(async () => {
 });
 after(async () => { await db?.close(); });
 
+test('demand context remains consent-gated, bounded and private',async()=>{
+  await as('authenticated',alice,async()=>{
+    await db.query('select public.set_home_base_privacy(false,true,false)');
+    const sql=`insert into public.shift_observations(user_id,observation_id,shift_id,area,observed_at,modeled_score,event_arrivals,event_exits) values ($1,$2,$3,'Midtown',now(),$4,2,1)`;
+    const args=[alice,'40000000-0000-4000-8000-000000000010','50000000-0000-4000-8000-000000000010'];
+    await assert.rejects(db.query(sql,[...args,1.1]),{code:'23514'});
+    await db.query(sql,[...args,.65]);
+  });
+  await as('authenticated',bob,async()=>assert.equal((await db.query('select * from public.shift_observations')).rows.length,0));
+  await as('authenticated',alice,async()=>{
+    await db.query('select public.set_home_base_privacy(false,false,false)');
+    assert.equal((await db.query('select * from public.shift_observations')).rows.length,0);
+  });
+});
+
 test('optional telemetry requires consent and is isolated from other drivers', async () => {
   await as('authenticated', alice, async () => {
     await assert.rejects(db.query("insert into public.usage_events(user_id,event_name,surface) values ($1,'view_map','map')",[alice]),{code:'42501'});

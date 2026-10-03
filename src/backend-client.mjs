@@ -188,6 +188,10 @@ export function createHomeBaseBackend(client) {
       return result(await client.from('shift_observations').upsert({ ...observation, user_id: me.id },
         { onConflict: 'user_id,observation_id', ignoreDuplicates: true }));
     },
+    async demandHistory() {
+      const me = await user();
+      return result(await client.from('shift_observations').select('area,observed_at,modeled_score,event_arrivals,event_exits').eq('user_id',me.id).order('observed_at',{ascending:false}).limit(1000));
+    },
     async dataInventory() {
       const me = await user();
       const output = {};

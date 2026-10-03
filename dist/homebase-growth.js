@@ -118,7 +118,7 @@
       const section=document.createElement('section');section.className='workspace-section growth-account';
       section.innerHTML='<h3>DATA & PRIVACY</h3><p>Optional contributions help improve Home Base. Declining does not remove free access.</p>'+[
         ['usage_analytics','Share app-usage measurements','Sends feature names and server timestamps, not earnings amounts, passwords, or exact GPS.'],
-        ['model_improvement','Help evaluate the forecast model','Saves displayed estimates and neighborhood observations only during an explicitly started, foreground shift. Not continuous background tracking.'],
+        ['model_improvement','Help evaluate the forecast model','Saves displayed estimates, neighborhood model scores and nearby event timing counts only during an explicitly started, foreground shift. No exact GPS or continuous background tracking. Scores are not actual ride counts.'],
         ['benchmark_sharing','Contribute to community earnings benchmarks','Uses eligible gross earnings and online hours for grouped comparisons.']
       ].map(([key,label,description])=>'<label><input type="checkbox" data-privacy="'+key+'" '+(privacy[key]?'checked':'')+' '+(!me?'disabled':'')+'> '+label+'<small>'+description+'</small></label>').join('')+
         '<button class="primary-action" id="privacySave" '+(!me?'disabled':'')+'>Save privacy choices</button><p>Third-party data sales and personalized ads are not active. Commercial releases require a separate rights and privacy review. Optional usage and neighborhood records have a 90-day retention target; prediction records have a 180-day target.</p><details><summary>Delete data</summary><p>Export first. Clearing cloud records is different from deleting your login account. Device records are separate.</p><div class="growth-actions"><button id="cloudClear" class="secondary-action" '+(!me?'disabled':'')+'>Clear cloud records</button><button id="accountDelete" class="secondary-action" '+(!me?'disabled':'')+'>Delete account</button><button id="deviceClear" class="secondary-action">Clear device records</button></div></details>';
@@ -157,7 +157,9 @@
         for(const prediction of forecastRecords({area,apps:currentApps,rates,states,now,uuid:()=>crypto.randomUUID()}))await backend.recordPrediction(prediction);
       }
       if(now-lastObservation>5*60000){lastObservation=now;if(!active.observationShiftId){active.observationShiftId=crypto.randomUUID();write('homeBaseActiveShift',active);}
-        await backend.observeShift({observation_id:crypto.randomUUID(),shift_id:active.observationShiftId,area,observed_at:new Date().toISOString(),source:'foreground_neighborhood'});}
+        const district=typeof demandAreas!=='undefined'?demandAreas.find(a=>a.name===area):null;
+        const context=district&&window.HomeBaseDemandHistory?HomeBaseDemandHistory.context(district):{};
+        await backend.observeShift({observation_id:crypto.randomUUID(),shift_id:active.observationShiftId,area,observed_at:new Date().toISOString(),source:'foreground_neighborhood',...context});}
     }
     async function tick() {
       if(!navigator.onLine||busy||!me)return;
@@ -181,7 +183,7 @@
     const oldSupport=renderSupport;renderSupport=function(...args){oldSupport(...args);renderSponsors();};
     refreshIdentity().catch(fail);setInterval(tick,30000);window.addEventListener('online',tick);
     const button=document.createElement('button');button.className='growth-account-shortcut';button.textContent='Account';button.onclick=()=>{document.getElementById('navProfile').click();};document.querySelector('.planner-toolbar')?.append(button);
-    window.HomeBaseAccounts={backend,refreshIdentity};
+    window.HomeBaseAccounts={backend,refreshIdentity,learningEnabled:()=>!!me&&!!privacy.model_improvement};
   }
   return {canSync,insideRing,areaAt,forecastRecords,boot};
 });

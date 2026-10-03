@@ -138,7 +138,14 @@
       const pretty=s=>({active:'Recent provider input',stale:'Stale — do not treat as live',not_configured:'Not connected',unknown:'Not available',unavailable:'Unavailable',rate_limited:'Temporarily rate limited',error:'Unavailable'}[s]||s);
       message('Demand sources & confidence','<p><b>Heat colors show relative modeled demand. They do not represent guaranteed surge payments or confirmed ride requests.</b></p><p>Model refreshed: '+escape(publicSignalsRefreshedAt?marketTime(publicSignalsRefreshedAt):'Pending')+'. Provider snapshot: '+(age===null?'Unavailable':age+' minutes old')+'.</p><ul>'+Object.entries(providerStatuses).map(([name,value])=>'<li>'+escape(name)+': '+escape(pretty(value))+'</li>').join('')+'</ul><p>Uber pricing is a price proxy. Flight activity is an airport activity proxy. Dated events are event context. Venues and routine school or nightlife patterns are estimates.</p><p><b>Confidence:</b> lower for routine patterns; medium for a dated event or recent provider proxy. Home Base has no measured probability of receiving a ride. Expired provider samples are excluded.</p>');
     }
-    document.getElementById('demandDetails').addEventListener('click',feedDetails);
+    document.getElementById('demandDetails').addEventListener('click',async()=>{
+      feedDetails();
+      const history=document.createElement('section');history.className='planner-card';
+      dialog.querySelector('#installCopy').append(history);
+      if(!window.HomeBaseAccounts?.learningEnabled()){history.innerHTML=HomeBaseDemandHistory.html([],escape);return;}
+      history.textContent='Loading your private demand history…';
+      try{history.innerHTML=HomeBaseDemandHistory.html(await HomeBaseAccounts.backend.demandHistory(),escape);}catch{history.textContent='Demand history could not load. Reconnect and try again.';}
+    });
     const drive=document.getElementById('driveViewToggle'),tabs=document.getElementById('toggleMapTabs'),showPickup=document.getElementById('showPickupCard');
     function applyView(){app.classList.toggle('planner-drive',compact);app.classList.toggle('planner-tabs-hidden',tabsHidden);drive.textContent=compact?'Full view':'Driving view';drive.setAttribute('aria-pressed',String(compact));tabs.textContent=tabsHidden?'Show tabs':'Hide tabs';tabs.setAttribute('aria-expanded',String(!tabsHidden));showPickup.hidden=!pickupHidden;document.querySelectorAll('[data-slot]').forEach(e=>e.style.display=compact?'none':'');document.querySelector('.weather')?.style.setProperty('display',compact?'none':'');saveView();setTimeout(()=>liveMap.invalidateSize(),100);}
     drive.addEventListener('click',()=>{compact=!compact;if(compact){fullViewTabsHidden=tabsHidden;tabsHidden=true;}else tabsHidden=fullViewTabsHidden;closeWorkspace();applyView();renderMove();});

@@ -1,5 +1,6 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
+import { publicRecords } from './public-records.mjs';
 
 const ROOT = new URL('../', import.meta.url);
 const CONFIG_URL = new URL('config/provider-markets.json', ROOT);
@@ -278,8 +279,8 @@ async function main() {
   try { previous = JSON.parse(await readFile(OUTPUT_URL, 'utf8')); } catch { /* first run */ }
   const markets = [];
   for (const market of config.markets) {
-    const [uber, ticketmaster, booking, flightaware] = await Promise.all([
-      uberProvider(market), ticketmasterProvider(market), bookingProvider(market), flightAwareProvider(market)
+    const [uber, ticketmaster, booking, flightaware, records] = await Promise.all([
+      uberProvider(market), ticketmasterProvider(market), bookingProvider(market), flightAwareProvider(market), publicRecords(market, NOW.getTime())
     ]);
     const old = previous.markets?.find((entry) => entry.id === market.id);
     markets.push({
@@ -288,6 +289,7 @@ async function main() {
       ticketmaster: retainRecent(old, ticketmaster, 'ticketmaster'),
       booking: retainRecent(old, booking, 'booking'),
       flightaware: retainRecent(old, flightaware, 'flightaware')
+      ,publicRecords: records
     });
   }
   const output = {

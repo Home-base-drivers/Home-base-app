@@ -198,10 +198,11 @@
 <link rel="stylesheet" href="homebase-earnings.css?v=110">
 <link rel="stylesheet" href="homebase-growth.css?v=111">
 <script src="homebase-earnings.js?v=110"></script>
-<script src="homebase-planner.js?v=111"></script>
+<script src="homebase-demand-history.js?v=112"></script>
+<script src="homebase-planner.js?v=112"></script>
 <script src="homebase-config.js?v=111"></script>
-<script src="homebase-backend.js?v=111"></script>
-<script src="homebase-growth.js?v=111"></script>
+<script src="homebase-backend.js?v=112"></script>
+<script src="homebase-growth.js?v=112"></script>
 <script>
 const app=document.getElementById('app');
 const $=s=>app.querySelector(s), $$=s=>[...app.querySelectorAll(s)];
@@ -323,8 +324,8 @@ function updateClock(){const now=new Date();$('#clock').textContent=now.toLocale
 updateClock();setInterval(updateClock,30000);
 function demandWeight(source,when){
   const parts=marketParts(when),h=parts.hour+when.getMinutes()/60,surge=Number(source.tags&&source.tags.uberSurgeMultiplier),amenity=String(source.tags&&source.tags.amenity||'').toLowerCase();
-  // A live Uber signal is authoritative, including at a food location.
-  if(Number.isFinite(surge))return Math.max(0,(surge-1)*30);
+  // A recent pricing proxy is context, not a confirmed request or future surge.
+  if(Number.isFinite(surge)){const sampled=Date.parse(source.tags.providerSampledAt||'');return Number.isFinite(sampled)&&Math.abs(when.getTime()-sampled)<=25*60000?Math.max(0,(surge-1)*30):0;}
   if(source.tags&&source.tags.airportActivity){
     const hourStart=Date.parse(source.tags.flightHour),time=when.getTime();
     if(!Number.isFinite(hourStart)||time<hourStart||time>=hourStart+3600000)return 0;
@@ -340,7 +341,7 @@ function demandWeight(source,when){
   let weight=Math.max(0,hourWeight(source.cat,h,when)+eventTimeWeight(source,when)*eventScale(source));
   weight+=rainDemandBoost(source,when);
   if(source.tags&&source.tags.areaCoverageAnchor)weight*=Number(source.tags.modelBias)||1;
-  if(source.tags&&source.tags.liveEvent)weight+=14;
+  if(source.tags&&source.tags.liveEvent&&source.eventStart&&when>=source.eventStart&&when<=(source.eventEnd||new Date(source.eventStart.getTime()+3*3600000)))weight+=14;
   if(source.tags&&source.tags.metroBaseline)weight*=.78;
   return weight;
 }
@@ -649,7 +650,7 @@ function eventTimeWeight(v,when){
   if(sinceEnd<=.75)return 16;
   return 8
 }
-function eventScale(v){const name=eventToken(`${v.venue||''} ${v.name||''}`);if(/m t bank stadium|camden yards/.test(name))return 1.35;if(/cfg bank arena/.test(name))return 1.2;if(/convention center|pier six|rams head/.test(name))return 1.05;return 1}
+function eventScale(v){if(v.tags&&v.tags.publicCalendar)return .2;const name=eventToken(`${v.venue||''} ${v.name||''}`);if(/m t bank stadium|camden yards/.test(name))return 1.35;if(/cfg bank arena/.test(name))return 1.2;if(/convention center|pier six|rams head/.test(name))return 1.05;return 1}
 function rainDemandBoost(source,when=new Date()){const target=when instanceof Date?when.getTime():Date.parse(when);const nearest=hourlyRainForecast.reduce((best,item)=>!best||Math.abs(item.time-target)<Math.abs(best.time-target)?item:best,null);const chance=nearest&&Math.abs(nearest.time-target)<=5400000?nearest.probability:Number(currentRainChance)||0;if(chance<25)return 0;if(!['event','transit','restaurant','nightlife','neighborhood','hotel'].includes(source.cat))return 0;let boost=chance>=75?4:chance>=50?2.5:1;if(source.eventStart)boost*=1.35;return boost}
 function schoolWeight(when){const mp=marketParts(when),day=mp.day,hour=mp.hour+when.getMinutes()/60;if(day<1||day>5||hour<13.5||hour>=17)return 0;if(hour<15.75)return 12;if(hour<16.5)return 7;return 3}
 function trendWeight(cat,stopIndex){if(surgeTrend!=='cooling'||stopIndex>0)return 0;if(cat==='school'||cat==='k12')return 4;if(cat==='transit'||cat==='restaurant')return 1;return-2}
@@ -701,11 +702,18 @@ async function loadProviderSignals(lat,lon,market){
     const uber=match.uber;
     if(uber&&['active','stale'].includes(uber.status)&&Date.now()-Date.parse(uber.fetchedAt||0)<=25*60000)providerUberPoints=(uber.samples||[]).filter(item=>Number.isFinite(Number(item.surgeMultiplier))).map(item=>({name:`Uber pricing · ${item.name}`,cat:'neighborhood',lat:Number(item.lat),lon:Number(item.lon),heatOnly:true,tags:{providerSignal:true,uberSurgeMultiplier:Number(item.surgeMultiplier),providerSampledAt:item.sampledAt,source:'Uber price estimate proxy'}})).filter(item=>Number.isFinite(item.lat)&&Number.isFinite(item.lon));
     const booking=match.booking;if(booking&&['active','stale'].includes(booking.status)&&Array.isArray(booking.areas)){const zones=booking.areas.filter(area=>Number(area.returnedListings)>0).length;providerBookingNote=`${zones} metro areas had lodging listings returned for ${booking.checkin||'the next-night sample'}`;}
-    const events=(match.ticketmaster&&['active','stale'].includes(match.ticketmaster.status)?match.ticketmaster.events||[]:[]).map(item=>{
+    const records=match.publicRecords;
+    providerStatuses.public_calendar=records&&records.calendarStatus||'unavailable';providerStatuses.public_weather=records&&records.weatherStatus||'unavailable';
+    if(records&&Date.now()-Date.parse(records.fetchedAt||'')<=25*60000&&records.weatherStatus==='active'){
+      const rain=(records.weather||[]).filter(p=>p.rainProbability!=null&&Number.isFinite(Number(p.rainProbability))).map(p=>({time:Date.parse(p.start),probability:Number(p.rainProbability)})).filter(p=>Number.isFinite(p.time));
+      if(rain.length)hourlyRainForecast=rain;
+    }
+    const campus=records&&Date.now()-Date.parse(records.fetchedAt||'')<=25*60000&&records.calendarStatus==='active'?records.events||[]:[];
+    const events=[...(match.ticketmaster&&['active','stale'].includes(match.ticketmaster.status)?match.ticketmaster.events||[]:[]),...campus].map(item=>{
       const start=new Date(item.eventStart),reportedEnd=item.eventEnd?new Date(item.eventEnd):null,end=reportedEnd&&Number.isFinite(reportedEnd.getTime())?reportedEnd:new Date(start.getTime()+3*3600000),known=knownBaltimoreVenue(item.venue||item.name),eventLat=known?known.lat:Number(item.lat),eventLon=known?known.lon:Number(item.lon);
       if(!Number.isFinite(start.getTime())||end.getTime()<Date.now()-105*60000||start.getTime()>Date.now()+36*3600000)return null;
       const live=start.getTime()<=Date.now()&&end.getTime()>Date.now();
-      return{name:`${item.name}${item.venue?` · ${item.venue}`:''} · ${marketTime(start)}`,cat:'event',lat:eventLat,lon:eventLon,venue:known&&known.name||item.venue||'',eventType:item.eventType||'',classification:item.classification||'',genre:item.genre||'',eventStart:start,eventEnd:end,eventState:live?'Live':'Preview',tags:{providerEvent:true,source:'Ticketmaster Discovery API'}}
+      return{name:`${item.name}${item.venue?` · ${item.venue}`:''} · ${marketTime(start)}`,cat:'event',lat:eventLat,lon:eventLon,venue:known&&known.name||item.venue||'',eventType:item.eventType||'',classification:item.classification||'',genre:item.genre||'',eventStart:start,eventEnd:end,eventState:live?'Live':'Preview',tags:{providerEvent:true,publicCalendar:item.source==='Towson University public calendar',source:item.source||'Ticketmaster Discovery API'}}
     }).filter(item=>item&&Number.isFinite(item.lat)&&Number.isFinite(item.lon)&&(!isGreaterBaltimoreLocation(lat,lon)||isGreaterBaltimoreLocation(item.lat,item.lon)));
     renderFeedSignal();renderDemandCoach();return{events}
   }catch{renderFeedSignal();renderDemandCoach();return null}

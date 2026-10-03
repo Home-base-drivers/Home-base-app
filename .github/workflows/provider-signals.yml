@@ -32,7 +32,7 @@ jobs:
       - name: Test provider normalization
         # Backend suites require installed SDK/Postgres dependencies and run in
         # validate.yml. Keep this five-minute refresh focused on its providers.
-        run: node --test tests/flightaware.test.mjs scripts/refresh-provider-signals.test.mjs
+        run: node --test tests/flightaware.test.mjs scripts/refresh-provider-signals.test.mjs tests/demand-history.test.mjs
       - name: Fetch provider signals
         run: node scripts/refresh-provider-signals.mjs
         env:

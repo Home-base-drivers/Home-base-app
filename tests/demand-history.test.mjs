@@ -1,0 +1,10 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';
+import {normalizeCampusEvents,normalizeWeather,publicRecords} from '../scripts/public-records.mjs';
+const H=createRequire(import.meta.url)('../dist/homebase-demand-history.js');
+test('trend compares same neighborhood across time, not zoom or null scores',()=>{const now=Date.now();const row=(area,ago,score)=>({area,observed_at:new Date(now-ago*60000).toISOString(),modeled_score:score});const result=H.compare([row('A',0,.7),row('A',5,.4),row('A',20,.3),row('B',0,null)],now);assert.equal(result.length,1);assert.ok(Math.abs(result[0].delta-.4)<.0001);assert.equal(H.compare([row('A',-1,.8)],now).length,0);});
+test('unknown event end cannot create a departure peak',()=>{assert.equal(H.eventPhase({eventStart:'2026-10-03T12:00:00Z',eventEnd:null},Date.parse('2026-10-03T16:00:00Z')),'unknown_end');});
+test('campus feed excludes private, undated, virtual and all-day events, never claims attendance',()=>{const event={title:'Public concert',publish_status:'published',experience:'inperson',geo:{latitude:39.39,longitude:-76.61},event_instances:[{event_instance:{id:1,start:'2026-10-03T16:00:00-04:00',end:'2026-10-03T18:00:00-04:00',num_attending:500}}]};const now=Date.parse('2026-10-03T12:00:00Z');const events=normalizeCampusEvents({events:[{event},{event:{...event,private:true}},{event:{...event,experience:'virtual'}}]},now);assert.equal(events.length,1);assert.equal(events[0].attendance,null);assert.equal(normalizeCampusEvents({events:[{event:{...event,event_instances:[{event_instance:{start:'2026-10-03',end:'2026-10-04'}}]}}]},now).length,0);});
+test('missing public weather is unknown, not zero rain',()=>{assert.equal(normalizeWeather({properties:{periods:[{startTime:'2026-10-03T00:00:00Z',endTime:'2026-10-03T01:00:00Z'}]}})[0].rainProbability,null);});
+test('source failures stay unavailable and do not produce invented events',async()=>{const result=await publicRecords({name:'Baltimore'},Date.now(),async()=>{throw Error('offline');});assert.equal(result.status,'unavailable');assert.deepEqual(result.events,[]);});
