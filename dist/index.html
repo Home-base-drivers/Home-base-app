@@ -196,8 +196,12 @@
 <script src="baltimore-market.js?v=72"></script>
 <script src="homebase-heat.js?v=94"></script>
 <link rel="stylesheet" href="homebase-earnings.css?v=110">
+<link rel="stylesheet" href="homebase-growth.css?v=111">
 <script src="homebase-earnings.js?v=110"></script>
-<script src="homebase-planner.js?v=110"></script>
+<script src="homebase-planner.js?v=111"></script>
+<script src="homebase-config.js?v=111"></script>
+<script src="homebase-backend.js?v=111"></script>
+<script src="homebase-growth.js?v=111"></script>
 <script>
 const app=document.getElementById('app');
 const $=s=>app.querySelector(s), $$=s=>[...app.querySelectorAll(s)];
@@ -521,7 +525,7 @@ function renderSupport(message=''){
 function hbRead(key,fallback){try{const value=JSON.parse(localStorage.getItem(key));return value===null?fallback:value}catch(e){return fallback}}
 function hbDownload(name,type,content){const url=URL.createObjectURL(new Blob([content],{type})),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),500)}
 function hbTrack(event,details={}){const rows=hbRead('homeBaseAnalytics',[]);rows.push({event,details,at:new Date().toISOString()});localStorage.setItem('homeBaseAnalytics',JSON.stringify(rows.slice(-250)))}
-function readProductPrefs(){return{marketPreset:'Baltimore',largeText:false,highContrast:false,reduceMotion:matchMedia('(prefers-reduced-motion: reduce)').matches,localAnalytics:true,...hbRead('homeBaseProductPrefs',{})}}
+function readProductPrefs(){return{marketPreset:'Baltimore',largeText:false,highContrast:false,reduceMotion:matchMedia('(prefers-reduced-motion: reduce)').matches,localAnalytics:false,...hbRead('homeBaseProductPrefs',{})}}
 function applyProductPrefs(){const p=readProductPrefs();app.classList.toggle('hb-large-text',!!p.largeText);app.classList.toggle('hb-high-contrast',!!p.highContrast);app.classList.toggle('hb-reduce-motion',!!p.reduceMotion)}
 window.addEventListener('error',event=>{const rows=hbRead('homeBaseErrorLog',[]);rows.push({message:String(event.message||'Unknown error').slice(0,240),source:String(event.filename||'').split('/').pop(),line:event.lineno||0,at:new Date().toISOString()});localStorage.setItem('homeBaseErrorLog',JSON.stringify(rows.slice(-40)))});
 applyProductPrefs();
@@ -804,9 +808,8 @@ async function refreshLiveDemandLayer(){
 if(!demoLocale)setTimeout(autoRefreshGps,150);
 setInterval(()=>{updateClimateAdvisory();const selected=$('[data-hour][aria-pressed="true"]');if(selected&&selected.dataset.hour==='0'&&activeStops.length)applyTimeForecast(0,new Date());refreshLiveDemandLayer()},300000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-lastAutoGpsRefresh>300000)autoRefreshGps()});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=110',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';}));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=111',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';}));
 </script>
 <script src="homebase-live.js?v=37"></script>
 </body>
 </html>
-

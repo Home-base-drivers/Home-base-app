@@ -86,6 +86,16 @@ export function createHomeBaseBackend(client) {
     return data.user;
   }
   return Object.freeze({
+    onAuthChange(callback) {
+      return client.auth.onAuthStateChange((event, session) => callback(event, session?.user || null));
+    },
+    async resetPassword(email, redirectTo) {
+      return result(await client.auth.resetPasswordForEmail(email, { redirectTo }));
+    },
+    async updatePassword(password) {
+      await user();
+      return result(await client.auth.updateUser({ password }));
+    },
     async sendSignInLink(email, redirectTo) {
       return result(await client.auth.signInWithOtp({ email,
         options: { emailRedirectTo: redirectTo, shouldCreateUser: true } }));
@@ -150,6 +160,55 @@ export function createHomeBaseBackend(client) {
         .eq('user_id', me.id));
       return ['Uber', 'Lyft', 'Empower'].map(platform => rows.find(r => r.platform === platform)
         || { platform, status: 'not_configured', last_synced_at: null });
+    },
+    async privacy() {
+      const me = await user();
+      return result(await client.from('privacy_preferences').select('*').eq('user_id', me.id).maybeSingle())
+        || { usage_analytics: false, model_improvement: false, benchmark_sharing: false };
+    },
+    async savePrivacy(choices) {
+      const me = await user();
+      const keys = ['usage_analytics', 'model_improvement', 'benchmark_sharing'];
+      if (!choices || keys.some(k => typeof choices[k] !== 'boolean')) throw new TypeError('Choose your data preferences.');
+      return result(await client.rpc('set_home_base_privacy', { p_usage: choices.usage_analytics,
+        p_model: choices.model_improvement, p_benchmark: choices.benchmark_sharing }));
+    },
+    async usage(event, surface = 'app') {
+      const me = await user();
+      if (!['view_map','view_earnings','view_profile','view_support','view_alerts','recommendation_opened','navigation_started','csv_imported','shift_started','shift_completed','sponsor_clicked'].includes(event)) return;
+      return result(await client.from('usage_events').insert({ user_id: me.id, event_name: event, surface }));
+    },
+    async recordPrediction(prediction) {
+      const me = await user();
+      return result(await client.from('model_predictions').upsert({ ...prediction, user_id: me.id },
+        { onConflict: 'user_id,prediction_id', ignoreDuplicates: true }));
+    },
+    async observeShift(observation) {
+      const me = await user();
+      return result(await client.from('shift_observations').upsert({ ...observation, user_id: me.id },
+        { onConflict: 'user_id,observation_id', ignoreDuplicates: true }));
+    },
+    async dataInventory() {
+      const me = await user();
+      const output = {};
+      for (const table of ['privacy_preferences','consent_receipts','usage_events','model_predictions','shift_observations','subscriptions']) {
+        const rows = [];
+        const order = {consent_receipts:'receipt_id',usage_events:'event_id',model_predictions:'prediction_id',shift_observations:'observation_id'}[table] || 'user_id';
+        for (let offset = 0; ; offset += 500) {
+          const page = result(await client.from(table).select('*').eq('user_id', me.id).order(order).range(offset, offset + 499));
+          rows.push(...page);
+          if (page.length < 500) break;
+        }
+        output[table] = rows;
+      }
+      return output;
+    },
+    async deleteAccount() {
+      await user();
+      return result(await client.functions.invoke('delete-account', { body: { confirmation: 'DELETE' } }));
+    },
+    async sponsors() {
+      return result(await client.from('sponsor_campaigns').select('campaign_id,advertiser,headline,description,destination_url').limit(3));
     },
     async clearCloudData() {
       await user();

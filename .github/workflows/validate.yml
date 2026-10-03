@@ -29,5 +29,6 @@ jobs:
           node --check dist/homebase-planner.js
           node --check dist/homebase-earnings.js
           node --check dist/homebase-heat.js
+          node --check dist/homebase-growth.js
       - name: Test the app and private account backend
         run: npm test

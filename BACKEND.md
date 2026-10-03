@@ -4,8 +4,9 @@ The backend release provides Supabase Auth integration, a private earnings
 ledger, saved progress with version conflict detection, and server-managed
 platform connection status. The hosted project was provisioned on October 2,
 2026 in the Homebase organization, in US East/Virginia (`us-east-1`).
-The live app continues to store records on the device; the new client bundle
-is not loaded by `index.html` and does not transmit anything automatically.
+The October 3 growth release loads the cloud client. Device history stays local
+until an authenticated driver explicitly saves or restores it. After linking,
+automatic cloud saving is optional. See GROWTH_READINESS.md for activation gates.
 
 ## Database and API
 
@@ -40,15 +41,24 @@ adapter needs approved access and server-side secret storage before activation.
 `npm run build:backend-client` bundles the pinned Supabase SDK into
 `dist/homebase-backend.js`. Packages and transitive dependencies are locked.
 
-The future account screen initializes `HomeBaseCloud.connectHomeBase` with a
-project URL and **publishable** key, after the cloud/privacy approval described
-in `SUPABASE_SETUP.md`. Secret and service-role keys are rejected by the client.
+The account screen initializes `HomeBaseCloud.connectHomeBase` with the approved
+project URL and **publishable** key. Secret and service-role keys are rejected by
+the client. Public email signup/recovery still needs sending-domain and SMTP setup.
 
 The API supports email-link sign-in, password sign-in/signup, sign-out, profile
 creation, benchmark consent, earnings save/read, connection status, saved
-progress, and cloud-record deletion. Account deletion, provider linking,
-provider reconnect/revoke, and automatic provider retrieval still need their
-separate approved server implementations; none is presented as activated.
+progress, privacy choices, cloud export and cloud-record deletion. The verified
+`delete-account` Edge Function revokes sessions before deleting the identity;
+it refuses deletion while a provider connection requires disconnecting.
+Provider linking, reconnect/revoke and automatic retrieval remain unactivated.
+
+Growth migrations add opt-in telemetry, immutable forecast snapshots,
+foreground neighborhood observations, consent receipts, server-managed
+subscription records and contextual sponsorship inventory. A private release
+registry blocks commercial analytics until review. A service-side pruning
+function is tested, but recurring deletion is NOT scheduled. The proposed
+90-day usage/observation and 180-day prediction windows require explicit approval.
+There is no paid checkout, raw-location sale endpoint or trained-model claim.
 
 Only explicitly selected earnings rows and an allowlist of progress keys are
 eligible for upload. Sessions, precise GPS, diagnostic logs, and duplicate

@@ -28,6 +28,38 @@ before(async () => {
 });
 after(async () => { await db?.close(); });
 
+test('optional telemetry requires consent and is isolated from other drivers', async () => {
+  await as('authenticated', alice, async () => {
+    await assert.rejects(db.query("insert into public.usage_events(user_id,event_name,surface) values ($1,'view_map','map')",[alice]),{code:'42501'});
+    await db.query('select public.set_home_base_privacy(true,true,false)');
+    await db.query("insert into public.usage_events(user_id,event_name,surface,recorded_at) values ($1,'view_map','map','2000-01-01')",[alice]);
+    const rows=(await db.query('select * from public.usage_events')).rows;
+    assert.equal(rows.length,1);
+    assert.ok(new Date(rows[0].recorded_at).getTime()>Date.now()-60000);
+    await assert.rejects(db.query("insert into public.usage_events(user_id,event_name,surface) values ($1,'view_map','map')",[bob]),{code:'42501'});
+    await assert.rejects(db.query("insert into public.consent_receipts(user_id,choices,policy_version) values ($1,'{}','forged')",[alice]),{code:'42501'});
+    await assert.rejects(db.query("insert into public.subscriptions(user_id,plan,status) values ($1,'plus','active')",[alice]),{code:'42501'});
+  });
+  await as('authenticated',bob,async()=>assert.equal((await db.query('select * from public.usage_events')).rows.length,0));
+});
+
+test('predictions cannot be backfilled and consent withdrawal deletes optional history', async () => {
+  await as('authenticated',alice,async()=>{
+    await db.query('select public.set_home_base_privacy(true,true,false)');
+    const sql=`insert into public.model_predictions(user_id,prediction_id,model_version,area,platform,horizon_minutes,forecast_for,gross_hourly_estimate,input_status)
+      values ($1,$2,'test','Midtown','Uber',15,$3,30,'modeled')`;
+    await assert.rejects(db.query(sql,[alice,'30000000-0000-4000-8000-000000000001','2000-01-01']),{code:'23514'});
+    await db.query(sql,[alice,'30000000-0000-4000-8000-000000000002',new Date(Date.now()+15*60000).toISOString()]);
+    await assert.rejects(db.query('update public.model_predictions set gross_hourly_estimate=100 where user_id=$1',[alice]),{code:'42501'});
+    await db.query(`insert into public.shift_observations(user_id,observation_id,shift_id,area,observed_at) values ($1,$2,$3,'Midtown',now())`,
+      [alice,'40000000-0000-4000-8000-000000000001','50000000-0000-4000-8000-000000000001']);
+    await db.query('select public.set_home_base_privacy(false,false,false)');
+    for(const table of ['usage_events','model_predictions','shift_observations'])assert.equal((await db.query('select * from public.'+table)).rows.length,0);
+    assert.ok((await db.query('select * from public.consent_receipts')).rows.length>=2);
+    await assert.rejects(db.query(sql,[alice,'30000000-0000-4000-8000-000000000003',new Date(Date.now()+15*60000).toISOString()]),{code:'42501'});
+  });
+});
+
 async function as(role, id, action) {
   await db.exec(`set role ${role}`);
   await db.query("select set_config('request.jwt.claim.sub', $1, false)", [id || '']);
@@ -196,4 +228,24 @@ test('all exposed tables have RLS; privileged benchmark code stays outside publi
   const exposedDefiners = (await db.query(`select proname from pg_proc p join pg_namespace n on n.oid=p.pronamespace
     where n.nspname='public' and p.prosecdef`)).rows;
   assert.deepEqual(exposedDefiners, []);
+});
+
+test('sponsorship is server-managed and only current approved inventory is public', async () => {
+  await as('service_role', null, () => db.query(`insert into public.sponsor_campaigns(advertiser,headline,description,destination_url,active,starts_at,ends_at)
+    values ('Synthetic sponsor','Active offer','Test only','https://example.com/offer',true,now()-interval '1 day',now()+interval '1 day'),
+    ('Synthetic sponsor','Inactive offer','Test only','https://example.com/offer',false,now()-interval '1 day',now()+interval '1 day')`));
+  await as('anon',null,async()=>assert.deepEqual((await db.query('select headline from public.sponsor_campaigns')).rows,[{headline:'Active offer'}]));
+  await as('authenticated',alice,async()=>await assert.rejects(db.query("update public.sponsor_campaigns set active=true"),{code:'42501'}));
+});
+
+test('retention deletes old learning records while keeping fresh observations', async () => {
+  await as('authenticated',alice,async()=>{
+    await db.query('select public.set_home_base_privacy(true,true,false)');
+    await db.query("insert into public.usage_events(user_id,event_name,surface) values ($1,'view_map','map')",[alice]);
+    await assert.rejects(db.query('select private.prune_home_base_learning()'),{code:'42501'});
+  });
+  await db.query("update public.usage_events set recorded_at=now()-interval '91 days' where user_id=$1",[alice]);
+  await as('authenticated',alice,()=>db.query("insert into public.usage_events(user_id,event_name,surface) values ($1,'view_profile','profile')",[alice]));
+  await as('service_role',null,()=>db.query('select private.prune_home_base_learning()'));
+  assert.deepEqual((await db.query('select event_name from public.usage_events where user_id=$1',[alice])).rows,[{event_name:'view_profile'}]);
 });

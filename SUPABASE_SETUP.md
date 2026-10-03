@@ -3,15 +3,15 @@
 This is an approval and deployment checklist for secure email-link login,
 cross-device progress, protected trip uploads, and a privacy-thresholded local
 hourly-rate benchmark. Both owners' approval of Supabase as the data processor
-was confirmed by Christopher on October 2, 2026. Cloud transmission is not yet
-wired into the live app; complete Auth/email configuration and verified browser
-integration below before activating it for drivers.
+was confirmed by Christopher on October 2, 2026. The October 3 account interface
+supports explicit device linking and private cloud save/restore. Complete email
+delivery and real multi-device pilot verification before public onboarding.
 
 The Home Base project has been created in the Homebase organization:
 https://supabase.com/dashboard/project/nixihmurdtfcbffgvpij.
-Both migrations below are already applied and hosted database checks passed.
-Do not reapply them manually. Auth configuration and browser activation are
-still pending; see [BACKEND.md](BACKEND.md).
+The account and earnings migrations below are already applied; October 3 growth
+migrations add consent, optional learning and retention. Do not reapply them
+manually. Public email delivery is still pending; see [BACKEND.md](BACKEND.md).
 
 1. Create a Supabase project owned by the Home Base organization (completed).
 2. Open **SQL Editor**, paste the complete contents of
@@ -45,6 +45,6 @@ Consent defaults off. Active-trip hours, payouts, delivery records, and future
 or undated records do not enter this rideshare benchmark. The function returns
 only the aggregate, never another driver's individual rows.
 
-The account client is built and tested but is not loaded by the live app.
-Creating a project and applying the backend do not automatically upload device
-history or activate Uber/Lyft/Empower account synchronization.
+The account client is loaded by the live app. Signing in alone does not upload
+device history. Automatic saves require explicitly linking this device first;
+Uber/Lyft/Empower account synchronization remains unactivated.

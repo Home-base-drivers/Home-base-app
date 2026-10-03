@@ -26,10 +26,13 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
       - name: Validate planner before deployment
         run: |
+          npm ci --ignore-scripts
+          npm test
           node scripts/check-index-syntax.mjs
+          node --check dist/homebase-growth.js
           node --check dist/homebase-planner.js
           node --check dist/homebase-earnings.js
           node --check dist/homebase-live.js
@@ -44,4 +47,3 @@ jobs:
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
-

@@ -10,10 +10,11 @@ demand model, event destinations, route suggestions, and recorded earnings.
 Christopher Brouard and Elizabeth Garcia are the recorded equal owners; see
 OWNERSHIP.md. A proposed sale needs both owners' agreement on assets and terms.
 
-Current status: functional planning prototype with a deployed private database
-and a tested account client. Public driver cloud accounts and automatic
-Uber/Lyft/Empower earnings synchronization are not shipped. A buyer should
-evaluate the working prototype and these explicit remaining dependencies.
+Current status: functional planning prototype with a deployed private database,
+account interface, opt-in learning and private cloud save/restore. Public signup
+email delivery and automatic Uber/Lyft/Empower earnings synchronization remain
+activation dependencies. GROWTH_READINESS.md records the October 3 additions
+and the remaining subscription, sponsorship and commercial-data release gates.
 
 ## Asset inventory
 
@@ -25,10 +26,10 @@ evaluate the working prototype and these explicit remaining dependencies.
 | Route and earnings helpers | dist/homebase-planner.js, dist/homebase-earnings.js | Tested calculation and destination logic |
 | Brand assets | dist/homebase-logo.png, dist/icon-192.png, dist/icon-512.png | Inventory origin and permitted use before transfer |
 | Provider pipeline | scripts/refresh-provider-signals.mjs, .github/workflows/provider-signals.yml | Adapters and freshness handling; live availability depends on provider access |
-| Private database | Supabase Home Base, nixihmurdtfcbffgvpij | Seven tables with RLS; two migrations applied |
-| Account client | src/backend-client.mjs, dist/homebase-backend.js | Tested SDK client; not loaded by the live app |
+| Private database | Supabase Home Base, nixihmurdtfcbffgvpij | RLS-protected earnings, consent and learning tables; growth migrations added |
+| Account client | src/backend-client.mjs, dist/homebase-backend.js, dist/homebase-growth.js | Account/cloud interface loaded; external email delivery remains pending |
 | Setup and contracts | BACKEND.md, SUPABASE_SETUP.md, CONNECTIONS.md | Database behavior and outstanding integration steps |
-| Automated checks | scripts/*.test.mjs, tests/*.test.mjs | 73 checks passed on the backend release |
+| Automated checks | scripts/*.test.mjs, tests/*.test.mjs | 82 checks passed on this release; rerun on each release |
 
 ## Minimum-investment finish sequence
 

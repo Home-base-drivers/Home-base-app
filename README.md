@@ -78,11 +78,12 @@ signals, and the app discards expired provider data rather than presenting it as
 
 The private Supabase database and both account/earnings migrations are deployed.
 Both owners' data-processor approval is recorded, and the Home Base Auth Site
-URL and allowed redirect are configured. SMTP and the account interface remain
-pending; the live app does not transmit private driver records. See BACKEND.md
-and SUPABASE_SETUP.md for the verified release status. The current app records a
-separate Home Base user gross-hourly rate and profit comparisons from imported
-trip rows on the driver's device. No trip row is uploaded.
+URL and allowed redirect are configured. The account interface supports explicit
+device linking and optional private cloud saves. Public SMTP delivery and
+automatic provider connections remain pending. See BACKEND.md, SUPABASE_SETUP.md
+and GROWTH_READINESS.md for release status and activation gates. Device CSVs and
+manual shifts remain available without an account; cloud and optional learning
+contributions require the corresponding user action or consent.
 
 When approved and wired, Row Level Security will isolate private records and the
 community benchmark function will return results only for a market/day/hour
