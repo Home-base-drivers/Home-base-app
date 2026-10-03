@@ -28,7 +28,7 @@ Updated October 3, 2026. This is an implementation checklist, not a claim of pro
 
 ## Retention and data boundaries
 
-Usage events and neighborhood observations have a proposed 90-day retention target; prediction records have a proposed 180-day target. The migration supplies a service-only pruning function, but recurring deletion is NOT scheduled: explicit owner approval is required. The separate operations script must not be run during migration replay. Consent receipts are retained for auditing; clearing cloud data is not deletion of billing records or the login identity.
+Daily retention cleanup was explicitly approved and activated October 3, 2026 at 04:20 UTC. It permanently deletes usage events and neighborhood observations older than 90 days and prediction records older than 180 days. The first manual verification succeeded with no expired records present. The separate operations script must not be run during ordinary migration replay. This job does not delete earnings, account details, subscriptions or consent receipts; clearing cloud data is separate from deleting the login identity.
 
 Cloud saving does not silently bind a shared device to whichever account signs in. First upload is explicit; an existing cloud history must be restored before linking an unbound device. Cloud restore replaces supported local earnings/settings after confirmation. Download a backup first. Deleting a local imported row does not delete its cloud copy; use cloud clearing or account deletion for cloud removal. In-progress shifts are not included in the backup format.
 

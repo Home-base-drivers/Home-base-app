@@ -55,9 +55,11 @@ Provider linking, reconnect/revoke and automatic retrieval remain unactivated.
 Growth migrations add opt-in telemetry, immutable forecast snapshots,
 foreground neighborhood observations, consent receipts, server-managed
 subscription records and contextual sponsorship inventory. A private release
-registry blocks commercial analytics until review. A service-side pruning
-function is tested, but recurring deletion is NOT scheduled. The proposed
-90-day usage/observation and 180-day prediction windows require explicit approval.
+registry blocks commercial analytics until review. After explicit owner approval
+on October 3, daily retention cleanup is active at 04:20 UTC: usage events and
+neighborhood observations older than 90 days, predictions older than 180 days.
+The first manual verification run succeeded with no expired records present.
+Earnings, account details and consent receipts are not pruned by this job.
 There is no paid checkout, raw-location sale endpoint or trained-model claim.
 
 Only explicitly selected earnings rows and an allowlist of progress keys are
