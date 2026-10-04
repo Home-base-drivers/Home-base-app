@@ -215,7 +215,7 @@ const initialHeatVisible=(()=>{try{return localStorage.getItem('homeBaseHeatVisi
 app.classList.toggle('heat-hidden',!initialHeatVisible);
 const demoKey=new URLSearchParams(location.search).get('demo');
 const demoLocale=demoKey==='london'?{name:'London',countryCode:'GB',lat:51.5074,lon:-.1278,timeZone:'Europe/London'}:null;
-const liveMap=L.map('liveMap',{zoomControl:true,attributionControl:true,dragging:true,scrollWheelZoom:true,zoomAnimation:true,fadeAnimation:true,markerZoomAnimation:true}).setView([39.2904,-76.6122],12);
+const liveMap=L.map('liveMap',{zoomControl:true,attributionControl:true,dragging:true,scrollWheelZoom:true,zoomAnimation:true,fadeAnimation:true,markerZoomAnimation:true}).setView([20,0],2);
 liveMap.on('layeradd',event=>{const layer=event.layer;if(layer instanceof L.CircleMarker&&layer.options.fillColor==='#2563eb'){layer.setStyle({fillColor:'#08a9ff'});if(layer._path)layer._path.classList.add('homebase-gps-dot')}});
 liveMap.createPane('heatPane');liveMap.getPane('heatPane').style.zIndex=320;liveMap.getPane('heatPane').style.pointerEvents='none';
 liveMap.createPane('roadsPane');liveMap.getPane('roadsPane').style.zIndex=340;liveMap.getPane('roadsPane').style.pointerEvents='none';
@@ -831,7 +831,23 @@ function refreshLocationFast(){
   },err=>{gpsRequestInFlight=false;renderEvents([]);locationError(err.code===1?'Location access was denied. Enable Location Services for this site, then refresh.':'Could not get a GPS fix. Check signal and try again.')},{enableHighAccuracy:false,timeout:6000,maximumAge:60000})
 }
 function locationError(message){$('#updated').textContent='GPS connection failed';$('#refreshBtn').classList.remove('refreshing');show(['⚠️','Location needed',message,'TIP · iPhone Settings → Privacy & Security → Location Services'])}
-function initializeInstantRoute(){const saved=(()=>{try{return JSON.parse(localStorage.getItem('driverRouterLocation'))}catch(e){return null}})(),seed=demoLocale||saved&&saved.lat&&saved.lon&&saved||{lat:39.2904,lon:-76.6122,market:'Baltimore',countryCode:'US'};currentLocation=[seed.lat,seed.lon];configurePlatforms({name:seed.name||seed.market||'Local',countryCode:seed.countryCode||'US'});liveMap.setView(currentLocation,demoLocale?11:12,{animate:false});gpsMarker=L.circleMarker(currentLocation,{radius:9,color:'#fff',weight:4,fillColor:'#2563eb',fillOpacity:1}).addTo(liveMap).bindTooltip(demoLocale?'London preview':saved?'Last location':'Temporary start',{permanent:true,direction:'top'});const market=seed.name||seed.market||'Local';currentMarketName=market;buildRoute(fallbackVenues(seed.lat,seed.lon,market),seed.lat,seed.lon,market);loadHighways(seed.lat,seed.lon);$('#marketHeading').textContent=`${market.toUpperCase()} — RIGHT NOW`;$('.route-source').textContent=demoLocale?'London time + current weather + public venue forecast':saved?'Last position shown · auto-connecting current GPS':'Temporary route shown · auto-connecting GPS';$('#updated').textContent=demoLocale?'London example · loading current conditions':'Auto-connecting current location…'}
+function initializeInstantRoute(){
+  const saved=(()=>{try{return JSON.parse(localStorage.getItem('driverRouterLocation'))}catch(e){return null}})();
+  const validSaved=saved&&Number.isFinite(Number(saved.lat))&&Number.isFinite(Number(saved.lon))&&Math.abs(Number(saved.lat))<=90&&Math.abs(Number(saved.lon))<=180;
+  const seed=demoLocale||validSaved?demoLocale||{...saved,lat:Number(saved.lat),lon:Number(saved.lon)}:null;
+  if(!seed){
+    currentLocation=null;currentMarketName='Local';configurePlatforms({name:'Local',countryCode:'US'});
+    liveMap.setView([20,0],2,{animate:false});$('#marketHeading').textContent='FINDING YOUR MARKET';$('#updated').textContent='Waiting for device location…';
+    $('#bestRoute').textContent='Waiting for GPS…';$('#routeStops').innerHTML='<div class="event-empty">Allow location access to load your local demand map.</div>';$('.route-source').textContent='Your location is not available yet · waiting for GPS permission';return;
+  }
+  currentLocation=[seed.lat,seed.lon];configurePlatforms({name:seed.name||seed.market||'Local',countryCode:seed.countryCode||'US'});
+  liveMap.setView(currentLocation,demoLocale?11:12,{animate:false});
+  gpsMarker=L.circleMarker(currentLocation,{radius:9,color:'#fff',weight:4,fillColor:'#2563eb',fillOpacity:1}).addTo(liveMap).bindTooltip(demoLocale?'London preview':'Last location',{permanent:true,direction:'top'});
+  const market=seed.name||seed.market||'Local';currentMarketName=market;buildRoute(fallbackVenues(seed.lat,seed.lon,market),seed.lat,seed.lon,market);
+  loadHighways(seed.lat,seed.lon);$('#marketHeading').textContent=`${market.toUpperCase()} — RIGHT NOW`;
+  $('.route-source').textContent=demoLocale?'London time + current weather + public venue forecast':'Last known position · auto-connecting current GPS';
+  $('#updated').textContent=demoLocale?'London example · loading current conditions':'Refreshing device location…';
+}
 initializeInstantRoute();
 async function loadDemo(){if(!demoLocale)return;renderEvents(null);loadWeather(demoLocale.lat,demoLocale.lon);loadHighways(demoLocale.lat,demoLocale.lon);let venues=[];try{venues=await loadVenues(demoLocale.lat,demoLocale.lon)}catch(e){}const local=venues.length>=6?venues:fallbackVenues(demoLocale.lat,demoLocale.lon,demoLocale.name);buildRoute(local,demoLocale.lat,demoLocale.lon,demoLocale.name);renderEvents([]);$('.route-source').textContent=venues.length>=6?'London time + current weather + public schools, stations, hotels and venues':'London time + current weather + fast public-venue forecast';$('#updated').textContent='London example · 12-hour route ready'}
 loadDemo();
