@@ -199,7 +199,7 @@
 <link rel="stylesheet" href="homebase-earnings.css?v=110">
 <link rel="stylesheet" href="homebase-growth.css?v=111">
 <script src="homebase-earnings.js?v=110"></script>
-<script src="homebase-demand-history.js?v=120"></script>
+<script src="homebase-demand-history.js?v=121"></script>
 <script src="homebase-planner.js?v=115"></script>
 <script src="homebase-config.js?v=111"></script>
 <script src="homebase-backend.js?v=112"></script>
@@ -868,7 +868,7 @@ async function refreshLiveDemandLayer(){
 if(!demoLocale)setTimeout(autoRefreshGps,150);
 setInterval(()=>{updateClimateAdvisory();const selected=$('[data-hour][aria-pressed="true"]');if(selected&&selected.dataset.hour==='0'&&activeStops.length)applyTimeForecast(0,new Date());refreshLiveDemandLayer()},300000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-lastAutoGpsRefresh>300000)autoRefreshGps()});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=121',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';}));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=122',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';}));
 </script>
 <script src="homebase-live.js?v=37"></script>
 </body>
