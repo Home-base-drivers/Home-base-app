@@ -58,7 +58,7 @@ test('each forecast hour has up to twelve destination options and custom event i
   assert.match(indexHtml, /function eventIconSvg\(event\)/);
   assert.match(indexHtml, /function eventPopupContent\(event\)/);
   assert.match(indexHtml, /event-icon-key" id="eventIconKey"/);
-  assert.match(heatRenderer, /HEAT_OPACITY_GAIN = 1\.05/);
+  assert.match(heatRenderer, /HEAT_OPACITY_GAIN = 1\.2/);
   assert.match(heatRenderer, /function anchoredGridOrigin/);
 });
 
