@@ -316,7 +316,7 @@
           const strength = sourceStrength(source, this._when, this._scoreSource);
           if (!strength || !Number.isFinite(source.lat) || !Number.isFinite(source.lon)) return null;
           const center = map.latLngToContainerPoint([source.lat, source.lon]);
-          const km = sourceFootprintKm(source), north = map.latLngToContainerPoint([source.lat + km / 111.32, source.lon]);
+          const zoom = map.getZoom(), baseKm = sourceFootprintKm(source), km = source.tags && source.tags.publicVenue ? Math.max(baseKm, zoom < 8 ? 3.4 : zoom < 10 ? 2.6 : zoom < 12 ? 1.8 : baseKm) : baseKm, north = map.latLngToContainerPoint([source.lat + km / 111.32, source.lon]);
           const radius = Math.max(1.25, Math.abs(center.y - north.y));
           const angle = stableAngle(source, index);
           let rx = radius * (.62 + (index % 5) * .055);
