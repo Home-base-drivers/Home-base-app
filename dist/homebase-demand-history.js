@@ -33,7 +33,7 @@
     for(const row of screenshotBenchmarks){
       if(row.record_type!=='uber_reference'||!Number.isFinite(Number(row.capture_hour_local)))continue;
       const stamp=Date.parse(row.observed_at),captured=new Date(stamp),age=+target-stamp;
-      if(!Number.isFinite(stamp)||age<0||age>120*86400000||captured.getDay()!==targetDay)continue;
+      if(!Number.isFinite(stamp)||age<0||age>120*86400000||marketParts(captured).day!==targetDay)continue;
       const delta=Math.abs(Number(row.capture_hour_local)-targetHour);if(Math.min(delta,24-delta)>1)continue;
       const item=matchingAreaObservation(row,name);if(!item)continue;
       const key=captured.toLocaleDateString('en-CA',{timeZone:'America/New_York'});
