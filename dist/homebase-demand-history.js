@@ -51,7 +51,7 @@
     const name=String(areaName||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim(),bandWeight={very_high:.16,high:.12,elevated:.08,moderate:.04},windowMs=30*60000;
     let weightOut=base;
     for(const row of screenshotBenchmarks){
-      if(row.record_type!=='uber_reference')continue;
+      if(row.record_type!=='uber_reference'||(Object.prototype.hasOwnProperty.call(row,'captured_at')&&!row.captured_at))continue;
       const captured=Date.parse(row.captured_at||row.observed_at),age=now-captured,forecastOffset=target-captured;
       if(!Number.isFinite(captured)||age<0||age>windowMs||forecastOffset<0||forecastOffset>windowMs)continue;
       const item=matchingAreaObservation(row,name);if(!item)continue;
