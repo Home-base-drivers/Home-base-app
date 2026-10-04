@@ -8,10 +8,10 @@ test('heat intensity rises independently with local demand strength', () => {
   assert.ok(heat.areaIntensity(3) > heat.areaIntensity(1));
 });
 
-test('heat overlay is five percent more opaque while retaining a clear zero', () => {
+test('heat opacity matches the stronger map treatment while retaining a clear zero', () => {
   const input = .1;
-  const prior = heat.areaIntensity(input) * 1.32;
-  assert.ok(Math.abs(heat.compositeOpacity(input) / prior - 1.05) < 1e-10);
+  const prior = heat.areaIntensity(input) * 1.42;
+  assert.ok(Math.abs(heat.compositeOpacity(input) / prior - 1.2) < 1e-10);
   assert.equal(heat.compositeOpacity(0), 0);
 });
 
@@ -81,7 +81,7 @@ test('provider and community footprint sizes reflect their current source classe
   const provider = heat.sourceFootprintKm({ cat: 'neighborhood', tags: { providerSignal: true } });
   const baseline = heat.sourceFootprintKm({ cat: 'neighborhood', tags: { metroBaseline: true } });
   assert.equal(provider, 1.35);
-  assert.equal(baseline, .85);
+  assert.equal(baseline, 1.25);
   assert.notEqual(
     heat.sourceFootprintKm({ cat: 'transit', tags: { metroBaseline: true } }),
     heat.sourceFootprintKm({ cat: 'restaurant', tags: { metroBaseline: true } }),
@@ -90,6 +90,6 @@ test('provider and community footprint sizes reflect their current source classe
 });
 
 test('heat opacity remains capped while retaining transparent edges', () => {
-  assert.ok(heat.compositeOpacity(100) <= .86);
+  assert.ok(heat.compositeOpacity(100) <= .9);
   assert.ok(heat.compositeOpacity(.1) < heat.compositeOpacity(10));
 });
