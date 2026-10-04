@@ -346,7 +346,7 @@ function demandWeight(source,when){
   if(source.tags&&source.tags.areaCoverageAnchor)weight*=Number(source.tags.modelBias)||1;
   if(source.tags&&source.tags.liveEvent&&source.eventStart&&when>=source.eventStart&&when<=(source.eventEnd||new Date(source.eventStart.getTime()+3*3600000)))weight+=14;
   if(source.tags&&source.tags.metroBaseline)weight*=.78;
-  if(window.HomeBaseDemandHistory&&source.heatAreaName&&isGreaterBaltimoreLocation(source.lat,source.lon))weight=HomeBaseDemandHistory.adjustWeight(weight,source.heatAreaName,when,parts,true);
+  if(window.HomeBaseDemandHistory&&source.heatAreaName&&isGreaterBaltimoreLocation(source.lat,source.lon)&&!source.eventStart&&!(source.tags&&(source.tags.providerSignal||source.tags.providerEvent||source.tags.liveEvent)))weight=HomeBaseDemandHistory.adjustWeight(weight,source.heatAreaName,when,parts,true);
   return weight;
 }
 function pointInRing(lon,lat,ring){let inside=false;for(let i=0,j=ring.length-1;i<ring.length;j=i++){const a=ring[i],b=ring[j];if(((a[1]>lat)!==(b[1]>lat))&&(lon<(b[0]-a[0])*(lat-a[1])/(b[1]-a[1]||1e-12)+a[0]))inside=!inside}return inside}
