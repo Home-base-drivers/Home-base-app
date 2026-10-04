@@ -20,21 +20,24 @@
   function adjustWeight(weight,areaName,when,parts,isBaltimore,now=Date.now()){
     const base=Number(weight),hour=Number(parts&&parts.hour),day=Number(parts&&parts.day);
     if(!Number.isFinite(base)||base<=0||!isBaltimore||!Number.isFinite(hour)||!Number.isFinite(day))return base;
+    const target=when instanceof Date?when.getTime():Date.parse(when);
+    if(!Number.isFinite(target))return base;
     const weekendLateNight=(day===5||day===6||day===0&&hour<3)&&(hour>=21||hour<3);
     if(!weekendLateNight)return base;
     const name=String(areaName||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
-    const bandWeight={very_high:.16,high:.12,elevated:.08,moderate:.04};
+    const bandWeight={very_high:.16,high:.12,elevated:.08,moderate:.04},windowMs=30*60000;
     const references=screenshotBenchmarks.filter(row=>row.record_type==='uber_reference'&&Array.isArray(row.area_observations));
     let selected=null;
     for(const row of references){
-      const age=now-Date.parse(row.observed_at);if(!Number.isFinite(age)||age<0||age>120*86400000)continue;
+      const captured=Date.parse(row.observed_at),age=now-captured,forecastOffset=target-captured;
+      if(!Number.isFinite(captured)||age<0||age>windowMs||forecastOffset<0||forecastOffset>windowMs)continue;
       for(const item of row.area_observations){
-        const aliases=String(item.area||'').toLowerCase().split(/[\/&,]+/).map(value=>value.replace(/[^a-z0-9]+/g,' ').trim()).filter(Boolean);
-        if(aliases.some(alias=>alias.length>=4&&name.includes(alias))&&(!selected||Date.parse(row.observed_at)>Date.parse(selected.row.observed_at)))selected={row,item,age};
+        const aliases=String(item.area||'').toLowerCase().split(/[\\/&,]+/).map(value=>value.replace(/[^a-z0-9]+/g,' ').trim()).filter(Boolean);
+        if(aliases.some(alias=>alias.length>=4&&name.includes(alias))&&(!selected||captured>Date.parse(selected.row.observed_at)))selected={row,item,age,forecastOffset};
       }
     }
     if(!selected)return base;
-    const decay=Math.exp(-selected.age/(45*86400000));
+    const decay=Math.max(0,1-Math.max(selected.age,selected.forecastOffset)/windowMs);
     return base*(1+(bandWeight[selected.item.band]||0)*decay);
   }
   function eventPhase(event,when=Date.now()){
@@ -57,7 +60,7 @@
   function html(rows,esc){const trends=compare(rows),benchmarks=Array.isArray(screenshotBenchmarks)?screenshotBenchmarks:[];
     const benchmarkSection='<h4>SCREENSHOT HISTORY</h4>'+(benchmarks.length?benchmarks.map(row=>benchmarkHtml(row,esc)).join(''):'<p>No reference screenshots stored.</p>');
     const modelHistory=trends.length?trends.slice(0,12).map(r=>'<p><b>'+esc(r.area)+'</b> · '+Math.round(r.score*100)+'/100 · '+(r.stale?'stale':r.delta===null?'baseline needed':r.delta>.03?'rising':r.delta<-.03?'falling':'steady')+' · '+r.count+' snapshots<br><small>'+esc(new Date(r.observedAt).toLocaleString('en-US',{timeZone:'America/New_York'}))+' ET'+(r.arrivals===null?'':' · '+r.arrivals+' nearby arrival windows · '+r.exits+' exit windows')+'</small></p>').join(''):'<p>No Home Base shift history yet. In Profile, enable Help evaluate the forecast model, then start a shift. Model snapshots are taken every five minutes while the app is visible.</p>';
-    return '<h3>NEIGHBORHOOD DEMAND HISTORY</h3><p>Home Base shift scores are calculated by its model. They are not confirmed ride counts or Uber surge payments.</p>'+benchmarkSection+modelHistory+'<p>Screenshot records preserve the first-share time and the clock visible in the image. Screenshot activity bands are low-confidence priors for comparable Baltimore weekend late-night forecasts only; they are not request counts or confirmed Uber activity. Displayed bonus and wait labels are stored as shown, not used as numeric training targets. Actual gross earnings with online hours are evaluated separately in Earnings.</p>';
+    return '<h3>NEIGHBORHOOD DEMAND HISTORY</h3><p>Home Base shift scores are calculated by its model. They are not confirmed ride counts or Uber surge payments.</p>'+benchmarkSection+modelHistory+'<p>Screenshot records preserve the first-share time and the clock visible in the image. Screenshot activity bands are low-confidence, per-neighborhood reference signals. They can influence only the matching Baltimore neighborhood and forecast times within 30 minutes of the screenshot’s first-share time, then expire from the live model while remaining archived here. They are not request counts or confirmed Uber activity. Displayed bonus and wait labels are stored as shown, not used as numeric training targets. Actual gross earnings with online hours are evaluated separately in Earnings.</p>';
   }
   return{compare,eventPhase,context,html,adjustWeight};
 });
