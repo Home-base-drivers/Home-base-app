@@ -29,7 +29,7 @@
     if(!isBaltimore)return{distinctDates:0,band:null,confidence:0};
     const target=when instanceof Date?when:new Date(when),name=String(areaName||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
     if(!Number.isFinite(+target))return{distinctDates:0,band:null,confidence:0};
-    const bands={moderate:1,elevated:2,high:3,very_high:4},counts=new Map(),targetHour=target.getHours(),targetDay=target.getDay();
+    const bands={moderate:1,elevated:2,high:3,very_high:4},counts=new Map(),marketParts=date=>{const p=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',weekday:'short',hour:'numeric',hour12:false}).formatToParts(date).map(x=>[x.type,x.value]));return{hour:Number(p.hour)%24,day:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(p.weekday)};},targetLocal=marketParts(target),targetHour=targetLocal.hour,targetDay=targetLocal.day;
     for(const row of screenshotBenchmarks){
       if(row.record_type!=='uber_reference'||!Number.isFinite(Number(row.capture_hour_local)))continue;
       const stamp=Date.parse(row.observed_at),captured=new Date(stamp),age=+target-stamp;
