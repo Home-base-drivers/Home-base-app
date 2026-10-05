@@ -1,4 +1,4 @@
-const CACHE='home-base-v120';
+const CACHE='home-base-v121';
 const ASSETS=['./','index.html','manifest.webmanifest','favicon.svg','icon-192.png','icon-512.png','homebase-logo.png','baltimore-map.jpg','provider-signals.json','homebase-live.js?v=37','homebase-earnings.js?v=110','homebase-earnings.css?v=110','homebase-planner.js?v=115','homebase-config.js?v=111','homebase-backend.js?v=112','homebase-growth.js?v=112','homebase-growth.css?v=111','homebase-demand-history.js?v=122','baltimore-market.js?v=72','homebase-heat.js?v=97','baltimore-demand-areas.geojson'];
 self.addEventListener('install',event=>event.waitUntil((async()=>{
  const cache=await caches.open(CACHE);
@@ -18,3 +18,4 @@ self.addEventListener('fetch',event=>{
  }
  event.respondWith((async()=>{const cached=await caches.match(event.request);if(cached)return cached;const response=await fetch(event.request);if(response.ok){const cache=await caches.open(CACHE);await cache.put(event.request,response.clone());}return response;})());
 });
+
