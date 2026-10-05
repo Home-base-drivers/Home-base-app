@@ -2,13 +2,18 @@
   "name": "home-base-app",
   "version": "1.0.0",
   "private": true,
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "build:backend-client": "node scripts/build-backend-client.mjs",
     "test": "node --test scripts/*.test.mjs tests/*.test.mjs",
-    "test:backend": "node --test tests/backend*.test.mjs"
+    "test:backend": "node --test tests/backend*.test.mjs",
+    "build:dispatch-function": "node scripts/build-dispatch-function.mjs"
   },
-  "dependencies": { "@supabase/supabase-js": "2.117.2" },
+  "dependencies": {
+    "@supabase/supabase-js": "2.117.2"
+  },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.8",
     "esbuild": "0.28.2"

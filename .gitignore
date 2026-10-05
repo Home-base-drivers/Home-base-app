@@ -3,3 +3,6 @@ supabase/.temp/
 .env
 .env.*
 !.env.example
+
+# Generated from dist/homebase-dispatch.js before Edge Function deployment
+supabase/functions/dispatch/engine.js

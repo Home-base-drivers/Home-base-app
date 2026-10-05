@@ -192,12 +192,51 @@ export function createHomeBaseBackend(client) {
       const me = await user();
       return result(await client.from('shift_observations').select('area,observed_at,modeled_score,event_arrivals,event_exits').eq('user_id',me.id).order('observed_at',{ascending:false}).limit(1000));
     },
+    async evaluateDispatch(payload) {
+      await user();
+      return result(await client.functions.invoke('dispatch',{body:payload}));
+    },
+    async dispatchRegistry() {
+      return {capabilities: result(await client.from('platform_capabilities').select('*')),
+        serviceAreas: result(await client.from('platform_service_areas').select('*'))};
+    },
+    async getDispatchState() {
+      const me = await user();
+      return result(await client.from('driver_dispatch_state').select('settings,updated_at').eq('user_id',me.id).maybeSingle());
+    },
+    async saveDispatchState(settings) {
+      const me = await user();
+      // Never sync exact home, work or custom base coordinates through settings.
+      const allowed = ['mode','goal','minimumHourly','maxDistance','vehicle','diamond','paidRepositioning','weights','platforms'];
+      if (!settings || Object.keys(settings).some(k=>!allowed.includes(k))) throw Error('Unsupported dispatch settings.');
+      return result(await client.from('driver_dispatch_state').upsert({user_id:me.id,settings,updated_at:new Date().toISOString()}));
+    },
+    async saveDispatchTrips(rows) {
+      await user();
+      if (!Array.isArray(rows) || rows.some(r=>!['manual','csv','screenshot'].includes(r.source))) throw Error('Provider imports require a server adapter.');
+      const totals={added:0,duplicates:0};
+      for(let i=0;i<rows.length;i+=500){const batch=result(await client.rpc('ingest_dispatch_trips',{p_records:rows.slice(i,i+500)}));totals.added+=batch.added;totals.duplicates+=batch.duplicates;}
+      return totals;
+    },
+    async listDispatchTrips() {
+      const me=await user(),rows=[];
+      for(let offset=0;;offset+=500){const page=result(await client.from('trip_rows').select('record_id,normalized').eq('user_id',me.id).not('record_id','is',null).order('id').range(offset,offset+499));rows.push(...page.map(r=>({...r.normalized,record_id:r.record_id})));if(page.length<500)break;}
+      return rows;
+    },
+    async saveDispatchRecommendation(row) {
+      const me=await user();
+      return result(await client.from('dispatch_recommendations').upsert({...row,user_id:me.id},{onConflict:'user_id,recommendation_id'}));
+    },
+    async listDispatchRecommendations() {
+      const me=await user();
+      return result(await client.from('dispatch_recommendations').select('*').eq('user_id',me.id).order('recorded_at',{ascending:false}).limit(500));
+    },
     async dataInventory() {
       const me = await user();
       const output = {};
-      for (const table of ['privacy_preferences','consent_receipts','usage_events','model_predictions','shift_observations','subscriptions']) {
+      for (const table of ['privacy_preferences','consent_receipts','usage_events','model_predictions','shift_observations','subscriptions','driver_dispatch_state','dispatch_recommendations','trip_rows']) {
         const rows = [];
-        const order = {consent_receipts:'receipt_id',usage_events:'event_id',model_predictions:'prediction_id',shift_observations:'observation_id'}[table] || 'user_id';
+        const order = {consent_receipts:'receipt_id',usage_events:'event_id',model_predictions:'prediction_id',shift_observations:'observation_id',dispatch_recommendations:'recommendation_id',trip_rows:'id'}[table] || 'user_id';
         for (let offset = 0; ; offset += 500) {
           const page = result(await client.from(table).select('*').eq('user_id', me.id).order(order).range(offset, offset + 499));
           rows.push(...page);

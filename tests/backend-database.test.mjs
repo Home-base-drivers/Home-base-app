@@ -264,3 +264,22 @@ test('retention deletes old learning records while keeping fresh observations', 
   await as('service_role',null,()=>db.query('select private.prune_home_base_learning()'));
   assert.deepEqual((await db.query('select event_name from public.usage_events where user_id=$1',[alice])).rows,[{event_name:'view_profile'}]);
 });
+
+test('dispatch trip ingestion deduplicates screenshot and CSV atomically and rejects provider claims',async()=>{
+ const trip={record_id:'dispatch-1',platform:'Uber',source:'screenshot',completeness:'partial',confidence:.7,request_time:'2026-10-05T10:00:00-04:00',fare:24,tip:2,trip_time:30,trip_distance:17,origin:'Washington DC',destination:'Laurel',status:'completed'};
+ await as('authenticated',alice,async()=>{
+  const first=(await db.query('select public.ingest_dispatch_trips($1::jsonb) result',[JSON.stringify([trip])])).rows[0].result;assert.equal(first.added,1);
+  const second=(await db.query('select public.ingest_dispatch_trips($1::jsonb) result',[JSON.stringify([{...trip,record_id:'different-id',source:'csv'}])])).rows[0].result;assert.equal(second.duplicates,1);
+  const rows=(await db.query("select source,completeness,provenance from public.trip_rows where record_id='dispatch-1'")).rows;assert.equal(rows.length,1);assert.equal(rows[0].source,'csv');assert.equal(rows[0].completeness,'partial');
+  await assert.rejects(db.query('select public.ingest_dispatch_trips($1::jsonb)',[JSON.stringify([{...trip,source:'provider'}])]),{code:'22023'});
+ });
+ await as('authenticated',bob,async()=>{assert.equal((await db.query("select * from public.trip_rows where record_id='dispatch-1'")).rows.length,0);});
+});
+test('capabilities are readable but cannot be forged by a driver',async()=>{
+ await as('authenticated',alice,async()=>{const caps=(await db.query('select * from public.platform_capabilities')).rows;assert.equal(caps.length,21);assert.ok(caps.every(c=>!c.supported));await assert.rejects(db.query("update public.platform_capabilities set supported=true where platform='Uber'"),{code:'42501'});const areas=(await db.query("select * from public.platform_service_areas where platform='Empower'")).rows;assert.ok(areas[0].markets.includes('Northern Virginia'));assert.equal(areas[0].provenance,'USER-REPORTED');});
+});
+test('dispatch settings and outcomes are private and erased by the existing deletion flow',async()=>{
+ await as('authenticated',alice,async()=>{await db.query("insert into public.driver_dispatch_state(user_id,settings) values($1,'{\"mode\":\"GET ME HOME\"}')",[alice]);await db.query("insert into public.dispatch_recommendations(user_id,recommendation_id,model_version,recommendation) values($1,'70000000-0000-4000-8000-000000000001','test','{\"action\":\"WAIT\"}')",[alice]);});
+ await as('authenticated',bob,async()=>{assert.equal((await db.query('select * from public.driver_dispatch_state')).rows.length,0);assert.equal((await db.query('select * from public.dispatch_recommendations')).rows.length,0);});
+ await as('authenticated',alice,async()=>{await db.query('select public.delete_my_home_base_data()');assert.equal((await db.query('select * from public.driver_dispatch_state')).rows.length,0);assert.equal((await db.query('select * from public.dispatch_recommendations')).rows.length,0);});
+});
