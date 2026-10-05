@@ -16,6 +16,8 @@ Neighborhood score snapshots are NOT training labels. Automatic citywide retrain
 
 ## Screenshot review limitations
 
+October 4, 2026 corrections: IMG_3463 was captured at 10:18 AM ET; IMG_3476 and IMG_3477 were captured at 6:15 PM ET and are one observation at two zoom levels. Both records remain qualitative Uber references. A provisional Sunday morning neighborhood prior now feeds map heat, route ranking, the demand advisory and earnings forecasts; scheduled event arrival/exit weights remain separate. This operator-supplied Sunday shape is an assumption to evaluate, not a trained or measured demand result.
+
 Reviewed screenshots show geographically changing city and northern-suburb surge patches, including broad afternoon-looking light-map views and more localized late-night dark-map views. Date and AM/PM are missing from screenshot clocks. Dark/light rendering and zoom change apparent heat coverage; near-identical zoom variants are not independent observations. An active-hour promotion is not per-trip surge. Missing badges do not mean zero surge.
 
 Do not attribute screenshots to named events without confirmed capture date, time zone, AM/PM and market. Screenshot bonus amounts, pricing multipliers, wait-time bands, modeled heat and gross earnings are separate units. The photos are not published and are not used as dated training labels.
