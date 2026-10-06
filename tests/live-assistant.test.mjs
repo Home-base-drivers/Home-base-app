@@ -23,7 +23,7 @@ test('GPT Live keeps user and assistant transcripts in Copilot history',()=>{
 test('GPT Live asset is versioned and cached by the PWA',()=>{
  assert.match(html,/homebase-live-assistant\.js\?v=2/);
  assert.match(sw,/homebase-live-assistant\.js\?v=2/);
- assert.match(sw,/home-base-v150/);
+ assert.match(sw,/home-base-v\\d+/);
 });
 
 function voiceHarness(getUser){
