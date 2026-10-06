@@ -228,7 +228,7 @@ function bootHomeBaseShell(){
  const esc=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
  const defaults={conditions:false,platforms:false,forecast:false,route:false,legend:false,briefing:false};
  let modules={...defaults,...read('homeBaseHomeModules',{})};
- let navVisible=read('homeBaseNavVisible',false)===true,menuRestoreState=read('homeBaseMenuRestoreState',null);
+ let navVisible=read('homeBaseNavVisible',false)===true,referenceNavVisible=read('homeBaseReferenceNavVisible',true)!==false,menuRestoreState=read('homeBaseMenuRestoreState',null);
  app.classList.toggle('hb-show-nav',navVisible);
  let showText=read('homeBaseCopilotShowText',false)===true;
  let voiceColor=read('homeBaseCopilotColor','#1769ff');
@@ -243,8 +243,8 @@ function bootHomeBaseShell(){
  menuButton.id='hbMenuToggle';menuButton.className='hb-menu-toggle';menuButton.type='button';menuButton.setAttribute('aria-label','Open Home Base menu');menuButton.setAttribute('aria-expanded','false');
  menuButton.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>';
  const homeWord=document.createElement('div');homeWord.id='hbHomeWord';homeWord.className='hb-home-word';homeWord.setAttribute('aria-label','Homebase — Drive. Earn. Connect.');homeWord.innerHTML='<strong>Homebase</strong><small>Drive. Earn. Connect.</small>';
- const backdrop=document.createElement('button');backdrop.id='hbMenuBackdrop';backdrop.className='hb-menu-backdrop';backdrop.type='button';backdrop.setAttribute('aria-label','Close Home Base menu');
- const drawer=document.createElement('aside');drawer.id='hbSideMenu';drawer.className='hb-side-menu';drawer.setAttribute('aria-label','Home Base menu');drawer.setAttribute('aria-hidden','true');
+ const backdrop=document.createElement('button');backdrop.id='hbMenuBackdrop';backdrop.className='hb-menu-backdrop';backdrop.type='button';backdrop.hidden=true;backdrop.setAttribute('aria-label','Close Home Base menu');
+ const drawer=document.createElement('aside');drawer.id='hbSideMenu';drawer.className='hb-side-menu';drawer.setAttribute('aria-label','Home Base menu');drawer.setAttribute('aria-hidden','true');drawer.inert=true;
  drawer.innerHTML='<div class="hb-menu-head"><div class="hb-menu-brand"><img src="homebase-logo.png" alt="" aria-hidden="true"><div><span>HOMEBASE</span><b>Drive. Earn. Connect.</b></div></div><button id="hbMenuClose" type="button" aria-label="Close menu">×</button></div>'+
   '<div class="hb-menu-scroll">'+
   '<div id="hbMenuMain" class="hb-menu-view" data-menu-view="main">'+
@@ -391,7 +391,7 @@ function bootHomeBaseShell(){
  }
  function syncHomeHud(){
   const workspace=document.getElementById('workspaceView'),workspaceOpen=!!(workspace&&!workspace.hidden),menuOpen=drawer.classList.contains('open'),onMap=app.classList.contains('map-mode');
-  const mapHudShow=onMap&&!workspaceOpen&&chat.hidden&&!menuOpen,bottomNavShow=chat.hidden&&!menuOpen;
+  const mapHudShow=onMap&&!workspaceOpen&&chat.hidden&&!menuOpen,bottomNavShow=chat.hidden&&!menuOpen&&(!onMap||workspaceOpen||referenceNavVisible);
   for(const node of [homeWord,menuButton,weatherCard,platformBar])node.hidden=!mapHudShow;
   homeControls.hidden=!bottomNavShow;voice.hidden=!bottomNavShow;liveText.hidden=!bottomNavShow;
   app.classList.toggle('hb-home-hud-visible',mapHudShow);
@@ -421,11 +421,11 @@ function bootHomeBaseShell(){
  function syncHeatMenu(){let palette='classic',visible=true;try{palette=window.HomeBaseHeatControls?.getPalette?.()||localStorage.getItem('homeBaseHeatPalette')||'classic';visible=window.HomeBaseHeatControls?.isVisible?.()??localStorage.getItem('homeBaseHeatVisible')!=='false'}catch{}drawer.querySelectorAll('[data-heat-palette]').forEach(button=>{const active=button.dataset.heatPalette===palette;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active))});const customActive=palette==='custom';customHeatEditor.hidden=!customActive;drawer.querySelector('[data-heat-palette="custom"]').setAttribute('aria-expanded',String(customActive));const customColors=window.HomeBaseHeatControls?.getCustomColors?.()||['#6838c4','#1f92ff','#ffffff'];drawer.querySelectorAll('#hbCustomDots i').forEach((dot,index)=>dot.style.setProperty('--dot',customColors[index]));if(customActive){customHeatInputs.forEach((input,index)=>{input.value=customColors[index]});previewCustomHeat()}const toggle=drawer.querySelector('#hbHeatVisibility');if(toggle){toggle.textContent=visible?'ON':'OFF';toggle.setAttribute('aria-pressed',String(visible));toggle.classList.toggle('active',visible)}}
  function showMenuView(name='main'){drawer.querySelectorAll('[data-menu-view]').forEach(view=>{view.hidden=view.dataset.menuView!==name});if(name==='heat'||name==='map')syncHeatMenu();const scroll=drawer.querySelector('.hb-menu-scroll');if(scroll)scroll.scrollTop=0}
  async function syncMenuIdentity(){const profile=read('homeBaseDriverProfile',{})||{},nameNode=drawer.querySelector('#hbMenuDriverName'),initialNode=drawer.querySelector('#hbMenuDriverInitial');let name=profile.name||profile.driverName||'Driver';try{const user=await window.HomeBaseAccounts?.backend?.getUser?.();name=profile.name||profile.driverName||user?.user_metadata?.full_name||user?.user_metadata?.name||user?.email?.split('@')[0]||name}catch{}if(nameNode)nameNode.textContent=name;if(initialNode)initialNode.textContent=String(name||'D').trim().charAt(0).toUpperCase()||'D'}
- function openMenu(){showMenuView('main');syncMenuIdentity();drawer.classList.add('open');backdrop.classList.add('open');drawer.setAttribute('aria-hidden','false');menuButton.setAttribute('aria-expanded','true');syncHomeHud()}
- function closeMenu(){drawer.classList.remove('open');backdrop.classList.remove('open');drawer.setAttribute('aria-hidden','true');menuButton.setAttribute('aria-expanded','false');syncHomeHud()}
+ function openMenu(){showMenuView('main');syncMenuIdentity();drawer.inert=false;backdrop.hidden=false;drawer.classList.add('open');backdrop.classList.add('open');drawer.setAttribute('aria-hidden','false');menuButton.setAttribute('aria-expanded','true');syncHomeHud()}
+ function closeMenu(){drawer.classList.remove('open');drawer.inert=true;backdrop.classList.remove('open');backdrop.hidden=true;drawer.setAttribute('aria-hidden','true');menuButton.setAttribute('aria-expanded','false');syncHomeHud()}
  homeControls.addEventListener('click',event=>{
   const button=event.target.closest('button');if(!button)return;
-  if(button.dataset.homeTarget){document.getElementById(button.dataset.homeTarget)?.click();return}
+  if(button.dataset.homeTarget){const id=button.dataset.homeTarget,attribute=id.startsWith('nav')?'nav':'control';runMenuCommand({dataset:{[attribute]:id}},attribute);return}
   const action=button.dataset.homeAction;
   if(action==='menu'){openMenu();return}
   if(action==='voice'){voice.click();return}
@@ -437,16 +437,17 @@ function bootHomeBaseShell(){
  menuButton.addEventListener('click',()=>drawer.classList.contains('open')?closeMenu():openMenu());
  backdrop.addEventListener('click',closeMenu);drawer.querySelector('#hbMenuClose').addEventListener('click',closeMenu);
  const menuStatus=drawer.querySelector('#hbMenuStatus');
- function setNavVisible(value){navVisible=!!value;app.classList.toggle('hb-show-nav',navVisible);write('homeBaseNavVisible',navVisible)}
+ function setNavVisible(value){navVisible=referenceNavVisible=!!value;app.classList.toggle('hb-show-nav',navVisible);write('homeBaseNavVisible',navVisible);write('homeBaseReferenceNavVisible',referenceNavVisible);syncHomeHud()}
  function setAllModules(value){for(const [key] of moduleMeta)modules[key]=!!value;applyModules()}
  function menuNotice(text){if(menuStatus)menuStatus.textContent=text;setVoiceStatus(text);}
  function runMenuCommand(button,attribute){
   const targetId=button.dataset[attribute];if(menuStatus)menuStatus.textContent='';
+  if(attribute==='control'&&targetId!=='installBtn')document.getElementById('navMap')?.click();
   if(attribute==='control'&&targetId==='panelsBtn'){const anyVisible=moduleMeta.some(([key])=>modules[key]);setAllModules(!anyVisible);menuNotice(anyVisible?'Home panels hidden.':'Home panels shown.');closeMenu();return true}
-  if(attribute==='control'&&targetId==='toggleMapTabs'){setNavVisible(!navVisible);menuNotice(navVisible?'Navigation tabs shown.':'Navigation tabs hidden.');closeMenu();return true}
-  if(attribute==='control'&&targetId==='hideMapControls'){menuRestoreState={modules:{...modules},navVisible};write('homeBaseMenuRestoreState',menuRestoreState);setAllModules(false);setNavVisible(false);document.getElementById('workspaceClose')?.click();menuNotice('Map-only view on.');closeMenu();return true}
+  if(attribute==='control'&&targetId==='toggleMapTabs'){setNavVisible(!referenceNavVisible);menuNotice(referenceNavVisible?'Navigation tabs shown.':'Navigation tabs hidden.');closeMenu();return true}
+  if(attribute==='control'&&targetId==='hideMapControls'){menuRestoreState={modules:{...modules},navVisible:referenceNavVisible};write('homeBaseMenuRestoreState',menuRestoreState);setAllModules(false);setNavVisible(false);document.getElementById('workspaceClose')?.click();menuNotice('Map-only view on.');closeMenu();return true}
   if(attribute==='control'&&targetId==='showMapControls'){const saved=menuRestoreState||read('homeBaseMenuRestoreState',null);if(saved?.modules){modules={...defaults,...saved.modules};applyModules();setNavVisible(saved.navVisible!==false)}else{setAllModules(true);setNavVisible(true)}menuNotice('Home controls restored.');closeMenu();return true}
-  if(attribute==='control'&&targetId==='driveViewToggle'){const clean=moduleMeta.some(([key])=>modules[key])||navVisible;if(clean){menuRestoreState={modules:{...modules},navVisible};write('homeBaseMenuRestoreState',menuRestoreState);setAllModules(false);setNavVisible(false);menuNotice('Driving view on.')}else{const saved=menuRestoreState||read('homeBaseMenuRestoreState',null);modules={...defaults,...(saved?.modules||Object.fromEntries(moduleMeta.map(([key])=>[key,true])))};applyModules();setNavVisible(saved?.navVisible!==false);menuNotice('Full view restored.')}closeMenu();return true}
+  if(attribute==='control'&&targetId==='driveViewToggle'){const clean=moduleMeta.some(([key])=>modules[key])||referenceNavVisible;if(clean){menuRestoreState={modules:{...modules},navVisible:referenceNavVisible};write('homeBaseMenuRestoreState',menuRestoreState);setAllModules(false);setNavVisible(false);menuNotice('Driving view on.')}else{const saved=menuRestoreState||read('homeBaseMenuRestoreState',null);modules={...defaults,...(saved?.modules||Object.fromEntries(moduleMeta.map(([key])=>[key,true])))};applyModules();setNavVisible(saved?.navVisible!==false);menuNotice('Full view restored.')}closeMenu();return true}
   if(attribute==='control'&&targetId==='installBtn'&&(matchMedia('(display-mode: standalone)').matches||navigator.standalone===true)){menuNotice('Home Base is already installed on this device.');closeMenu();return true}
   const target=document.getElementById(targetId);if(!target){menuNotice('That control is temporarily unavailable.');return false}
   closeMenu();requestAnimationFrame(()=>{target.click();target.focus?.({preventScroll:true})});return true;
@@ -500,7 +501,7 @@ function bootHomeBaseShell(){
  voiceSelect.addEventListener('change',()=>{voicePrefs.aiVoice=voiceSelect.value;saveVoicePrefs()});
  conversationToggle.addEventListener('change',()=>{voicePrefs.conversation=conversationToggle.checked;saveVoicePrefs()});
  if(window.speechSynthesis?.addEventListener)window.speechSynthesis.addEventListener('voiceschanged',populateVoices);else if(window.speechSynthesis)window.speechSynthesis.onvoiceschanged=populateVoices;
- drawer.querySelector('#hbVoicePreview').addEventListener('click',async()=>{const button=drawer.querySelector('#hbVoicePreview');button.disabled=true;try{window.HomeBaseCopilot?.stopConversation?.();const preview=window.HomeBaseCopilot?.previewAiVoice;if(!preview){setVoiceStatus('Voice preview is still loading. Try again in a moment.',true);return}await preview()}finally{button.disabled=false}});
+ drawer.querySelector('#hbVoicePreview').addEventListener('click',async()=>{const button=drawer.querySelector('#hbVoicePreview');button.disabled=true;try{window.HomeBaseCopilot?.stopConversation?.();const preview=window.HomeBaseCopilot?.previewAiVoice;if(!preview){setVoiceStatus('Voice preview is still loading. Try again in a moment.',true);return}await preview()}catch(error){menuNotice(error?.message||'Voice preview could not play. Try again.')}finally{button.disabled=false}});
  const colorInput=drawer.querySelector('#hbVoiceColor');colorInput.value=voiceColor;colorInput.addEventListener('input',()=>setVoiceColor(colorInput.value));
  drawer.querySelectorAll('[data-color]').forEach(button=>{button.style.setProperty('--swatch',button.dataset.color);button.addEventListener('click',()=>setVoiceColor(button.dataset.color))});
  function setVoiceColor(color){voiceColor=color;app.style.setProperty('--hb-voice-color',color);colorInput.value=color;write('homeBaseCopilotColor',color)}
@@ -508,7 +509,7 @@ function bootHomeBaseShell(){
  function saveChats(value){write('homeBaseCopilotChats',value.slice(-30))}
  function activeConversation(list){const id=read('homeBaseCopilotActiveChat',null),found=list.find(item=>item.id===id);if(found&&Date.now()-Date.parse(found.updatedAt||found.startedAt)<14400000)return found;const item={id:'chat-'+Date.now(),startedAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[]};list.push(item);write('homeBaseCopilotActiveChat',item.id);return item}
  function logChat(role,text){text=String(text||'').trim();if(!text)return;const list=chats(),conversation=activeConversation(list),last=conversation.messages[conversation.messages.length-1];if(last&&last.role===role&&last.text===text&&Date.now()-Date.parse(last.at)<2500)return;conversation.messages.push({role,text,at:new Date().toISOString()});conversation.messages=conversation.messages.slice(-120);conversation.updatedAt=new Date().toISOString();saveChats(list);if(showText){liveText.textContent=(role==='user'?'You · ':'Home Base · ')+text;liveText.classList.add('visible')}renderChat()}
- function setVoiceStatus(text,sticky=false){text=String(text||'').trim();if(!text)return;liveText.textContent=text;liveText.classList.add('visible');clearTimeout(voiceNoticeTimer);if(!sticky&&!showText)voiceNoticeTimer=setTimeout(()=>liveText.classList.remove('visible'),2600)}
+ function setVoiceStatus(text,sticky=false){text=String(text||'').trim();if(!text)return;if(drawer.classList.contains('open')&&menuStatus)menuStatus.textContent=text;liveText.textContent=text;liveText.classList.add('visible');clearTimeout(voiceNoticeTimer);if(!sticky&&!showText)voiceNoticeTimer=setTimeout(()=>liveText.classList.remove('visible'),2600)}
  window.HomeBaseShell={...window.HomeBaseShell,updateWeather:updateHomeWeather,logChat,setVoiceStatus,openMenu,closeMenu,openChat:()=>openChat(),runMenuCommand};if(window.HomeBaseWeatherState)updateHomeWeather(window.HomeBaseWeatherState);
  function renderChat(){
   const root=chat.querySelector('#hbChatContent');if(!root)return;const term=(chat.querySelector('#hbChatSearch')?.value||'').trim().toLowerCase();const list=chats().slice().reverse().filter(item=>!term||item.messages.some(message=>message.text.toLowerCase().includes(term)));
