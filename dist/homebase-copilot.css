@@ -194,7 +194,8 @@
 }
 
 /* Shell-native menu visibility */
-.hb-shell-active.hb-show-nav .home-nav{display:grid!important;pointer-events:auto}
+/* The reference Home navigation is the only visible navigation bar. */
+.hb-shell-active.hb-show-nav .home-nav{display:none!important}
 
 
 /* Street-mode charcoal + ice icon treatment */
