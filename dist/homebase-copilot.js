@@ -272,6 +272,7 @@ function bootHomeBaseShell(){
   '</div>'+
   '<div class="hb-menu-view" data-menu-view="driving" hidden><div class="hb-submenu-head"><button type="button" data-menu-back aria-label="Back">‹</button><div><small>DRIVE & EARN</small><b>Driving Preferences</b></div></div><div class="hb-list-menu hb-submenu-list">'+
    '<button type="button" id="hbDrivingViewToggle" class="hb-driving-toggle" data-control="driveViewToggle" data-keep-menu-open="true" aria-label="Driving view" aria-pressed="false"><span><b>Driving view</b><small id="hbDrivingViewHint">Reduce map panels while driving</small></span><i id="hbDrivingViewState" aria-hidden="true">OFF</i></button>'+
+   '<button type="button" data-menu-panel="panels"><span><b>Full view / panels</b><small>Open all panels together over your map</small></span><i>›</i></button>'+
    '<button type="button" data-control="demandDetails"><span><b>Demand details</b><small>Open the current demand explanation</small></span><i>›</i></button>'+
    '<button type="button" data-control="showPickupCard"><span><b>Pickup card</b><small>Show the active pickup information</small></span><i>›</i></button>'+
    '<button type="button" data-control="refreshBtn"><span><b>Refresh GPS</b><small>Update your map position now</small></span><i>›</i></button>'+
@@ -279,7 +280,7 @@ function bootHomeBaseShell(){
   '<div class="hb-menu-view" data-menu-view="map" hidden><div class="hb-submenu-head"><button type="button" data-menu-back aria-label="Back">‹</button><div><small>MAP & DISPLAY</small><b>Home & Map Preferences</b></div></div><div class="hb-list-menu hb-submenu-list">'+
    '<button type="button" data-menu-panel="heat"><span><b>Heat Map</b><small>Colors, palette and visibility</small></span><i>›</i></button>'+
    '<button type="button" data-control="layerBtn"><span><b>Street / Satellite</b><small>Switch the base map layer</small></span><i>›</i></button>'+
-   '<button type="button" data-control="panelsBtn"><span><b>Information panels</b><small>Show or hide map information panels</small></span><i>›</i></button>'+
+   '<button type="button" data-menu-panel="panels"><span><b>Information panels</b><small>Open all panels together over your map</small></span><i>›</i></button>'+
   '</div><div class="hb-submenu-block"><h3>CUSTOMIZE HOME</h3><p>Choose what stays visible over the map.</p><div id="hbModuleList" class="hb-module-list"></div></div></div>'+
   '<div class="hb-menu-view" data-menu-view="heat" hidden><div class="hb-submenu-head"><button type="button" data-menu-back="map" aria-label="Back">‹</button><div><small>HOME & MAP</small><b>Heat Map</b></div></div>'+
    '<div class="hb-heat-toggle-row"><span><b>Show Heat Map</b><small>Display demand colors over the street map</small></span><button type="button" id="hbHeatVisibility" aria-pressed="true">ON</button></div>'+
@@ -385,13 +386,16 @@ function bootHomeBaseShell(){
  const voice=document.createElement('button');voice.id='hbVoiceBubble';voice.className='hb-voice-bubble';voice.type='button';voice.setAttribute('aria-label','Talk to Home Base');voice.setAttribute('aria-pressed','false');voice.innerHTML='<span class="hb-voice-ring"></span><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4M9 21h6"/></svg>';
  const liveText=document.createElement('div');liveText.id='hbVoiceText';liveText.className='hb-voice-text';liveText.setAttribute('aria-live','polite');liveText.setAttribute('dir','auto');
  const chat=document.createElement('section');chat.id='hbChatPanel';chat.className='hb-chat-panel';chat.hidden=true;chat.innerHTML='<div class="hb-chat-head"><button id="hbChatClose" type="button" aria-label="Close Copilot history">‹</button><div><span>HOME BASE COPILOT</span><b>Conversation history</b></div><button id="hbNewChat" type="button">New</button></div><div class="hb-chat-tools"><input id="hbChatSearch" type="search" placeholder="Search conversations" aria-label="Search conversations"></div><div id="hbChatContent" class="hb-chat-content"></div>';
- app.append(backdrop,drawer,homeWord,menuButton,homeControls,platformBar,weatherCard,voice,liveText,chat);
+ const panelsBrowser=document.createElement('section');panelsBrowser.id='hbPanelsBrowser';panelsBrowser.className='hb-panels-browser';panelsBrowser.hidden=true;panelsBrowser.setAttribute('role','dialog');panelsBrowser.setAttribute('aria-modal','false');panelsBrowser.setAttribute('aria-labelledby','hbPanelsTitle');
+ panelsBrowser.innerHTML='<div class="hb-panels-head"><div><small>HOME PANELS</small><b id="hbPanelsTitle">Full view</b></div><button type="button" id="hbPanelsClose" aria-label="Close full view">×</button></div><div class="hb-panel-picker"><label for="hbPanelSelect">Show</label><select id="hbPanelSelect" aria-label="Choose information panel"><option value="all">All panels</option>'+moduleMeta.map(([key,label])=>'<option value="'+key+'">'+esc(label)+'</option>').join('')+'</select></div><div class="hb-panel-actions"><button type="button" id="hbPanelsExpand">Expand all</button><button type="button" id="hbPanelsMinimize">Minimize all</button></div><div id="hbPanelStack"></div>';
+ app.append(backdrop,drawer,homeWord,menuButton,homeControls,platformBar,weatherCard,voice,liveText,chat,panelsBrowser);
  function syncBottomNav(){
   const current=document.querySelector('.nav-btn[aria-current="page"]')?.id||'navMap';
   homeControls.querySelectorAll('.hb-ref-bottom [data-home-target]').forEach(button=>button.classList.toggle('active',button.dataset.homeTarget===current));
  }
  function syncHomeHud(){
   const workspace=document.getElementById('workspaceView'),workspaceOpen=!!(workspace&&!workspace.hidden),menuOpen=drawer.classList.contains('open'),onMap=app.classList.contains('map-mode');
+  if((workspaceOpen||!onMap||!chat.hidden||menuOpen)&&!panelsBrowser.hidden)closeHomePanels();
   const mapHudShow=onMap&&!workspaceOpen&&chat.hidden&&!menuOpen,bottomNavShow=chat.hidden&&!menuOpen&&(!onMap||workspaceOpen||referenceNavVisible);
   for(const node of [homeWord,menuButton,weatherCard,platformBar])node.hidden=!mapHudShow;
   homeControls.hidden=!bottomNavShow;voice.hidden=!bottomNavShow;liveText.hidden=!bottomNavShow;
@@ -420,9 +424,54 @@ function bootHomeBaseShell(){
  function previewCustomHeat(){const colors=customHeatInputs.map(input=>input.value);drawer.querySelector('#hbCustomHeatPreview').style.background='linear-gradient(90deg,'+colors.join(',')+')';customHeatInputs.forEach(input=>{input.parentElement.querySelector('small').textContent=input.value.toUpperCase()})}
  function openCustomHeat(){const colors=window.HomeBaseHeatControls?.getCustomColors?.()||['#6838c4','#1f92ff','#ffffff'];customHeatInputs.forEach((input,index)=>{input.value=colors[index]});previewCustomHeat();customHeatEditor.hidden=false;drawer.querySelector('[data-heat-palette="custom"]').setAttribute('aria-expanded','true');customHeatStatus.textContent='Choose your colors, then tap Apply.';customHeatEditor.scrollIntoView?.({behavior:'smooth',block:'nearest'})}
  function syncHeatMenu(){let palette='classic',visible=true;try{palette=window.HomeBaseHeatControls?.getPalette?.()||localStorage.getItem('homeBaseHeatPalette')||'classic';visible=window.HomeBaseHeatControls?.isVisible?.()??localStorage.getItem('homeBaseHeatVisible')!=='false'}catch{}drawer.querySelectorAll('[data-heat-palette]').forEach(button=>{const active=button.dataset.heatPalette===palette;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active))});const customActive=palette==='custom';customHeatEditor.hidden=!customActive;drawer.querySelector('[data-heat-palette="custom"]').setAttribute('aria-expanded',String(customActive));const customColors=window.HomeBaseHeatControls?.getCustomColors?.()||['#6838c4','#1f92ff','#ffffff'];drawer.querySelectorAll('#hbCustomDots i').forEach((dot,index)=>dot.style.setProperty('--dot',customColors[index]));if(customActive){customHeatInputs.forEach((input,index)=>{input.value=customColors[index]});previewCustomHeat()}const toggle=drawer.querySelector('#hbHeatVisibility');if(toggle){toggle.textContent=visible?'ON':'OFF';toggle.setAttribute('aria-pressed',String(visible));toggle.classList.toggle('active',visible)}}
- function showMenuView(name='main'){drawer.querySelectorAll('[data-menu-view]').forEach(view=>{view.hidden=view.dataset.menuView!==name});if(name==='heat'||name==='map')syncHeatMenu();if(name==='driving')syncDrivingPreferences();const scroll=drawer.querySelector('.hb-menu-scroll');if(scroll)scroll.scrollTop=0}
+ let panelSources=[];
+ function setPanelExpanded(card,expanded){
+  const button=card.querySelector('.hb-panel-heading'),body=card.querySelector('.hb-panel-body');
+  body.hidden=!expanded;button.setAttribute('aria-expanded',String(expanded));
+  button.setAttribute('aria-label',(expanded?'Minimize ':'Expand ')+card.dataset.panelLabel);
+  button.querySelector('i').textContent=expanded?'−':'+';
+ }
+ function mountHomePanels(){
+  if(panelSources.length)return;
+  const stack=panelsBrowser.querySelector('#hbPanelStack');stack.replaceChildren();
+  const sources={conditions:['.conditions'],platforms:['#compareSourceRow','.platforms','#forecastNote'],forecast:['#timeRow'],route:['#routePlan'],legend:['#legend'],briefing:['#bottomSheet']};
+  for(const [key,label] of moduleMeta){
+   const card=document.createElement('section');card.className='hb-info-panel';card.dataset.panelKey=key;card.dataset.panelLabel=label;
+   card.innerHTML='<button type="button" class="hb-panel-heading" aria-expanded="true" aria-controls="hbPanelBody-'+key+'" aria-label="Minimize '+esc(label)+'"><b>'+esc(label)+'</b><i aria-hidden="true">−</i></button><div class="hb-panel-body" id="hbPanelBody-'+key+'"></div>';
+   const body=card.querySelector('.hb-panel-body');
+   for(const selector of sources[key]){
+    const node=document.querySelector(selector);if(!node)continue;
+    const anchor=document.createComment('Home panel: '+key);node.before(anchor);body.append(node);panelSources.push({node,anchor});
+   }
+   if(key==='forecast'){const hint=document.createElement('p');hint.className='hb-panel-empty';hint.textContent='Hourly options appear when your local forecast is ready.';body.append(hint);}
+   card.querySelector('.hb-panel-heading').addEventListener('click',()=>setPanelExpanded(card,body.hidden));
+   stack.append(card);
+  }
+  panelsBrowser.querySelector('#hbPanelSelect').value='all';
+ }
+ function restoreHomePanels(){
+  for(const {node,anchor} of panelSources)anchor.replaceWith(node);
+  panelSources=[];panelsBrowser.querySelector('#hbPanelStack').replaceChildren();
+ }
+ function filterHomePanels(key){
+  panelsBrowser.querySelectorAll('.hb-info-panel').forEach(card=>{card.hidden=key!=='all'&&card.dataset.panelKey!==key;if(!card.hidden&&key!=='all')setPanelExpanded(card,true)});
+  panelsBrowser.querySelector('#hbPanelStack').scrollTop=0;
+ }
+ panelsBrowser.querySelector('#hbPanelSelect').addEventListener('change',event=>filterHomePanels(event.target.value));
+ panelsBrowser.querySelector('#hbPanelsExpand').addEventListener('click',()=>panelsBrowser.querySelectorAll('.hb-info-panel').forEach(card=>setPanelExpanded(card,true)));
+ panelsBrowser.querySelector('#hbPanelsMinimize').addEventListener('click',()=>panelsBrowser.querySelectorAll('.hb-info-panel').forEach(card=>setPanelExpanded(card,false)));
+ function openHomePanels(){
+  closeMenu();document.getElementById('navMap')?.click();mountHomePanels();
+  panelsBrowser.hidden=false;app.classList.add('hb-panels-open');panelsBrowser.querySelector('#hbPanelsClose').focus();
+ }
+ function closeHomePanels(){
+  if(panelSources.length)restoreHomePanels();panelsBrowser.hidden=true;app.classList.remove('hb-panels-open');
+ }
+ panelsBrowser.querySelector('#hbPanelsClose').addEventListener('click',()=>{closeHomePanels();menuButton.focus()});
+ panelsBrowser.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();closeHomePanels();menuButton.focus()}});
+ function showMenuView(name='main'){if(name==='panels'){openHomePanels();return}drawer.querySelectorAll('[data-menu-view]').forEach(view=>{view.hidden=view.dataset.menuView!==name});if(name==='heat'||name==='map')syncHeatMenu();if(name==='driving')syncDrivingPreferences();const scroll=drawer.querySelector('.hb-menu-scroll');if(scroll)scroll.scrollTop=0}
  async function syncMenuIdentity(){const profile=read('homeBaseDriverProfile',{})||{},nameNode=drawer.querySelector('#hbMenuDriverName'),initialNode=drawer.querySelector('#hbMenuDriverInitial');let name=profile.name||profile.driverName||'Driver';try{const user=await window.HomeBaseAccounts?.backend?.getUser?.();name=profile.name||profile.driverName||user?.user_metadata?.full_name||user?.user_metadata?.name||user?.email?.split('@')[0]||name}catch{}if(nameNode)nameNode.textContent=name;if(initialNode)initialNode.textContent=String(name||'D').trim().charAt(0).toUpperCase()||'D'}
- function openMenu(){showMenuView('main');syncMenuIdentity();drawer.inert=false;backdrop.hidden=false;drawer.classList.add('open');backdrop.classList.add('open');drawer.setAttribute('aria-hidden','false');menuButton.setAttribute('aria-expanded','true');syncHomeHud()}
+ function openMenu(){closeHomePanels();showMenuView('main');syncMenuIdentity();drawer.inert=false;backdrop.hidden=false;drawer.classList.add('open');backdrop.classList.add('open');drawer.setAttribute('aria-hidden','false');menuButton.setAttribute('aria-expanded','true');syncHomeHud()}
  function closeMenu(){drawer.classList.remove('open');drawer.inert=true;backdrop.classList.remove('open');backdrop.hidden=true;drawer.setAttribute('aria-hidden','true');menuButton.setAttribute('aria-expanded','false');syncHomeHud()}
  homeControls.addEventListener('click',event=>{
   const button=event.target.closest('button');if(!button)return;
