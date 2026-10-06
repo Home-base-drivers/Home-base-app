@@ -32,7 +32,7 @@ test('heat palette includes green, amber, red, and magenta demand levels', () =>
 
 test('the heat map exposes distinct persistent color patterns without changing demand strength', () => {
   const classic = heat.colorAt(.7);
-  assert.deepEqual(heat.paletteNames, ['classic', 'purple_blue_white', 'ocean', 'sunset', 'ember', 'mint', 'ice', 'monochrome']);
+  assert.deepEqual(heat.paletteNames, ['classic', 'purple_blue_white', 'ocean', 'sunset', 'ember', 'mint', 'ice', 'aurora', 'violet_rose', 'blue_gold', 'coral_sand', 'teal_lime', 'royal_ice', 'custom', 'monochrome']);
   assert.equal(heat.setPalette('ocean'), 'ocean');
   assert.notDeepEqual(heat.colorAt(.7), classic);
   assert.equal(heat.getPalette(), 'ocean');
@@ -101,4 +101,26 @@ test('provider and community footprint sizes reflect their current source classe
 test('heat opacity remains capped while retaining transparent edges', () => {
   assert.ok(heat.compositeOpacity(100) <= .9);
   assert.ok(heat.compositeOpacity(.1) < heat.compositeOpacity(10));
+});
+
+test('custom colors cover low, medium and high demand without changing scores or opacity', () => {
+  const original = heat.getCustomColors();
+  const strength = heat.sourceStrength({tags:{}}, new Date(), () => 7);
+  const opacity = heat.compositeOpacity(.35);
+  assert.deepEqual(heat.setCustomColors(['#123456','#AB7890','#fedcba']), ['#123456','#ab7890','#fedcba']);
+  heat.setPalette('custom');
+  assert.deepEqual(heat.colorAt(0), [18,52,86]);
+  assert.deepEqual(heat.colorAt(.5), [171,120,144]);
+  assert.deepEqual(heat.colorAt(1), [254,220,186]);
+  assert.deepEqual(heat.colorAt(.25), [95,86,115]);
+  assert.equal(heat.sourceStrength({tags:{}}, new Date(), () => 7), strength);
+  assert.equal(heat.compositeOpacity(.35), opacity);
+  for(const value of [null, {}, ['#ffffff'], ['red','#ffffff','#000000'], ['#000000','#ffffff','#12345g']]){
+    assert.equal(heat.setCustomColors(value), null);
+    assert.deepEqual(heat.getCustomColors(), ['#123456','#ab7890','#fedcba']);
+  }
+  const copy = heat.getCustomColors(); copy[0] = '#000000';
+  assert.equal(heat.getCustomColors()[0], '#123456');
+  heat.setCustomColors(original);
+  heat.setPalette('classic');
 });
