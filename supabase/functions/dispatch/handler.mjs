@@ -15,7 +15,9 @@ export function makeDispatchHandler({engine,authenticate,loadState,loadTrips,par
     if(!synthesizeVoice)return response({configured:false,provider:'not_configured'});
     const result=await synthesizeVoice({text:payload.text,locale:payload.locale,voice:payload.voice,style:payload.style});
     if(!result.configured)return response(result);
-    return new Response(result.audio,{status:200,headers:{...headers,'Content-Type':result.contentType||'audio/mpeg','Cache-Control':'no-store','X-HomeBase-Voice':'ai'}});
+    // Supabase functions.invoke only preserves binary responses as Blob for application/octet-stream.
+    // Keep the actual media type in a dedicated header so the browser can still identify the audio.
+    return new Response(result.audio,{status:200,headers:{...headers,'Content-Type':'application/octet-stream','Cache-Control':'no-store','X-HomeBase-Voice':'ai','X-HomeBase-Audio-Type':result.contentType||'audio/mpeg'}});
    }
    if(payload.operation==='translate'){if(!translateLanguage)return response({translated:false,provider:'not_configured'});return response(await translateLanguage(payload.text,payload.locale));}
    if(payload.operation==='chat'){const language=parseLanguage?await parseLanguage(payload.utterance,payload.locale):{command:engine.parseCommand(payload.utterance),provider:'not_configured',execution:'advisory'};return response(language);}
