@@ -245,22 +245,67 @@ function bootHomeBaseShell(){
  const homeWord=document.createElement('div');homeWord.id='hbHomeWord';homeWord.className='hb-home-word';homeWord.setAttribute('aria-label','Homebase — Drive. Earn. Connect.');homeWord.innerHTML='<strong>Homebase</strong><small>Drive. Earn. Connect.</small>';
  const backdrop=document.createElement('button');backdrop.id='hbMenuBackdrop';backdrop.className='hb-menu-backdrop';backdrop.type='button';backdrop.setAttribute('aria-label','Close Home Base menu');
  const drawer=document.createElement('aside');drawer.id='hbSideMenu';drawer.className='hb-side-menu';drawer.setAttribute('aria-label','Home Base menu');drawer.setAttribute('aria-hidden','true');
- drawer.innerHTML='<div class="hb-menu-head"><div><span>HOME BASE</span><b>Driver menu</b></div><button id="hbMenuClose" type="button" aria-label="Close menu">×</button></div>'+
+ drawer.innerHTML='<div class="hb-menu-head"><div><span>HOMEBASE</span><b>Drive. Earn. Connect.</b></div><button id="hbMenuClose" type="button" aria-label="Close menu">×</button></div>'+
   '<div class="hb-menu-scroll">'+
-  '<section class="hb-menu-section"><h3>GO TO</h3><div class="hb-menu-grid">'+
-  '<button data-nav="navMap">Map</button><button data-nav="navEarn">Earnings</button><button data-nav="navAlerts">Alerts</button><button data-nav="navProfile">Profile</button><button data-nav="navSupport">Support</button><button id="hbChatOpen">Copilot history</button></div></section>'+
-  '<section class="hb-menu-section"><h3>MAP + APP TOOLS</h3><div class="hb-menu-grid">'+
-  '<button data-control="heatToggle">Heat map</button><button data-control="paletteToggle">Colors</button><button data-control="layerBtn">Street / Satellite</button><button data-control="refreshBtn">Refresh GPS</button><button data-control="panelsBtn">Show / hide panels</button><button data-control="installBtn">Add to Home Screen</button></div></section>'+
-  '<section class="hb-menu-section"><h3>MAP VIEW</h3><div class="hb-menu-grid">'+
-  '<button data-control="driveViewToggle">Driving / full view</button><button data-control="demandDetails">Demand details</button><button data-control="toggleMapTabs">Show / hide tabs</button><button data-control="showPickupCard">Show pickup</button><button data-control="hideMapControls">Map only</button><button data-control="showMapControls">Restore controls</button></div><p id="hbMenuStatus" class="hb-menu-status" role="status" aria-live="polite"></p></section>'+
-  '<section class="hb-menu-section"><div class="hb-section-title"><h3>CUSTOMIZE HOME</h3><small>Choose only what you want over the map</small></div><div id="hbModuleList" class="hb-module-list"></div></section>'+
-  '<section class="hb-menu-section"><div class="hb-section-title"><h3>VOICE COPILOT</h3><small>Voice first · chat saved on this device</small></div>'+
-  '<div class="hb-voice-preferences"><label><span>Language</span><select id="hbVoiceLanguage" aria-label="Copilot language"></select></label><label><span>Accent / region</span><select id="hbVoiceAccent" aria-label="Copilot accent or region"></select></label><label><span>Voice style</span><select id="hbVoiceStyle" aria-label="Voice style"><option value="all">All voices</option><option value="masculine">Masculine</option><option value="feminine">Feminine</option></select></label><label><span>Voice</span><select id="hbVoiceChoice" aria-label="Home Base AI voice"></select></label><button id="hbVoicePreview" type="button">Preview AI voice</button><p id="hbVoiceAvailability" role="status" style="font-size:.72rem;line-height:1.5"></p><p id="hbVoiceCommands" dir="auto" style="font-size:.72rem;line-height:1.5"></p><small>Home Base AI voice is AI-generated, not a human voice. Language, regional accent and vocal presentation are generated securely through the Home Base backend when signed in. Your phone voice is used only as a fallback if AI audio is unavailable.</small></div>'+
-  '<label class="hb-setting-row"><span><b>Continuous conversation</b><small>Tap once, then keep talking hands-free</small></span><input id="hbConversationMode" type="checkbox"></label>'+
-  '<label class="hb-setting-row"><span><b>Voice + text on map</b><small>Optional live transcript; voice-only is the default</small></span><input id="hbShowText" type="checkbox"></label>'+
-  '<div class="hb-color-row"><span><b>Voice button color</b><small>Blue is the Home Base default</small></span><div class="hb-swatches"><button data-color="#1769ff" aria-label="Blue"></button><button data-color="#08a9ff" aria-label="Cyan"></button><button data-color="#7047ff" aria-label="Purple"></button><button data-color="#ff2aa7" aria-label="Pink"></button><input id="hbVoiceColor" type="color" aria-label="Custom voice button color"></div></div></section>'+
-  '</div>';
- const menuIcons={
+  '<div id="hbMenuMain" class="hb-menu-view" data-menu-view="main">'+
+   '<button class="hb-driver-row" type="button" data-nav="navProfile"><span class="hb-driver-initial" id="hbMenuDriverInitial">D</span><span><b id="hbMenuDriverName">Driver</b><small>Driver account</small></span><i>›</i></button>'+
+   '<section class="hb-list-section"><h3>DRIVE & EARN</h3><div class="hb-list-menu">'+
+    '<button type="button" data-nav="navProfile"><span>Account</span><i>›</i></button>'+
+    '<button type="button" data-nav="navEarn"><span>Earnings & Goals</span><i>›</i></button>'+
+    '<button type="button" data-menu-panel="driving"><span>Driving Preferences</span><i>›</i></button>'+
+   '</div></section>'+
+   '<section class="hb-list-section"><h3>MAP & DISPLAY</h3><div class="hb-list-menu">'+
+    '<button type="button" data-menu-panel="map"><span>Home & Map Preferences</span><i>›</i></button>'+
+    '<button type="button" data-menu-panel="voice"><span>Voice Copilot</span><i>›</i></button>'+
+    '<button type="button" data-nav="navAlerts"><span>Notifications & Alerts</span><i>›</i></button>'+
+   '</div></section>'+
+   '<section class="hb-list-section"><h3>SAFETY & SUPPORT</h3><div class="hb-list-menu">'+
+    '<button type="button" data-menu-panel="safety"><span>Safety</span><i>›</i></button>'+
+    '<button type="button" data-nav="navSupport"><span>Help & Support</span><i>›</i></button>'+
+   '</div></section>'+
+   '<section class="hb-list-section"><h3>APP SETTINGS</h3><div class="hb-list-menu">'+
+    '<button type="button" data-menu-panel="settings"><span>Settings</span><i>›</i></button>'+
+    '<button type="button" data-menu-panel="about"><span>About Homebase</span><i>›</i></button>'+
+   '</div></section>'+
+   '<button class="hb-signout-row" type="button" data-menu-action="signout"><span>Sign Out</span><i>›</i></button>'+
+  '</div>'+
+  '<div class="hb-menu-view" data-menu-view="driving" hidden><div class="hb-submenu-head"><button type="button" data-menu-back aria-label="Back">‹</button><div><small>DRIVE & EARN</small><b>Driving Preferences</b></div></div><div class="hb-list-menu hb-submenu-list">'+
+   '<button type="button" data-control="driveViewToggle"><span><b>Driving / full view</b><small>Switch between clean driving mode and full controls</small></span><i>›</i></button>'+
+   '<button type="button" data-control="demandDetails"><span><b>Demand details</b><small>Open the current demand explanation</small></span><i>›</i></button>'+
+   '<button type="button" data-control="showPickupCard"><span><b>Pickup card</b><small>Show the active pickup information</small></span><i>›</i></button>'+
+   '<button type="button" data-control="refreshBtn"><span><b>Refresh GPS</b><small>Update your map position now</small></span><i>›</i></button>'+
+  '</div></div>'+
+  '<div class="hb-menu-view" data-menu-view="map" hidden><div class="hb-submenu-head"><button type="button" data-menu-back aria-label="Back">‹</button><div><small>MAP & DISPLAY</small><b>Home & Map Preferences</b></div></div><div class="hb-list-menu hb-submenu-list">'+
+   '<button type="button" data-control="heatToggle"><span><b>Heat map</b><small>Turn demand heat on or off</small></span><i>›</i></button>'+
+   '<button type="button" data-control="paletteToggle"><span><b>Map colors</b><small>Change the demand color palette</small></span><i>›</i></button>'+
+   '<button type="button" data-control="layerBtn"><span><b>Street / Satellite</b><small>Switch the base map layer</small></span><i>›</i></button>'+
+   '<button type="button" data-control="panelsBtn"><span><b>Information panels</b><small>Show or hide map information panels</small></span><i>›</i></button>'+
+  '</div><div class="hb-submenu-block"><h3>CUSTOMIZE HOME</h3><p>Choose what stays visible over the map.</p><div id="hbModuleList" class="hb-module-list"></div></div></div>'+
+  '<div class="hb-menu-view" data-menu-view="voice" hidden><div class="hb-submenu-head"><button type="button" data-menu-back aria-label="Back">‹</button><div><small>HOMEBASE AI</small><b>Voice Copilot</b></div></div>'+
+   '<button id="hbChatOpen" class="hb-list-action" type="button"><span><b>Conversation history</b><small>Continue or review saved Homebase chats</small></span><i>›</i></button>'+
+   '<div class="hb-voice-preferences"><label><span>Language</span><select id="hbVoiceLanguage" aria-label="Copilot language"></select></label><label><span>Accent / region</span><select id="hbVoiceAccent" aria-label="Copilot accent or region"></select></label><label><span>Voice style</span><select id="hbVoiceStyle" aria-label="Voice style"><option value="all">All voices</option><option value="masculine">Masculine</option><option value="feminine">Feminine</option></select></label><label><span>Voice</span><select id="hbVoiceChoice" aria-label="Home Base AI voice"></select></label><button id="hbVoicePreview" type="button">Preview AI voice</button><p id="hbVoiceAvailability" role="status"></p><p id="hbVoiceCommands" dir="auto"></p><small>Home Base AI voice is AI-generated. Your phone voice is used only as a fallback if AI audio is unavailable.</small></div>'+
+   '<label class="hb-setting-row"><span><b>Continuous conversation</b><small>Tap once, then keep talking hands-free</small></span><input id="hbConversationMode" type="checkbox"></label>'+
+   '<label class="hb-setting-row"><span><b>Voice + text on map</b><small>Optional live transcript; voice-only is the default</small></span><input id="hbShowText" type="checkbox"></label>'+
+   '<div class="hb-color-row"><span><b>Voice button color</b><small>Blue is the Homebase default</small></span><div class="hb-swatches"><button data-color="#1769ff" aria-label="Blue"></button><button data-color="#08a9ff" aria-label="Cyan"></button><button data-color="#7047ff" aria-label="Purple"></button><button data-color="#ff2aa7" aria-label="Pink"></button><input id="hbVoiceColor" type="color" aria-label="Custom voice button color"></div></div>'+
+  '</div>'+
+  '<div class="hb-menu-view" data-menu-view="safety" hidden><div class="hb-submenu-head"><button type="button" data-menu-back aria-label="Back">‹</button><div><small>SAFETY & SUPPORT</small><b>Safety</b></div></div><div class="hb-list-menu hb-submenu-list">'+
+   '<button type="button" data-menu-action="share-location"><span><b>Share current location</b><small>Use your phone GPS and share a map link</small></span><i>›</i></button>'+
+   '<button type="button" data-menu-action="navigate"><span><b>Open navigation</b><small>Continue the current Homebase route in Maps</small></span><i>›</i></button>'+
+   '<button type="button" data-control="refreshBtn"><span><b>Refresh my location</b><small>Request a fresh GPS position</small></span><i>›</i></button>'+
+   '<button type="button" data-nav="navSupport"><span><b>Safety help & support</b><small>Open Homebase support and diagnostics</small></span><i>›</i></button>'+
+  '</div></div>'+
+  '<div class="hb-menu-view" data-menu-view="settings" hidden><div class="hb-submenu-head"><button type="button" data-menu-back aria-label="Back">‹</button><div><small>APP SETTINGS</small><b>Settings</b></div></div><div class="hb-list-menu hb-submenu-list">'+
+   '<button type="button" data-control="installBtn"><span><b>Add to Home Screen</b><small>Install Homebase as an app on this device</small></span><i>›</i></button>'+
+   '<button type="button" data-control="toggleMapTabs"><span><b>Navigation tabs</b><small>Show or hide the app navigation tabs</small></span><i>›</i></button>'+
+   '<button type="button" data-control="showMapControls"><span><b>Restore Home controls</b><small>Bring back saved map controls and panels</small></span><i>›</i></button>'+
+   '<button type="button" data-control="hideMapControls"><span><b>Map-only view</b><small>Hide controls for a distraction-reduced map</small></span><i>›</i></button>'+
+  '</div></div>'+
+  '<div class="hb-menu-view" data-menu-view="about" hidden><div class="hb-submenu-head"><button type="button" data-menu-back aria-label="Back">‹</button><div><small>APP SETTINGS</small><b>About Homebase</b></div></div><div class="hb-about-card"><b>Homebase</b><span>Drive. Earn. Connect.</span><p>Driver-focused navigation, demand guidance, earnings tools and voice assistance.</p></div><div class="hb-list-menu hb-submenu-list">'+
+   '<button type="button" data-nav="navProfile"><span><b>Privacy & account</b><small>Review account and data preferences</small></span><i>›</i></button>'+
+   '<button type="button" data-nav="navSupport"><span><b>Diagnostics & support</b><small>Check app status and support options</small></span><i>›</i></button>'+
+  '</div></div>'+
+  '<p id="hbMenuStatus" class="hb-menu-status" role="status" aria-live="polite"></p>'+
+  '</div>'; const menuIcons={
   navMap:'<path d="M4 6.5 9 4l6 2.5L20 4v13.5L15 20l-6-2.5L4 20V6.5Z"/><path d="M9 4v13.5M15 6.5V20"/>',
   navEarn:'<path d="M12 3v18M16.5 7.2c0-1.8-1.8-3-4.4-3S7.8 5.4 7.8 7.3c0 4.1 8.7 2.2 8.7 6.6 0 2-1.8 3.5-4.6 3.5s-4.7-1.4-4.7-3.5"/>',
   navAlerts:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9ZM10 21h4"/>',
@@ -350,7 +395,9 @@ function bootHomeBaseShell(){
   list.innerHTML=moduleMeta.map(([key,label])=>'<label class="hb-setting-row"><span><b>'+esc(label)+'</b><small>'+(modules[key]?'Visible on Home':'Saved in menu')+'</small></span><input type="checkbox" data-module="'+key+'" '+(modules[key]?'checked':'')+'></label>').join('');
   list.querySelectorAll('[data-module]').forEach(input=>input.addEventListener('change',()=>{modules[input.dataset.module]=input.checked;applyModules()}));
  }
- function openMenu(){drawer.classList.add('open');backdrop.classList.add('open');drawer.setAttribute('aria-hidden','false');menuButton.setAttribute('aria-expanded','true');syncHomeHud()}
+ function showMenuView(name='main'){drawer.querySelectorAll('[data-menu-view]').forEach(view=>{view.hidden=view.dataset.menuView!==name});const scroll=drawer.querySelector('.hb-menu-scroll');if(scroll)scroll.scrollTop=0}
+ async function syncMenuIdentity(){const profile=read('homeBaseDriverProfile',{})||{},nameNode=drawer.querySelector('#hbMenuDriverName'),initialNode=drawer.querySelector('#hbMenuDriverInitial');let name=profile.name||profile.driverName||'Driver';try{const user=await window.HomeBaseAccounts?.backend?.getUser?.();name=profile.name||profile.driverName||user?.user_metadata?.full_name||user?.user_metadata?.name||user?.email?.split('@')[0]||name}catch{}if(nameNode)nameNode.textContent=name;if(initialNode)initialNode.textContent=String(name||'D').trim().charAt(0).toUpperCase()||'D'}
+ function openMenu(){showMenuView('main');syncMenuIdentity();drawer.classList.add('open');backdrop.classList.add('open');drawer.setAttribute('aria-hidden','false');menuButton.setAttribute('aria-expanded','true');syncHomeHud()}
  function closeMenu(){drawer.classList.remove('open');backdrop.classList.remove('open');drawer.setAttribute('aria-hidden','true');menuButton.setAttribute('aria-expanded','false');syncHomeHud()}
  homeControls.addEventListener('click',event=>{
   const button=event.target.closest('button');if(!button)return;
@@ -382,6 +429,24 @@ function bootHomeBaseShell(){
  }
  drawer.querySelectorAll('[data-nav]').forEach(button=>button.addEventListener('click',()=>runMenuCommand(button,'nav')));
  drawer.querySelectorAll('[data-control]').forEach(button=>button.addEventListener('click',()=>runMenuCommand(button,'control')));
+ drawer.querySelectorAll('[data-menu-panel]').forEach(button=>button.addEventListener('click',()=>showMenuView(button.dataset.menuPanel)));
+ drawer.querySelectorAll('[data-menu-back]').forEach(button=>button.addEventListener('click',()=>showMenuView('main')));
+ drawer.querySelectorAll('[data-menu-action]').forEach(button=>button.addEventListener('click',async()=>{
+  const action=button.dataset.menuAction;if(menuStatus)menuStatus.textContent='';
+  if(action==='navigate'){closeMenu();document.getElementById('mapsBtn')?.click();return}
+  if(action==='share-location'){
+   if(!navigator.geolocation){menuNotice('Location sharing is unavailable on this device.');return}
+   button.disabled=true;menuNotice('Getting your current location…');
+   navigator.geolocation.getCurrentPosition(async pos=>{button.disabled=false;const lat=pos.coords.latitude.toFixed(6),lon=pos.coords.longitude.toFixed(6),url='https://maps.google.com/?q='+lat+','+lon,text='My current location from Homebase';try{if(navigator.share)await navigator.share({title:'Homebase location',text,url});else if(navigator.clipboard){await navigator.clipboard.writeText(url);menuNotice('Location link copied.')}else{window.open(url,'_blank','noopener');closeMenu()}}catch(error){if(error?.name!=='AbortError')menuNotice('Location is ready, but sharing could not open.')}} ,()=>{button.disabled=false;menuNotice('Allow location access to share your current position.')},{enableHighAccuracy:true,timeout:9000,maximumAge:15000});return
+  }
+  if(action==='signout'){
+   if(!window.HomeBaseAccounts?.backend){closeMenu();document.getElementById('navProfile')?.click();return}
+   let signedIn=true;try{await window.HomeBaseAccounts.backend.getUser()}catch{signedIn=false}
+   if(!signedIn){closeMenu();document.getElementById('navProfile')?.click();return}
+   if(!confirm('Sign out of Homebase on this device? Your local driver data will stay on this phone.'))return;
+   button.disabled=true;try{await window.HomeBaseAccounts.backend.signOut();localStorage.removeItem('homeBaseCloudOwner');await window.HomeBaseAccounts.refreshIdentity?.();closeMenu();document.getElementById('navProfile')?.click()}catch(error){button.disabled=false;menuNotice(error?.message||'Sign out could not be completed. Try again.')}return
+  }
+ }));
  const textToggle=drawer.querySelector('#hbShowText');textToggle.checked=showText;textToggle.addEventListener('change',()=>{showText=textToggle.checked;write('homeBaseCopilotShowText',showText);liveText.classList.toggle('visible',showText&&!!liveText.textContent)});
  const languageSelect=drawer.querySelector('#hbVoiceLanguage'),accentSelect=drawer.querySelector('#hbVoiceAccent'),styleSelect=drawer.querySelector('#hbVoiceStyle'),voiceSelect=drawer.querySelector('#hbVoiceChoice'),conversationToggle=drawer.querySelector('#hbConversationMode');
  const accents=Object.fromEntries(HomeBaseLanguages.languages.map(language=>[language.id,language.regions]));
