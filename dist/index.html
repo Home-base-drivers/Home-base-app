@@ -216,8 +216,8 @@
 <script src="homebase-dispatch.js?v=2"></script>
 <script src="homebase-languages.js?v=2"></script>
 <script src="homebase-voice.js?v=4"></script>
-<script src="homebase-copilot.js?v=39"></script>
-<script src="homebase-live-assistant.js?v=3"></script>
+<script src="homebase-copilot.js?v=40"></script>
+<script src="homebase-live-assistant.js?v=4"></script>
 <script>
 const app=document.getElementById('app');
 app.classList.add('map-mode');
@@ -896,16 +896,16 @@ function buildRoute(venues,lat,lon,market,publicHeatSources=venues){
 }
 async function refreshLocation(){const btn=$('#refreshBtn');btn.classList.add('refreshing');$('#updated').textContent='Building local 12-hour route…';if(!navigator.geolocation){locationError('GPS is not supported on this device');return}navigator.geolocation.getCurrentPosition(async pos=>{currentLocation=[pos.coords.latitude,pos.coords.longitude];window.HomeBaseCopilot?.observePosition(pos);const accuracy=Math.round(pos.coords.accuracy),[lat,lon]=currentLocation,locale=await detectMarket(lat,lon),market=locale.name;configurePlatforms(locale);liveMap.flyTo([lat,lon],13,{duration:1.2});if(gpsMarker)liveMap.removeLayer(gpsMarker);if(gpsCircle)liveMap.removeLayer(gpsCircle);gpsMarker=L.circleMarker([lat,lon],{radius:9,color:'#fff',weight:4,fillColor:'#2563eb',fillOpacity:1}).addTo(liveMap).bindTooltip('You are here',{permanent:true,direction:'top'});gpsCircle=L.circle([lat,lon],{radius:Math.min(accuracy,1000),color:'#38bdf8',weight:1,fillOpacity:.1}).addTo(liveMap);$('#updated').textContent=`${market} · Finding current hotspots…`;loadWeather(lat,lon);loadHighways(lat,lon);let venues,publicHeatSources=[],forecastOnly=false;try{publicHeatSources=await loadVenues(lat,lon);venues=publicHeatSources;if(venues.length<6){venues=[...publicHeatSources,...fallbackVenues(lat,lon,market)];forecastOnly=true}}catch(e){venues=fallbackVenues(lat,lon,market);publicHeatSources=[];forecastOnly=true}buildRoute(venues,lat,lon,market,publicHeatSources);$('#updated').textContent=`${market} · ${forecastOnly?'Forecast route':'Live venue route'} refreshed`;if(forecastOnly)$('.route-source').textContent='GPS + current time + weather · forecast fallback';else $('.route-source').textContent='GPS + current time + weather + public venue data';btn.classList.remove('refreshing')},err=>locationError(err.code===1?'Location access was denied. Enable Location Services for this site, then refresh.':'Could not get a GPS fix. Move near a window and try again.'),{enableHighAccuracy:true,timeout:12000,maximumAge:60000})}
 function refreshLocationFastLegacy(){/* Retained only for migration history. The unified refresh path below is authoritative. */}
-function refreshLocationFast(customPosition){
-  if(gpsRequestInFlight)return;const locationRequest=++locationRequestId;locationMode=customPosition?.coords?'custom':'current';marketTimeZone=null;gpsRequestInFlight=true;renderEvents(null);
+function refreshLocationFast(){
+  if(gpsRequestInFlight)return;const locationRequest=++locationRequestId;locationMode='current';marketTimeZone=null;gpsRequestInFlight=true;renderEvents(null);
   const btn=$('#refreshBtn');btn.classList.add('refreshing');$('#updated').textContent='Connecting GPS automatically…';
-  if(!customPosition?.coords&&!navigator.geolocation){gpsRequestInFlight=false;locationError('GPS is not supported on this device');return}
+  if(!navigator.geolocation){gpsRequestInFlight=false;locationError('GPS is not supported on this device');return}
   const applyPosition=pos=>{
     if(locationRequest!==locationRequestId)return;
     gpsRequestInFlight=false;const lat=pos.coords.latitude,lon=pos.coords.longitude,accuracy=Math.round(pos.coords.accuracy),requestKey=`${lat.toFixed(4)},${lon.toFixed(4)}`;currentLocation=[lat,lon];if(locationMode==='current')window.HomeBaseCopilot?.observePosition(pos);
     try{localStorage.setItem('driverRouterLocation',JSON.stringify({lat,lon,market:'Local',savedAt:Date.now()}))}catch{}liveMap.setView([lat,lon],13,{animate:false});
-    if(gpsMarker)liveMap.removeLayer(gpsMarker);if(gpsCircle)liveMap.removeLayer(gpsCircle);gpsMarker=L.circleMarker([lat,lon],{radius:9,color:'#fff',weight:4,fillColor:'#2563eb',fillOpacity:1}).addTo(liveMap).bindTooltip(locationMode==='custom'?'Custom location':'You are here',{permanent:true,direction:'top'});if(locationMode==='current')gpsCircle=L.circle([lat,lon],{radius:Math.min(accuracy,1000),color:'#38bdf8',weight:1,fillOpacity:.1}).addTo(liveMap);
-    buildRoute(fallbackVenues(lat,lon,'Local'),lat,lon,'Local');$('.route-source').textContent=(locationMode==='custom'?'Custom location':'GPS')+' · refining public activity';$('#updated').textContent='Location ready · refining today’s hotspots';btn.classList.remove('refreshing');loadWeather(lat,lon);loadHighways(lat,lon);
+    if(gpsMarker)liveMap.removeLayer(gpsMarker);if(gpsCircle)liveMap.removeLayer(gpsCircle);gpsMarker=L.circleMarker([lat,lon],{radius:9,color:'#fff',weight:4,fillColor:'#2563eb',fillOpacity:1}).addTo(liveMap).bindTooltip('You are here',{permanent:true,direction:'top'});gpsCircle=L.circle([lat,lon],{radius:Math.min(accuracy,1000),color:'#38bdf8',weight:1,fillOpacity:.1}).addTo(liveMap);
+    buildRoute(fallbackVenues(lat,lon,'Local'),lat,lon,'Local');$('.route-source').textContent='GPS · refining public activity';$('#updated').textContent='Location ready · refining today’s hotspots';btn.classList.remove('refreshing');loadWeather(lat,lon);loadHighways(lat,lon);
     Promise.all([detectMarket(lat,lon),loadVenues(lat,lon).catch(()=>[])]).then(async([locale,venues])=>{
       if(locationRequest!==locationRequestId||!currentLocation||`${currentLocation[0].toFixed(4)},${currentLocation[1].toFixed(4)}`!==requestKey)return;
       const market=locale.name,events=await loadTodayEvents(lat,lon,market,venues).catch(()=>[]);currentMarketName=market;
@@ -915,7 +915,6 @@ function refreshLocationFast(customPosition){
       $('.route-source').textContent=events.length?'Metro heat: events + neighborhoods + schools + venues':live?'Metro heat: city + county public activity anchors':'Route ready · metro heat awaiting public data';$('#updated').textContent=`Today’s metro demand ready${events.length?` · ${events.length} current event${events.length===1?'':'s'}`:''}`;
     }).catch(()=>{renderEvents([]);$('#updated').textContent='Location ready · today’s fast forecast active'})
   };
-  if(customPosition?.coords){applyPosition(customPosition);return}
   navigator.geolocation.getCurrentPosition(applyPosition,err=>{if(locationRequest!==locationRequestId)return;gpsRequestInFlight=false;renderEvents([]);locationError(err.code===1?'Location access was denied. Enable Location Services for this site, then refresh.':'Could not get a GPS fix. Check signal and try again.')},{enableHighAccuracy:false,timeout:6000,maximumAge:60000})
 }
 function locationError(message){$('#updated').textContent='GPS connection failed';$('#refreshBtn').classList.remove('refreshing');show(['⚠️','Location needed',message,'TIP · iPhone Settings → Privacy & Security → Location Services'])}
@@ -940,30 +939,23 @@ initializeInstantRoute();
 async function loadDemo(){if(!demoLocale)return;renderEvents(null);loadWeather(demoLocale.lat,demoLocale.lon);loadHighways(demoLocale.lat,demoLocale.lon);let venues=[];try{venues=await loadVenues(demoLocale.lat,demoLocale.lon)}catch(e){}const local=venues.length>=6?venues:fallbackVenues(demoLocale.lat,demoLocale.lon,demoLocale.name);buildRoute(local,demoLocale.lat,demoLocale.lon,demoLocale.name);renderEvents([]);$('.route-source').textContent=venues.length>=6?'London time + current weather + public schools, stations, hotels and venues':'London time + current weather + fast public-venue forecast';$('#updated').textContent='London example · 12-hour route ready'}
 loadDemo();
 
-$('#refreshBtn').addEventListener('click',()=>{if(locationMode==='custom'&&currentLocation)liveMap.setView(currentLocation,13);else refreshLocationFast()});
-function openLocationOptions(){
-  let dialog=document.getElementById('hbLocationOptions');
-  if(!dialog){
-    dialog=document.createElement('dialog');dialog.id='hbLocationOptions';dialog.setAttribute('aria-labelledby','hbLocationTitle');
-    dialog.innerHTML='<form method="dialog"><header><h2 id="hbLocationTitle">My Location</h2><button formnovalidate aria-label="Close location options">×</button></header><p>Use your GPS, or explore demand near a custom location.</p><button type="button" id="hbUseCurrent">Current location · GPS</button><fieldset><legend>Custom location</legend><p>Pan the map before opening this menu to choose its center, or enter coordinates.</p><label>Latitude<input id="hbCustomLat" type="number" step="any" min="-90" max="90" required></label><label>Longitude<input id="hbCustomLon" type="number" step="any" min="-180" max="180" required></label><button type="button" id="hbUseCustom">Use custom location</button></fieldset><p id="hbLocationStatus" role="status"></p></form>';
-    document.body.append(dialog);
-    dialog.querySelector('#hbUseCurrent').onclick=()=>{locationMode='current';dialog.close();gpsRequestInFlight=false;refreshLocationFast()};
-    dialog.querySelector('#hbUseCustom').onclick=()=>{
-      const inputs=[dialog.querySelector('#hbCustomLat'),dialog.querySelector('#hbCustomLon')];
-      if(!inputs.every(input=>input.reportValidity()))return;
-      const [latitude,longitude]=inputs.map(input=>Number(input.value));
-      locationMode='custom';dialog.close();gpsRequestInFlight=false;refreshLocationFast({coords:{latitude,longitude,accuracy:0}});
-    };
-  }
-  const center=liveMap.getCenter();dialog.querySelector('#hbCustomLat').value=center.lat.toFixed(6);dialog.querySelector('#hbCustomLon').value=center.lng.toFixed(6);
-  dialog.querySelector('#hbLocationStatus').textContent=locationMode==='custom'?'Exploring a custom location — not your GPS position.':'Current location mode';
-  dialog.showModal();
+$('#refreshBtn').addEventListener('click',()=>refreshLocationFast());
+function refreshCurrentGps(){
+  locationMode='current';
+  gpsRequestInFlight=false;
+  refreshLocationFast();
 }
-document.addEventListener('click',event=>{const button=event.target.closest('.hb-ref-left [data-home-target="refreshBtn"]');if(button){event.preventDefault();event.stopImmediatePropagation();openLocationOptions()}},true);
+document.addEventListener('click',event=>{
+  const button=event.target.closest('.hb-ref-left [data-home-target="refreshBtn"]');
+  if(!button)return;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  refreshCurrentGps();
+},true);
 function openHomeNavigation(){
   if(!selectedDestination||!selectedDestination.every(Number.isFinite)){show(['🧭','Choose a destination','Choose an event or route stop on the map first.','Select a destination, then tap Navigate']);return}
   const [lat,lon]=selectedDestination;
-  const origin=locationMode==='custom'&&currentLocation?'&origin='+encodeURIComponent(currentLocation.join(',')):'';
+  const origin='';
   window.location.assign('https://www.google.com/maps/dir/?api=1&destination='+lat+','+lon+'&travelmode=driving&dir_action=navigate'+origin);
 }
 $('#mapsBtn').addEventListener('click',openHomeNavigation);
