@@ -446,3 +446,35 @@
  .hb-platform-mini b{font-size:.44rem}.hb-platform-mini span{font-size:.64rem}
  .hb-platform-bar.collapsed{width:39px;right:6px}.hb-platform-bar.collapsed .hb-platform-toggle{width:39px;height:39px}
 }
+
+
+/* Bottom navigation v2: seven items with Ask Homebase exactly centered */
+.hb-shell-active .hb-ref-bottom{
+ grid-template-columns:repeat(7,minmax(0,1fr))!important;
+}
+.hb-shell-active .hb-ref-bottom .ask{
+ grid-column:4!important;
+ padding-top:29px!important;
+ overflow:visible!important;
+}
+.hb-shell-active .hb-voice-bubble{
+ left:50%!important;
+ right:auto!important;
+ bottom:max(50px,calc(38px + env(safe-area-inset-bottom)))!important;
+ width:62px!important;
+ height:62px!important;
+ transform:translateX(-50%)!important;
+ z-index:1262!important;
+ background:radial-gradient(circle at 43% 32%,#7bc8ff 0%,#2382ff 32%,#315fff 58%,#6848ef 82%,#17204c 100%)!important;
+ border:1px solid rgba(148,202,255,.82)!important;
+ box-shadow:0 0 0 5px rgba(55,129,255,.18),0 0 0 9px rgba(98,82,255,.12),0 0 27px rgba(63,111,255,.72),0 8px 22px rgba(0,0,0,.44)!important;
+}
+.hb-shell-active .hb-voice-bubble svg{width:28px!important;height:28px!important;stroke-width:1.8}
+.hb-shell-active .hb-voice-bubble.listening,
+.hb-shell-active .hb-voice-bubble.responding{transform:translateX(-50%) scale(1.14)!important}
+@media(max-width:430px){
+ .hb-shell-active .hb-ref-bottom{grid-template-columns:repeat(7,minmax(0,1fr))!important}
+ .hb-shell-active .hb-ref-bottom .ask{grid-column:4!important;padding-top:27px!important}
+ .hb-shell-active .hb-voice-bubble{left:50%!important;width:58px!important;height:58px!important;bottom:max(49px,calc(37px + env(safe-area-inset-bottom)))!important}
+ .hb-shell-active .hb-voice-bubble svg{width:26px!important;height:26px!important}
+}
