@@ -764,3 +764,14 @@
   border-radius:17px!important;
  }
 }
+
+
+/* Final Events panel placement: always clear the platform-price strip by 12px */
+.hb-shell-active #routePlan{
+ top:max(162px,calc(env(safe-area-inset-top) + 152px))!important;
+}
+@media(max-width:430px){
+ .hb-shell-active #routePlan{
+  top:max(159px,calc(env(safe-area-inset-top) + 149px))!important;
+ }
+}
