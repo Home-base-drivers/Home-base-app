@@ -1,4 +1,4 @@
-const CACHE='home-base-v161';
+const CACHE='home-base-v162';
 const ASSETS=['./','index.html','manifest.webmanifest','favicon.svg','icon-192.png','icon-512.png','homebase-languages.js?v=2','homebase-voice.js?v=4','homebase-dispatch.js?v=2','homebase-copilot.js?v=27','homebase-live-assistant.js?v=2','homebase-copilot.css?v=27','homebase-logo.png','baltimore-map.jpg','provider-signals.json','homebase-live.js?v=37','homebase-earnings.js?v=110','homebase-earnings.css?v=110','homebase-planner.js?v=126','homebase-config.js?v=111','homebase-backend.js?v=124','homebase-growth.js?v=124','homebase-growth.css?v=111','homebase-demand-history.js?v=123','baltimore-market.js?v=72','homebase-heat.js?v=97','baltimore-demand-areas.geojson'];
 self.addEventListener('install',event=>event.waitUntil((async()=>{
  const cache=await caches.open(CACHE);
