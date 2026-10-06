@@ -12,10 +12,13 @@ function waitIce(peer){if(peer.iceGatheringState==='complete')return Promise.res
 async function stop(message='GPT Live stopped. Tap the microphone to talk again.'){starting=false;active=false;flush('user');flush('assistant');try{if(dc?.readyState==='open')dc.send(JSON.stringify({type:'session.close',event_id:'homebase-close-'+Date.now()}))}catch{}try{dc?.close()}catch{}try{pc?.close()}catch{}try{stream?.getTracks().forEach(t=>t.stop())}catch{}try{if(audio){audio.pause();audio.srcObject=null;audio.remove()}}catch{}dc=null;pc=null;stream=null;audio=null;buttonState(false,message);status(message)}
 async function start(){
  if(active||starting)return stop();
- if(!window.HomeBaseAccounts?.backend){status('Sign in to Home Base to use GPT Live.',true);return}
+ if(!window.HomeBaseAccounts?.backend){status('Home Base account service is still loading. Try again in a moment.',true);return}
  if(!window.RTCPeerConnection||!navigator.mediaDevices?.getUserMedia){status('GPT Live needs WebRTC and microphone access in this browser.',true);return}
  starting=true;buttonState(true,'GPT Live · connecting…');status('Connecting GPT Live…',true);
  try{
+  const user=await HomeBaseAccounts.backend.getUser();
+  if(!starting)return;
+  if(!user?.id||user.is_anonymous)throw Object.assign(Error('Sign in to your Home Base account first.'),{name:'AuthSessionMissingError'});
   oldStop?.('Switching to GPT Live…');
   stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
   pc=new RTCPeerConnection();stream.getTracks().forEach(track=>pc.addTrack(track,stream));
@@ -25,7 +28,11 @@ async function start(){
   const prefs=readPrefs(),answer=await HomeBaseAccounts.backend.evaluateDispatch({operation:'live-session',sdp:pc.localDescription.sdp,locale:prefs.locale,voice:prefs.aiVoice,style:prefs.voiceStyle,history:history()});
   if(!answer?.transport?.sdp)throw Error(answer?.error||'GPT Live session could not start.');
   await pc.setRemoteDescription({type:'answer',sdp:answer.transport.sdp});active=true;starting=false;buttonState(true,'GPT Live · listening');status('GPT Live · connected. Speak naturally in any language.',true);
- }catch(error){await stop('GPT Live could not connect. '+(error?.message||'Please try again.'))}
+ }catch(error){
+  const needsSignIn=error?.name==='AuthSessionMissingError'||/auth session missing|sign in.*first|invalid session/i.test(error?.message||'');
+  await stop(needsSignIn?'Sign in to Home Base in Profile, then tap the voice orb again.':'GPT Live could not connect. '+(error?.message||'Please try again.'));
+  if(needsSignIn){document.getElementById('navProfile')?.click();document.querySelector('#cloudAuth [name="email"]')?.focus();}
+ }
 }
 function install(){if(!window.HomeBaseCopilot||window.HomeBaseCopilot.__gptLiveInstalled)return false;oldStop=window.HomeBaseCopilot.stopConversation?.bind(window.HomeBaseCopilot);window.HomeBaseCopilot.toggleConversation=start;window.HomeBaseCopilot.stopConversation=()=>stop();window.HomeBaseCopilot.__gptLiveInstalled=true;window.HomeBaseLiveAssistant=Object.freeze({start,stop,get active(){return active},get starting(){return starting}});const notice=document.getElementById('hbVoiceAvailability');if(notice)notice.textContent='GPT Live: full-duplex conversation, interruptions, multilingual speech, general questions and current web answers when the backend is connected.';return true}
 if(!install()){let tries=0;const timer=setInterval(()=>{if(install()||++tries>80)clearInterval(timer)},100)}
