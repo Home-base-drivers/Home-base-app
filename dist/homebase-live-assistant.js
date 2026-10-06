@@ -32,7 +32,7 @@ async function start(){
   audio=document.createElement('audio');audio.autoplay=true;audio.playsInline=true;audio.setAttribute('aria-hidden','true');document.body.append(audio);pc.ontrack=e=>{audio.srcObject=e.streams[0];audio.play().catch(()=>{})};
   dc=pc.createDataChannel('oai-events');dc.addEventListener('message',e=>{try{handleEvent(JSON.parse(e.data))}catch{}});dc.addEventListener('close',()=>{if(active||starting)stop('GPT Live connection closed. Tap the microphone to reconnect.')});
   const offer=await pc.createOffer();await pc.setLocalDescription(offer);await waitIce(pc);
-  const prefs=readPrefs(),answer=await HomeBaseAccounts.backend.evaluateDispatch({operation:'live-session',sdp:pc.localDescription.sdp,locale:prefs.locale,voice:prefs.aiVoice,style:prefs.voiceStyle,history:history()});
+  const prefs=readPrefs(),liveContext=window.HomeBaseCopilot?.liveContext?.()||{},answer=await HomeBaseAccounts.backend.evaluateDispatch({operation:'live-session',sdp:pc.localDescription.sdp,locale:prefs.locale,voice:prefs.aiVoice,style:prefs.voiceStyle,history:history(),context:liveContext});
   if(!answer?.transport?.sdp)throw Error(answer?.error||'GPT Live session could not start.');
   await pc.setRemoteDescription({type:'answer',sdp:answer.transport.sdp});active=true;starting=false;buttonState(true,'GPT Live · listening');status('GPT Live · connected. Speak naturally in any language.',true);
  }catch(error){
