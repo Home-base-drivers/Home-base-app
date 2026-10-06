@@ -3,6 +3,8 @@ name: Deploy Home Base to GitHub Pages
 on:
   push:
     branches: [main]
+  schedule:
+    - cron: '2-59/5 * * * *'
   workflow_dispatch:
 
 permissions:
@@ -10,9 +12,11 @@ permissions:
   pages: write
   id-token: write
 
+# Every published snapshot passes the app checks. A feed refresh cannot cancel
+# a running release validation or deployment.
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -27,17 +31,38 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Validate planner before deployment
+          cache: npm
+      - name: Validate application before deployment
         run: |
           npm ci --ignore-scripts
           npm test
+          npm run build:backend-client
+          git diff --exit-code -- dist/homebase-backend.js
+          npm run build:dispatch-function
           node scripts/check-index-syntax.mjs
           node --check dist/homebase-growth.js
           node --check dist/homebase-planner.js
           node --check dist/homebase-earnings.js
           node --check dist/homebase-live.js
+          node --check dist/homebase-dispatch.js
+          node --check dist/homebase-copilot.js
           node --check dist/sw.js
-          node --test scripts/homebase-earnings.test.mjs scripts/homebase-planner.test.mjs scripts/homebase-heat.test.mjs scripts/baltimore-demand-areas.test.mjs scripts/refresh-provider-signals.test.mjs
+      - name: Fetch provider signals
+        run: node scripts/refresh-provider-signals.mjs
+        env:
+          TICKETMASTER_API_KEY: ${{ secrets.TICKETMASTER_API_KEY }}
+          UBER_ACCESS_TOKEN: ${{ secrets.UBER_ACCESS_TOKEN }}
+          UBER_CLIENT_ID: ${{ secrets.UBER_CLIENT_ID }}
+          UBER_CLIENT_SECRET: ${{ secrets.UBER_CLIENT_SECRET }}
+          UBER_ESTIMATES_SCOPE: ${{ vars.UBER_ESTIMATES_SCOPE }}
+          BOOKING_API_KEY: ${{ secrets.BOOKING_API_KEY }}
+          BOOKING_AFFILIATE_ID: ${{ secrets.BOOKING_AFFILIATE_ID }}
+          FLIGHTAWARE_API_KEY: ${{ secrets.FLIGHTAWARE_API_KEY }}
+      - name: Build public runtime configuration
+        run: node scripts/write-runtime-config.mjs
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
       - name: Configure Pages
         uses: actions/configure-pages@v5
       - name: Upload Home Base

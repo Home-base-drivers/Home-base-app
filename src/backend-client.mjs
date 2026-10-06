@@ -207,15 +207,15 @@ export function createHomeBaseBackend(client) {
     async saveDispatchState(settings) {
       const me = await user();
       // Never sync exact home, work or custom base coordinates through settings.
-      const allowed = ['mode','goal','minimumHourly','maxDistance','vehicle','diamond','paidRepositioning','weights','platforms'];
+      const allowed = ['mode','goal','minimumHourly','minimumMile','maxDistance','maxShiftHours','acceptanceTarget','driverName','vehicle','diamond','paidRepositioning','weights','platforms','radioCue'];
       if (!settings || Object.keys(settings).some(k=>!allowed.includes(k))) throw Error('Unsupported dispatch settings.');
       return result(await client.from('driver_dispatch_state').upsert({user_id:me.id,settings,updated_at:new Date().toISOString()}));
     },
     async saveDispatchTrips(rows) {
       await user();
       if (!Array.isArray(rows) || rows.some(r=>!['manual','csv','screenshot'].includes(r.source))) throw Error('Provider imports require a server adapter.');
-      const totals={added:0,duplicates:0};
-      for(let i=0;i<rows.length;i+=500){const batch=result(await client.rpc('ingest_dispatch_trips',{p_records:rows.slice(i,i+500)}));totals.added+=batch.added;totals.duplicates+=batch.duplicates;}
+      const totals={added:0,duplicates:0,updated:0};
+      for(let i=0;i<rows.length;i+=500){const batch=result(await client.rpc('ingest_dispatch_trips',{p_records:rows.slice(i,i+500)}));totals.added+=batch.added;totals.duplicates+=batch.duplicates;totals.updated+=batch.updated||0;}
       return totals;
     },
     async listDispatchTrips() {

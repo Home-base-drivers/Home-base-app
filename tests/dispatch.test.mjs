@@ -26,3 +26,34 @@ import {makeLanguageParser} from '../supabase/functions/dispatch/language.mjs';
 test('cloud language falls back without credentials and never returns an execution receipt',async()=>{const parse=makeLanguageParser({engine:D});const r=await parse('paid rides toward my place please');assert.equal(r.execution,'advisory');assert.equal(r.provider,'not_configured');const local=await parse('get me home');assert.equal(local.command.mode,'GET ME HOME');});
 test('cloud language validates structured intents before local actions',async()=>{let request;const parse=makeLanguageParser({engine:D,apiKey:'test-not-a-real-key',model:'configured-model',fetchImpl:async(url,options)=>{request=JSON.parse(options.body);return new Response(JSON.stringify({output:[{content:[{type:'output_text',text:JSON.stringify({type:'mode',mode:'GET ME HOME',amount:null,additional:false,thenHome:false,remaining:false})}]}]}));}});const r=await parse('paid rides toward my place please');assert.equal(r.command.mode,'GET ME HOME');assert.equal(request.store,false);assert.equal(request.text.format.strict,true);assert.equal(r.execution,'advisory');});
 test('stored vehicle profile supplies scoring costs without duplicate configuration',()=>{const r=D.scoreTrip(offer,{vehicle:{fuelCostPerMile:.17,reservePerMile:.2}});assert.ok(r.trip_score!==null);assert.equal(r.net_estimate,24-19*.37);});
+test('same trip ID accepts final-fare corrections and never reverts completion',()=>{
+ const completed={...offer,status:'completed'};
+ const revised=D.mergeTrips([completed],[{...completed,fare:26,tip:4}]);
+ assert.equal(revised.rows.length,1);assert.equal(revised.rows[0].fare,26);assert.equal(revised.rows[0].tip,4);assert.equal(revised.updated,1);
+ const stale=D.mergeTrips(revised.rows,[{...offer,status:'offer'}]);assert.equal(stale.rows[0].status,'completed');assert.equal(stale.rows[0].fare,26);
+});
+test('losses and zero-mile waits participate in personal calibration',()=>{
+ const result=D.learn(Array.from({length:5},()=>({followed:true,net:-6,minutes:30,miles:0})));
+ assert.equal(result.sampleCount,5);assert.equal(result.netHourly,-12);assert.equal(result.weights.profit,.8);
+});
+test('reviewed trips enter the shared ledger without duplicating platform/day summaries',()=>{
+ const completed={...D.normalizeTrip(offer),status:'completed'};
+ const other={...completed,record_id:'trip-2',request_time:'2026-10-05T12:00:00-04:00'};
+ const tripsOnly=D.earningsRecords([],[completed,other]);assert.equal(tripsOnly.length,2);assert.equal(tripsOnly[0].hoursType,'active');assert.equal(D.ledgerTotals(tripsOnly).gross,48);assert.equal(D.ledgerTotals(tripsOnly).grossOnlineHourly,null);
+ const summary={id:'shift:1',platform:'Empower',date:'2026-10-05',earnings:100,payType:'gross',hoursType:'unknown',hours:5,shiftHours:5,miles:90,costs:0};
+ const withSummary=D.earningsRecords([summary],[completed,other]);assert.equal(withSummary.length,1);assert.equal(D.ledgerTotals(withSummary,state).gross,100);assert.equal(D.ledgerTotals(withSummary,state).netShiftHourly,(100-90*.37)/5);assert.equal(D.ledgerTotals(withSummary,state).netOnlineHourly,null);
+ const online=D.ledgerTotals([{...summary,hoursType:'online',hours:4}],state);assert.equal(online.netOnlineHourly,(100-90*.37)/4);
+});
+test('Diamond recovery uses selective repositioning without discarding acceptance preference',()=>{
+ const recovering={...state,mode:'DIAMOND MODE',recovery:{active:true},paidRepositioning:true,diamond:true};
+ const rec=D.recommend(recovering,{locationAt:new Date().toISOString(),platforms:['Uber','Empower']});assert.equal(rec.platform,'Empower');assert.ok(rec.factors.some(f=>f.includes('Previous trip')));
+ assert.equal(D.scoreTrip({...offer,platform:'Uber',fare:3},{...recovering,mode:'GET ME HOME'}).action,'acceptance_strategy');
+ assert.equal(D.recommend({...state,mode:'GET ME HOME'},{locationAt:new Date().toISOString(),platforms:['Uber']}).action,'RETURN HOME');
+ assert.equal(D.recommend(state,{locationAt:new Date(Date.now()+10000).toISOString()}).confidence,0);
+});
+test('daily and weekly voice goals preserve their scope and metric',()=>{
+ assert.equal(D.parseCommand('300 dollars this week').period,'week');assert.equal(D.parseCommand('80 dollars net more then home').kind,'net');assert.equal(D.parseCommand('Should I take this?').type,'offer_query');assert.equal(D.parseCommand('Stay within 20 miles of Baltimore').value,20);
+});
+test('shortcut handoff supports only Home Base objectives and never platform execution',()=>{
+ assert.equal(D.shortcutCommand('get-me-home').mode,'GET ME HOME');assert.equal(D.shortcutCommand('pause').type,'pause');assert.equal(D.shortcutCommand('do it'),null);assert.equal(D.shortcutCommand('accept_trip'),null);assert.equal(D.localDay('2026-10-05T10:00:00Z',null),'2026-10-05');
+});

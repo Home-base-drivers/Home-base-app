@@ -65,3 +65,10 @@ test('frontend initialization refuses server keys and incomplete configuration',
   assert.throws(() => connectHomeBase({ supabaseUrl: 'https://test.supabase.co', supabasePublishableKey: 'sb_secret_private' }));
   assert.throws(() => connectHomeBase({}));
 });
+test('dispatch preference syncing keeps complete editable settings while withholding destinations',async()=>{
+ let saved;
+ const api=createHomeBaseBackend({...fake(async()=>({data:{}})),from:name=>({upsert:async row=>{saved={name,row};return{data:row};}})});
+ await api.saveDispatchState({mode:'DIAMOND MODE',minimumMile:1.2,maxShiftHours:6,acceptanceTarget:90,driverName:'Chris',radioCue:true,paidRepositioning:true});
+ assert.equal(saved.name,'driver_dispatch_state');assert.equal(saved.row.settings.maxShiftHours,6);
+ await assert.rejects(api.saveDispatchState({destination:[39,-76]}));
+});

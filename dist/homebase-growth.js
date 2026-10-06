@@ -40,9 +40,9 @@
     const readOwner = () => localStorage.getItem('homeBaseCloudOwner');
     const emptyPrefs = () => ({usage_analytics:false,model_improvement:false,benchmark_sharing:false});
     const redirect = 'https://home-base-drivers.github.io/Home-base-app/';
-    const deviceKeys = [...HomeBaseCloud.progressKeys,'homeBaseLedger','homeBaseEarningsProfile','homeBaseTripRows','homeBaseActiveShift'];
+    const deviceKeys = [...HomeBaseCloud.progressKeys,'homeBaseLedger','homeBaseEarningsProfile','homeBaseTripRows','homeBaseActiveShift','homeBaseDispatchState','homeBaseDispatchLog','homeBaseDriverEvidence','homeBasePrivateDestination'];
     // In-progress shifts are intentionally excluded from the existing backup format.
-    const localBackup = () => Object.fromEntries(deviceKeys.filter(k=>k!=='homeBaseActiveShift').map(k => [k,read(k)]).filter(([,v])=>v!==null));
+    const localBackup = () => Object.fromEntries(deviceKeys.filter(k=>!['homeBaseActiveShift','homeBasePrivateDestination'].includes(k)).map(k => [k,read(k)]).filter(([,v])=>v!==null));
     const download = (name,data) => { const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));
       const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000); };
     const status = text => { message=text; const node=document.getElementById('cloudStatus');if(node)node.textContent=text; };
@@ -82,14 +82,16 @@
     async function restoreCloud() {
       if(!me)throw Error('Sign in first.');
       if(!confirm('Replace this device’s Home Base settings and earnings with the cloud copy for '+me.email+'? Download a device backup first if needed.'))return;
-      const cloud=await backend.getProgress(),rows=await listAllEarnings();
-      if(!cloud.version && !rows.length && deviceKeys.some(k=>read(k)!==null))throw Error('Cloud copy is empty. Export and clear device data first if you want to switch accounts.');
+      const [cloud,rows,dispatchTrips,dispatchState,dispatchLog]=await Promise.all([backend.getProgress(),listAllEarnings(),backend.listDispatchTrips(),backend.getDispatchState(),backend.listDispatchRecommendations()]);
+      if(!cloud.version && !rows.length && !dispatchTrips.length && !dispatchState && deviceKeys.some(k=>read(k)!==null))throw Error('Cloud copy is empty. Export and clear device data first if you want to switch accounts.');
       // Everything has been fetched before touching the device. No implicit merge.
+      const privateBase=readOwner()===me.id?read('homeBasePrivateDestination'):null;
       deviceKeys.forEach(k=>localStorage.removeItem(k));
       for(const [key,value] of Object.entries(cloud.state||{}))if(HomeBaseCloud.progressKeys.includes(key))write(key,value);
+      write('homeBaseTripRows',dispatchTrips);if(dispatchState)write('homeBaseDispatchState',dispatchState.settings);write('homeBaseDispatchLog',dispatchLog);if(privateBase)write('homeBasePrivateDestination',privateBase);
       write('homeBaseLedger',rows);const summary=HomeBasePlanner.summarize(rows,'Cloud history');write('homeBaseEarningsProfile',summary);earningsProfile=summary;
       localStorage.setItem('homeBaseCloudOwner',me.id);localStorage.setItem('homeBaseAutoCloud','true');autosave=true;version=cloud.version;
-      localStorage.setItem('homeBaseCloudVersion',String(version));
+      localStorage.setItem('homeBaseCloudVersion',String(version));document.dispatchEvent(new Event('homebase:device-data-changed'));
       fingerprint=JSON.stringify([HomeBaseCloud.progressSnapshot(localStorage),rows]);
       applyProductPrefs();updateEarnings();status('Cloud copy restored. Refresh the map to apply saved map preferences.');renderProfile();
     }
@@ -125,7 +127,7 @@
       section.querySelector('#privacySave').onclick=()=>action(async()=>{const choices=Object.fromEntries([...section.querySelectorAll('[data-privacy]')].map(e=>[e.dataset.privacy,e.checked]));privacy=await backend.savePrivacy(choices);status('Privacy choices saved. Turning off optional learning removes its stored cloud history.');});
       section.querySelector('#cloudClear').onclick=()=>action(async()=>{if(!confirm('Clear your Home Base cloud records? Your login account and device data remain.'))return;await backend.clearCloudData();autosave=false;localStorage.setItem('homeBaseAutoCloud','false');localStorage.removeItem('homeBaseCloudOwner');await refreshIdentity();status('Cloud records cleared. Automatic saving is off.');renderProfile();});
       section.querySelector('#accountDelete').onclick=()=>action(async()=>{if(prompt('Type DELETE to permanently remove your login and cloud records. Export first.')!=='DELETE')return;await backend.deleteAccount();await backend.signOut().catch(()=>{});me=null;privacy=emptyPrefs();autosave=false;localStorage.removeItem('homeBaseCloudOwner');localStorage.removeItem('homeBaseAutoCloud');status('Account and cloud records deleted. Device records remain until you clear them.');renderProfile();});
-      section.querySelector('#deviceClear').onclick=()=>{if(!confirm('Clear device earnings and settings? Download a backup first. Cloud records remain.'))return;deviceKeys.forEach(k=>localStorage.removeItem(k));localStorage.removeItem('homeBaseCloudOwner');localStorage.removeItem('homeBaseAutoCloud');autosave=false;earningsProfile=null;updateEarnings();status('Device records cleared. Cloud data was not deleted.');renderProfile();};
+      section.querySelector('#deviceClear').onclick=()=>{if(!confirm('Clear device earnings and settings? Download a backup first. Cloud records remain.'))return;deviceKeys.forEach(k=>localStorage.removeItem(k));document.dispatchEvent(new Event('homebase:device-data-changed'));localStorage.removeItem('homeBaseCloudOwner');localStorage.removeItem('homeBaseAutoCloud');autosave=false;earningsProfile=null;updateEarnings();status('Device records cleared. Cloud data was not deleted.');renderProfile();};
       return section;
     }
     const originalProfile=renderProfile;

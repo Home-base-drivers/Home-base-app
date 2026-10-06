@@ -283,3 +283,16 @@ test('dispatch settings and outcomes are private and erased by the existing dele
  await as('authenticated',bob,async()=>{assert.equal((await db.query('select * from public.driver_dispatch_state')).rows.length,0);assert.equal((await db.query('select * from public.dispatch_recommendations')).rows.length,0);});
  await as('authenticated',alice,async()=>{await db.query('select public.delete_my_home_base_data()');assert.equal((await db.query('select * from public.driver_dispatch_state')).rows.length,0);assert.equal((await db.query('select * from public.dispatch_recommendations')).rows.length,0);});
 });
+test('dispatch ingestion preserves stable identity across coordinate precision and fare revisions',async()=>{
+ const trip={record_id:'coord-trip',platform:'Empower',source:'manual',completeness:'partial',confidence:.7,request_time:'2026-10-05T11:00:00-04:00',fare:24,tip:0,trip_time:30,trip_distance:17,pickup_location:[38.907001,-77.036001],dropoff_location:[39.099001,-76.848001],status:'completed'};
+ await as('authenticated',bob,async()=>{
+  await db.query('select public.ingest_dispatch_trips($1::jsonb)',[JSON.stringify([trip])]);
+  const dup=(await db.query('select public.ingest_dispatch_trips($1::jsonb) result',[JSON.stringify([{...trip,record_id:'coord-copy',pickup_location:[38.907002,-77.036002],source:'csv'}])])).rows[0].result;assert.equal(dup.duplicates,1);assert.equal(dup.updated,1);
+  const revision={...trip,source:'csv',fare:26,tip:3};
+  const updated=(await db.query('select public.ingest_dispatch_trips($1::jsonb) result',[JSON.stringify([revision])])).rows[0].result;assert.equal(updated.updated,1);
+  await db.query('select public.ingest_dispatch_trips($1::jsonb)',[JSON.stringify([{...revision,status:'offer',fare:1}])]);
+  const rows=(await db.query("select gross_earnings,normalized from public.trip_rows where record_id='coord-trip'")).rows;assert.equal(rows.length,1);assert.equal(Number(rows[0].gross_earnings),29);assert.equal(rows[0].normalized.status,'completed');
+  await assert.rejects(db.query('select public.ingest_dispatch_trips($1::jsonb)',[JSON.stringify([{...trip,record_id:'negative-trip',trip_time:-5}])]),{code:'22023'});
+  await assert.rejects(db.query('select public.ingest_dispatch_trips($1::jsonb)',[JSON.stringify([{...trip,record_id:'bad-coordinate',pickup_location:[91,0]}])]),{code:'22023'});
+ });
+});

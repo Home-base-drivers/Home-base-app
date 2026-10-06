@@ -1,15 +1,42 @@
 {
-  "name":"Home Base",
-  "short_name":"Home Base",
-  "description":"All your local driver platforms, earnings forecasts, events and 12-hour route in one home.",
-  "start_url":"./",
-  "scope":"./",
-  "display":"standalone",
-  "background_color":"#01070d",
-  "theme_color":"#051424",
-  "orientation":"portrait-primary",
-  "icons":[
-    {"src":"icon-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},
-    {"src":"icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
+  "name": "Home Base",
+  "short_name": "Home Base",
+  "description": "Home Base driver map, earnings and voice Copilot.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#01070d",
+  "theme_color": "#051424",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Get Me Home",
+      "url": "./?copilot=get-me-home",
+      "description": "Find a paid repositioning strategy toward your private destination."
+    },
+    {
+      "name": "Diamond Mode",
+      "url": "./?copilot=diamond",
+      "description": "Preserve acceptance and improve positioning."
+    },
+    {
+      "name": "Pause recommendations",
+      "url": "./?copilot=pause",
+      "description": "Pause Home Base advice."
+    }
   ]
 }
