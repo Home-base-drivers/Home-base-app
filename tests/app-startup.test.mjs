@@ -35,15 +35,19 @@ test('fresh-device startup reaches automatic GPS and initializes the controls',(
 test('map-only controls hide and restore after full application startup',()=>{
   const app=startApp();
   const hide=planner.match(/^    function setControlsHidden\(hidden\).*$/m)?.[0];assert.ok(hide);
-  vm.runInContext('let controlsHidden=false;const restore=document.createElement("button"),newPanels=document.getElementById("panelsBtn");function saveView(){}\n'+hide+'\nsetControlsHidden(true);',app.context);
+  vm.runInContext('let controlsHidden=false,tabsHidden=true,viewHidden=true;const restore=document.createElement("button"),showTabs={hidden:false},showView={hidden:false},newPanels=document.getElementById("panelsBtn");function saveView(){}\n'+hide+'\nsetControlsHidden(true);',app.context);
   assert.ok(app.nodes.get('app').classList.contains('ui-hidden'));
   assert.ok(app.nodes.get('body').classList.contains('hb-map-only'));
   assert.equal(app.nodes.get('workspaceView').hidden,true);
   assert.equal(vm.runInContext('restore.hidden',app.context),false);
+  assert.equal(vm.runInContext('showTabs.hidden',app.context),true);
+  assert.equal(vm.runInContext('showView.hidden',app.context),true);
   vm.runInContext('setControlsHidden(false)',app.context);
   assert.ok(!app.nodes.get('app').classList.contains('ui-hidden'));
   assert.ok(!app.nodes.get('body').classList.contains('hb-map-only'));
   assert.equal(vm.runInContext('restore.hidden',app.context),true);
+  assert.equal(vm.runInContext('showTabs.hidden',app.context),false);
+  assert.equal(vm.runInContext('showView.hidden',app.context),false);
 });
 test('valid GPS centers the map even when saving the device location fails',()=>{
   const app=startApp();
