@@ -292,3 +292,20 @@
  .hb-shell-active .hb-home-word strong{font-size:1.18rem}
  .hb-shell-active .hb-home-word small{font-size:.56rem}
 }
+
+
+/* Compact live weather card from the approved Home reference */
+.hb-home-weather{
+ position:fixed;z-index:1248;left:max(12px,calc((100vw - min(100vw,760px))/2 + 12px));
+ bottom:max(94px,calc(82px + env(safe-area-inset-bottom)));min-width:118px;height:68px;padding:9px 13px;
+ border:1px solid rgba(167,213,237,.2);border-radius:18px;background:rgba(8,17,23,.93);
+ box-shadow:0 8px 24px rgba(0,0,0,.34);backdrop-filter:blur(14px);
+ display:flex;align-items:center;gap:10px;color:#f5fbff;pointer-events:none
+}
+.hb-weather-icon{width:38px;text-align:center;font-size:2rem;line-height:1;filter:drop-shadow(0 0 8px rgba(255,193,62,.22))}
+.hb-home-weather strong{display:block;font-size:1.28rem;line-height:1;font-weight:850;letter-spacing:-.035em}
+.hb-home-weather span{display:block;margin-top:5px;color:#b9cbd6;font-size:.64rem;font-weight:650;white-space:nowrap}
+@media(max-width:430px){
+ .hb-home-weather{left:8px;bottom:max(88px,calc(77px + env(safe-area-inset-bottom)));min-width:100px;height:58px;padding:7px 10px;border-radius:15px;gap:7px}
+ .hb-weather-icon{width:31px;font-size:1.65rem}.hb-home-weather strong{font-size:1.05rem}.hb-home-weather span{font-size:.54rem;margin-top:4px}
+}
