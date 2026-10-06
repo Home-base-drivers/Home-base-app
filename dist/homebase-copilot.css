@@ -609,3 +609,10 @@
  .hb-shell-active .hb-ref-left{left:8px!important}
  .hb-shell-active .hb-ref-right{right:8px!important}
 }
+
+
+/* Optical alignment: right map controls sit slightly lower to match left stack */
+.hb-shell-active .hb-ref-right{top:calc(35% + 12px)!important}
+@media(max-width:430px){
+ .hb-shell-active .hb-ref-right{top:calc(36% + 10px)!important}
+}
