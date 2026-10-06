@@ -32,6 +32,7 @@ jobs:
           node --check dist/homebase-growth.js
           node --check dist/homebase-dispatch.js
           node --check dist/homebase-copilot.js
+          node --check dist/homebase-live-assistant.js
           npm run build:dispatch-function
       - name: Test the app and private account backend
         run: npm test
