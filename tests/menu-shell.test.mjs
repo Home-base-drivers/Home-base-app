@@ -42,3 +42,11 @@ test('planner toolbar commands are available from the side drawer',()=>{
   assert.match(shell,new RegExp('data-control=["\\\']'+id+'["\\\']'));
  }
 });
+
+
+test('planner itself force-hides legacy map controls even before shell CSS applies',()=>{
+ assert.match(planner,/toolbar\.style\.display='none'/);
+ assert.match(planner,/showView\.style\.display='none'/);
+ assert.match(planner,/showTabs\.style\.display='none'/);
+ assert.match(planner,/restore\.style\.display='none'/);
+});
