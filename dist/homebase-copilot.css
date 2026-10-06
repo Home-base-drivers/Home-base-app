@@ -192,3 +192,6 @@
     0 0 0 5px rgba(112,207,255,.1),
     0 6px 18px rgba(0,0,0,.32);
 }
+
+/* Shell-native menu visibility */
+.hb-shell-active.hb-show-nav .home-nav{display:grid!important;pointer-events:auto}
