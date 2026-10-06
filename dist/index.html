@@ -88,8 +88,8 @@
     .homebase-route-core{shape-rendering:geometricPrecision;filter:drop-shadow(0 0 2px rgba(230,253,255,.96))}
     .homebase-route-flow{stroke-dasharray:9 25;stroke-dashoffset:0;filter:drop-shadow(0 0 2px rgba(210,250,255,.95)) drop-shadow(0 0 5px rgba(0,174,255,.58));animation:homebaseRouteFlow 1.65s linear infinite;shape-rendering:geometricPrecision;pointer-events:none}
     .homebase-route-reveal{animation:homebaseRouteReveal .38s ease-out both}
-    .planner-drive .homebase-route-flow{stroke-width:2.7!important;opacity:1!important;filter:drop-shadow(0 0 3px #e8fdff) drop-shadow(0 0 7px rgba(0,183,255,.78))}
-    .planner-drive .homebase-route-clean{stroke-width:3.5!important}
+    .planner-drive .homebase-route-flow{stroke-width:2.4!important;opacity:1!important;filter:drop-shadow(0 0 3px #e8fdff) drop-shadow(0 0 7px rgba(0,183,255,.78))}
+    .planner-drive .homebase-route-clean{stroke-width:3.1!important}
     @keyframes homebaseRouteFlow{to{stroke-dashoffset:-68}}
     @keyframes homebaseRouteReveal{from{opacity:.28}to{opacity:1}}
     @media(prefers-reduced-motion:reduce){.homebase-route-flow,.homebase-route-reveal{animation:none!important}}
@@ -243,7 +243,7 @@ function mapLabels(){return L.tileLayer(esriTiles+'Reference/World_Boundaries_an
 const streetLabelLayer=L.tileLayer(esriTiles+'Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',{...darkMapOptions,pane:'labelsPane',attribution:'Labels © Esri'});
 const streetLayer=L.layerGroup([streetBaseLayer,streetLabelLayer]);
 const satelliteLayer=L.layerGroup([L.tileLayer(esriTiles+'World_Imagery/MapServer/tile/{z}/{y}/{x}',imageryOptions),mapRoads(),mapLabels()]);
-const initialBaseMap=(()=>{try{return localStorage.getItem('homeBaseBaseMapMode')||'dark'}catch{return'dark'}})();
+const initialBaseMap='dark';
 let activeBaseMapMode='satellite';
 function setBaseLayer(mode){
   const baseMode=mode==='dark'?'dark':'satellite';
@@ -391,7 +391,7 @@ function renderDemandGrid(sources,index,when){
   demandAreas.forEach(area=>{
     const bounds=L.geoJSON(area.feature).getBounds(),center=bounds.getCenter(),name=area.name;
     if(!name||!showDemandAreaLabel(name,zoom,area.areaType)||!visible.contains(center))return;
-    const point=liveMap.latLngToLayerPoint(center),spacing=zoom>=16?42:zoom>=15?56:zoom>=14?68:78;
+    const point=liveMap.latLngToLayerPoint(center),spacing=zoom>=16?64:zoom>=15?82:zoom>=14?108:138;
     if(occupied.some(existing=>existing.distanceTo(point)<spacing))return;
     occupied.push(point);
     L.marker(center,{pane:'markerPane',interactive:false,keyboard:false,icon:L.divIcon({className:'heat-area-label',html:safeText(name),iconSize:null})}).addTo(heatAreaLayer);
@@ -714,6 +714,17 @@ async function loadWeather(lat,lon){
   }catch(e){
     weatherFeedAt=null;renderFeedSignal();hourlyRainForecast=[];
     let cached=null;try{cached=JSON.parse(localStorage.getItem('homeBaseLastWeather')||'null')}catch{}
+    if(!cached?.available){
+      try{
+        const fallbackUnit=metric?'celsius':'fahrenheit';
+        const fallback=await fetchJSON(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,is_day&temperature_unit=${fallbackUnit}&timezone=auto`,6000);
+        if(fallback?.current&&Number.isFinite(Number(fallback.current.temperature_2m))){
+          const fallbackTemp=Math.round(Number(fallback.current.temperature_2m));
+          cached={temp:`${fallbackTemp}°`,code:fallback.current.weather_code,isDay:Number(fallback.current.is_day)===1,rain:0,available:true,savedAt:Date.now()};
+          try{localStorage.setItem('homeBaseLastWeather',JSON.stringify(cached))}catch{}
+        }
+      }catch{}
+    }
     if(cached?.available&&cached.savedAt&&Date.now()-cached.savedAt<21600000){
       window.HomeBaseWeatherState=cached;window.HomeBaseShell?.updateWeather?.(cached);
       $('#weatherTemp').textContent=String(cached.temp||'--');$('#weatherText').textContent='Recent local conditions';
@@ -837,7 +848,7 @@ function mergeDemandSources(baseline,verified){
   [...baseline,...verified].forEach(source=>{if(!Number.isFinite(source.lat)||!Number.isFinite(source.lon))return;const key=`${Number(source.lat).toFixed(4)}:${Number(source.lon).toFixed(4)}:${eventToken(source.name).slice(0,32)}`;if(seen.has(key))return;seen.add(key);merged.push(source)});
   return merged
 }
-function drawRoutePath(path){routeStrokeLayers.forEach(layer=>liveMap.removeLayer(layer));routeLayers=routeLayers.filter(layer=>!routeStrokeLayers.includes(layer));const casing=L.polyline(path,{color:'#00111e',weight:7,opacity:.92,interactive:false,lineCap:'round',lineJoin:'round',smoothFactor:.55,className:'homebase-route-reveal'}).addTo(liveMap),bloom=L.polyline(path,{color:'#006fff',weight:5,opacity:.3,interactive:false,lineCap:'round',lineJoin:'round',smoothFactor:.55,className:'homebase-route-bloom homebase-route-reveal'}).addTo(liveMap),route=L.polyline(path,{color:'#14baff',weight:3.1,opacity:1,interactive:false,lineCap:'round',lineJoin:'round',smoothFactor:.55,className:'homebase-route-clean homebase-route-reveal'}).addTo(liveMap),core=L.polyline(path,{color:'#dffbff',weight:.9,opacity:.82,interactive:false,lineCap:'round',lineJoin:'round',smoothFactor:.55,className:'homebase-route-core homebase-route-reveal'}).addTo(liveMap),flow=L.polyline(path,{color:'#bff6ff',weight:2.15,opacity:.92,interactive:false,lineCap:'round',lineJoin:'round',smoothFactor:.55,dashArray:'9 25',className:'homebase-route-flow'}).addTo(liveMap);routeStrokeLayers=[casing,bloom,route,core,flow];routeLayers.push(...routeStrokeLayers)}
+function drawRoutePath(path){routeStrokeLayers.forEach(layer=>liveMap.removeLayer(layer));routeLayers=routeLayers.filter(layer=>!routeStrokeLayers.includes(layer));const casing=L.polyline(path,{color:'#00111e',weight:6.2,opacity:.92,interactive:false,lineCap:'round',lineJoin:'round',smoothFactor:.55,className:'homebase-route-reveal'}).addTo(liveMap),bloom=L.polyline(path,{color:'#006fff',weight:4.4,opacity:.28,interactive:false,lineCap:'round',lineJoin:'round',smoothFactor:.55,className:'homebase-route-bloom homebase-route-reveal'}).addTo(liveMap),route=L.polyline(path,{color:'#14baff',weight:2.75,opacity:.98,interactive:false,lineCap:'round',lineJoin:'round',smoothFactor:.55,className:'homebase-route-clean homebase-route-reveal'}).addTo(liveMap),core=L.polyline(path,{color:'#dffbff',weight:.8,opacity:.78,interactive:false,lineCap:'round',lineJoin:'round',smoothFactor:.55,className:'homebase-route-core homebase-route-reveal'}).addTo(liveMap),flow=L.polyline(path,{color:'#bff6ff',weight:1.9,opacity:.88,interactive:false,lineCap:'round',lineJoin:'round',smoothFactor:.55,dashArray:'9 25',className:'homebase-route-flow'}).addTo(liveMap);routeStrokeLayers=[casing,bloom,route,core,flow];routeLayers.push(...routeStrokeLayers)}
 function restaurantDistrictCandidates(lat,lon,when){if(!isGreaterBaltimoreLocation(lat,lon))return[];const parts=marketParts(when),hour=parts.hour+when.getMinutes()/60,weekend=parts.day===0||parts.day===6,busy=hour>=11&&hour<14||hour>=17&&hour<22||weekend&&hour>=14&&hour<23;if(!busy)return[];const districts=[['Inner Harbor dining district',39.2851,-76.6132],['Harbor East dining district',39.2831,-76.6022],['Fells Point dining district',39.2825,-76.5934],['Canton dining district',39.2803,-76.5754],['Towson dining district',39.4015,-76.6019],['Catonsville dining district',39.2721,-76.7319],['Columbia dining district',39.2037,-76.8610],['Glen Burnie dining district',39.1626,-76.6247]];return districts.map(([name,pointLat,pointLon])=>({name,cat:'restaurant_district',lat:pointLat,lon:pointLon,tags:{aggregateDistrict:true,modelEstimate:true}})).map(point=>({...point,distance:distanceKm([lat,lon],[point.lat,point.lon])})).filter(point=>point.distance<=8).sort((a,b)=>a.distance-b.distance).slice(0,3)}
 function buildRoute(venues,lat,lon,market,publicHeatSources=venues){
   hourlyDestinations=[];
@@ -928,7 +939,7 @@ async function refreshLiveDemandLayer(){
 if(!demoLocale)setTimeout(autoRefreshGps,150);
 setInterval(()=>{updateClimateAdvisory();const selected=$('[data-hour][aria-pressed="true"]');if(selected&&selected.dataset.hour==='0'&&activeStops.length)applyTimeForecast(0,new Date());refreshLiveDemandLayer()},300000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-lastAutoGpsRefresh>300000)autoRefreshGps()});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=167',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';}));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=168',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';}));
 </script>
 <script src="homebase-live.js?v=38"></script>
 </body>
