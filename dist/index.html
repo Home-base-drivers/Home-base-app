@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#051424">
+  <meta name="theme-color" content="#171d22">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Home Base">
@@ -204,7 +204,7 @@
 <script src="homebase-config.js?v=111"></script>
 <script src="homebase-backend.js?v=124"></script>
 <script src="homebase-growth.js?v=124"></script>
-<link rel="stylesheet" href="homebase-copilot.css?v=9">
+<link rel="stylesheet" href="homebase-copilot.css?v=10">
 <script src="homebase-dispatch.js?v=2"></script>
 <script src="homebase-languages.js?v=2"></script>
 <script src="homebase-voice.js?v=4"></script>
@@ -235,7 +235,7 @@ function mapLabels(){return L.tileLayer(esriTiles+'Reference/World_Boundaries_an
 const streetLabelLayer=L.tileLayer(esriTiles+'Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',{...darkMapOptions,pane:'labelsPane',attribution:'Labels © Esri'});
 const streetLayer=L.layerGroup([streetBaseLayer,streetLabelLayer]);
 const satelliteLayer=L.layerGroup([L.tileLayer(esriTiles+'World_Imagery/MapServer/tile/{z}/{y}/{x}',imageryOptions),mapRoads(),mapLabels()]);
-const initialBaseMap=(()=>{try{return localStorage.getItem('homeBaseBaseMapMode')||'satellite'}catch{return'satellite'}})();
+const initialBaseMap=(()=>{try{return localStorage.getItem('homeBaseBaseMapMode')||'dark'}catch{return'dark'}})();
 let activeBaseMapMode='satellite';
 function setBaseLayer(mode){
   const baseMode=mode==='dark'?'dark':'satellite';
@@ -873,7 +873,7 @@ async function refreshLiveDemandLayer(){
 if(!demoLocale)setTimeout(autoRefreshGps,150);
 setInterval(()=>{updateClimateAdvisory();const selected=$('[data-hour][aria-pressed="true"]');if(selected&&selected.dataset.hour==='0'&&activeStops.length)applyTimeForecast(0,new Date());refreshLiveDemandLayer()},300000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-lastAutoGpsRefresh>300000)autoRefreshGps()});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=139',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';}));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=140',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';}));
 </script>
 <script src="homebase-live.js?v=37"></script>
 </body>
