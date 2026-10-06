@@ -338,3 +338,11 @@
  .hb-shell-active .hb-menu-toggle{left:13px;top:max(14px,calc(env(safe-area-inset-top) + 8px));width:42px;height:48px}
  .hb-shell-active .hb-menu-toggle svg{width:28px;height:28px}
 }
+
+
+/* Live provider price/surge badges on the map */
+.hb-price-badge{position:relative;display:flex;align-items:center;justify-content:center;min-width:68px;height:36px;padding:0 11px;border-radius:13px;background:rgba(9,17,23,.94);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",Arial,sans-serif;font-size:.88rem;font-weight:760;line-height:1;white-space:nowrap;box-shadow:0 0 0 1.5px var(--price),0 0 16px color-mix(in srgb,var(--price) 46%,transparent),0 7px 16px rgba(0,0,0,.42);color:#f8fbfd}
+.hb-price-badge:after{content:'';position:absolute;left:50%;bottom:-12px;width:7px;height:7px;transform:translateX(-50%);border-radius:50%;background:var(--price);box-shadow:0 0 10px var(--price),0 0 18px var(--price)}
+.hb-price-badge .platform-dot{width:7px;height:7px;border-radius:50%;background:var(--price);margin-right:6px;box-shadow:0 0 7px var(--price)}
+.hb-price-badge.uber{--price:#f2f6f8;color:#fff}.hb-price-badge.lyft{--price:#ff3fb4}.hb-price-badge.empower{--price:#278dff}
+.hb-price-badge small{display:block;margin-left:5px;color:#9fb1bd;font-size:.45rem;font-weight:800;letter-spacing:.08em}
