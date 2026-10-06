@@ -309,3 +309,32 @@
  .hb-home-weather{left:8px;bottom:max(88px,calc(77px + env(safe-area-inset-bottom)));min-width:100px;height:58px;padding:7px 10px;border-radius:15px;gap:7px}
  .hb-weather-icon{width:31px;font-size:1.65rem}.hb-home-weather strong{font-size:1.05rem}.hb-home-weather span{font-size:.54rem;margin-top:4px}
 }
+
+
+/* Reference-brand header block: same dark glass background, white wordmark, muted subtitle */
+.hb-shell-active .hb-menu-toggle{
+ background:transparent!important;border:0!important;box-shadow:none!important;backdrop-filter:none!important;
+ left:max(18px,calc((100vw - min(100vw,760px))/2 + 18px));top:max(17px,calc(env(safe-area-inset-top) + 11px));z-index:1252
+}
+.hb-shell-active .hb-home-word{
+ left:max(12px,calc((100vw - min(100vw,760px))/2 + 12px));top:max(9px,calc(env(safe-area-inset-top) + 3px));
+ width:292px;min-height:76px;padding:15px 16px 12px 78px;border-radius:20px;
+ background:linear-gradient(145deg,rgba(10,24,33,.96),rgba(7,19,27,.92));
+ border:1px solid rgba(159,202,226,.08);box-shadow:0 10px 28px rgba(0,0,0,.35);
+ backdrop-filter:blur(14px);justify-content:center;pointer-events:none
+}
+.hb-shell-active .hb-home-word strong{
+ font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",Arial,sans-serif;
+ color:#f5f7f9;font-size:1.62rem;font-weight:720;letter-spacing:-.035em;line-height:1
+}
+.hb-shell-active .hb-home-word small{
+ font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;
+ color:#aab9c7;font-size:.78rem;font-weight:450;letter-spacing:.005em;line-height:1.1;margin-top:4px
+}
+.hb-shell-active .hb-menu-toggle svg{width:31px;height:31px;stroke:#d9e3e9;stroke-width:1.9}
+@media(max-width:430px){
+ .hb-shell-active .hb-home-word{left:7px;width:255px;min-height:67px;padding:12px 12px 10px 66px;border-radius:17px}
+ .hb-shell-active .hb-home-word strong{font-size:1.38rem}.hb-shell-active .hb-home-word small{font-size:.67rem}
+ .hb-shell-active .hb-menu-toggle{left:13px;top:max(14px,calc(env(safe-area-inset-top) + 8px));width:42px;height:48px}
+ .hb-shell-active .hb-menu-toggle svg{width:28px;height:28px}
+}
