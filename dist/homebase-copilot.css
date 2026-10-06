@@ -803,12 +803,12 @@
 
 /* Keep the entire Events + Route card visibly below the platform-price strip */
 .hb-shell-active #routePlan{
- top:max(308px,calc(env(safe-area-inset-top) + 298px))!important;
+ top:max(283px,calc(env(safe-area-inset-top) + 273px))!important;
  max-height:min(50vh,650px)!important;
 }
 @media(max-width:430px){
  .hb-shell-active #routePlan{
-  top:max(306px,calc(env(safe-area-inset-top) + 296px))!important;
+  top:max(281px,calc(env(safe-area-inset-top) + 271px))!important;
   max-height:48vh!important;
  }
 }
