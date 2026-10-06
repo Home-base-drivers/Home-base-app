@@ -13,6 +13,13 @@
     ember: [[0,[74,47,111]],[.16,[111,49,156]],[.32,[174,54,139]],[.48,[224,73,94]],[.64,[246,123,55]],[.8,[250,181,48]],[1,[255,230,112]]],
     mint: [[0,[8,72,83]],[.2,[7,125,126]],[.42,[17,173,139]],[.64,[76,213,133]],[.82,[164,240,142]],[1,[235,255,213]]],
     ice: [[0,[16,35,74]],[.2,[24,74,142]],[.42,[45,126,210]],[.64,[101,185,240]],[.82,[183,229,255]],[1,[255,255,255]]],
+    aurora: [[0,[53,36,92]],[.25,[54,72,136]],[.5,[22,140,145]],[.75,[95,220,185]],[1,[181,255,225]]],
+    violet_rose: [[0,[56,35,89]],[.25,[108,53,139]],[.5,[188,85,159]],[.75,[242,168,211]],[1,[255,240,247]]],
+    blue_gold: [[0,[21,57,101]],[.25,[32,97,159]],[.5,[48,153,203]],[.75,[170,212,188]],[1,[255,240,166]]],
+    coral_sand: [[0,[82,45,77]],[.25,[153,68,94]],[.5,[231,123,102]],[.75,[249,186,139]],[1,[255,240,196]]],
+    teal_lime: [[0,[7,78,89]],[.25,[13,128,123]],[.5,[42,184,146]],[.75,[151,223,121]],[1,[237,255,168]]],
+    royal_ice: [[0,[39,43,115]],[.25,[78,84,175]],[.5,[141,147,230]],[.75,[197,211,248]],[1,[248,250,255]]],
+    custom: [[0,[104,56,196]],[.5,[31,146,255]],[1,[255,255,255]]],
     monochrome: [[0,[43,54,63]],[.2,[70,84,94]],[.42,[107,122,132]],[.64,[151,166,176]],[.82,[205,216,223]],[1,[255,255,255]]]
   };
   let activePalette = 'classic';
@@ -31,6 +38,17 @@
     if (!Object.prototype.hasOwnProperty.call(PALETTES, name)) return activePalette;
     activePalette = name;
     return activePalette;
+  }
+
+  function getCustomColors() {
+    return PALETTES.custom.map(stop => '#' + stop[1].map(channel => channel.toString(16).padStart(2, '0')).join(''));
+  }
+
+  function setCustomColors(colors) {
+    if (!Array.isArray(colors) || colors.length !== 3 ||
+        !colors.every(color => typeof color === 'string' && /^#[0-9a-f]{6}$/i.test(color))) return null;
+    PALETTES.custom = colors.map((color, index) => [index / 2, [1,3,5].map(offset => parseInt(color.slice(offset, offset + 2), 16))]);
+    return getCustomColors();
   }
 
   function colorAt(level) {
@@ -429,5 +447,5 @@
     return new HeatLayer();
   }
 
-  return { colorAt, setPalette, getPalette: () => activePalette, paletteNames: Object.keys(PALETTES), sourceStrength, areaIntensity, sourceShade, compositeLevel, compositeOpacity, sourceRadiusKm, sourceFootprintKm, anchoredGridOrigin, createLayer };
+  return { colorAt, setPalette, getCustomColors, setCustomColors, getPalette: () => activePalette, paletteNames: Object.keys(PALETTES), sourceStrength, areaIntensity, sourceShade, compositeLevel, compositeOpacity, sourceRadiusKm, sourceFootprintKm, anchoredGridOrigin, createLayer };
 });
