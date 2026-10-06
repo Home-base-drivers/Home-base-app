@@ -73,7 +73,7 @@ test('hourly destination markers are on the selected route and open an informati
 test('passenger destinations aggregate restaurant activity into busy-time districts', () => {
   assert.match(indexHtml, /function restaurantDistrictCandidates/);
   assert.match(indexHtml, /cat:'restaurant_district'/);
-  assert.match(indexHtml, /v\.cat!=='restaurant'/);
+  assert.match(indexHtml, /HomeBaseRoutePolicy.candidatesForHour/);
   assert.match(indexHtml, /hour>=11&&hour<14\|\|hour>=17&&hour<22/);
   assert.match(indexHtml, /ARTS:'🎨'.+MUSIC:'🎵'.+THEATER:'🎭'.+NIGHTLIFE:'🍸'.+FESTIVAL:'🎉'/s);
 });
@@ -114,15 +114,15 @@ test('K–12 pickup and university demand use different timing models', () => {
   assert.match(indexHtml, /\['Phoenix','neighborhood'/);
   assert.match(indexHtml, /weekday&&h>=13&&h<19\?7/);
   assert.match(indexHtml, /K–12 pickup and dismissal window/);
-  assert.match(indexHtml, /All-day campus activity/);
-  assert.match(indexHtml, /h>=15\.75&&h<16\.5/);
-  assert.match(indexHtml, /h>=16\.5&&h<17/);
+  assert.match(indexHtml, /Modeled campus background · dated events required for routing/);
+  assert.match(indexHtml, /HomeBaseRoutePolicy.schoolWeight/);
   assert.match(indexHtml, /h>=15\.5&&h<20/);
 });
 
 test('stadium heat and route stops require a dated verified event', () => {
   assert.match(indexHtml, /source\.cat==='event'&&!source\.eventStart/);
-  assert.match(indexHtml, /v\.cat!=='event'\|\|v\.eventStart/);
+  assert.match(indexHtml, /HomeBaseRoutePolicy.candidatesForHour/);
+  assert.match(indexHtml, /HomeBaseRoutePolicy.selectRanked/);
   assert.match(indexHtml, /heatOnly:source\.cat==='event'/);
   assert.match(indexHtml, /function eventScale/);
   assert.match(indexHtml, /function rainDemandBoost/);

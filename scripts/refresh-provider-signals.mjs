@@ -39,6 +39,8 @@ export function haversineKm(a, b) {
 }
 
 export function normalizeTicketmasterEvent(event, now = NOW) {
+  // A postponed/canceled listing or TBA time is not a current route signal.
+  if (/^(canceled|cancelled|postponed)$/i.test(event?.dates?.status?.code || '') || event?.dates?.start?.dateTBD || event?.dates?.start?.dateTBA || event?.dates?.start?.timeTBA) return null;
   const venue = event?._embedded?.venues?.[0];
   const lat = Number(venue?.location?.latitude), lon = Number(venue?.location?.longitude);
   const start = event?.dates?.start?.dateTime;
