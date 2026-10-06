@@ -86,10 +86,11 @@ test('clean-shell menu commands have visible native behavior',()=>{
 });
 
 
-test('Home HUD disappears outside Map and while the drawer is open',()=>{
+test('Map HUD hides outside Map while persistent navigation remains available',()=>{
  assert.match(shell,/function syncHomeHud\(\)/);
  assert.match(shell,/app\.classList\.contains\('map-mode'\)/);
- assert.match(shell,/for\(const node of \[homeWord,menuButton,homeControls,weatherCard,voice,liveText\]\)node\.hidden=!show/);
+ assert.match(shell,/for\(const node of \[homeWord,menuButton,weatherCard\]\)node\.hidden=!mapHudShow/);
+ assert.match(shell,/homeControls\.hidden=!bottomNavShow;voice\.hidden=!bottomNavShow;liveText\.hidden=!bottomNavShow/);
  assert.match(shell,/function openMenu\(\)[\s\S]{0,260}syncHomeHud\(\)/);
  assert.match(css,/\.hb-reference-controls\[hidden\][\s\S]{0,220}display:none!important/);
 });
@@ -105,4 +106,19 @@ test('Homebase lettering stays visibly above the dark header background',()=>{
  assert.match(css,/Keep the Homebase lettering above the glass header/);
  assert.match(css,/\.hb-shell-active \.hb-home-word strong\{color:#f5f7f9!important;-webkit-text-fill-color:#f5f7f9!important;opacity:1!important\}/);
  assert.match(css,/\.hb-shell-active \.hb-home-word small\{color:#aab9c7!important;-webkit-text-fill-color:#aab9c7!important;opacity:1!important\}/);
+});
+
+
+test('bottom navigation persists across workspace tabs without leaking map controls',()=>{
+ assert.match(shell,/const mapHudShow=onMap&&!workspaceOpen&&chat\.hidden&&!menuOpen,bottomNavShow=chat\.hidden&&!menuOpen/);
+ assert.match(shell,/homeControls\.hidden=!bottomNavShow;voice\.hidden=!bottomNavShow;liveText\.hidden=!bottomNavShow/);
+ assert.match(css,/\.hb-shell-active:not\(\.hb-home-hud-visible\) \.hb-ref-top,[\s\S]{0,300}\.hb-ref-right\{display:none!important\}/);
+ assert.match(css,/\.hb-shell-active\.hb-workspace-open \.hb-ref-bottom\{display:grid!important/);
+ assert.match(shell,/function syncBottomNav\(\)/);
+});
+
+test('voice orb is aligned to the Ask Homebase navigation column',()=>{
+ assert.match(css,/left:calc\(50% \+ min\(100vw,760px\)\/16\)/);
+ assert.match(css,/width:54px;height:54px/);
+ assert.match(css,/scale\(1\.1\)/);
 });
