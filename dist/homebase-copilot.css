@@ -163,3 +163,32 @@
     0 9px 28px rgba(0,0,0,.44),
     0 0 30px rgba(202,238,255,.58);
 }
+
+
+/* Charcoal + smoked-ice refinement — approved Homebase direction */
+.hb-shell-active.app.dark,.hb-shell-active .map{background:#171d22!important}
+.hb-shell-active.app.dark .leaflet-tile-pane{filter:brightness(.88) contrast(1.12) saturate(.68)}
+.hb-voice-bubble{
+  border:1px solid rgba(132,215,255,.72);
+  background:rgba(15,29,39,.46);
+  -webkit-backdrop-filter:blur(12px) saturate(112%);
+  backdrop-filter:blur(12px) saturate(112%);
+  box-shadow:
+    inset 0 1px 1px rgba(255,255,255,.12),
+    inset 0 -1px 2px rgba(5,18,28,.18),
+    0 5px 16px rgba(0,0,0,.3);
+}
+.hb-voice-bubble svg{
+  stroke:rgba(250,253,255,.98);
+  filter:none;
+}
+.hb-voice-bubble:before,.hb-voice-bubble:after,.hb-voice-ring{
+  border-color:rgba(139,220,255,.58);
+  box-shadow:none;
+}
+.hb-voice-bubble.listening,.hb-voice-bubble.responding{
+  box-shadow:
+    inset 0 1px 1px rgba(255,255,255,.14),
+    0 0 0 5px rgba(112,207,255,.1),
+    0 6px 18px rgba(0,0,0,.32);
+}
