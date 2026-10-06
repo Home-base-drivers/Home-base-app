@@ -13,7 +13,7 @@ export function makeDispatchHandler({engine,authenticate,loadState,loadTrips,par
    const payload=JSON.parse(raw);if(!['score','recommend','chat','translate','voice','live-session'].includes(payload.operation))return response({error:'Unsupported operation'},400);
    if(payload.operation==='live-session'){
     if(!createLiveSession)return response({configured:false,error:'GPT Live is not configured on the Home Base server.'},503);
-    return response(await createLiveSession({sdp:payload.sdp,locale:payload.locale,voice:payload.voice,style:payload.style,history:payload.history}));
+    return response(await createLiveSession({sdp:payload.sdp,locale:payload.locale,voice:payload.voice,style:payload.style,history:payload.history,context:payload.context}));
    }
    if(payload.operation==='voice'){
     if(!synthesizeVoice)return response({configured:false,provider:'not_configured'});
