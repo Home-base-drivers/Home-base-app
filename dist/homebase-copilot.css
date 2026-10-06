@@ -1143,3 +1143,12 @@
  .hb-platform-open{width:24px;height:40px;border-radius:7px}
  .hb-platform-open svg{width:14px;height:14px}
 }
+#hbLocationOptions{box-sizing:border-box;width:min(92vw,400px);max-height:80dvh;overflow:auto;border:1px solid #2784ab;border-radius:18px;background:#071923;color:#eef8ff;padding:18px;font:14px system-ui;z-index:9999}
+#hbLocationOptions::backdrop{background:#0009}
+#hbLocationOptions header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+#hbLocationOptions h2{font-size:20px;margin:0}
+#hbLocationOptions p{color:#a9bdca;line-height:1.45}
+#hbLocationOptions button{min-height:44px;padding:10px 14px;border:1px solid #287dab;border-radius:10px;background:#12354b;color:white;font:inherit;cursor:pointer}
+#hbLocationOptions fieldset{min-width:0;margin:16px 0 0;border:1px solid #355463;border-radius:12px;padding:12px}
+#hbLocationOptions label{display:block;margin-bottom:12px}
+#hbLocationOptions input{box-sizing:border-box;width:100%;min-width:0;display:block;margin-top:5px;padding:10px;border-radius:8px;border:1px solid #355463;background:#06121b;color:white;font:inherit}
