@@ -204,11 +204,11 @@
 <script src="homebase-config.js?v=111"></script>
 <script src="homebase-backend.js?v=124"></script>
 <script src="homebase-growth.js?v=124"></script>
-<link rel="stylesheet" href="homebase-copilot.css?v=14">
+<link rel="stylesheet" href="homebase-copilot.css?v=15">
 <script src="homebase-dispatch.js?v=2"></script>
 <script src="homebase-languages.js?v=2"></script>
 <script src="homebase-voice.js?v=4"></script>
-<script src="homebase-copilot.js?v=15"></script>
+<script src="homebase-copilot.js?v=16"></script>
 <script src="homebase-live-assistant.js?v=2"></script>
 <script>
 const app=document.getElementById('app');
@@ -697,7 +697,7 @@ function rainDemandBoost(source,when=new Date()){const target=when instanceof Da
 function schoolWeight(when){const mp=marketParts(when),day=mp.day,hour=mp.hour+when.getMinutes()/60;if(day<1||day>5||hour<13.5||hour>=17)return 0;if(hour<15.75)return 12;if(hour<16.5)return 7;return 3}
 function trendWeight(cat,stopIndex){if(surgeTrend!=='cooling'||stopIndex>0)return 0;if(cat==='school'||cat==='k12')return 4;if(cat==='transit'||cat==='restaurant')return 1;return-2}
 function distanceKm(a,b){const x=(a[1]-b[1])*Math.cos((a[0]+b[0])*.00872665),y=a[0]-b[0];return Math.sqrt(x*x+y*y)*111}
-async function loadWeather(lat,lon){try{const u=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&hourly=precipitation_probability&forecast_days=2&timezone=auto`,w=await fetchJSON(u,4500);weatherFeedAt=new Date().toISOString();renderFeedSignal();if(w.timezone)marketTimeZone=w.timezone;const metric=currentMoney.code!=='USD',temp=metric?Math.round(w.current.temperature_2m):Math.round(w.current.temperature_2m*9/5+32),unit=metric?'°C':'°F';hourlyRainForecast=(w.hourly?.time||[]).map((time,i)=>({time:Date.parse(time),probability:Number(w.hourly.precipitation_probability?.[i])||0})).filter(item=>Number.isFinite(item.time));const now=Date.now(),next12=hourlyRainForecast.filter(item=>item.time>=now-1800000&&item.time<=now+12*3600000),rain=next12.length?Math.max(...next12.map(item=>item.probability)):0;currentRainChance=rain;updateClimateAdvisory();updateClock();renderDemandGrid(activeDemandSources,0,selectedForecastTime);$('#weatherTemp').textContent=`${temp}${unit}`;$('#weatherTitle').textContent='LOCAL CONDITIONS';$('#weatherText').textContent=rain>=50?`Rain chance ${rain}% · higher ride demand possible`:`Rain chance ${rain||0}% · normal demand effect`}catch(e){weatherFeedAt=null;renderFeedSignal();hourlyRainForecast=[];$('#weatherTemp').textContent='--';$('#weatherText').textContent='Current weather unavailable · route remains active'}}
+async function loadWeather(lat,lon){try{const u=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&hourly=precipitation_probability&forecast_days=2&timezone=auto`,w=await fetchJSON(u,4500);weatherFeedAt=new Date().toISOString();renderFeedSignal();if(w.timezone)marketTimeZone=w.timezone;const metric=currentMoney.code!=='USD',temp=metric?Math.round(w.current.temperature_2m):Math.round(w.current.temperature_2m*9/5+32),unit=metric?'°C':'°F';hourlyRainForecast=(w.hourly?.time||[]).map((time,i)=>({time:Date.parse(time),probability:Number(w.hourly.precipitation_probability?.[i])||0})).filter(item=>Number.isFinite(item.time));const now=Date.now(),next12=hourlyRainForecast.filter(item=>item.time>=now-1800000&&item.time<=now+12*3600000),rain=next12.length?Math.max(...next12.map(item=>item.probability)):0;currentRainChance=rain;updateClimateAdvisory();updateClock();renderDemandGrid(activeDemandSources,0,selectedForecastTime);$('#weatherTemp').textContent=`${temp}${unit}`;$('#weatherTitle').textContent='LOCAL CONDITIONS';$('#weatherText').textContent=rain>=50?`Rain chance ${rain}% · higher ride demand possible`:`Rain chance ${rain||0}% · normal demand effect`;window.HomeBaseShell?.updateWeather?.({temp:`${temp}°`,code:w.current.weather_code,available:true})}catch(e){weatherFeedAt=null;renderFeedSignal();hourlyRainForecast=[];$('#weatherTemp').textContent='--';$('#weatherText').textContent='Current weather unavailable · route remains active';window.HomeBaseShell?.updateWeather?.({available:false})}}
 function interstateRefs(tags){const ref=String(tags&&tags.ref||'').toUpperCase(),matches=ref.match(/I[\\s-]?\\d{1,3}[A-Z]?/g)||[];return[...new Set(matches.map(value=>value.replace(/\\s+/g,'-').replace(/^I-/,'I-')))]}
 function sameHighwayPoint(a,b){const dy=(a[0]-b[0])*111000,dx=(a[1]-b[1])*111000*Math.cos(a[0]*Math.PI/180);return dx*dx+dy*dy<25}
 function joinHighwaySegments(segments){
@@ -874,7 +874,7 @@ async function refreshLiveDemandLayer(){
 if(!demoLocale)setTimeout(autoRefreshGps,150);
 setInterval(()=>{updateClimateAdvisory();const selected=$('[data-hour][aria-pressed="true"]');if(selected&&selected.dataset.hour==='0'&&activeStops.length)applyTimeForecast(0,new Date());refreshLiveDemandLayer()},300000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-lastAutoGpsRefresh>300000)autoRefreshGps()});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=145',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';}));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=146',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';}));
 </script>
 <script src="homebase-live.js?v=37"></script>
 </body>
