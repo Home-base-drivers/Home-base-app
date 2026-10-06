@@ -616,3 +616,9 @@
 @media(max-width:430px){
  .hb-shell-active .hb-ref-right{top:calc(36% + 10px)!important}
 }
+
+
+/* Final optical side-stack alignment from device screenshot */
+@media(max-width:430px){
+ .hb-shell-active .hb-ref-right{top:calc(36% + 45px)!important}
+}
