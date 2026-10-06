@@ -998,3 +998,8 @@
 .hb-custom-heat>button{width:100%;min-height:44px;margin:16px 0 10px;padding:10px;border:1px solid #409fda;border-radius:10px;background:#176c9f;color:#fff;font-size:.72rem;font-weight:750}
 .hb-custom-heat>button:focus-visible,.hb-custom-colors input:focus-visible{outline:2px solid #b5e5ff;outline-offset:3px}
 .hb-custom-heat #hbCustomHeatStatus{margin:0;font-size:.61rem}
+
+/* Closed menus must not cover workspace tabs or intercept input. */
+.hb-side-menu:not(.open){visibility:hidden;pointer-events:none}
+.hb-side-menu.open{visibility:visible;pointer-events:auto}
+.hb-menu-backdrop[hidden]{display:none!important}
