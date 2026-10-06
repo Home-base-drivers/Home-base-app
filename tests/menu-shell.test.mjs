@@ -86,10 +86,11 @@ test('clean-shell menu commands have visible native behavior',()=>{
 });
 
 
-test('Home HUD disappears outside Map and while the drawer is open',()=>{
+test('Map HUD hides outside Map while persistent navigation remains available',()=>{
  assert.match(shell,/function syncHomeHud\(\)/);
  assert.match(shell,/app\.classList\.contains\('map-mode'\)/);
- assert.match(shell,/for\(const node of \[homeWord,menuButton,homeControls,weatherCard,voice,liveText\]\)node\.hidden=!show/);
+ assert.match(shell,/for\(const node of \[homeWord,menuButton,weatherCard\]\)node\.hidden=!mapHudShow/);
+ assert.match(shell,/homeControls\.hidden=!bottomNavShow;voice\.hidden=!bottomNavShow;liveText\.hidden=!bottomNavShow/);
  assert.match(shell,/function openMenu\(\)[\s\S]{0,260}syncHomeHud\(\)/);
  assert.match(css,/\.hb-reference-controls\[hidden\][\s\S]{0,220}display:none!important/);
 });
