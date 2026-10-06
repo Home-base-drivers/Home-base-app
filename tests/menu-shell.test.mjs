@@ -66,3 +66,21 @@ test('approved charcoal map and smoked-ice microphone treatment stay in the shel
  assert.match(css,/\.hb-voice-bubble svg\{[\s\S]*?filter:none/);
  assert.match(html,/homeBaseBaseMapMode'\)\|\|'dark'/);
 });
+
+
+test('voice Preview calls the exported Copilot preview API instead of out-of-scope private functions',()=>{
+ assert.match(shell,/const preview=window\.HomeBaseCopilot\?\.previewAiVoice/);
+ assert.doesNotMatch(shell,/hbVoicePreview'[\s\S]{0,180}unlockAiAudio\(\);await previewAiVoice\(\)/);
+ assert.match(shell,/normalizeVoiceBlob/);
+ assert.match(shell,/application\/octet-stream/);
+ assert.match(shell,/Phone voice preview/);
+});
+
+test('clean-shell menu commands have visible native behavior',()=>{
+ assert.match(shell,/targetId==='panelsBtn'/);
+ assert.match(shell,/targetId==='toggleMapTabs'/);
+ assert.match(shell,/targetId==='hideMapControls'/);
+ assert.match(shell,/targetId==='showMapControls'/);
+ assert.match(shell,/targetId==='driveViewToggle'/);
+ assert.match(css,/\.hb-shell-active\.hb-show-nav \.home-nav\{display:grid!important/);
+});
