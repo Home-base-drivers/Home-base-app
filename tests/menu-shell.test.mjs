@@ -14,9 +14,15 @@ test('every side-menu navigation and control command has a live app target',()=>
 });
 
 test('former top controls live in the side menu',()=>{
- for(const id of ['panelsBtn','layerBtn','refreshBtn','installBtn','heatToggle','paletteToggle']){
+ for(const id of ['panelsBtn','layerBtn','refreshBtn','installBtn']){
   assert.match(shell,new RegExp('data-control=["\\\']'+id+'["\\\']'));
  }
+ assert.match(shell,/data-menu-panel="heat"/);
+ assert.match(shell,/data-menu-view="heat"/);
+ assert.match(shell,/id="hbHeatVisibility"/);
+ assert.match(shell,/data-heat-palette="purple_blue_white"/);
+ assert.match(shell,/window\.HomeBaseHeatControls\.setPalette\(name\)/);
+ assert.match(shell,/window\.HomeBaseHeatControls\.toggleVisible\(\)/);
  assert.match(css,/header \.status,\.hb-shell-active header \.map-style-controls\{display:none!important\}/);
 });
 
