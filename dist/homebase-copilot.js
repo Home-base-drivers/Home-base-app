@@ -121,6 +121,7 @@ function boot(){
  function command(raw,parsed){
  if(raw&&!parsed)window.HomeBaseShell?.logChat?.('user',raw);
  const prefs=getVoicePrefs();
+ if(raw&&!parsed&&state.aiUnderstanding&&window.HomeBaseAccounts)return askAgent(raw,prefs);
  if(raw&&!parsed&&!state.aiUnderstanding&&/(busiest|busy\s+(?:area|zone|neighborhood)|best\s+(?:area|zone|neighborhood)|hotspot|zona\s+(?:más\s+)?(?:activa|ocupada|movida)|área\s+(?:más\s+)?(?:activa|ocupada)|d[oó]nde\s+(?:hay|est[aá])\s+(?:m[aá]s\s+)?demanda)/i.test(raw)){
   const zones=context().zones.filter(z=>Number.isFinite(z.score)).sort((a,b)=>b.score-a.score).slice(0,3);
   if(zones.length)return say('Right now, the highest-scoring demand areas are '+zones.map(z=>z.name).join(', ')+'. This is a Home Base prediction, not a guarantee of ride requests.');
