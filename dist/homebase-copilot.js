@@ -222,14 +222,15 @@ function bootHomeBaseShell(){
  const menuButton=document.createElement('button');
  menuButton.id='hbMenuToggle';menuButton.className='hb-menu-toggle';menuButton.type='button';menuButton.setAttribute('aria-label','Open Home Base menu');menuButton.setAttribute('aria-expanded','false');
  menuButton.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>';
+ const homeWord=document.createElement('div');homeWord.id='hbHomeWord';homeWord.className='hb-home-word';homeWord.setAttribute('aria-label','Homebase');homeWord.textContent='Homebase';
  const backdrop=document.createElement('button');backdrop.id='hbMenuBackdrop';backdrop.className='hb-menu-backdrop';backdrop.type='button';backdrop.setAttribute('aria-label','Close Home Base menu');
  const drawer=document.createElement('aside');drawer.id='hbSideMenu';drawer.className='hb-side-menu';drawer.setAttribute('aria-label','Home Base menu');drawer.setAttribute('aria-hidden','true');
  drawer.innerHTML='<div class="hb-menu-head"><div><span>HOME BASE</span><b>Driver menu</b></div><button id="hbMenuClose" type="button" aria-label="Close menu">×</button></div>'+
   '<div class="hb-menu-scroll">'+
   '<section class="hb-menu-section"><h3>GO TO</h3><div class="hb-menu-grid">'+
   '<button data-nav="navMap">Map</button><button data-nav="navEarn">Earnings</button><button data-nav="navAlerts">Alerts</button><button data-nav="navProfile">Profile</button><button data-nav="navSupport">Support</button><button id="hbChatOpen">Copilot history</button></div></section>'+
-  '<section class="hb-menu-section"><h3>MAP TOOLS</h3><div class="hb-menu-grid">'+
-  '<button data-control="heatToggle">Heat map</button><button data-control="paletteToggle">Colors</button><button data-control="layerBtn">Satellite</button><button data-control="refreshBtn">Refresh GPS</button></div></section>'+
+  '<section class="hb-menu-section"><h3>MAP + APP TOOLS</h3><div class="hb-menu-grid">'+
+  '<button data-control="heatToggle">Heat map</button><button data-control="paletteToggle">Colors</button><button data-control="layerBtn">Street / Satellite</button><button data-control="refreshBtn">Refresh GPS</button><button data-control="panelsBtn">Show / hide panels</button><button data-control="installBtn">Add to Home Screen</button></div><p id="hbMenuStatus" class="hb-menu-status" role="status" aria-live="polite"></p></section>'+
   '<section class="hb-menu-section"><div class="hb-section-title"><h3>CUSTOMIZE HOME</h3><small>Choose only what you want over the map</small></div><div id="hbModuleList" class="hb-module-list"></div></section>'+
   '<section class="hb-menu-section"><div class="hb-section-title"><h3>VOICE COPILOT</h3><small>Voice first · chat saved on this device</small></div>'+
   '<div class="hb-voice-preferences"><label><span>Language</span><select id="hbVoiceLanguage" aria-label="Copilot language"></select></label><label><span>Accent / region</span><select id="hbVoiceAccent" aria-label="Copilot accent or region"></select></label><label><span>Voice style</span><select id="hbVoiceStyle" aria-label="Voice style"><option value="all">All voices</option><option value="masculine">Masculine</option><option value="feminine">Feminine</option></select></label><label><span>Voice</span><select id="hbVoiceChoice" aria-label="Home Base AI voice"></select></label><button id="hbVoicePreview" type="button">Preview AI voice</button><p id="hbVoiceAvailability" role="status" style="font-size:.72rem;line-height:1.5"></p><p id="hbVoiceCommands" dir="auto" style="font-size:.72rem;line-height:1.5"></p><small>Home Base AI voice is AI-generated, not a human voice. Language, regional accent and vocal presentation are generated securely through the Home Base backend when signed in. Your phone voice is used only as a fallback if AI audio is unavailable.</small></div>'+
@@ -240,7 +241,10 @@ function bootHomeBaseShell(){
  const voice=document.createElement('button');voice.id='hbVoiceBubble';voice.className='hb-voice-bubble';voice.type='button';voice.setAttribute('aria-label','Talk to Home Base');voice.setAttribute('aria-pressed','false');voice.innerHTML='<span class="hb-voice-ring"></span><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4M9 21h6"/></svg>';
  const liveText=document.createElement('div');liveText.id='hbVoiceText';liveText.className='hb-voice-text';liveText.setAttribute('aria-live','polite');liveText.setAttribute('dir','auto');
  const chat=document.createElement('section');chat.id='hbChatPanel';chat.className='hb-chat-panel';chat.hidden=true;chat.innerHTML='<div class="hb-chat-head"><button id="hbChatClose" type="button" aria-label="Close Copilot history">‹</button><div><span>HOME BASE COPILOT</span><b>Conversation history</b></div><button id="hbNewChat" type="button">New</button></div><div class="hb-chat-tools"><input id="hbChatSearch" type="search" placeholder="Search conversations" aria-label="Search conversations"></div><div id="hbChatContent" class="hb-chat-content"></div>';
- app.append(backdrop,drawer,menuButton,voice,liveText,chat);
+ app.append(backdrop,drawer,homeWord,menuButton,voice,liveText,chat);
+ function syncHomeWord(){const workspace=document.getElementById('workspaceView');homeWord.hidden=!chat.hidden||!!(workspace&&!workspace.hidden)}
+ const workspaceObserverTarget=document.getElementById('workspaceView');if(workspaceObserverTarget)new MutationObserver(syncHomeWord).observe(workspaceObserverTarget,{attributes:true,attributeFilter:['hidden']});
+ syncHomeWord();
  function applyModules(){
   for(const [key] of moduleMeta)app.classList.toggle('hb-show-'+key,!!modules[key]);
   write('homeBaseHomeModules',modules);
@@ -255,8 +259,17 @@ function bootHomeBaseShell(){
  function closeMenu(){drawer.classList.remove('open');backdrop.classList.remove('open');drawer.setAttribute('aria-hidden','true');menuButton.setAttribute('aria-expanded','false')}
  menuButton.addEventListener('click',()=>drawer.classList.contains('open')?closeMenu():openMenu());
  backdrop.addEventListener('click',closeMenu);drawer.querySelector('#hbMenuClose').addEventListener('click',closeMenu);
- drawer.querySelectorAll('[data-nav]').forEach(button=>button.addEventListener('click',()=>{closeMenu();document.getElementById(button.dataset.nav)?.click()}));
- drawer.querySelectorAll('[data-control]').forEach(button=>button.addEventListener('click',()=>document.getElementById(button.dataset.control)?.click()));
+ const menuStatus=drawer.querySelector('#hbMenuStatus');
+ function runMenuCommand(button,attribute){
+  const targetId=button.dataset[attribute],target=document.getElementById(targetId);
+  if(!target){if(menuStatus)menuStatus.textContent='That control is temporarily unavailable.';return false}
+  if(menuStatus)menuStatus.textContent='';
+  closeMenu();
+  requestAnimationFrame(()=>{target.click();target.focus?.({preventScroll:true})});
+  return true;
+ }
+ drawer.querySelectorAll('[data-nav]').forEach(button=>button.addEventListener('click',()=>runMenuCommand(button,'nav')));
+ drawer.querySelectorAll('[data-control]').forEach(button=>button.addEventListener('click',()=>runMenuCommand(button,'control')));
  const textToggle=drawer.querySelector('#hbShowText');textToggle.checked=showText;textToggle.addEventListener('change',()=>{showText=textToggle.checked;write('homeBaseCopilotShowText',showText);liveText.classList.toggle('visible',showText&&!!liveText.textContent)});
  const languageSelect=drawer.querySelector('#hbVoiceLanguage'),accentSelect=drawer.querySelector('#hbVoiceAccent'),styleSelect=drawer.querySelector('#hbVoiceStyle'),voiceSelect=drawer.querySelector('#hbVoiceChoice'),conversationToggle=drawer.querySelector('#hbConversationMode');
  const accents=Object.fromEntries(HomeBaseLanguages.languages.map(language=>[language.id,language.regions]));
@@ -291,15 +304,15 @@ function bootHomeBaseShell(){
  function activeConversation(list){const id=read('homeBaseCopilotActiveChat',null),found=list.find(item=>item.id===id);if(found&&Date.now()-Date.parse(found.updatedAt||found.startedAt)<14400000)return found;const item={id:'chat-'+Date.now(),startedAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[]};list.push(item);write('homeBaseCopilotActiveChat',item.id);return item}
  function logChat(role,text){text=String(text||'').trim();if(!text)return;const list=chats(),conversation=activeConversation(list),last=conversation.messages[conversation.messages.length-1];if(last&&last.role===role&&last.text===text&&Date.now()-Date.parse(last.at)<2500)return;conversation.messages.push({role,text,at:new Date().toISOString()});conversation.messages=conversation.messages.slice(-120);conversation.updatedAt=new Date().toISOString();saveChats(list);if(showText){liveText.textContent=(role==='user'?'You · ':'Home Base · ')+text;liveText.classList.add('visible')}renderChat()}
  function setVoiceStatus(text,sticky=false){text=String(text||'').trim();if(!text)return;liveText.textContent=text;liveText.classList.add('visible');clearTimeout(voiceNoticeTimer);if(!sticky&&!showText)voiceNoticeTimer=setTimeout(()=>liveText.classList.remove('visible'),2600)}
- window.HomeBaseShell={logChat,setVoiceStatus,openMenu,openChat:()=>openChat()};
+ window.HomeBaseShell={logChat,setVoiceStatus,openMenu,closeMenu,openChat:()=>openChat(),runMenuCommand};
  function renderChat(){
   const root=chat.querySelector('#hbChatContent');if(!root)return;const term=(chat.querySelector('#hbChatSearch')?.value||'').trim().toLowerCase();const list=chats().slice().reverse().filter(item=>!term||item.messages.some(message=>message.text.toLowerCase().includes(term)));
   root.innerHTML=list.length?list.map((item,index)=>'<article class="hb-conversation" data-chat-id="'+esc(item.id)+'"><div class="hb-conversation-date"><div><b>'+(index===0?'Latest conversation':new Date(item.startedAt).toLocaleDateString())+'</b><span>'+new Date(item.startedAt).toLocaleString([], {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+'</span></div><div class="hb-chat-actions"><button type="button" data-chat-continue="'+esc(item.id)+'">Continue</button><button type="button" data-chat-delete="'+esc(item.id)+'" aria-label="Delete conversation">Delete</button></div></div>'+item.messages.map(message=>'<div class="hb-chat-message '+(message.role==='user'?'user':'assistant')+'"><span>'+(message.role==='user'?'You':'Home Base')+'</span><p dir="auto">'+esc(message.text)+'</p></div>').join('')+'</article>').join(''):'<div class="hb-chat-empty"><b>No conversations yet</b><span>Tap the blue voice button and talk to Home Base. The conversation will appear here.</span></div>';
   root.querySelectorAll('[data-chat-continue]').forEach(button=>button.addEventListener('click',()=>{write('homeBaseCopilotActiveChat',button.dataset.chatContinue);closeChat();setTimeout(()=>voice.click(),120)}));
   root.querySelectorAll('[data-chat-delete]').forEach(button=>button.addEventListener('click',()=>{const id=button.dataset.chatDelete;if(!confirm('Delete this Home Base conversation?'))return;saveChats(chats().filter(item=>item.id!==id));if(read('homeBaseCopilotActiveChat',null)===id)write('homeBaseCopilotActiveChat',null);renderChat()}));
  }
- function openChat(){closeMenu();chat.hidden=false;renderChat()}
- function closeChat(){chat.hidden=true}
+ function openChat(){closeMenu();chat.hidden=false;syncHomeWord();renderChat()}
+ function closeChat(){chat.hidden=true;syncHomeWord()}
  drawer.querySelector('#hbChatOpen').addEventListener('click',openChat);chat.querySelector('#hbChatClose').addEventListener('click',closeChat);chat.querySelector('#hbChatSearch').addEventListener('input',renderChat);chat.querySelector('#hbNewChat').addEventListener('click',()=>{write('homeBaseCopilotActiveChat',null);closeChat();setTimeout(()=>voice.click(),120)});
  function syncVoiceState(){
   const listen=document.getElementById('copilotListen'),status=document.getElementById('copilotStatus');if(!listen)return;
