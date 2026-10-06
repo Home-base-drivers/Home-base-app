@@ -1,6 +1,6 @@
 # Home Base connections
 
-Updated October 1, 2026.
+Updated October 5, 2026.
 
 ## ChatGPT plugins and Home Base account sync
 
@@ -26,7 +26,7 @@ For a direct Uber integration, the [Driver API](https://developer.uber.com/docs/
 
 ## Heat-map provider feeds already wired in the repository
 
-These are separate from a driver's private earnings sync. The workflow is [Refresh live provider signals](.github/workflows/provider-signals.yml).
+These are separate from a driver's private earnings sync. The provider refresh runs inside [Deploy Home Base to GitHub Pages](.github/workflows/pages.yml), on pushes to `main`, a five-minute schedule target, and manual dispatch. GitHub scheduling can delay runs. Each deployment validates the app before fetching providers.
 
 | Purpose | Provider account | Existing GitHub setting |
 | --- | --- | --- |
@@ -34,7 +34,11 @@ These are separate from a driver's private earnings sync. The workflow is [Refre
 | BWI scheduled flight activity | [FlightAware AeroAPI](https://www.flightaware.com/aeroapi/portal/) with the required schedule access | Secret: FLIGHTAWARE_API_KEY |
 | Authorized Uber price estimates | Uber developer app with approved estimates access | Secrets: UBER_CLIENT_ID and UBER_CLIENT_SECRET; variable: UBER_ESTIMATES_SCOPE. UBER_ACCESS_TOKEN is the workflow's alternative token mode. |
 
-An owner enters provider-issued values directly in the repository's **Settings → Secrets and variables → Actions**. Use the exact setting names above. Do not send credential values in chat or commit them to source. After saving them, run **Actions → Refresh live provider signals → Run workflow**, and verify successful provider calls and fresh statuses in Home Base's **Demand details** panel. Missing or rejected access stays labeled unavailable.
+Booking.com travel context additionally requires secrets `BOOKING_API_KEY` and `BOOKING_AFFILIATE_ID` from an approved [Booking.com Demand API account](https://developers.booking.com/demand/docs/getting-started). Lodging availability does not enter the rideshare-demand score.
+
+Open [repository Actions secrets](https://github.com/Home-base-drivers/Home-base-app/settings/secrets/actions) for private provider values, and [Actions variables](https://github.com/Home-base-drivers/Home-base-app/settings/variables/actions) for the approved non-secret Uber scope. Enter values directly in GitHub; never send them in chat. Saved secret names alone do not prove API access: confirm fresh provider statuses after deployment.
+
+An owner enters provider-issued values directly in the repository's **Settings → Secrets and variables → Actions**. Use the exact setting names above. Do not send credential values in chat or commit them to source. After saving them, run **Actions → Deploy Home Base to GitHub Pages → Run workflow**, and verify successful provider calls and fresh statuses in Home Base's **Demand details** panel. Missing or rejected access stays labeled unavailable.
 
 Provider data has different meanings: Uber estimates are a price proxy; flight schedules are airport activity context; events are dated event context. None is a count of confirmed ride requests. Open-Meteo weather, OpenStreetMap venue data, and OSRM road routes already have public refresh paths and do not require a driver to connect an account.
 
