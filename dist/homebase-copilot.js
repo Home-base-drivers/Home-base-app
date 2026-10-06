@@ -229,7 +229,7 @@ function bootHomeBaseShell(){
  const menuButton=document.createElement('button');
  menuButton.id='hbMenuToggle';menuButton.className='hb-menu-toggle';menuButton.type='button';menuButton.setAttribute('aria-label','Open Home Base menu');menuButton.setAttribute('aria-expanded','false');
  menuButton.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>';
- const homeWord=document.createElement('div');homeWord.id='hbHomeWord';homeWord.className='hb-home-word';homeWord.setAttribute('aria-label','Homebase');homeWord.textContent='Homebase';
+ const homeWord=document.createElement('div');homeWord.id='hbHomeWord';homeWord.className='hb-home-word';homeWord.setAttribute('aria-label','Homebase — Drive. Earn. Connect.');homeWord.innerHTML='<strong>Homebase</strong><small>Drive. Earn. Connect.</small>';
  const backdrop=document.createElement('button');backdrop.id='hbMenuBackdrop';backdrop.className='hb-menu-backdrop';backdrop.type='button';backdrop.setAttribute('aria-label','Close Home Base menu');
  const drawer=document.createElement('aside');drawer.id='hbSideMenu';drawer.className='hb-side-menu';drawer.setAttribute('aria-label','Home Base menu');drawer.setAttribute('aria-hidden','true');
  drawer.innerHTML='<div class="hb-menu-head"><div><span>HOME BASE</span><b>Driver menu</b></div><button id="hbMenuClose" type="button" aria-label="Close menu">×</button></div>'+

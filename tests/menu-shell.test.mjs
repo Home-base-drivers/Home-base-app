@@ -21,7 +21,7 @@ test('former top controls live in the side menu',()=>{
 });
 
 test('Homebase wordmark is clean and transparent on the home map',()=>{
- assert.match(shell,/homeWord\.textContent='Homebase'/);
+ assert.ok(shell.includes("homeWord.innerHTML='<strong>Homebase</strong><small>Drive. Earn. Connect.</small>'"));
  assert.match(css,/\.hb-home-word\{[^}]*background:transparent/);
  assert.match(css,/\.hb-menu-toggle\{[^}]*background:transparent/);
 });
