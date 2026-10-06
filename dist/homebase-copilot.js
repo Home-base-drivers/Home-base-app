@@ -281,7 +281,7 @@ function bootHomeBaseShell(){
   if(attribute==='control'&&targetId==='driveViewToggle'){const clean=moduleMeta.some(([key])=>modules[key])||navVisible;if(clean){menuRestoreState={modules:{...modules},navVisible};write('homeBaseMenuRestoreState',menuRestoreState);setAllModules(false);setNavVisible(false);menuNotice('Driving view on.')}else{const saved=menuRestoreState||read('homeBaseMenuRestoreState',null);modules={...defaults,...(saved?.modules||Object.fromEntries(moduleMeta.map(([key])=>[key,true])))};applyModules();setNavVisible(saved?.navVisible!==false);menuNotice('Full view restored.')}closeMenu();return true}
   if(attribute==='control'&&targetId==='installBtn'&&(matchMedia('(display-mode: standalone)').matches||navigator.standalone===true)){menuNotice('Home Base is already installed on this device.');closeMenu();return true}
   const target=document.getElementById(targetId);if(!target){menuNotice('That control is temporarily unavailable.');return false}
-  closeMenu();requestAnimationFrame(()=>{try{target.click();target.focus?.({preventScroll:true})}catch{setVoiceStatus('That control could not open. Please try again.',true)}});return true;
+  closeMenu();requestAnimationFrame(()=>{target.click();target.focus?.({preventScroll:true})});return true;
  }
  drawer.querySelectorAll('[data-nav]').forEach(button=>button.addEventListener('click',()=>runMenuCommand(button,'nav')));
  drawer.querySelectorAll('[data-control]').forEach(button=>button.addEventListener('click',()=>runMenuCommand(button,'control')));
