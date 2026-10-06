@@ -242,6 +242,9 @@ function bootHomeBaseShell(){
  const liveText=document.createElement('div');liveText.id='hbVoiceText';liveText.className='hb-voice-text';liveText.setAttribute('aria-live','polite');liveText.setAttribute('dir','auto');
  const chat=document.createElement('section');chat.id='hbChatPanel';chat.className='hb-chat-panel';chat.hidden=true;chat.innerHTML='<div class="hb-chat-head"><button id="hbChatClose" type="button" aria-label="Close Copilot history">‹</button><div><span>HOME BASE COPILOT</span><b>Conversation history</b></div><button id="hbNewChat" type="button">New</button></div><div class="hb-chat-tools"><input id="hbChatSearch" type="search" placeholder="Search conversations" aria-label="Search conversations"></div><div id="hbChatContent" class="hb-chat-content"></div>';
  app.append(backdrop,drawer,homeWord,menuButton,voice,liveText,chat);
+ function syncHomeWord(){const workspace=document.getElementById('workspaceView');homeWord.hidden=!chat.hidden||!!(workspace&&!workspace.hidden)}
+ const workspaceObserverTarget=document.getElementById('workspaceView');if(workspaceObserverTarget)new MutationObserver(syncHomeWord).observe(workspaceObserverTarget,{attributes:true,attributeFilter:['hidden']});
+ syncHomeWord();
  function applyModules(){
   for(const [key] of moduleMeta)app.classList.toggle('hb-show-'+key,!!modules[key]);
   write('homeBaseHomeModules',modules);
@@ -308,8 +311,8 @@ function bootHomeBaseShell(){
   root.querySelectorAll('[data-chat-continue]').forEach(button=>button.addEventListener('click',()=>{write('homeBaseCopilotActiveChat',button.dataset.chatContinue);closeChat();setTimeout(()=>voice.click(),120)}));
   root.querySelectorAll('[data-chat-delete]').forEach(button=>button.addEventListener('click',()=>{const id=button.dataset.chatDelete;if(!confirm('Delete this Home Base conversation?'))return;saveChats(chats().filter(item=>item.id!==id));if(read('homeBaseCopilotActiveChat',null)===id)write('homeBaseCopilotActiveChat',null);renderChat()}));
  }
- function openChat(){closeMenu();chat.hidden=false;homeWord.hidden=true;renderChat()}
- function closeChat(){chat.hidden=true;homeWord.hidden=false}
+ function openChat(){closeMenu();chat.hidden=false;syncHomeWord();renderChat()}
+ function closeChat(){chat.hidden=true;syncHomeWord()}
  drawer.querySelector('#hbChatOpen').addEventListener('click',openChat);chat.querySelector('#hbChatClose').addEventListener('click',closeChat);chat.querySelector('#hbChatSearch').addEventListener('input',renderChat);chat.querySelector('#hbNewChat').addEventListener('click',()=>{write('homeBaseCopilotActiveChat',null);closeChat();setTimeout(()=>voice.click(),120)});
  function syncVoiceState(){
   const listen=document.getElementById('copilotListen'),status=document.getElementById('copilotStatus');if(!listen)return;
