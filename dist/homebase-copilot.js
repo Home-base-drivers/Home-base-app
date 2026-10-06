@@ -229,6 +229,7 @@ function bootHomeBaseShell(){
  const defaults={conditions:false,platforms:false,forecast:false,route:false,legend:false,briefing:false};
  let modules={...defaults,...read('homeBaseHomeModules',{})};
  let navVisible=read('homeBaseNavVisible',false)===true,referenceNavVisible=read('homeBaseReferenceNavVisible',true)!==false,menuRestoreState=read('homeBaseMenuRestoreState',null);
+ let drivingViewActive=read('homeBaseDrivingViewActive',!referenceNavVisible&&!Object.keys(defaults).some(key=>modules[key]))===true,drivingRestoreState=read('homeBaseDrivingRestoreState',menuRestoreState);
  app.classList.toggle('hb-show-nav',navVisible);
  let showText=read('homeBaseCopilotShowText',false)===true;
  let voiceColor=read('homeBaseCopilotColor','#1769ff');
@@ -270,7 +271,7 @@ function bootHomeBaseShell(){
    '<button class="hb-signout-row" type="button" data-menu-action="signout"><span>Sign Out</span><i>›</i></button>'+
   '</div>'+
   '<div class="hb-menu-view" data-menu-view="driving" hidden><div class="hb-submenu-head"><button type="button" data-menu-back aria-label="Back">‹</button><div><small>DRIVE & EARN</small><b>Driving Preferences</b></div></div><div class="hb-list-menu hb-submenu-list">'+
-   '<button type="button" data-control="driveViewToggle"><span><b>Driving / full view</b><small>Switch between clean driving mode and full controls</small></span><i>›</i></button>'+
+   '<button type="button" id="hbDrivingViewToggle" class="hb-driving-toggle" data-control="driveViewToggle" data-keep-menu-open="true" aria-label="Driving view" aria-pressed="false"><span><b>Driving view</b><small id="hbDrivingViewHint">Reduce map panels while driving</small></span><i id="hbDrivingViewState" aria-hidden="true">OFF</i></button>'+
    '<button type="button" data-control="demandDetails"><span><b>Demand details</b><small>Open the current demand explanation</small></span><i>›</i></button>'+
    '<button type="button" data-control="showPickupCard"><span><b>Pickup card</b><small>Show the active pickup information</small></span><i>›</i></button>'+
    '<button type="button" data-control="refreshBtn"><span><b>Refresh GPS</b><small>Update your map position now</small></span><i>›</i></button>'+
@@ -419,7 +420,7 @@ function bootHomeBaseShell(){
  function previewCustomHeat(){const colors=customHeatInputs.map(input=>input.value);drawer.querySelector('#hbCustomHeatPreview').style.background='linear-gradient(90deg,'+colors.join(',')+')';customHeatInputs.forEach(input=>{input.parentElement.querySelector('small').textContent=input.value.toUpperCase()})}
  function openCustomHeat(){const colors=window.HomeBaseHeatControls?.getCustomColors?.()||['#6838c4','#1f92ff','#ffffff'];customHeatInputs.forEach((input,index)=>{input.value=colors[index]});previewCustomHeat();customHeatEditor.hidden=false;drawer.querySelector('[data-heat-palette="custom"]').setAttribute('aria-expanded','true');customHeatStatus.textContent='Choose your colors, then tap Apply.';customHeatEditor.scrollIntoView?.({behavior:'smooth',block:'nearest'})}
  function syncHeatMenu(){let palette='classic',visible=true;try{palette=window.HomeBaseHeatControls?.getPalette?.()||localStorage.getItem('homeBaseHeatPalette')||'classic';visible=window.HomeBaseHeatControls?.isVisible?.()??localStorage.getItem('homeBaseHeatVisible')!=='false'}catch{}drawer.querySelectorAll('[data-heat-palette]').forEach(button=>{const active=button.dataset.heatPalette===palette;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active))});const customActive=palette==='custom';customHeatEditor.hidden=!customActive;drawer.querySelector('[data-heat-palette="custom"]').setAttribute('aria-expanded',String(customActive));const customColors=window.HomeBaseHeatControls?.getCustomColors?.()||['#6838c4','#1f92ff','#ffffff'];drawer.querySelectorAll('#hbCustomDots i').forEach((dot,index)=>dot.style.setProperty('--dot',customColors[index]));if(customActive){customHeatInputs.forEach((input,index)=>{input.value=customColors[index]});previewCustomHeat()}const toggle=drawer.querySelector('#hbHeatVisibility');if(toggle){toggle.textContent=visible?'ON':'OFF';toggle.setAttribute('aria-pressed',String(visible));toggle.classList.toggle('active',visible)}}
- function showMenuView(name='main'){drawer.querySelectorAll('[data-menu-view]').forEach(view=>{view.hidden=view.dataset.menuView!==name});if(name==='heat'||name==='map')syncHeatMenu();const scroll=drawer.querySelector('.hb-menu-scroll');if(scroll)scroll.scrollTop=0}
+ function showMenuView(name='main'){drawer.querySelectorAll('[data-menu-view]').forEach(view=>{view.hidden=view.dataset.menuView!==name});if(name==='heat'||name==='map')syncHeatMenu();if(name==='driving')syncDrivingPreferences();const scroll=drawer.querySelector('.hb-menu-scroll');if(scroll)scroll.scrollTop=0}
  async function syncMenuIdentity(){const profile=read('homeBaseDriverProfile',{})||{},nameNode=drawer.querySelector('#hbMenuDriverName'),initialNode=drawer.querySelector('#hbMenuDriverInitial');let name=profile.name||profile.driverName||'Driver';try{const user=await window.HomeBaseAccounts?.backend?.getUser?.();name=profile.name||profile.driverName||user?.user_metadata?.full_name||user?.user_metadata?.name||user?.email?.split('@')[0]||name}catch{}if(nameNode)nameNode.textContent=name;if(initialNode)initialNode.textContent=String(name||'D').trim().charAt(0).toUpperCase()||'D'}
  function openMenu(){showMenuView('main');syncMenuIdentity();drawer.inert=false;backdrop.hidden=false;drawer.classList.add('open');backdrop.classList.add('open');drawer.setAttribute('aria-hidden','false');menuButton.setAttribute('aria-expanded','true');syncHomeHud()}
  function closeMenu(){drawer.classList.remove('open');drawer.inert=true;backdrop.classList.remove('open');backdrop.hidden=true;drawer.setAttribute('aria-hidden','true');menuButton.setAttribute('aria-expanded','false');syncHomeHud()}
@@ -437,6 +438,25 @@ function bootHomeBaseShell(){
  menuButton.addEventListener('click',()=>drawer.classList.contains('open')?closeMenu():openMenu());
  backdrop.addEventListener('click',closeMenu);drawer.querySelector('#hbMenuClose').addEventListener('click',closeMenu);
  const menuStatus=drawer.querySelector('#hbMenuStatus');
+ function syncDrivingPreferences(){
+  const toggle=drawer.querySelector('#hbDrivingViewToggle');
+  if(toggle)toggle.setAttribute('aria-pressed',String(drivingViewActive));
+  const state=drawer.querySelector('#hbDrivingViewState'),hint=drawer.querySelector('#hbDrivingViewHint');
+  if(state)state.textContent=drivingViewActive?'ON':'OFF';
+  if(hint)hint.textContent=drivingViewActive?'Tap to restore your saved panels and navigation':'Tap to reduce panels and navigation while driving';
+ }
+ function setDrivingView(active){
+  if(active===drivingViewActive)return;
+  if(active){
+   drivingRestoreState={modules:{...modules},navVisible:referenceNavVisible};
+   write('homeBaseDrivingRestoreState',drivingRestoreState);
+   setAllModules(false);setNavVisible(false);
+  }else{
+   const saved=drivingRestoreState;
+   modules={...defaults,...(saved?.modules||{})};applyModules();setNavVisible(saved?.navVisible!==false);
+  }
+  drivingViewActive=active;write('homeBaseDrivingViewActive',active);syncDrivingPreferences();
+ }
  function setNavVisible(value){navVisible=referenceNavVisible=!!value;app.classList.toggle('hb-show-nav',navVisible);write('homeBaseNavVisible',navVisible);write('homeBaseReferenceNavVisible',referenceNavVisible);syncHomeHud()}
  function setAllModules(value){for(const [key] of moduleMeta)modules[key]=!!value;applyModules()}
  function menuNotice(text){if(menuStatus)menuStatus.textContent=text;setVoiceStatus(text);}
@@ -446,8 +466,8 @@ function bootHomeBaseShell(){
   if(attribute==='control'&&targetId==='panelsBtn'){const anyVisible=moduleMeta.some(([key])=>modules[key]);setAllModules(!anyVisible);menuNotice(anyVisible?'Home panels hidden.':'Home panels shown.');closeMenu();return true}
   if(attribute==='control'&&targetId==='toggleMapTabs'){setNavVisible(!referenceNavVisible);menuNotice(referenceNavVisible?'Navigation tabs shown.':'Navigation tabs hidden.');closeMenu();return true}
   if(attribute==='control'&&targetId==='hideMapControls'){menuRestoreState={modules:{...modules},navVisible:referenceNavVisible};write('homeBaseMenuRestoreState',menuRestoreState);setAllModules(false);setNavVisible(false);document.getElementById('workspaceClose')?.click();menuNotice('Map-only view on.');closeMenu();return true}
-  if(attribute==='control'&&targetId==='showMapControls'){const saved=menuRestoreState||read('homeBaseMenuRestoreState',null);if(saved?.modules){modules={...defaults,...saved.modules};applyModules();setNavVisible(saved.navVisible!==false)}else{setAllModules(true);setNavVisible(true)}menuNotice('Home controls restored.');closeMenu();return true}
-  if(attribute==='control'&&targetId==='driveViewToggle'){const clean=moduleMeta.some(([key])=>modules[key])||referenceNavVisible;if(clean){menuRestoreState={modules:{...modules},navVisible:referenceNavVisible};write('homeBaseMenuRestoreState',menuRestoreState);setAllModules(false);setNavVisible(false);menuNotice('Driving view on.')}else{const saved=menuRestoreState||read('homeBaseMenuRestoreState',null);modules={...defaults,...(saved?.modules||Object.fromEntries(moduleMeta.map(([key])=>[key,true])))};applyModules();setNavVisible(saved?.navVisible!==false);menuNotice('Full view restored.')}closeMenu();return true}
+  if(attribute==='control'&&targetId==='showMapControls'){if(drivingViewActive){setDrivingView(false);menuNotice('Driving view is OFF. Your saved layout is restored.');closeMenu();return true}const saved=menuRestoreState||read('homeBaseMenuRestoreState',null);if(saved?.modules){modules={...defaults,...saved.modules};applyModules();setNavVisible(saved.navVisible!==false)}else{setAllModules(true);setNavVisible(true)}menuNotice('Home controls restored.');closeMenu();return true}
+  if(attribute==='control'&&targetId==='driveViewToggle'){setDrivingView(!drivingViewActive);menuNotice(drivingViewActive?'Driving view is ON. Close the menu to see your map.':'Driving view is OFF. Your saved layout is restored.');if(button.dataset.keepMenuOpen!=='true')closeMenu();return true}
   if(attribute==='control'&&targetId==='installBtn'&&(matchMedia('(display-mode: standalone)').matches||navigator.standalone===true)){menuNotice('Home Base is already installed on this device.');closeMenu();return true}
   const target=document.getElementById(targetId);if(!target){menuNotice('That control is temporarily unavailable.');return false}
   closeMenu();queueMicrotask(()=>{target.click();target.focus?.({preventScroll:true})});return true;
