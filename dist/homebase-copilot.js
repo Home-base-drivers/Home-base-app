@@ -265,16 +265,29 @@ function bootHomeBaseShell(){
   toggleMapTabs:'<rect x="4" y="5" width="16" height="14" rx="2"/><path d="M4 10h16M9 10v9"/>',
   showPickupCard:'<path d="M12 21s6-5.3 6-11a6 6 0 1 0-12 0c0 5.7 6 11 6 11Z"/><circle cx="12" cy="10" r="2"/>',
   hideMapControls:'<path d="M4 6.5 9 4l6 2.5L20 4v13.5L15 20l-6-2.5L4 20V6.5Z"/><path d="M3 3l18 18"/>',
-  showMapControls:'<path d="M4 6.5 9 4l6 2.5L20 4v13.5L15 20l-6-2.5L4 20V6.5Z"/><path d="m8 12 2.4 2.4L16 9"/>'
+  showMapControls:'<path d="M4 6.5 9 4l6 2.5L20 4v13.5L15 20l-6-2.5L4 20V6.5Z"/><path d="m8 12 2.4 2.4L16 9"/>',
+  fullscreen:'<path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/><path d="m3 8 5-5m8 0 5 5M3 16l5 5m8 0 5-5"/>',
+  navigate:'<path d="m4 12 16-8-7 16-2-7-7-1Z"/>',
+  more:'<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
+  online:'<circle cx="12" cy="12" r="7"/>',
+  today:'<path d="M5 5h14v15H5V5Zm3-2v4m8-4v4M5 9h14"/>'
  };
  drawer.querySelectorAll('.hb-menu-grid button').forEach(button=>{
   const key=button.dataset.nav||button.dataset.control||button.id,path=menuIcons[key];if(!path)return;
   const label=button.textContent.trim();button.innerHTML='<span class="hb-menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24">'+path+'</svg></span><span class="hb-menu-label">'+esc(label)+'</span>';
  });
+ const iconSvg=key=>'<svg viewBox="0 0 24 24" aria-hidden="true">'+(menuIcons[key]||'')+'</svg>';
+ const homeControls=document.createElement('div');homeControls.className='hb-reference-controls';homeControls.setAttribute('aria-label','Home map controls');
+ homeControls.innerHTML=
+  '<div class="hb-ref-top"><button data-home-target="navEarn" class="hb-ref-chip">'+iconSvg('navEarn')+'<span>Earnings</span></button><button class="hb-ref-chip" data-home-action="today">'+iconSvg('today')+'<span>Today</span><b>⌄</b></button></div>'+
+  '<div class="hb-ref-status"><button data-home-target="navAlerts" aria-label="Alerts">'+iconSvg('navAlerts')+'<i></i></button><button class="hb-online" data-home-action="online"><em></em><span>Online</span><b>⌄</b></button></div>'+
+  '<div class="hb-ref-left"><button data-home-target="heatToggle">'+iconSvg('heatToggle')+'<span>Heat Map</span></button><button data-home-target="layerBtn">'+iconSvg('layerBtn')+'<span>Layers</span></button><button data-home-target="refreshBtn">'+iconSvg('refreshBtn')+'<span>Recenter</span></button><button data-home-target="refreshBtn" class="active">'+iconSvg('navigate')+'<span>My Location</span></button></div>'+
+  '<div class="hb-ref-right"><button data-home-action="fullscreen" aria-label="Fullscreen">'+iconSvg('fullscreen')+'</button><button data-home-target="mapsBtn" aria-label="Navigate">'+iconSvg('navigate')+'</button><button data-home-target="driveViewToggle" aria-label="Drive view">'+iconSvg('driveViewToggle')+'</button><button data-home-target="layerBtn" aria-label="Layers">'+iconSvg('layerBtn')+'</button></div>'+
+  '<nav class="hb-ref-bottom" aria-label="Home navigation"><button data-home-target="navMap" class="active">'+iconSvg('navMap')+'<span>Map</span></button><button data-home-target="navEarn">'+iconSvg('navEarn')+'<span>Earnings</span></button><button data-home-target="navAlerts">'+iconSvg('navAlerts')+'<span>Alerts</span><i>3</i></button><button data-home-target="navProfile">'+iconSvg('navProfile')+'<span>Profile</span></button><button data-home-action="voice" class="ask">'+iconSvg('hbChatOpen')+'<span>Ask Homebase</span></button><button data-home-target="navSupport">'+iconSvg('navSupport')+'<span>Support</span></button><button data-home-target="driveViewToggle">'+iconSvg('driveViewToggle')+'<span>Drive</span></button><button data-home-action="menu">'+iconSvg('more')+'<span>More</span></button></nav>';
  const voice=document.createElement('button');voice.id='hbVoiceBubble';voice.className='hb-voice-bubble';voice.type='button';voice.setAttribute('aria-label','Talk to Home Base');voice.setAttribute('aria-pressed','false');voice.innerHTML='<span class="hb-voice-ring"></span><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4M9 21h6"/></svg>';
  const liveText=document.createElement('div');liveText.id='hbVoiceText';liveText.className='hb-voice-text';liveText.setAttribute('aria-live','polite');liveText.setAttribute('dir','auto');
  const chat=document.createElement('section');chat.id='hbChatPanel';chat.className='hb-chat-panel';chat.hidden=true;chat.innerHTML='<div class="hb-chat-head"><button id="hbChatClose" type="button" aria-label="Close Copilot history">‹</button><div><span>HOME BASE COPILOT</span><b>Conversation history</b></div><button id="hbNewChat" type="button">New</button></div><div class="hb-chat-tools"><input id="hbChatSearch" type="search" placeholder="Search conversations" aria-label="Search conversations"></div><div id="hbChatContent" class="hb-chat-content"></div>';
- app.append(backdrop,drawer,homeWord,menuButton,voice,liveText,chat);
+ app.append(backdrop,drawer,homeWord,menuButton,homeControls,voice,liveText,chat);
  function syncHomeWord(){const workspace=document.getElementById('workspaceView');homeWord.hidden=!chat.hidden||!!(workspace&&!workspace.hidden)}
  const workspaceObserverTarget=document.getElementById('workspaceView');if(workspaceObserverTarget)new MutationObserver(syncHomeWord).observe(workspaceObserverTarget,{attributes:true,attributeFilter:['hidden']});
  syncHomeWord();
@@ -290,6 +303,16 @@ function bootHomeBaseShell(){
  }
  function openMenu(){drawer.classList.add('open');backdrop.classList.add('open');drawer.setAttribute('aria-hidden','false');menuButton.setAttribute('aria-expanded','true')}
  function closeMenu(){drawer.classList.remove('open');backdrop.classList.remove('open');drawer.setAttribute('aria-hidden','true');menuButton.setAttribute('aria-expanded','false')}
+ homeControls.addEventListener('click',event=>{
+  const button=event.target.closest('button');if(!button)return;
+  if(button.dataset.homeTarget){document.getElementById(button.dataset.homeTarget)?.click();return}
+  const action=button.dataset.homeAction;
+  if(action==='menu'){openMenu();return}
+  if(action==='voice'){voice.click();return}
+  if(action==='fullscreen'){const root=document.documentElement;if(!document.fullscreenElement)root.requestFullscreen?.().catch(()=>{});else document.exitFullscreen?.();return}
+  if(action==='today'){document.getElementById('time0')?.click();return}
+  if(action==='online'){menuNotice('Homebase is online.');return}
+ });
  menuButton.addEventListener('click',()=>drawer.classList.contains('open')?closeMenu():openMenu());
  backdrop.addEventListener('click',closeMenu);drawer.querySelector('#hbMenuClose').addEventListener('click',closeMenu);
  const menuStatus=drawer.querySelector('#hbMenuStatus');
