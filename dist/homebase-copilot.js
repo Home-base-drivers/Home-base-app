@@ -9,6 +9,7 @@ function boot(){
  let trips=read('homeBaseTripRows',[]).filter(r=>r?.record_id),logs=read('homeBaseDispatchLog',[]),evidence=read('homeBaseDriverEvidence',null);
  let radioAddressed=false,speechSequence=0,replySequence=0,aiAudioContext=null,aiAudioSource=null,aiAudioElement=null,aiAudioUrl=null;
  function stopAiAudio(){try{aiAudioSource?.stop()}catch{}aiAudioSource=null;if(aiAudioElement){try{aiAudioElement.pause()}catch{}aiAudioElement=null}if(aiAudioUrl){URL.revokeObjectURL(aiAudioUrl);aiAudioUrl=null}}
+ function normalizeVoiceBlob(value){if(!(value instanceof Blob)||!value.size)return null;if(value.type.startsWith('audio/'))return value;if(value.type==='application/octet-stream'||!value.type)return new Blob([value],{type:'audio/mpeg'});return null}
  function cancelSpeech(){++replySequence;++speechSequence;speechBusy=false;stopAiAudio();window.speechSynthesis?.cancel();}
  function unlockAiAudio(){try{const AudioCtx=window.AudioContext||window.webkitAudioContext;if(!AudioCtx)return;aiAudioContext=aiAudioContext||new AudioCtx();aiAudioContext.resume?.()}catch{}}
  async function playAiAudio(blob,sequence,onEnd){
@@ -62,7 +63,7 @@ function boot(){
    try{
     const audio=await HomeBaseAccounts.backend.evaluateDispatch({operation:'voice',text,locale:outputLocale,voice:prefs.aiVoice||((prefs.voiceStyle||'all')==='masculine'?'cedar':(prefs.voiceStyle||'all')==='feminine'?'marin':'cedar'),style:prefs.voiceStyle||'all'});
     if(sequence!==speechSequence)return;
-    if(audio instanceof Blob&&audio.type.startsWith('audio/')){window.HomeBaseShell?.setVoiceStatus?.('Home Base AI · '+displayed);await playAiAudio(audio,sequence,finish);return;}
+    const playable=normalizeVoiceBlob(audio);if(playable){window.HomeBaseShell?.setVoiceStatus?.('Home Base AI · '+displayed);await playAiAudio(playable,sequence,finish);return;}
    }catch{}
   }
   if(!('speechSynthesis' in window)){speechBusy=false;window.HomeBaseShell?.setVoiceStatus?.('AI voice unavailable. Sign in to use Home Base AI voice.',true);return;}
@@ -75,8 +76,12 @@ function boot(){
   try{speechSynthesis.resume?.();speechSynthesis.speak(utterance);window.HomeBaseShell?.setVoiceStatus?.('Device voice fallback · '+displayed)}catch{speechBusy=false;window.HomeBaseShell?.setVoiceStatus?.('Audio could not start. Check phone volume and try again.',true)}
  }
  async function previewAiVoice(){
-  const prefs=getVoicePrefs(),sample=HomeBaseLanguages.get(prefs.language).preview;unlockAiAudio();cancelSpeech();const sequence=++speechSequence;speechBusy=true;window.HomeBaseShell?.setVoiceStatus?.('Generating AI voice preview…',true);
-  try{if(!window.HomeBaseAccounts?.backend)throw Error('Sign in required');const audio=await HomeBaseAccounts.backend.evaluateDispatch({operation:'voice',text:sample,locale:prefs.locale,voice:prefs.aiVoice||((prefs.voiceStyle||'all')==='masculine'?'cedar':(prefs.voiceStyle||'all')==='feminine'?'marin':'cedar'),style:prefs.voiceStyle||'all'});if(!(audio instanceof Blob)||!audio.type.startsWith('audio/'))throw Error('AI voice not configured');window.HomeBaseShell?.setVoiceStatus?.('AI-generated Home Base voice · '+sample,true);await playAiAudio(audio,sequence,()=>{speechBusy=false});return true}catch{speechBusy=false;window.HomeBaseShell?.setVoiceStatus?.('AI voice is not active for this account yet. Home Base will use the phone voice as fallback.',true);return false}
+  const prefs=getVoicePrefs(),sample=HomeBaseLanguages.get(prefs.language).preview;unlockAiAudio();unlockSpeech();cancelSpeech();const sequence=++speechSequence;speechBusy=true;window.HomeBaseShell?.setVoiceStatus?.('Generating AI voice preview…',true);
+  try{if(!window.HomeBaseAccounts?.backend)throw Error('Sign in required');const audio=await HomeBaseAccounts.backend.evaluateDispatch({operation:'voice',text:sample,locale:prefs.locale,voice:prefs.aiVoice||((prefs.voiceStyle||'all')==='masculine'?'cedar':(prefs.voiceStyle||'all')==='feminine'?'marin':'cedar'),style:prefs.voiceStyle||'all'});const playable=normalizeVoiceBlob(audio);if(!playable)throw Error('AI voice not configured');window.HomeBaseShell?.setVoiceStatus?.('AI-generated Home Base voice · '+sample,true);await playAiAudio(playable,sequence,()=>{speechBusy=false});return true}catch(error){
+   if(!('speechSynthesis' in window)||typeof SpeechSynthesisUtterance==='undefined'){speechBusy=false;window.HomeBaseShell?.setVoiceStatus?.('Voice preview is unavailable. Home Base AI voice backend still needs to be connected.',true);return false}
+   const selected=HomeBaseVoice.selectVoice(speechSynthesis.getVoices(),prefs.voiceURI||'',prefs.locale,prefs.voiceStyle||'all');if(!selected){speechBusy=false;window.HomeBaseShell?.setVoiceStatus?.('No compatible phone voice is installed for this language. Home Base AI voice backend still needs to be connected.',true);return false}
+   const utterance=new SpeechSynthesisUtterance(sample);utterance.lang=selected.lang||prefs.locale;utterance.voice=selected;utterance.rate=.94;utterance.pitch=.92;utterance.onend=()=>{if(sequence===speechSequence)speechBusy=false};utterance.onerror=()=>{speechBusy=false;window.HomeBaseShell?.setVoiceStatus?.('Phone voice preview could not play. Check sound volume and try again.',true)};try{speechSynthesis.resume?.();speechSynthesis.speak(utterance);window.HomeBaseShell?.setVoiceStatus?.('Phone voice preview · AI voice backend not connected yet.',true);return true}catch{speechBusy=false;return false}
+  }
  }
  function save(){const {location,destination,...settings}=state;write('homeBaseDispatchState',settings);}
  function setMode(mode){if(!D.MODES.includes(mode))return;state.mode=mode;q('#copilotMode').value=mode;save();update(true);say('Copy. Switching to '+mode.toLowerCase()+'.');}
@@ -210,6 +215,8 @@ function bootHomeBaseShell(){
  const esc=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
  const defaults={conditions:false,platforms:false,forecast:false,route:false,legend:false,briefing:false};
  let modules={...defaults,...read('homeBaseHomeModules',{})};
+ let navVisible=read('homeBaseNavVisible',false)===true,menuRestoreState=read('homeBaseMenuRestoreState',null);
+ app.classList.toggle('hb-show-nav',navVisible);
  let showText=read('homeBaseCopilotShowText',false)===true;
  let voiceColor=read('homeBaseCopilotColor','#1769ff');
  let voicePrefs=HomeBaseLanguages.preferences(read('homeBaseVoicePrefs',{}),navigator.languages||[navigator.language]);
@@ -262,13 +269,19 @@ function bootHomeBaseShell(){
  menuButton.addEventListener('click',()=>drawer.classList.contains('open')?closeMenu():openMenu());
  backdrop.addEventListener('click',closeMenu);drawer.querySelector('#hbMenuClose').addEventListener('click',closeMenu);
  const menuStatus=drawer.querySelector('#hbMenuStatus');
+ function setNavVisible(value){navVisible=!!value;app.classList.toggle('hb-show-nav',navVisible);write('homeBaseNavVisible',navVisible)}
+ function setAllModules(value){for(const [key] of moduleMeta)modules[key]=!!value;applyModules()}
+ function menuNotice(text){if(menuStatus)menuStatus.textContent=text;setVoiceStatus(text);}
  function runMenuCommand(button,attribute){
-  const targetId=button.dataset[attribute],target=document.getElementById(targetId);
-  if(!target){if(menuStatus)menuStatus.textContent='That control is temporarily unavailable.';return false}
-  if(menuStatus)menuStatus.textContent='';
-  closeMenu();
-  requestAnimationFrame(()=>{target.click();target.focus?.({preventScroll:true})});
-  return true;
+  const targetId=button.dataset[attribute];if(menuStatus)menuStatus.textContent='';
+  if(attribute==='control'&&targetId==='panelsBtn'){const anyVisible=moduleMeta.some(([key])=>modules[key]);setAllModules(!anyVisible);menuNotice(anyVisible?'Home panels hidden.':'Home panels shown.');closeMenu();return true}
+  if(attribute==='control'&&targetId==='toggleMapTabs'){setNavVisible(!navVisible);menuNotice(navVisible?'Navigation tabs shown.':'Navigation tabs hidden.');closeMenu();return true}
+  if(attribute==='control'&&targetId==='hideMapControls'){menuRestoreState={modules:{...modules},navVisible};write('homeBaseMenuRestoreState',menuRestoreState);setAllModules(false);setNavVisible(false);document.getElementById('workspaceClose')?.click();menuNotice('Map-only view on.');closeMenu();return true}
+  if(attribute==='control'&&targetId==='showMapControls'){const saved=menuRestoreState||read('homeBaseMenuRestoreState',null);if(saved?.modules){modules={...defaults,...saved.modules};applyModules();setNavVisible(saved.navVisible!==false)}else{setAllModules(true);setNavVisible(true)}menuNotice('Home controls restored.');closeMenu();return true}
+  if(attribute==='control'&&targetId==='driveViewToggle'){const clean=moduleMeta.some(([key])=>modules[key])||navVisible;if(clean){menuRestoreState={modules:{...modules},navVisible};write('homeBaseMenuRestoreState',menuRestoreState);setAllModules(false);setNavVisible(false);menuNotice('Driving view on.')}else{const saved=menuRestoreState||read('homeBaseMenuRestoreState',null);modules={...defaults,...(saved?.modules||Object.fromEntries(moduleMeta.map(([key])=>[key,true])))};applyModules();setNavVisible(saved?.navVisible!==false);menuNotice('Full view restored.')}closeMenu();return true}
+  if(attribute==='control'&&targetId==='installBtn'&&(matchMedia('(display-mode: standalone)').matches||navigator.standalone===true)){menuNotice('Home Base is already installed on this device.');closeMenu();return true}
+  const target=document.getElementById(targetId);if(!target){menuNotice('That control is temporarily unavailable.');return false}
+  closeMenu();requestAnimationFrame(()=>{target.click();target.focus?.({preventScroll:true})});return true;
  }
  drawer.querySelectorAll('[data-nav]').forEach(button=>button.addEventListener('click',()=>runMenuCommand(button,'nav')));
  drawer.querySelectorAll('[data-control]').forEach(button=>button.addEventListener('click',()=>runMenuCommand(button,'control')));
@@ -297,7 +310,7 @@ function bootHomeBaseShell(){
  voiceSelect.addEventListener('change',()=>{voicePrefs.aiVoice=voiceSelect.value;saveVoicePrefs()});
  conversationToggle.addEventListener('change',()=>{voicePrefs.conversation=conversationToggle.checked;saveVoicePrefs()});
  if(window.speechSynthesis?.addEventListener)window.speechSynthesis.addEventListener('voiceschanged',populateVoices);else if(window.speechSynthesis)window.speechSynthesis.onvoiceschanged=populateVoices;
- drawer.querySelector('#hbVoicePreview').addEventListener('click',async()=>{window.HomeBaseCopilot?.stopConversation?.();unlockAiAudio();await previewAiVoice()});
+ drawer.querySelector('#hbVoicePreview').addEventListener('click',async()=>{const button=drawer.querySelector('#hbVoicePreview');button.disabled=true;try{window.HomeBaseCopilot?.stopConversation?.();const preview=window.HomeBaseCopilot?.previewAiVoice;if(!preview){setVoiceStatus('Voice preview is still loading. Try again in a moment.',true);return}await preview()}finally{button.disabled=false}});
  const colorInput=drawer.querySelector('#hbVoiceColor');colorInput.value=voiceColor;colorInput.addEventListener('input',()=>setVoiceColor(colorInput.value));
  drawer.querySelectorAll('[data-color]').forEach(button=>{button.style.setProperty('--swatch',button.dataset.color);button.addEventListener('click',()=>setVoiceColor(button.dataset.color))});
  function setVoiceColor(color){voiceColor=color;app.style.setProperty('--hb-voice-color',color);colorInput.value=color;write('homeBaseCopilotColor',color)}
