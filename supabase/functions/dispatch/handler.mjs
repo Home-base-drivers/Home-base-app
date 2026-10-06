@@ -1,5 +1,5 @@
 // Shared foreground dispatch endpoint. Auth is checked before reading private driver data.
-export function makeDispatchHandler({engine,authenticate,loadState,loadTrips,parseLanguage,translateLanguage,synthesizeVoice}) {
+export function makeDispatchHandler({engine,authenticate,loadState,loadTrips,parseLanguage,translateLanguage,synthesizeVoice,createLiveSession}) {
  const headers={'Content-Type':'application/json','Access-Control-Allow-Origin':'https://home-base-drivers.github.io','Access-Control-Allow-Headers':'authorization,apikey,content-type,x-client-info','Access-Control-Allow-Methods':'POST,OPTIONS'};
  const response=(body,status=200)=>new Response(JSON.stringify(body),{status,headers});
  return async request=>{
@@ -10,7 +10,11 @@ export function makeDispatchHandler({engine,authenticate,loadState,loadTrips,par
   if(!user?.id||user.is_anonymous)return response({error:'Sign in first'},401);
   try{
    const raw=await request.text();if(raw.length>65536)return response({error:'Request too large'},413);
-   const payload=JSON.parse(raw);if(!['score','recommend','chat','translate','voice'].includes(payload.operation))return response({error:'Unsupported operation'},400);
+   const payload=JSON.parse(raw);if(!['score','recommend','chat','translate','voice','live-session'].includes(payload.operation))return response({error:'Unsupported operation'},400);
+   if(payload.operation==='live-session'){
+    if(!createLiveSession)return response({configured:false,error:'GPT Live is not configured on the Home Base server.'},503);
+    return response(await createLiveSession({sdp:payload.sdp,locale:payload.locale,voice:payload.voice,style:payload.style,history:payload.history}));
+   }
    if(payload.operation==='voice'){
     if(!synthesizeVoice)return response({configured:false,provider:'not_configured'});
     const result=await synthesizeVoice({text:payload.text,locale:payload.locale,voice:payload.voice,style:payload.style});
