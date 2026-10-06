@@ -1,5 +1,5 @@
 // Shared foreground dispatch endpoint. Auth is checked before reading private driver data.
-export function makeDispatchHandler({engine,authenticate,loadState,loadTrips,parseLanguage,translateLanguage,synthesizeVoice,createLiveSession}) {
+export function makeDispatchHandler({engine,authenticate,loadState,loadTrips,parseLanguage,translateLanguage,synthesizeVoice,createLiveSession,agent}) {
  const headers={'Content-Type':'application/json','Access-Control-Allow-Origin':'https://home-base-drivers.github.io','Access-Control-Allow-Headers':'authorization,apikey,content-type,x-client-info','Access-Control-Allow-Methods':'POST,OPTIONS'};
  const response=(body,status=200)=>new Response(JSON.stringify(body),{status,headers});
  return async request=>{
@@ -10,7 +10,7 @@ export function makeDispatchHandler({engine,authenticate,loadState,loadTrips,par
   if(!user?.id||user.is_anonymous)return response({error:'Sign in first'},401);
   try{
    const raw=await request.text();if(raw.length>65536)return response({error:'Request too large'},413);
-   const payload=JSON.parse(raw);if(!['score','recommend','chat','translate','voice','live-session'].includes(payload.operation))return response({error:'Unsupported operation'},400);
+   const payload=JSON.parse(raw);if(!['score','recommend','chat','agent','translate','voice','live-session'].includes(payload.operation))return response({error:'Unsupported operation'},400);
    if(payload.operation==='live-session'){
     if(!createLiveSession)return response({configured:false,error:'GPT Live is not configured on the Home Base server.'},503);
     return response(await createLiveSession({sdp:payload.sdp,locale:payload.locale,voice:payload.voice,style:payload.style,history:payload.history,context:payload.context}));
@@ -24,7 +24,7 @@ export function makeDispatchHandler({engine,authenticate,loadState,loadTrips,par
     return new Response(result.audio,{status:200,headers:{...headers,'Content-Type':'application/octet-stream','Cache-Control':'no-store','X-HomeBase-Voice':'ai','X-HomeBase-Audio-Type':result.contentType||'audio/mpeg'}});
    }
    if(payload.operation==='translate'){if(!translateLanguage)return response({translated:false,provider:'not_configured'});return response(await translateLanguage(payload.text,payload.locale));}
-   if(payload.operation==='chat'){const language=parseLanguage?await parseLanguage(payload.utterance,payload.locale,payload.context):{command:engine.parseCommand(payload.utterance),provider:'not_configured',execution:'advisory'};return response(language);}
+   if(payload.operation==='agent'||payload.operation==='chat'){if(agent)return response(await agent({userId:user.id,utterance:payload.utterance,context:payload.context||{},conversationId:payload.conversationId||'default'}));const language=parseLanguage?await parseLanguage(payload.utterance,payload.locale,payload.context):{command:engine.parseCommand(payload.utterance),provider:'not_configured',execution:'advisory'};return response(language);}
    const stored=await loadState(user.id),trips=await loadTrips(user.id);
    const state=engine.DriverState.create({...stored,...payload.state});
    // Request context is driver-reported; no client can create official capability support.
