@@ -749,7 +749,7 @@ function renderProviderPriceBadges(points=providerPricePoints){
   });
 }
 async function loadProviderSignals(lat,lon,market){
-  providerUberPoints=[];providerFlightPoints=[];providerBookingNote='';providerSnapshotAt=null;providerFeedTimes={};providerStatuses={uber:'unknown',ticketmaster:'unknown',flightaware:'unknown'};renderFeedSignal();
+  providerUberPoints=[];providerPricePoints=[];providerFlightPoints=[];providerBookingNote='';providerSnapshotAt=null;providerFeedTimes={};providerStatuses={uber:'unknown',lyft:'unknown',empower:'unknown',ticketmaster:'unknown',flightaware:'unknown'};renderProviderPriceBadges([]);renderFeedSignal();
   try{
     const response=await fetch(`./provider-signals.json?ts=${Date.now()}`,{cache:'no-store',headers:{Accept:'application/json'}});if(!response.ok)throw Error('provider feed unavailable');
     const payload=await response.json(),match=(payload.markets||[]).find(item=>String(item.name||'').toLowerCase()===String(market||'').toLowerCase()||distanceKm([lat,lon],[item.center.lat,item.center.lon])<=Number(item.radiusKm||0));
@@ -761,7 +761,17 @@ async function loadProviderSignals(lat,lon,market){
       providerFlightPoints=flight.activityByHour.map(bucket=>({name:`BWI flight activity · ${bucket.hour}`,cat:'transit',lat:Number(bucket.lat),lon:Number(bucket.lon),heatOnly:true,tags:{providerSignal:true,airportActivity:true,flightHour:bucket.hour,arrivals:Number(bucket.arrivals)||0,departures:Number(bucket.departures)||0,source:'FlightAware AeroAPI'}})).filter(point=>Number.isFinite(point.lat)&&Number.isFinite(point.lon));
     }
     const uber=match.uber;
-    if(uber&&['active','stale'].includes(uber.status)&&Date.now()-Date.parse(uber.fetchedAt||0)<=25*60000)providerUberPoints=(uber.samples||[]).filter(item=>Number.isFinite(Number(item.surgeMultiplier))).map(item=>({name:`Uber pricing · ${item.name}`,cat:'neighborhood',lat:Number(item.lat),lon:Number(item.lon),heatOnly:true,tags:{providerSignal:true,uberSurgeMultiplier:Number(item.surgeMultiplier),providerSampledAt:item.sampledAt,source:'Uber price estimate proxy'}})).filter(item=>Number.isFinite(item.lat)&&Number.isFinite(item.lon));
+    if(uber&&['active','stale'].includes(uber.status)&&Date.now()-Date.parse(uber.fetchedAt||0)<=25*60000){
+      providerUberPoints=(uber.samples||[]).filter(item=>Number.isFinite(Number(item.surgeMultiplier))).map(item=>({name:'Uber pricing · '+item.name,cat:'neighborhood',lat:Number(item.lat),lon:Number(item.lon),heatOnly:true,tags:{providerSignal:true,uberSurgeMultiplier:Number(item.surgeMultiplier),providerSampledAt:item.sampledAt,source:'Uber price estimate proxy'}})).filter(item=>Number.isFinite(item.lat)&&Number.isFinite(item.lon));
+      providerPricePoints.push(...(uber.samples||[]).map(item=>providerPriceSample('Uber',item)).filter(Boolean));
+    }
+    for(const pair of [['Lyft','lyft'],['Empower','empower']]){
+      const platform=pair[0],key=pair[1],feed=match[key];
+      providerStatuses[key]=feed&&feed.status||'unavailable';
+      providerFeedTimes[key]=feed&&feed.fetchedAt||null;
+      if(feed&&['active','stale'].includes(feed.status)&&Date.now()-Date.parse(feed.fetchedAt||0)<=25*60000)providerPricePoints.push(...(feed.samples||[]).map(item=>providerPriceSample(platform,item)).filter(Boolean));
+    }
+    renderProviderPriceBadges(providerPricePoints);
     const booking=match.booking;if(booking&&['active','stale'].includes(booking.status)&&Array.isArray(booking.areas)){const zones=booking.areas.filter(area=>Number(area.returnedListings)>0).length;providerBookingNote=`${zones} metro areas had lodging listings returned for ${booking.checkin||'the next-night sample'}`;}
     const records=match.publicRecords;
     providerStatuses.public_calendar=records&&records.calendarStatus||'unavailable';providerStatuses.public_weather=records&&records.weatherStatus||'unavailable';
