@@ -346,3 +346,29 @@
 .hb-price-badge .platform-dot{width:7px;height:7px;border-radius:50%;background:var(--price);margin-right:6px;box-shadow:0 0 7px var(--price)}
 .hb-price-badge.uber{--price:#f2f6f8;color:#fff}.hb-price-badge.lyft{--price:#ff3fb4}.hb-price-badge.empower{--price:#278dff}
 .hb-price-badge small{display:block;margin-left:5px;color:#9fb1bd;font-size:.45rem;font-weight:800;letter-spacing:.08em}
+
+
+/* Home HUD cleanup: no legacy wordmark rays/glow; overlays exist only on Home/Map */
+.hb-shell-active .hb-home-word:before,.hb-shell-active .hb-home-word:after{content:none!important;display:none!important}
+.hb-shell-active .hb-home-word,.hb-shell-active .hb-home-word strong,.hb-shell-active .hb-home-word small{filter:none!important;text-shadow:none!important;-webkit-text-fill-color:currentColor}
+.hb-shell-active .hb-menu-toggle{filter:none!important;text-shadow:none!important}
+.hb-reference-controls[hidden],.hb-home-weather[hidden],.hb-home-word[hidden],.hb-menu-toggle[hidden],.hb-voice-bubble[hidden],.hb-voice-text[hidden]{display:none!important}
+
+/* Phone spacing: keep the reference header clear of Earnings/Today/status controls */
+@media(max-width:600px){
+ .hb-ref-top,.hb-ref-status{top:max(104px,calc(env(safe-area-inset-top) + 94px))}
+ .hb-ref-chip{height:34px;min-width:84px;padding:0 9px;font-size:.59rem}
+ .hb-ref-status button{height:34px}.hb-ref-status>button:first-child{width:36px}.hb-online{padding:0 9px}
+ .hb-ref-left{top:27%;gap:7px}.hb-ref-left button{width:55px;min-height:55px;border-radius:13px;font-size:.47rem}
+ .hb-ref-right{top:32%;gap:7px}.hb-ref-right button{width:40px;height:40px}
+ .hb-home-weather{min-width:94px;height:54px;padding:6px 9px}
+}
+@media(max-width:430px){
+ .hb-shell-active .hb-home-word{width:222px;min-height:62px;padding:10px 10px 9px 59px}
+ .hb-shell-active .hb-home-word strong{font-size:1.22rem}.hb-shell-active .hb-home-word small{font-size:.6rem}
+ .hb-shell-active .hb-menu-toggle{width:38px;height:44px}.hb-shell-active .hb-menu-toggle svg{width:25px;height:25px}
+ .hb-ref-top{left:8px;transform:none}.hb-ref-status{right:8px}
+ .hb-ref-chip{min-width:72px;padding:0 7px}.hb-ref-chip svg{width:17px;height:17px}.hb-ref-chip:first-child span{display:none}
+ .hb-online{padding:0 8px}.hb-online span{display:none}
+ .hb-ref-left{left:7px}.hb-ref-right{right:7px}
+}

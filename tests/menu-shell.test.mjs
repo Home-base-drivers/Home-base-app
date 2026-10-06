@@ -84,3 +84,18 @@ test('clean-shell menu commands have visible native behavior',()=>{
  assert.match(shell,/targetId==='driveViewToggle'/);
  assert.match(css,/\.hb-shell-active\.hb-show-nav \.home-nav\{display:grid!important/);
 });
+
+
+test('Home HUD disappears outside Map and while the drawer is open',()=>{
+ assert.match(shell,/function syncHomeHud\(\)/);
+ assert.match(shell,/app\.classList\.contains\('map-mode'\)/);
+ assert.match(shell,/for\(const node of \[homeWord,menuButton,homeControls,weatherCard,voice,liveText\]\)node\.hidden=!show/);
+ assert.match(shell,/function openMenu\(\)[\s\S]{0,260}syncHomeHud\(\)/);
+ assert.match(css,/\.hb-reference-controls\[hidden\][\s\S]{0,220}display:none!important/);
+});
+
+test('reference Homebase title has no legacy rays or illumination',()=>{
+ assert.match(css,/\.hb-shell-active \.hb-home-word:before,\.hb-shell-active \.hb-home-word:after\{content:none!important;display:none!important\}/);
+ assert.match(css,/\.hb-shell-active \.hb-home-word,\.hb-shell-active \.hb-home-word strong,\.hb-shell-active \.hb-home-word small\{filter:none!important;text-shadow:none!important/);
+ assert.match(css,/Phone spacing: keep the reference header clear/);
+});
