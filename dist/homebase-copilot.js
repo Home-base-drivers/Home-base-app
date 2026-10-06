@@ -7,8 +7,16 @@ function boot(){
  const state=D.DriverState.create({...read('homeBaseDispatchState',{}),destination:read('homeBasePrivateDestination',null)?.coords});
  let last=null,lastOffer=null,lastOfferEvaluation=null,locationAt=null,moving=false,watch=null,quietUntil=0,voiceEnabled=false,listening=false,recognition=null,speechBusy=false,pendingAction=null,feed={color:'gray',rows:[]},lastFingerprint='',collapsed=false,conversationActive=false,micReady=false;
  let trips=read('homeBaseTripRows',[]).filter(r=>r?.record_id),logs=read('homeBaseDispatchLog',[]),evidence=read('homeBaseDriverEvidence',null);
- let radioAddressed=false,speechSequence=0,replySequence=0;
- function cancelSpeech(){++replySequence;++speechSequence;speechBusy=false;window.speechSynthesis?.cancel();}
+ let radioAddressed=false,speechSequence=0,replySequence=0,aiAudioContext=null,aiAudioSource=null,aiAudioElement=null,aiAudioUrl=null;
+ function stopAiAudio(){try{aiAudioSource?.stop()}catch{}aiAudioSource=null;if(aiAudioElement){try{aiAudioElement.pause()}catch{}aiAudioElement=null}if(aiAudioUrl){URL.revokeObjectURL(aiAudioUrl);aiAudioUrl=null}}
+ function cancelSpeech(){++replySequence;++speechSequence;speechBusy=false;stopAiAudio();window.speechSynthesis?.cancel();}
+ function unlockAiAudio(){try{const AudioCtx=window.AudioContext||window.webkitAudioContext;if(!AudioCtx)return;aiAudioContext=aiAudioContext||new AudioCtx();aiAudioContext.resume?.()}catch{}}
+ async function playAiAudio(blob,sequence,onEnd){
+  if(!(blob instanceof Blob)||!blob.size)throw Error('AI voice returned no playable audio.');
+  stopAiAudio();
+  if(aiAudioContext){try{await aiAudioContext.resume?.();const buffer=await aiAudioContext.decodeAudioData(await blob.arrayBuffer());if(sequence!==speechSequence)return;const source=aiAudioContext.createBufferSource();aiAudioSource=source;source.buffer=buffer;source.connect(aiAudioContext.destination);source.onended=()=>{if(aiAudioSource===source)aiAudioSource=null;if(sequence===speechSequence)onEnd()};source.start();return}catch{}}
+  aiAudioUrl=URL.createObjectURL(blob);const audio=new Audio(aiAudioUrl);aiAudioElement=audio;audio.playsInline=true;audio.onended=()=>{if(aiAudioElement===audio)aiAudioElement=null;if(sequence===speechSequence)onEnd()};audio.onerror=()=>{if(sequence===speechSequence)onEnd(new Error('Audio playback failed.'))};await audio.play();
+ }
  window.speechSynthesis?.getVoices();
  const getVoicePrefs=()=>HomeBaseLanguages.preferences(read('homeBaseVoicePrefs',{}),navigator.languages||[navigator.language]);
  function unlockSpeech(){
@@ -45,18 +53,30 @@ function boot(){
   const fallback=text===null;if(fallback){text=String(message);outputLocale='en-US';}
   const displayed=fallback?language.englishFallback+' '+text:text;
   window.HomeBaseShell?.logChat?.('assistant',displayed);q('#copilotAction').textContent=displayed;q('#copilotAction').dir='auto';
-  if(!voiceEnabled||Date.now()<quietUntil||!('speechSynthesis' in window)){speechBusy=false;return;}
+  if(!voiceEnabled||Date.now()<quietUntil){speechBusy=false;return;}
   if(fallback)window.HomeBaseShell?.setVoiceStatus?.(displayed,true);
-  const selected=HomeBaseVoice.selectVoice(speechSynthesis.getVoices(),fallback?'':prefs.voiceURI||state.voiceURI||'',outputLocale,fallback?'all':prefs.voiceStyle||'all');
+  const sequence=++speechSequence;
+  const finish=()=>{if(sequence!==speechSequence)return;speechBusy=false;q('#copilotStatus').textContent=conversationActive?'Listening will resume…':'Dispatcher ready · tap Talk · advisory';if(conversationActive&&getVoicePrefs().conversation!==false)setTimeout(()=>listen({resume:true}),260);};
+  if(window.HomeBaseAccounts?.backend){
+   q('#copilotStatus').textContent='Generating Home Base AI voice…';
+   try{
+    const audio=await HomeBaseAccounts.backend.evaluateDispatch({operation:'voice',text,locale:outputLocale,voice:prefs.aiVoice||((prefs.voiceStyle||'all')==='masculine'?'cedar':(prefs.voiceStyle||'all')==='feminine'?'marin':'cedar'),style:prefs.voiceStyle||'all'});
+    if(sequence!==speechSequence)return;
+    if(audio instanceof Blob&&audio.type.startsWith('audio/')){window.HomeBaseShell?.setVoiceStatus?.('Home Base AI · '+displayed);await playAiAudio(audio,sequence,finish);return;}
+   }catch{}
+  }
+  if(!('speechSynthesis' in window)){speechBusy=false;window.HomeBaseShell?.setVoiceStatus?.('AI voice unavailable. Sign in to use Home Base AI voice.',true);return;}
+  const selected=HomeBaseVoice.selectVoice(speechSynthesis.getVoices(),prefs.voiceURI||state.voiceURI||'',outputLocale,prefs.voiceStyle||'all');
   if(!selected){speechBusy=false;window.HomeBaseShell?.setVoiceStatus?.(language.noVoice+' '+displayed,true);if(conversationActive)setTimeout(()=>listen({resume:true}),260);return;}
-  q('#copilotStatus').textContent='Speaking · advisory';
+  q('#copilotStatus').textContent='Device voice fallback · advisory';
   const dispatch=HomeBaseVoice.delivery(text,{driverName:state.driverName||readProfile().name,address:HomeBaseVoice.languageOf(outputLocale)==='en'&&(address||!radioAddressed)});radioAddressed=true;
   const utterance=new SpeechSynthesisUtterance(dispatch.text);utterance.rate=dispatch.rate;utterance.pitch=dispatch.pitch;utterance.volume=dispatch.volume;utterance.lang=selected.lang||outputLocale;utterance.voice=selected;
-  const sequence=++speechSequence;
-  utterance.onend=()=>{if(sequence!==speechSequence)return;speechBusy=false;q('#copilotStatus').textContent=conversationActive?'Listening will resume…':'Dispatcher ready · tap Talk · advisory';if(conversationActive&&getVoicePrefs().conversation!==false)setTimeout(()=>listen({resume:true}),260);};
-  utterance.onerror=e=>{if(sequence!==speechSequence)return;speechBusy=false;q('#copilotStatus').textContent=e.error==='canceled'||e.error==='interrupted'?'Voice stopped · tap Talk':'Audio unavailable · check phone sound and try Preview dispatcher';};
-  if(state.radioCue){try{const ctx=new (window.AudioContext||window.webkitAudioContext)(),osc=ctx.createOscillator(),gain=ctx.createGain();osc.frequency.value=640;gain.gain.value=.018;osc.connect(gain);gain.connect(ctx.destination);osc.start();osc.stop(ctx.currentTime+.07);osc.onended=()=>ctx.close();}catch{}}
-  try{speechSynthesis.resume?.();speechSynthesis.speak(utterance);window.HomeBaseShell?.setVoiceStatus?.('Home Base · '+displayed)}catch{speechBusy=false;window.HomeBaseShell?.setVoiceStatus?.('I have the answer, but audio could not start. Tap Preview voice once, then try the microphone again.',true)}
+  utterance.onend=finish;utterance.onerror=()=>{if(sequence!==speechSequence)return;speechBusy=false;q('#copilotStatus').textContent='Audio unavailable · check phone sound and try Preview AI voice';};
+  try{speechSynthesis.resume?.();speechSynthesis.speak(utterance);window.HomeBaseShell?.setVoiceStatus?.('Device voice fallback · '+displayed)}catch{speechBusy=false;window.HomeBaseShell?.setVoiceStatus?.('Audio could not start. Check phone volume and try again.',true)}
+ }
+ async function previewAiVoice(){
+  const prefs=getVoicePrefs(),sample=HomeBaseLanguages.get(prefs.language).preview;unlockAiAudio();cancelSpeech();const sequence=++speechSequence;speechBusy=true;window.HomeBaseShell?.setVoiceStatus?.('Generating AI voice preview…',true);
+  try{if(!window.HomeBaseAccounts?.backend)throw Error('Sign in required');const audio=await HomeBaseAccounts.backend.evaluateDispatch({operation:'voice',text:sample,locale:prefs.locale,voice:prefs.aiVoice||((prefs.voiceStyle||'all')==='masculine'?'cedar':(prefs.voiceStyle||'all')==='feminine'?'marin':'cedar'),style:prefs.voiceStyle||'all'});if(!(audio instanceof Blob)||!audio.type.startsWith('audio/'))throw Error('AI voice not configured');window.HomeBaseShell?.setVoiceStatus?.('AI-generated Home Base voice · '+sample,true);await playAiAudio(audio,sequence,()=>{speechBusy=false});return true}catch{speechBusy=false;window.HomeBaseShell?.setVoiceStatus?.('AI voice is not active for this account yet. Home Base will use the phone voice as fallback.',true);return false}
  }
  function save(){const {location,destination,...settings}=state;write('homeBaseDispatchState',settings);}
  function setMode(mode){if(!D.MODES.includes(mode))return;state.mode=mode;q('#copilotMode').value=mode;save();update(true);say('Copy. Switching to '+mode.toLowerCase()+'.');}
@@ -104,7 +124,7 @@ function boot(){
   if(!resume&&(listening||conversationActive||speechBusy)){stopConversation();return;}
   if(listening||speechBusy)return;
   if(!resume){
-   cancelSpeech();unlockSpeech();conversationActive=true;voiceEnabled=true;quietUntil=0;speechBusy=false;
+   cancelSpeech();unlockSpeech();unlockAiAudio();conversationActive=true;voiceEnabled=true;quietUntil=0;speechBusy=false;
    q('#copilotStatus').textContent='Requesting microphone…';window.HomeBaseShell?.setVoiceStatus?.('Starting microphone…');
    if(!await ensureMicrophone()){conversationActive=false;voiceEnabled=false;q('#copilotStatus').textContent='Microphone permission needed · tap Talk after allowing access';return;}
   }else if(!conversationActive||getVoicePrefs().conversation===false)return;
