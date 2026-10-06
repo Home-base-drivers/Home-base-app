@@ -28,7 +28,7 @@
  function preferences(saved={},browserLanguages=[]){
   const detected=browserLanguages.find(locale=>languages.some(l=>l.id===String(locale).split('-')[0].toLowerCase()))||'en-US';
   const language=get(saved.language||saved.locale||detected),locale=saved.locale||detected;
-  return {...saved,language:language.id,locale:language.regions.find(([id])=>id.toLowerCase()===String(locale).toLowerCase())?.[0]||language.regions[0][0],voiceURI:typeof saved.voiceURI==='string'?saved.voiceURI:'',conversation:saved.conversation!==false};
+  return {...saved,language:language.id,locale:language.regions.find(([id])=>id.toLowerCase()===String(locale).toLowerCase())?.[0]||language.regions[0][0],voiceURI:typeof saved.voiceURI==='string'?saved.voiceURI:'',voiceStyle:['all','masculine','feminine'].includes(saved.voiceStyle)?saved.voiceStyle:'all',conversation:saved.conversation!==false};
  }
  const normalize=s=>String(s||'').normalize('NFKC').toLowerCase().replace(/^(home base|homebase)[\s,.:]*/u,'').replace(/[\p{P}\p{S}]/gu,' ').replace(/\s+/g,' ').trim();
  function parseCommand(raw,locale){const index=get(locale).commands.findIndex(phrase=>normalize(phrase)===normalize(raw));return index<0?null:[{type:'plan'},{type:'why'},{type:'mode',mode:'GET ME HOME'},{type:'pause'},{type:'resume'},{type:'earnings',remaining:false}][index];}
