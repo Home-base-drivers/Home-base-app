@@ -3,7 +3,9 @@
  // Voice choices always come from voices actually supplied by the device.
  // Home Base stores the user's language/region/voice preference, but never
  // fabricates a voice ID or assumes a particular system voice is installed.
- const dispatcherNames=['Alex','Aaron','Daniel','Nathan','Guy','Ryan','David','Thomas','Samantha','Ava','Serena','Karen','Moira','Tessa','Monica','Paulina','Jorge','Diego','Carlos'];
+ const dispatcherNames=['Alex','Aaron','Daniel','Nathan','Guy','Ryan','David','Thomas','Jorge','Diego','Carlos','Juan','Enrique','Raul','Felipe','Tiago','Joao','Henrique','Rishi','Otoya','Markus','Martin','Lukas','Nicolas','Henri','Samantha','Ava','Serena','Karen','Moira','Tessa','Monica','Paulina','Luciana','Marisol','Helena','Amelie','Marie','Anna','Yuna','Kyoko','Ting-Ting','Mei-Jia','Lekha','Veena'];
+ const masculineNames=['Alex','Aaron','Daniel','Nathan','Guy','Ryan','David','Thomas','Jorge','Diego','Carlos','Juan','Enrique','Raul','Felipe','Tiago','Joao','Henrique','Rishi','Otoya','Markus','Martin','Lukas','Nicolas','Henri'];
+ const feminineNames=['Samantha','Ava','Serena','Karen','Moira','Tessa','Monica','Paulina','Luciana','Marisol','Helena','Amelie','Marie','Anna','Yuna','Kyoko','Ting-Ting','Mei-Jia','Lekha','Veena'];
  function normalizeLocale(locale='en-US'){return String(locale||'en-US').replaceAll('_','-');}
  function languageOf(locale='en-US'){return normalizeLocale(locale).split('-')[0].toLowerCase();}
  function voicesForLocale(voices,locale='en-US'){
@@ -12,9 +14,21 @@
   const sameLanguage=all.filter(v=>languageOf(v.lang)===language&&!exact.includes(v));
   return [...exact,...sameLanguage];
  }
+ function voiceStyle(voice){
+  const name=String(voice?.name||'');
+  if(masculineNames.some(n=>new RegExp('\\b'+n+'\\b','i').test(name)))return'masculine';
+  if(feminineNames.some(n=>new RegExp('\\b'+n+'\\b','i').test(name)))return'feminine';
+  return'neutral';
+ }
+ function voicesForPreference(voices,locale='en-US',style='all'){
+  const available=voicesForLocale(voices,locale);
+  if(!style||style==='all')return available;
+  const filtered=available.filter(v=>voiceStyle(v)===style);
+  return filtered.length?filtered:available;
+ }
  function englishVoices(voices){return voicesForLocale(voices,'en-US').filter(v=>languageOf(v.lang)==='en');}
- function selectVoice(voices,preferredURI='',locale='en-US'){
-  const available=voicesForLocale(voices,locale),saved=available.find(v=>v.voiceURI===preferredURI);
+ function selectVoice(voices,preferredURI='',locale='en-US',style='all'){
+  const available=voicesForPreference(voices,locale,style),saved=available.find(v=>v.voiceURI===preferredURI);
   if(saved)return saved;
   const wanted=normalizeLocale(locale);
   const score=v=>{
@@ -30,5 +44,5 @@
   const body=text.replace(/^Home Base(?: Copilot)?[.:,]\s*/i,'');
   return{text:address?(name?'Home Base to '+name+'. ':'Home Base. ')+body:text,rate:.94,pitch:.86,volume:1};
  }
- return{normalizeLocale,languageOf,voicesForLocale,englishVoices,selectVoice,delivery};
+ return{normalizeLocale,languageOf,voiceStyle,voicesForLocale,voicesForPreference,englishVoices,selectVoice,delivery};
 });
