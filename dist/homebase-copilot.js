@@ -25,6 +25,12 @@ function boot(){
   try{speechSynthesis.resume();const warmup=new SpeechSynthesisUtterance('\u00a0');warmup.volume=0;warmup.rate=2;speechSynthesis.speak(warmup)}catch{}
  }
  async function ensureMicrophone(){
+  // On iPhone/iPad, WebKit SpeechRecognition owns the microphone session.
+  // Opening getUserMedia first and immediately closing it can leave the
+  // standalone web-app audio session between states, so let recognition
+  // request/access the microphone directly.
+  const appleMobile=/iPad|iPhone|iPod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  if(appleMobile)return true;
   if(micReady||!navigator.mediaDevices?.getUserMedia)return true;
   try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});stream.getTracks().forEach(track=>track.stop());micReady=true;return true}
   catch{window.HomeBaseShell?.setVoiceStatus?.('Microphone permission is needed. Allow microphone access, then tap the voice button again.',true);return false}
@@ -141,7 +147,14 @@ function boot(){
   recognition.onerror=e=>{failed=true;if(e.error!=='aborted'){conversationActive=false;voiceEnabled=false}const message=({'not-allowed':'Allow microphone access for Home Base, then tap the voice button again.','service-not-allowed':'Speech input is blocked by this browser.','audio-capture':'Microphone unavailable. Check your audio connection, then try again.','no-speech':'I did not hear anything. Tap the voice button and try again.','network':'Speech recognition service is unavailable. Check your connection and try again.','aborted':'Voice conversation stopped.','language-not-supported':'This browser cannot recognize the selected language. Choose another language or browser.'})[e.error]||'Voice input stopped. Tap the voice button to retry.';q('#copilotStatus').textContent=message;window.HomeBaseShell?.setVoiceStatus?.(message,e.error==='not-allowed'||e.error==='service-not-allowed');};
   recognition.onend=()=>{resetButton();if(!failed&&!speechBusy&&conversationActive&&getVoicePrefs().conversation!==false)setTimeout(()=>listen({resume:true}),240);else if(!failed&&!speechBusy)q('#copilotStatus').textContent='Tap Talk for a voice conversation · advisory';};
   q('#copilotStatus').textContent='Starting microphone…';
-  try{recognition.start()}catch{resetButton();conversationActive=false;voiceEnabled=false;const message='Microphone could not start. Tap the voice button to retry.';q('#copilotStatus').textContent=message;window.HomeBaseShell?.setVoiceStatus?.(message,true);}
+  let startTimer=setTimeout(()=>{if(!listening&&conversationActive){try{recognition?.abort()}catch{}resetButton();conversationActive=false;voiceEnabled=false;const message='Home Base could not open speech recognition. On iPhone, allow Microphone access and make sure Dictation is enabled, then tap again.';q('#copilotStatus').textContent=message;window.HomeBaseShell?.setVoiceStatus?.(message,true)}},4500);
+  const priorStart=recognition.onstart;
+  recognition.onstart=()=>{clearTimeout(startTimer);priorStart?.()};
+  const priorError=recognition.onerror;
+  recognition.onerror=e=>{clearTimeout(startTimer);priorError?.(e)};
+  const priorEnd=recognition.onend;
+  recognition.onend=()=>{clearTimeout(startTimer);priorEnd?.()};
+  try{recognition.start()}catch{clearTimeout(startTimer);resetButton();conversationActive=false;voiceEnabled=false;const message='Microphone could not start. Tap the voice button to retry.';q('#copilotStatus').textContent=message;window.HomeBaseShell?.setVoiceStatus?.(message,true);}
  }
  function enableGps(){if(watch!==null)return;if(!navigator.geolocation)return;say('Starting foreground location updates.');watch=navigator.geolocation.watchPosition(pos=>{state.location=[pos.coords.latitude,pos.coords.longitude];currentLocation=state.location;if(gpsMarker)gpsMarker.setLatLng(currentLocation);locationAt=new Date(pos.timestamp||Date.now()).toISOString();moving=Number.isFinite(pos.coords.speed)&&pos.coords.speed>2.2;document.getElementById('app').classList.toggle('dispatch-moving',moving);update();},()=>{locationAt=null;q('#copilotStatus').textContent='GPS unavailable. Allow location and retry.';},{enableHighAccuracy:true,maximumAge:10000,timeout:15000});}
  function feeds(){const times=typeof providerFeedTimes==='undefined'?{}:providerFeedTimes;const rows=Object.entries(providerStatuses||{}).map(([name,status])=>({name,sourceStatus:status,provenance:status==='active'?'LIVE':status==='stale'?'RECENT':'PREDICTED',observedAt:['active','stale'].includes(status)?(times[name]||null):null}));if(typeof weatherFeedAt!=='undefined')rows.push({name:'Open-Meteo weather',sourceStatus:weatherFeedAt?'active':'unavailable',provenance:weatherFeedAt?'LIVE':'PREDICTED',observedAt:weatherFeedAt,required:false});rows.push({name:'Demand model refresh',provenance:'PREDICTED',observedAt:null,required:false},{name:'Demand prediction',provenance:'PREDICTED',observedAt:null,required:false});feed=D.feedStatus(rows);renderFeedSignal();q('#copilotLive i').className='dispatch-live '+feed.color;q('#copilotLive span').textContent=feed.color==='green'?'Live feeds connected':feed.color==='yellow'?'Partial/recent feeds':'Offline / model only';}
