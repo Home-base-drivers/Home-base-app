@@ -1109,7 +1109,9 @@
 .hb-panels-head>button{flex:0 0 40px;width:40px;height:40px;border:1px solid #41728d;border-radius:10px;background:#0b2a3e;color:#eaf6ff;font:26px/1 sans-serif}
 .hb-panels-browser .hb-panel-picker{padding:10px 0 8px;flex-shrink:0}
 .hb-panels-browser .hb-panel-actions{margin-bottom:10px;flex-shrink:0}
-.hb-panels-browser #hbPanelStack{min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;align-content:start;padding-right:3px}
+.hb-panels-browser #hbPanelStack{display:flex;flex-direction:column;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;align-content:start;padding-right:3px}
 .hb-panels-open .hb-ref-left,.hb-panels-open .hb-ref-right,.hb-panels-open #nextMoveCard{visibility:hidden!important;pointer-events:none!important}
 @media(min-width:600px){#hbPanelsBrowser .hb-panel-body .platforms{grid-template-columns:repeat(3,minmax(0,1fr))!important}#hbPanelsBrowser #bottomSheet .decision-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}}
 @media(max-height:550px){.hb-panels-browser{top:max(78px,calc(env(safe-area-inset-top) + 68px));bottom:96px}.hb-panels-browser .hb-panel-actions{display:none}}
+
+.hb-panels-browser .hb-info-panel{flex:0 0 auto}
