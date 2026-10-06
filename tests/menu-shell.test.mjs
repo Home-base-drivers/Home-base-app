@@ -14,9 +14,10 @@ test('every side-menu navigation and control command has a live app target',()=>
 });
 
 test('former top controls live in the side menu',()=>{
- for(const id of ['panelsBtn','layerBtn','refreshBtn','installBtn']){
+ for(const id of ['layerBtn','refreshBtn','installBtn']){
   assert.match(shell,new RegExp('data-control=["\\\']'+id+'["\\\']'));
  }
+ assert.match(shell,/data-menu-panel="panels"/);
  assert.match(shell,/data-menu-panel="heat"/);
  assert.match(shell,/data-menu-view="heat"/);
  assert.match(shell,/id="hbHeatVisibility"/);
