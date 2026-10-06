@@ -1,5 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
+import {makeDispatchHandler} from '../supabase/functions/dispatch/handler.mjs';
 import {makeVoiceSynthesizer} from '../supabase/functions/dispatch/voice.mjs';
 
 test('AI voice sends Dominican accent and masculine presentation instructions',async()=>{
@@ -13,6 +14,26 @@ test('AI voice sends Dominican accent and masculine presentation instructions',a
  assert.match(sent.body.instructions,/masculine vocal presentation/);
  assert.equal(result.contentType,'audio/mpeg');
  assert.equal(result.audio.length,3);
+});
+
+test('dispatch voice response is binary-safe for Supabase functions.invoke',async()=>{
+ const handler=makeDispatchHandler({
+  engine:{},
+  authenticate:async()=>({id:'user-1',is_anonymous:false}),
+  loadState:async()=>({}),
+  loadTrips:async()=>[],
+  synthesizeVoice:async()=>({configured:true,audio:new Uint8Array([1,2,3]),contentType:'audio/mpeg'})
+ });
+ const response=await handler(new Request('https://example.test/dispatch',{
+  method:'POST',
+  headers:{Authorization:'Bearer test-token','Content-Type':'application/json'},
+  body:JSON.stringify({operation:'voice',text:'Hola',locale:'es-DO',voice:'cedar',style:'masculine'})
+ }));
+ assert.equal(response.status,200);
+ assert.equal(response.headers.get('content-type'),'application/octet-stream');
+ assert.equal(response.headers.get('x-homebase-audio-type'),'audio/mpeg');
+ assert.equal(response.headers.get('cache-control'),'no-store');
+ assert.deepEqual([...new Uint8Array(await response.arrayBuffer())],[1,2,3]);
 });
 
 test('AI voice rejects unsupported voice settings',async()=>{
