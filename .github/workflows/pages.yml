@@ -46,6 +46,7 @@ jobs:
           node --check dist/homebase-live.js
           node --check dist/homebase-dispatch.js
           node --check dist/homebase-copilot.js
+          node --check dist/homebase-live-assistant.js
           node --check dist/sw.js
       - name: Fetch provider signals
         run: node scripts/refresh-provider-signals.mjs
