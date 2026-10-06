@@ -46,14 +46,10 @@
     return delta > .08 ? 'rising' : delta < -.08 ? 'falling' : 'steady';
   }
   function ensureFreshnessBadge() {
-    let badge = document.getElementById('demandFreshness');
-    if (badge) return badge;
-    badge = document.createElement('div');
+    const existing = document.getElementById('demandFreshness');
+    if (existing) existing.remove();
+    const badge = document.createElement('div');
     badge.id = 'demandFreshness';
-    badge.setAttribute('role', 'status');
-    badge.style.cssText = 'position:absolute;z-index:890;right:10px;top:10px;border:1px solid rgba(69,207,255,.45);border-radius:999px;padding:6px 9px;background:rgba(2,14,24,.86);backdrop-filter:blur(10px);color:#9edfff;font-size:.58rem;font-weight:850;letter-spacing:.05em;box-shadow:0 8px 22px rgba(0,0,0,.3)';
-    badge.textContent = 'DEMAND · CHECKING';
-    document.querySelector('.map-stage')?.appendChild(badge);
     return badge;
   }
   async function refreshLiveDemand() {
