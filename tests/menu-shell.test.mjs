@@ -99,3 +99,10 @@ test('reference Homebase title has no legacy rays or illumination',()=>{
  assert.match(css,/\.hb-shell-active \.hb-home-word,\.hb-shell-active \.hb-home-word strong,\.hb-shell-active \.hb-home-word small\{filter:none!important;text-shadow:none!important/);
  assert.match(css,/Phone spacing: keep the reference header clear/);
 });
+
+
+test('Homebase lettering stays visibly above the dark header background',()=>{
+ assert.match(css,/Keep the Homebase lettering above the glass header/);
+ assert.match(css,/\.hb-shell-active \.hb-home-word strong\{color:#f5f7f9!important;-webkit-text-fill-color:#f5f7f9!important;opacity:1!important\}/);
+ assert.match(css,/\.hb-shell-active \.hb-home-word small\{color:#aab9c7!important;-webkit-text-fill-color:#aab9c7!important;opacity:1!important\}/);
+});
