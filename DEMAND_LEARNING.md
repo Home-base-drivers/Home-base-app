@@ -22,6 +22,8 @@ Reviewed screenshots show geographically changing city and northern-suburb surge
 
 Do not attribute screenshots to named events without confirmed capture date, time zone, AM/PM and market. Screenshot bonus amounts, pricing multipliers, wait-time bands, modeled heat and gross earnings are separate units. The photos are not published and are not used as dated training labels.
 
+October 5, 2026 additions: five Uber maps are grouped into three dated evening observations: 8:31 PM (IMG_3545), 9:48 PM (IMG_3546 + IMG_3547), and 10:00 PM (IMG_3548 + IMG_3549), America/New_York. PM is inferred from the evening sharing context and explicitly labeled. Same-time zoom variants count once; multiple captures on this Monday remain one distinct date for recurrence. Readable incentive badges and wait bands are stored separately from qualitative neighborhood shading. Unknown event markers are not attributed to a named event. No badge in a view means unobserved, not zero. Short-lived heat effects still expire after 30 minutes; historical records persist.
+
 ## Verification and future improvements
 
 Run `npm test` and `npm run build:backend-client`. Database tests execute migrations in PostgreSQL WASM and check bounds, consent withdrawal and cross-user isolation. Public normalization tests exclude private, virtual and undated campus events and preserve unknown precipitation. Deployment uses the existing provider refresh workflow, with source failures remaining explicit.
