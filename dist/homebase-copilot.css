@@ -1115,3 +1115,31 @@
 @media(max-height:550px){.hb-panels-browser{top:max(78px,calc(env(safe-area-inset-top) + 68px));bottom:96px}.hb-panels-browser .hb-panel-actions{display:none}}
 
 .hb-panels-browser .hb-info-panel{flex:0 0 auto}
+
+/* Compact platform actions stay inside their own cell on narrow phones. */
+.hb-platform-bar{height:48px}
+.hb-platform-mini{display:grid;grid-template-columns:minmax(0,1fr) 28px;align-items:center;gap:3px;padding:4px 3px 4px 9px}
+.hb-platform-mini .hb-platform-copy{display:flex;flex-direction:column;min-width:0;margin:0;overflow:hidden}
+.hb-platform-mini .hb-platform-copy b{font-size:9px;letter-spacing:.045em;line-height:1.15}
+.hb-platform-mini .hb-platform-price{font-size:12px;line-height:1.2;margin-top:3px;font-variant-numeric:tabular-nums}
+.hb-platform-open{display:grid;place-items:center;width:28px;min-width:0;height:40px;padding:0;border:1px solid #8059cb;border-radius:8px;background:#071b2b;color:#aa80ff;cursor:pointer;touch-action:manipulation}
+.hb-platform-mini-1 .hb-platform-open{border-color:#a52b70;color:#ff58b0}
+.hb-platform-mini-2 .hb-platform-open{border-color:#168d7b;color:#24dfbd}
+.hb-platform-open svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.hb-platform-open:focus-visible{outline:2px solid #e0f6ff;outline-offset:-3px}
+.hb-platform-open:active{background:#133249}
+.hb-shell-active #routePlan .compact-route-stop b{white-space:normal!important;overflow-wrap:anywhere;line-height:1.3!important}
+.hb-shell-active #routePlan .compact-route-stop b time{display:block;margin-bottom:3px;font-size:.62rem;white-space:normal}
+.hb-shell-active #routePlan .compact-route-stop b em{display:none}
+.hb-shell-active #routePlan .compact-event span{white-space:normal!important;overflow-wrap:anywhere;line-height:1.35!important}
+.hb-shell-active #routePlan .route-head h2{min-width:0}
+.hb-shell-active #routePlan .route-head button{flex:0 0 32px;min-width:32px}
+@media(max-width:430px){
+ .hb-platform-bar{height:48px;grid-template-columns:minmax(0,1fr) 34px;gap:4px}
+ .hb-platform-toggle{width:34px;height:40px}
+ .hb-platform-mini{grid-template-columns:minmax(0,1fr) 24px;gap:2px;padding:4px 2px 4px 7px}
+ .hb-platform-mini .hb-platform-copy b{font-size:clamp(7px,2vw,8.5px);letter-spacing:.025em}
+ .hb-platform-mini .hb-platform-price{font-size:clamp(9px,2.65vw,11.5px)}
+ .hb-platform-open{width:24px;height:40px;border-radius:7px}
+ .hb-platform-open svg{width:14px;height:14px}
+}
