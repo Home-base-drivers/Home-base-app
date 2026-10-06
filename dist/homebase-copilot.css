@@ -564,3 +564,22 @@
  }
  .hb-shell-active .hb-voice-bubble svg{width:26px!important;height:26px!important}
 }
+
+
+/* Weather HUD v2 — compact current conditions only */
+.hb-home-weather{
+ min-width:0!important;width:auto!important;height:46px!important;padding:5px 9px!important;
+ gap:6px!important;border-radius:13px!important
+}
+.hb-home-weather .hb-weather-icon{width:26px!important;font-size:1.35rem!important}
+.hb-weather-copy{gap:0!important}
+.hb-weather-now{gap:5px!important}
+.hb-weather-now strong{font-size:1rem!important;line-height:1!important}
+.hb-weather-now span{font-size:.53rem!important;line-height:1!important;max-width:62px!important;margin-top:0!important}
+.hb-weather-copy small{display:none!important}
+@media(max-width:430px){
+ .hb-home-weather{height:42px!important;padding:4px 7px!important;gap:5px!important;border-radius:12px!important}
+ .hb-home-weather .hb-weather-icon{width:23px!important;font-size:1.18rem!important}
+ .hb-weather-now strong{font-size:.92rem!important}
+ .hb-weather-now span{font-size:.49rem!important;max-width:56px!important}
+}
