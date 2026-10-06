@@ -7,8 +7,16 @@ function boot(){
  const state=D.DriverState.create({...read('homeBaseDispatchState',{}),destination:read('homeBasePrivateDestination',null)?.coords});
  let last=null,lastOffer=null,lastOfferEvaluation=null,locationAt=null,moving=false,watch=null,quietUntil=0,voiceEnabled=false,listening=false,recognition=null,speechBusy=false,pendingAction=null,feed={color:'gray',rows:[]},lastFingerprint='',collapsed=false,conversationActive=false,micReady=false;
  let trips=read('homeBaseTripRows',[]).filter(r=>r?.record_id),logs=read('homeBaseDispatchLog',[]),evidence=read('homeBaseDriverEvidence',null);
- let radioAddressed=false,speechSequence=0,replySequence=0;
- function cancelSpeech(){++replySequence;++speechSequence;speechBusy=false;window.speechSynthesis?.cancel();}
+ let radioAddressed=false,speechSequence=0,replySequence=0,aiAudioContext=null,aiAudioSource=null,aiAudioElement=null,aiAudioUrl=null;
+ function stopAiAudio(){try{aiAudioSource?.stop()}catch{}aiAudioSource=null;if(aiAudioElement){try{aiAudioElement.pause()}catch{}aiAudioElement=null}if(aiAudioUrl){URL.revokeObjectURL(aiAudioUrl);aiAudioUrl=null}}
+ function cancelSpeech(){++replySequence;++speechSequence;speechBusy=false;stopAiAudio();window.speechSynthesis?.cancel();}
+ function unlockAiAudio(){try{const AudioCtx=window.AudioContext||window.webkitAudioContext;if(!AudioCtx)return;aiAudioContext=aiAudioContext||new AudioCtx();aiAudioContext.resume?.()}catch{}}
+ async function playAiAudio(blob,sequence,onEnd){
+  if(!(blob instanceof Blob)||!blob.size)throw Error('AI voice returned no playable audio.');
+  stopAiAudio();
+  if(aiAudioContext){try{await aiAudioContext.resume?.();const buffer=await aiAudioContext.decodeAudioData(await blob.arrayBuffer());if(sequence!==speechSequence)return;const source=aiAudioContext.createBufferSource();aiAudioSource=source;source.buffer=buffer;source.connect(aiAudioContext.destination);source.onended=()=>{if(aiAudioSource===source)aiAudioSource=null;if(sequence===speechSequence)onEnd()};source.start();return}catch{}}
+  aiAudioUrl=URL.createObjectURL(blob);const audio=new Audio(aiAudioUrl);aiAudioElement=audio;audio.playsInline=true;audio.onended=()=>{if(aiAudioElement===audio)aiAudioElement=null;if(sequence===speechSequence)onEnd()};audio.onerror=()=>{if(sequence===speechSequence)onEnd(new Error('Audio playback failed.'))};await audio.play();
+ }
  window.speechSynthesis?.getVoices();
  const getVoicePrefs=()=>HomeBaseLanguages.preferences(read('homeBaseVoicePrefs',{}),navigator.languages||[navigator.language]);
  function unlockSpeech(){
@@ -45,18 +53,30 @@ function boot(){
   const fallback=text===null;if(fallback){text=String(message);outputLocale='en-US';}
   const displayed=fallback?language.englishFallback+' '+text:text;
   window.HomeBaseShell?.logChat?.('assistant',displayed);q('#copilotAction').textContent=displayed;q('#copilotAction').dir='auto';
-  if(!voiceEnabled||Date.now()<quietUntil||!('speechSynthesis' in window)){speechBusy=false;return;}
+  if(!voiceEnabled||Date.now()<quietUntil){speechBusy=false;return;}
   if(fallback)window.HomeBaseShell?.setVoiceStatus?.(displayed,true);
-  const selected=HomeBaseVoice.selectVoice(speechSynthesis.getVoices(),fallback?'':prefs.voiceURI||state.voiceURI||'',outputLocale,fallback?'all':prefs.voiceStyle||'all');
+  const sequence=++speechSequence;
+  const finish=()=>{if(sequence!==speechSequence)return;speechBusy=false;q('#copilotStatus').textContent=conversationActive?'Listening will resume…':'Dispatcher ready · tap Talk · advisory';if(conversationActive&&getVoicePrefs().conversation!==false)setTimeout(()=>listen({resume:true}),260);};
+  if(window.HomeBaseAccounts?.backend){
+   q('#copilotStatus').textContent='Generating Home Base AI voice…';
+   try{
+    const audio=await HomeBaseAccounts.backend.evaluateDispatch({operation:'voice',text,locale:outputLocale,voice:prefs.aiVoice||((prefs.voiceStyle||'all')==='masculine'?'cedar':(prefs.voiceStyle||'all')==='feminine'?'marin':'cedar'),style:prefs.voiceStyle||'all'});
+    if(sequence!==speechSequence)return;
+    if(audio instanceof Blob&&audio.type.startsWith('audio/')){window.HomeBaseShell?.setVoiceStatus?.('Home Base AI · '+displayed);await playAiAudio(audio,sequence,finish);return;}
+   }catch{}
+  }
+  if(!('speechSynthesis' in window)){speechBusy=false;window.HomeBaseShell?.setVoiceStatus?.('AI voice unavailable. Sign in to use Home Base AI voice.',true);return;}
+  const selected=HomeBaseVoice.selectVoice(speechSynthesis.getVoices(),prefs.voiceURI||state.voiceURI||'',outputLocale,prefs.voiceStyle||'all');
   if(!selected){speechBusy=false;window.HomeBaseShell?.setVoiceStatus?.(language.noVoice+' '+displayed,true);if(conversationActive)setTimeout(()=>listen({resume:true}),260);return;}
-  q('#copilotStatus').textContent='Speaking · advisory';
+  q('#copilotStatus').textContent='Device voice fallback · advisory';
   const dispatch=HomeBaseVoice.delivery(text,{driverName:state.driverName||readProfile().name,address:HomeBaseVoice.languageOf(outputLocale)==='en'&&(address||!radioAddressed)});radioAddressed=true;
   const utterance=new SpeechSynthesisUtterance(dispatch.text);utterance.rate=dispatch.rate;utterance.pitch=dispatch.pitch;utterance.volume=dispatch.volume;utterance.lang=selected.lang||outputLocale;utterance.voice=selected;
-  const sequence=++speechSequence;
-  utterance.onend=()=>{if(sequence!==speechSequence)return;speechBusy=false;q('#copilotStatus').textContent=conversationActive?'Listening will resume…':'Dispatcher ready · tap Talk · advisory';if(conversationActive&&getVoicePrefs().conversation!==false)setTimeout(()=>listen({resume:true}),260);};
-  utterance.onerror=e=>{if(sequence!==speechSequence)return;speechBusy=false;q('#copilotStatus').textContent=e.error==='canceled'||e.error==='interrupted'?'Voice stopped · tap Talk':'Audio unavailable · check phone sound and try Preview dispatcher';};
-  if(state.radioCue){try{const ctx=new (window.AudioContext||window.webkitAudioContext)(),osc=ctx.createOscillator(),gain=ctx.createGain();osc.frequency.value=640;gain.gain.value=.018;osc.connect(gain);gain.connect(ctx.destination);osc.start();osc.stop(ctx.currentTime+.07);osc.onended=()=>ctx.close();}catch{}}
-  try{speechSynthesis.resume?.();speechSynthesis.speak(utterance);window.HomeBaseShell?.setVoiceStatus?.('Home Base · '+displayed)}catch{speechBusy=false;window.HomeBaseShell?.setVoiceStatus?.('I have the answer, but audio could not start. Tap Preview voice once, then try the microphone again.',true)}
+  utterance.onend=finish;utterance.onerror=()=>{if(sequence!==speechSequence)return;speechBusy=false;q('#copilotStatus').textContent='Audio unavailable · check phone sound and try Preview AI voice';};
+  try{speechSynthesis.resume?.();speechSynthesis.speak(utterance);window.HomeBaseShell?.setVoiceStatus?.('Device voice fallback · '+displayed)}catch{speechBusy=false;window.HomeBaseShell?.setVoiceStatus?.('Audio could not start. Check phone volume and try again.',true)}
+ }
+ async function previewAiVoice(){
+  const prefs=getVoicePrefs(),sample=HomeBaseLanguages.get(prefs.language).preview;unlockAiAudio();cancelSpeech();const sequence=++speechSequence;speechBusy=true;window.HomeBaseShell?.setVoiceStatus?.('Generating AI voice preview…',true);
+  try{if(!window.HomeBaseAccounts?.backend)throw Error('Sign in required');const audio=await HomeBaseAccounts.backend.evaluateDispatch({operation:'voice',text:sample,locale:prefs.locale,voice:prefs.aiVoice||((prefs.voiceStyle||'all')==='masculine'?'cedar':(prefs.voiceStyle||'all')==='feminine'?'marin':'cedar'),style:prefs.voiceStyle||'all'});if(!(audio instanceof Blob)||!audio.type.startsWith('audio/'))throw Error('AI voice not configured');window.HomeBaseShell?.setVoiceStatus?.('AI-generated Home Base voice · '+sample,true);await playAiAudio(audio,sequence,()=>{speechBusy=false});return true}catch{speechBusy=false;window.HomeBaseShell?.setVoiceStatus?.('AI voice is not active for this account yet. Home Base will use the phone voice as fallback.',true);return false}
  }
  function save(){const {location,destination,...settings}=state;write('homeBaseDispatchState',settings);}
  function setMode(mode){if(!D.MODES.includes(mode))return;state.mode=mode;q('#copilotMode').value=mode;save();update(true);say('Copy. Switching to '+mode.toLowerCase()+'.');}
@@ -104,7 +124,7 @@ function boot(){
   if(!resume&&(listening||conversationActive||speechBusy)){stopConversation();return;}
   if(listening||speechBusy)return;
   if(!resume){
-   cancelSpeech();unlockSpeech();conversationActive=true;voiceEnabled=true;quietUntil=0;speechBusy=false;
+   cancelSpeech();unlockSpeech();unlockAiAudio();conversationActive=true;voiceEnabled=true;quietUntil=0;speechBusy=false;
    q('#copilotStatus').textContent='Requesting microphone…';window.HomeBaseShell?.setVoiceStatus?.('Starting microphone…');
    if(!await ensureMicrophone()){conversationActive=false;voiceEnabled=false;q('#copilotStatus').textContent='Microphone permission needed · tap Talk after allowing access';return;}
   }else if(!conversationActive||getVoicePrefs().conversation===false)return;
@@ -173,7 +193,7 @@ function boot(){
  document.addEventListener('visibilitychange',()=>{if(document.hidden){conversationActive=false;voiceEnabled=false;recognition?.abort();cancelSpeech();if(watch!==null){navigator.geolocation.clearWatch(watch);watch=null;}locationAt=null;moving=false;document.getElementById('app').classList.remove('dispatch-moving');}else update(true);});
  function reload(){radioAddressed=false;voiceEnabled=false;conversationActive=false;recognition?.abort();cancelSpeech();for(const key of Object.keys(state))delete state[key];Object.assign(state,D.DriverState.create({...read('homeBaseDispatchState',{}),destination:read('homeBasePrivateDestination',null)?.coords}));refreshTrips();logs=read('homeBaseDispatchLog',[]);evidence=read('homeBaseDriverEvidence',null);lastOffer=null;lastOfferEvaluation=null;last=null;lastFingerprint='';update(true);}
  document.addEventListener('homebase:device-data-changed',reload);
- q('#copilotMode').value=state.mode;window.HomeBaseCopilot={command,update,reload,showFeeds,enableGps,toggleConversation:()=>listen(),stopConversation,observePosition:pos=>{locationAt=new Date(pos.timestamp||Date.now()).toISOString();moving=Number.isFinite(pos.coords.speed)&&pos.coords.speed>2.2;document.getElementById('app').classList.toggle('dispatch-moving',moving);},stop:()=>stopConversation(),state};
+ q('#copilotMode').value=state.mode;window.HomeBaseCopilot={command,update,reload,showFeeds,enableGps,toggleConversation:()=>listen(),stopConversation,previewAiVoice,observePosition:pos=>{locationAt=new Date(pos.timestamp||Date.now()).toISOString();moving=Number.isFinite(pos.coords.speed)&&pos.coords.speed>2.2;document.getElementById('app').classList.toggle('dispatch-moving',moving);},stop:()=>stopConversation(),state};
  const launchUrl=new URL(location.href),intent=D.shortcutCommand(launchUrl.searchParams.get('copilot'));if(intent){command('',intent);launchUrl.searchParams.delete('copilot');history.replaceState(null,'',launchUrl.href);}
  update();feeds();setInterval(()=>{if(document.visibilityState==='visible'){update();feeds();}},30000);
 }
@@ -212,7 +232,7 @@ function bootHomeBaseShell(){
   '<button data-control="heatToggle">Heat map</button><button data-control="paletteToggle">Colors</button><button data-control="layerBtn">Satellite</button><button data-control="refreshBtn">Refresh GPS</button></div></section>'+
   '<section class="hb-menu-section"><div class="hb-section-title"><h3>CUSTOMIZE HOME</h3><small>Choose only what you want over the map</small></div><div id="hbModuleList" class="hb-module-list"></div></section>'+
   '<section class="hb-menu-section"><div class="hb-section-title"><h3>VOICE COPILOT</h3><small>Voice first · chat saved on this device</small></div>'+
-  '<div class="hb-voice-preferences"><label><span>Language</span><select id="hbVoiceLanguage" aria-label="Copilot language"></select></label><label><span>Accent / region</span><select id="hbVoiceAccent" aria-label="Copilot accent or region"></select></label><label><span>Voice style</span><select id="hbVoiceStyle" aria-label="Voice style"><option value="all">All voices</option><option value="masculine">Masculine</option><option value="feminine">Feminine</option></select></label><label><span>Voice</span><select id="hbVoiceChoice" aria-label="Copilot voice"><option value="">Device default</option></select></label><button id="hbVoicePreview" type="button">Preview voice</button><p id="hbVoiceAvailability" role="status" style="font-size:.72rem;line-height:1.5"></p><p id="hbVoiceCommands" dir="auto" style="font-size:.72rem;line-height:1.5"></p><small>Speech recognition and accents depend on your browser and installed voices. Basic commands work locally. Other replies use English unless cloud language is enabled and translation is available. App menus and market coverage are unchanged.</small></div>'+
+  '<div class="hb-voice-preferences"><label><span>Language</span><select id="hbVoiceLanguage" aria-label="Copilot language"></select></label><label><span>Accent / region</span><select id="hbVoiceAccent" aria-label="Copilot accent or region"></select></label><label><span>Voice style</span><select id="hbVoiceStyle" aria-label="Voice style"><option value="all">All voices</option><option value="masculine">Masculine</option><option value="feminine">Feminine</option></select></label><label><span>Voice</span><select id="hbVoiceChoice" aria-label="Home Base AI voice"></select></label><button id="hbVoicePreview" type="button">Preview AI voice</button><p id="hbVoiceAvailability" role="status" style="font-size:.72rem;line-height:1.5"></p><p id="hbVoiceCommands" dir="auto" style="font-size:.72rem;line-height:1.5"></p><small>Home Base AI voice is AI-generated, not a human voice. Language, regional accent and vocal presentation are generated securely through the Home Base backend when signed in. Your phone voice is used only as a fallback if AI audio is unavailable.</small></div>'+
   '<label class="hb-setting-row"><span><b>Continuous conversation</b><small>Tap once, then keep talking hands-free</small></span><input id="hbConversationMode" type="checkbox"></label>'+
   '<label class="hb-setting-row"><span><b>Voice + text on map</b><small>Optional live transcript; voice-only is the default</small></span><input id="hbShowText" type="checkbox"></label>'+
   '<div class="hb-color-row"><span><b>Voice button color</b><small>Blue is the Home Base default</small></span><div class="hb-swatches"><button data-color="#1769ff" aria-label="Blue"></button><button data-color="#08a9ff" aria-label="Cyan"></button><button data-color="#7047ff" aria-label="Purple"></button><button data-color="#ff2aa7" aria-label="Pink"></button><input id="hbVoiceColor" type="color" aria-label="Custom voice button color"></div></div></section>'+
@@ -247,25 +267,22 @@ function bootHomeBaseShell(){
   accentSelect.innerHTML=options.map(([value,label])=>'<option value="'+value+'">'+label+'</option>').join('');
   if(options.some(([value])=>value===voicePrefs.locale))accentSelect.value=voicePrefs.locale;else{accentSelect.value=options[0][0];voicePrefs.locale=accentSelect.value}
  }
+ const aiVoices=[['cedar','Cedar · rich'],['marin','Marin · natural'],['onyx','Onyx · deep'],['coral','Coral · bright'],['sage','Sage · calm'],['nova','Nova · clear'],['echo','Echo · smooth'],['ash','Ash · direct'],['verse','Verse · expressive'],['shimmer','Shimmer · light'],['alloy','Alloy · balanced'],['ballad','Ballad · warm'],['fable','Fable · character']];
  function populateVoices(){
-  const voices=window.speechSynthesis?.getVoices?.()||[],sameLanguage=window.HomeBaseVoice?.voicesForLocale?.(voices,voicePrefs.locale)||voices.filter(v=>String(v.lang||'').toLowerCase().startsWith((voicePrefs.language||'en').toLowerCase())),available=window.HomeBaseVoice?.voicesForPreference?.(voices,voicePrefs.locale,voicePrefs.voiceStyle||'all')||sameLanguage;
-  const selected=voicePrefs.voiceURI||'';
-  voiceSelect.innerHTML='<option value="">Automatic · selected language</option>'+available.map(v=>'<option value="'+esc(v.voiceURI)+'">'+esc(v.name)+' · '+esc(v.lang||voicePrefs.locale)+(HomeBaseVoice.voiceStyle(v)!=='neutral'?' · '+HomeBaseVoice.voiceStyle(v):'')+'</option>').join('');
-  if([...voiceSelect.options].some(option=>option.value===selected))voiceSelect.value=selected;else{voiceSelect.value='';voicePrefs.voiceURI=''}
-  const language=HomeBaseLanguages.get(voicePrefs.language),exact=sameLanguage.some(v=>HomeBaseVoice.normalizeLocale(v.lang).toLowerCase()===voicePrefs.locale.toLowerCase()),styleMatches=voicePrefs.voiceStyle==='all'||sameLanguage.some(v=>HomeBaseVoice.voiceStyle(v)===voicePrefs.voiceStyle);
-  const availability=drawer.querySelector('#hbVoiceAvailability');availability.dir='auto';availability.textContent=!sameLanguage.length?language.noVoice:!styleMatches?'No '+voicePrefs.voiceStyle+' voice is installed for this language on this device. Showing all available voices instead.':exact?'Voice available for '+voicePrefs.locale+'.':'Exact accent not installed; using another '+language.english+' voice.';
-  drawer.querySelector('#hbVoiceCommands').textContent=language.commands.join(' · ');
-  drawer.querySelector('#hbVoicePreview').disabled=!available.length;
-
+  const selected=voicePrefs.aiVoice||((voicePrefs.voiceStyle||'all')==='masculine'?'cedar':(voicePrefs.voiceStyle||'all')==='feminine'?'marin':'cedar');
+  voiceSelect.innerHTML=aiVoices.map(([value,label])=>'<option value="'+value+'">'+label+'</option>').join('');
+  voiceSelect.value=aiVoices.some(([value])=>value===selected)?selected:'cedar';voicePrefs.aiVoice=voiceSelect.value;
+  const language=HomeBaseLanguages.get(voicePrefs.language),availability=drawer.querySelector('#hbVoiceAvailability');availability.dir='auto';availability.textContent='Home Base AI voice · '+voicePrefs.locale+' · '+(voicePrefs.voiceStyle==='masculine'?'masculine presentation':voicePrefs.voiceStyle==='feminine'?'feminine presentation':'natural presentation')+'. Device voices are fallback only.';
+  drawer.querySelector('#hbVoiceCommands').textContent=language.commands.join(' · ');drawer.querySelector('#hbVoicePreview').disabled=false;
  }
  languageSelect.value=voicePrefs.language||String(voicePrefs.locale||'en-US').split('-')[0]||'en';styleSelect.value=voicePrefs.voiceStyle||'all';populateAccents();populateVoices();conversationToggle.checked=voicePrefs.conversation!==false;write('homeBaseVoicePrefs',voicePrefs);
- languageSelect.addEventListener('change',()=>{voicePrefs.language=languageSelect.value;voicePrefs.locale=(accents[voicePrefs.language]||accents.en)[0][0];voicePrefs.voiceURI='';populateAccents();populateVoices();saveVoicePrefs()});
- accentSelect.addEventListener('change',()=>{voicePrefs.locale=accentSelect.value;voicePrefs.voiceURI='';populateVoices();saveVoicePrefs()});
- styleSelect.addEventListener('change',()=>{voicePrefs.voiceStyle=styleSelect.value;voicePrefs.voiceURI='';populateVoices();saveVoicePrefs()});
- voiceSelect.addEventListener('change',()=>{voicePrefs.voiceURI=voiceSelect.value;saveVoicePrefs()});
+ languageSelect.addEventListener('change',()=>{voicePrefs.language=languageSelect.value;voicePrefs.locale=(accents[voicePrefs.language]||accents.en)[0][0];populateAccents();populateVoices();saveVoicePrefs()});
+ accentSelect.addEventListener('change',()=>{voicePrefs.locale=accentSelect.value;populateVoices();saveVoicePrefs()});
+ styleSelect.addEventListener('change',()=>{voicePrefs.voiceStyle=styleSelect.value;if(styleSelect.value==='masculine')voicePrefs.aiVoice='cedar';else if(styleSelect.value==='feminine')voicePrefs.aiVoice='marin';populateVoices();saveVoicePrefs()});
+ voiceSelect.addEventListener('change',()=>{voicePrefs.aiVoice=voiceSelect.value;saveVoicePrefs()});
  conversationToggle.addEventListener('change',()=>{voicePrefs.conversation=conversationToggle.checked;saveVoicePrefs()});
  if(window.speechSynthesis?.addEventListener)window.speechSynthesis.addEventListener('voiceschanged',populateVoices);else if(window.speechSynthesis)window.speechSynthesis.onvoiceschanged=populateVoices;
- drawer.querySelector('#hbVoicePreview').addEventListener('click',()=>{if(!('speechSynthesis' in window))return setVoiceStatus('Voice output is unavailable in this browser.',true);speechSynthesis.cancel();window.HomeBaseCopilot?.stopConversation?.();const sample=HomeBaseLanguages.get(voicePrefs.language).preview;const utterance=new SpeechSynthesisUtterance(sample),selected=HomeBaseVoice.selectVoice(speechSynthesis.getVoices(),voicePrefs.voiceURI,voicePrefs.locale,voicePrefs.voiceStyle||'all');if(!selected)return setVoiceStatus(HomeBaseLanguages.get(voicePrefs.language).noVoice,true);speechSynthesis.resume?.();utterance.lang=voicePrefs.locale;if(selected){utterance.voice=selected;utterance.lang=selected.lang||voicePrefs.locale}speechSynthesis.speak(utterance);setVoiceStatus(sample)});
+ drawer.querySelector('#hbVoicePreview').addEventListener('click',async()=>{window.HomeBaseCopilot?.stopConversation?.();unlockAiAudio();await previewAiVoice()});
  const colorInput=drawer.querySelector('#hbVoiceColor');colorInput.value=voiceColor;colorInput.addEventListener('input',()=>setVoiceColor(colorInput.value));
  drawer.querySelectorAll('[data-color]').forEach(button=>{button.style.setProperty('--swatch',button.dataset.color);button.addEventListener('click',()=>setVoiceColor(button.dataset.color))});
  function setVoiceColor(color){voiceColor=color;app.style.setProperty('--hb-voice-color',color);colorInput.value=color;write('homeBaseCopilotColor',color)}
