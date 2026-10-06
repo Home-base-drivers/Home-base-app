@@ -1,5 +1,5 @@
 // Shared foreground dispatch endpoint. Auth is checked before reading private driver data.
-export function makeDispatchHandler({engine,authenticate,loadState,loadTrips,parseLanguage}) {
+export function makeDispatchHandler({engine,authenticate,loadState,loadTrips,parseLanguage,translateLanguage}) {
  const headers={'Content-Type':'application/json','Access-Control-Allow-Origin':'https://home-base-drivers.github.io','Access-Control-Allow-Headers':'authorization,apikey,content-type,x-client-info','Access-Control-Allow-Methods':'POST,OPTIONS'};
  const response=(body,status=200)=>new Response(JSON.stringify(body),{status,headers});
  return async request=>{
@@ -10,8 +10,9 @@ export function makeDispatchHandler({engine,authenticate,loadState,loadTrips,par
   if(!user?.id||user.is_anonymous)return response({error:'Sign in first'},401);
   try{
    const raw=await request.text();if(raw.length>65536)return response({error:'Request too large'},413);
-   const payload=JSON.parse(raw);if(!['score','recommend','chat'].includes(payload.operation))return response({error:'Unsupported operation'},400);
-   if(payload.operation==='chat'){const language=parseLanguage?await parseLanguage(payload.utterance):{command:engine.parseCommand(payload.utterance),provider:'not_configured',execution:'advisory'};return response(language);}
+   const payload=JSON.parse(raw);if(!['score','recommend','chat','translate'].includes(payload.operation))return response({error:'Unsupported operation'},400);
+   if(payload.operation==='translate'){if(!translateLanguage)return response({translated:false,provider:'not_configured'});return response(await translateLanguage(payload.text,payload.locale));}
+   if(payload.operation==='chat'){const language=parseLanguage?await parseLanguage(payload.utterance,payload.locale):{command:engine.parseCommand(payload.utterance),provider:'not_configured',execution:'advisory'};return response(language);}
    const stored=await loadState(user.id),trips=await loadTrips(user.id);
    const state=engine.DriverState.create({...stored,...payload.state});
    // Request context is driver-reported; no client can create official capability support.
