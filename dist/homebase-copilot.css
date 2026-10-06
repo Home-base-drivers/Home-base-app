@@ -272,3 +272,23 @@
  .hb-ref-bottom button span{font-size:.4rem}.hb-ref-bottom .ask span{max-width:52px;white-space:normal;line-height:1.05;text-align:center}
  .hb-ref-left button{width:54px}.hb-ref-chip{min-width:82px}.hb-ref-chip:first-child span{display:none}
 }
+
+
+/* Reference header: hamburger + Homebase + Drive. Earn. Connect. */
+.hb-shell-active .hb-menu-toggle{
+ top:max(15px,calc(env(safe-area-inset-top) + 9px));left:max(14px,calc((100vw - min(100vw,760px))/2 + 14px));
+ width:46px;height:54px;border-radius:14px;background:rgba(8,17,23,.72);border:1px solid rgba(167,213,237,.08);backdrop-filter:blur(10px)
+}
+.hb-shell-active .hb-menu-toggle svg{width:27px;height:27px;stroke-width:2}
+.hb-shell-active .hb-home-word{
+ left:max(74px,calc((100vw - min(100vw,760px))/2 + 74px));top:max(17px,calc(env(safe-area-inset-top) + 11px));
+ transform:none;display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;text-shadow:0 2px 7px rgba(0,0,0,.7)
+}
+.hb-shell-active .hb-home-word strong{display:block;color:#f7fbfd;font-size:1.43rem;line-height:1;font-weight:850;letter-spacing:-.045em}
+.hb-shell-active .hb-home-word small{display:block;color:#a9bdca;font-size:.67rem;line-height:1.1;font-weight:650;letter-spacing:.025em;white-space:nowrap}
+@media(max-width:430px){
+ .hb-shell-active .hb-menu-toggle{left:8px;width:42px;height:48px}
+ .hb-shell-active .hb-home-word{left:58px;top:max(18px,calc(env(safe-area-inset-top) + 12px))}
+ .hb-shell-active .hb-home-word strong{font-size:1.18rem}
+ .hb-shell-active .hb-home-word small{font-size:.56rem}
+}
