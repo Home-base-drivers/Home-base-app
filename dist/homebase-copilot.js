@@ -292,12 +292,22 @@ function bootHomeBaseShell(){
  const liveText=document.createElement('div');liveText.id='hbVoiceText';liveText.className='hb-voice-text';liveText.setAttribute('aria-live','polite');liveText.setAttribute('dir','auto');
  const chat=document.createElement('section');chat.id='hbChatPanel';chat.className='hb-chat-panel';chat.hidden=true;chat.innerHTML='<div class="hb-chat-head"><button id="hbChatClose" type="button" aria-label="Close Copilot history">‹</button><div><span>HOME BASE COPILOT</span><b>Conversation history</b></div><button id="hbNewChat" type="button">New</button></div><div class="hb-chat-tools"><input id="hbChatSearch" type="search" placeholder="Search conversations" aria-label="Search conversations"></div><div id="hbChatContent" class="hb-chat-content"></div>';
  app.append(backdrop,drawer,homeWord,menuButton,homeControls,weatherCard,voice,liveText,chat);
+ function syncBottomNav(){
+  const current=document.querySelector('.nav-btn[aria-current="page"]')?.id||'navMap';
+  homeControls.querySelectorAll('.hb-ref-bottom [data-home-target]').forEach(button=>button.classList.toggle('active',button.dataset.homeTarget===current));
+ }
  function syncHomeHud(){
-  const workspace=document.getElementById('workspaceView'),workspaceOpen=!!(workspace&&!workspace.hidden),menuOpen=drawer.classList.contains('open'),onMap=app.classList.contains('map-mode'),show=onMap&&!workspaceOpen&&chat.hidden&&!menuOpen;
-  for(const node of [homeWord,menuButton,homeControls,weatherCard,voice,liveText])node.hidden=!show;
-  app.classList.toggle('hb-home-hud-visible',show);
+  const workspace=document.getElementById('workspaceView'),workspaceOpen=!!(workspace&&!workspace.hidden),menuOpen=drawer.classList.contains('open'),onMap=app.classList.contains('map-mode');
+  const mapHudShow=onMap&&!workspaceOpen&&chat.hidden&&!menuOpen,bottomNavShow=chat.hidden&&!menuOpen;
+  for(const node of [homeWord,menuButton,weatherCard])node.hidden=!mapHudShow;
+  homeControls.hidden=!bottomNavShow;voice.hidden=!bottomNavShow;liveText.hidden=!bottomNavShow;
+  app.classList.toggle('hb-home-hud-visible',mapHudShow);
+  app.classList.toggle('hb-bottom-nav-visible',bottomNavShow);
+  app.classList.toggle('hb-workspace-open',workspaceOpen);
+  syncBottomNav();
  }
  const workspaceObserverTarget=document.getElementById('workspaceView');if(workspaceObserverTarget)new MutationObserver(syncHomeHud).observe(workspaceObserverTarget,{attributes:true,attributeFilter:['hidden']});
+ document.querySelectorAll('.nav-btn').forEach(button=>new MutationObserver(syncBottomNav).observe(button,{attributes:true,attributeFilter:['aria-current']}));
  new MutationObserver(syncHomeHud).observe(app,{attributes:true,attributeFilter:['class']});
  syncHomeHud();
  function applyModules(){
