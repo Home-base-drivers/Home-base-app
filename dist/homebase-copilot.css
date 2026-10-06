@@ -478,3 +478,41 @@
  .hb-shell-active .hb-voice-bubble{left:50%!important;width:58px!important;height:58px!important;bottom:max(49px,calc(37px + env(safe-area-inset-bottom)))!important}
  .hb-shell-active .hb-voice-bubble svg{width:26px!important;height:26px!important}
 }
+
+
+/* Voice cradle v3 — the bottom bar curves up around the centered Homebase microphone */
+.hb-shell-active .hb-ref-bottom .ask{isolation:isolate;z-index:2}
+.hb-shell-active .hb-ref-bottom .ask:before{
+ content:"";position:absolute;z-index:-1;left:50%;top:-35px;transform:translateX(-50%);
+ width:88px;height:68px;border-radius:50% 50% 44% 44%;
+ background:rgba(7,16,22,.98);
+ border:1px solid rgba(167,213,237,.15);border-bottom-color:transparent;
+ box-shadow:0 -7px 18px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.025);
+ pointer-events:none
+}
+.hb-shell-active .hb-ref-bottom .ask:after{
+ content:"";position:absolute;z-index:-1;left:50%;top:17px;transform:translateX(-50%);
+ width:72px;height:24px;border-radius:0 0 50% 50%;
+ background:rgba(7,16,22,.98);pointer-events:none
+}
+.hb-shell-active .hb-voice-bubble{
+ bottom:max(51px,calc(39px + env(safe-area-inset-bottom)))!important;
+ width:64px!important;height:64px!important
+}
+
+/* Live weather HUD */
+.hb-home-weather{min-width:150px!important;width:auto!important;height:64px!important;padding:7px 11px!important;gap:9px!important}
+.hb-home-weather .hb-weather-icon{flex:0 0 auto}
+.hb-weather-copy{min-width:0;display:flex;flex-direction:column;justify-content:center;gap:4px}
+.hb-weather-now{display:flex;align-items:baseline;gap:7px;white-space:nowrap}
+.hb-weather-now strong{font-size:1rem;line-height:1;font-weight:900;color:#f7fbff}
+.hb-weather-now span{font-size:.63rem;line-height:1;font-weight:750;color:#c8d7e1;max-width:74px;overflow:hidden;text-overflow:ellipsis}
+.hb-weather-copy small{display:flex;align-items:center;gap:4px;white-space:nowrap;font-size:.43rem;line-height:1;font-weight:850;letter-spacing:.035em;color:#8fa8b8}
+.hb-weather-copy small i{display:inline-block;width:5px;height:5px;border-radius:50%;background:#28e67d;box-shadow:0 0 7px rgba(40,230,125,.75)}
+@media(max-width:430px){
+ .hb-shell-active .hb-ref-bottom .ask:before{top:-32px;width:80px;height:62px}
+ .hb-shell-active .hb-ref-bottom .ask:after{top:16px;width:66px;height:22px}
+ .hb-shell-active .hb-voice-bubble{width:60px!important;height:60px!important;bottom:max(50px,calc(38px + env(safe-area-inset-bottom)))!important}
+ .hb-home-weather{min-width:137px!important;height:58px!important;padding:6px 9px!important;gap:7px!important}
+ .hb-weather-now strong{font-size:.9rem}.hb-weather-now span{font-size:.56rem;max-width:65px}.hb-weather-copy small{font-size:.39rem}
+}
