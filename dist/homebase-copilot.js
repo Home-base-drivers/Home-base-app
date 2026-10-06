@@ -292,11 +292,24 @@ function bootHomeBaseShell(){
  const iconSvg=key=>'<svg viewBox="0 0 24 24" aria-hidden="true">'+(menuIcons[key]||'')+'</svg>';
  const homeControls=document.createElement('div');homeControls.className='hb-reference-controls';homeControls.setAttribute('aria-label','Home map controls');
  homeControls.innerHTML=
-  '<div class="hb-ref-top"><button data-home-target="navEarn" class="hb-ref-chip">'+iconSvg('navEarn')+'<span>Earnings</span></button><button class="hb-ref-chip" data-home-action="today">'+iconSvg('today')+'<span>Today</span><b>⌄</b></button></div>'+
-  '<div class="hb-ref-status"><button data-home-target="navAlerts" aria-label="Alerts">'+iconSvg('navAlerts')+'<i></i></button><button class="hb-online" data-home-action="online"><em></em><span>Online</span><b>⌄</b></button></div>'+
   '<div class="hb-ref-left"><button data-home-target="heatToggle">'+iconSvg('heatToggle')+'<span>Heat Map</span></button><button data-home-target="layerBtn">'+iconSvg('layerBtn')+'<span>Layers</span></button><button data-home-target="refreshBtn">'+iconSvg('refreshBtn')+'<span>Recenter</span></button><button data-home-target="refreshBtn" class="active">'+iconSvg('navigate')+'<span>My Location</span></button></div>'+
   '<div class="hb-ref-right"><button data-home-action="fullscreen" aria-label="Fullscreen">'+iconSvg('fullscreen')+'</button><button data-home-target="mapsBtn" aria-label="Navigate">'+iconSvg('navigate')+'</button><button data-home-target="driveViewToggle" aria-label="Drive view">'+iconSvg('driveViewToggle')+'</button><button data-home-target="layerBtn" aria-label="Layers">'+iconSvg('layerBtn')+'</button></div>'+
   '<nav class="hb-ref-bottom" aria-label="Home navigation"><button data-home-target="navMap" class="active">'+iconSvg('navMap')+'<span>Map</span></button><button data-home-target="navEarn">'+iconSvg('navEarn')+'<span>Earnings</span></button><button data-home-target="navAlerts">'+iconSvg('navAlerts')+'<span>Alerts</span><i>3</i></button><button data-home-target="navProfile">'+iconSvg('navProfile')+'<span>Profile</span></button><button data-home-action="voice" class="ask">'+iconSvg('hbChatOpen')+'<span>Ask Homebase</span></button><button data-home-target="navSupport">'+iconSvg('navSupport')+'<span>Support</span></button><button data-home-target="driveViewToggle">'+iconSvg('driveViewToggle')+'<span>Drive</span></button><button data-home-action="menu">'+iconSvg('more')+'<span>More</span></button></nav>';
+ const platformBar=document.createElement('div');platformBar.id='hbPlatformBar';platformBar.className='hb-platform-bar';platformBar.setAttribute('aria-label','Current driver platform forecasts');
+ const platformBarVisible=()=>read('homeBaseCompactPlatformsVisible',true)!==false;
+ platformBar.innerHTML='<div class="hb-platform-values" id="hbPlatformValues"></div><button class="hb-platform-toggle" id="hbPlatformToggle" type="button" aria-label="Hide platform prices" aria-pressed="true">'+
+  '<svg class="hb-platform-eye" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.5"/></svg></button>';
+ function syncCompactPlatforms(){
+  const values=platformBar.querySelector('#hbPlatformValues');if(!values)return;
+  const rows=[0,1,2].map(i=>({name:document.getElementById('app'+i+'Name')?.textContent?.trim(),price:document.getElementById('app'+i+'Earn')?.textContent?.trim()})).filter(row=>row.name&&row.price);
+  values.innerHTML=rows.slice(0,3).map((row,i)=>'<div class="hb-platform-mini hb-platform-mini-'+i+'"><b>'+esc(row.name)+'</b><span>'+esc(row.price.replace(/^≈\\s*/,''))+'</span></div>').join('');
+ }
+ function setCompactPlatformsVisible(visible){
+  platformBar.classList.toggle('collapsed',!visible);const toggle=platformBar.querySelector('#hbPlatformToggle');toggle.setAttribute('aria-pressed',String(visible));toggle.setAttribute('aria-label',visible?'Hide platform prices':'Show platform prices');write('homeBaseCompactPlatformsVisible',visible);
+ }
+ platformBar.querySelector('#hbPlatformToggle').addEventListener('click',()=>setCompactPlatformsVisible(platformBar.classList.contains('collapsed')));
+ setCompactPlatformsVisible(platformBarVisible());syncCompactPlatforms();
+ [0,1,2].forEach(i=>['Name','Earn'].forEach(suffix=>{const node=document.getElementById('app'+i+suffix);if(node)new MutationObserver(syncCompactPlatforms).observe(node,{childList:true,subtree:true,characterData:true})}));
  const weatherCard=document.createElement('div');weatherCard.className='hb-home-weather';weatherCard.setAttribute('aria-label','Current weather');weatherCard.innerHTML='<div class="hb-weather-icon" aria-hidden="true">☀</div><div><strong id="hbWeatherTemp">--</strong><span id="hbWeatherCondition">Weather</span></div>';
  const weatherLabel=code=>{code=Number(code);if(code===0)return['☀','Clear'];if([1,2].includes(code))return['🌤','Mostly clear'];if(code===3)return['☁','Cloudy'];if([45,48].includes(code))return['🌫','Fog'];if(code>=51&&code<=67)return['🌧','Rain'];if(code>=71&&code<=77)return['❄','Snow'];if(code>=80&&code<=82)return['🌦','Showers'];if(code>=85&&code<=86)return['🌨','Snow showers'];if(code>=95)return['⛈','Thunderstorms'];return['◌','Weather']};
  const updateHomeWeather=({temp,code,available=true}={})=>{const pair=weatherLabel(code),tempEl=weatherCard.querySelector('#hbWeatherTemp'),conditionEl=weatherCard.querySelector('#hbWeatherCondition'),iconEl=weatherCard.querySelector('.hb-weather-icon');if(tempEl)tempEl.textContent=available&&temp!=null?String(temp):'--';if(conditionEl)conditionEl.textContent=available?pair[1]:'Unavailable';if(iconEl)iconEl.textContent=available?pair[0]:'◌';};
@@ -304,7 +317,7 @@ function bootHomeBaseShell(){
  const voice=document.createElement('button');voice.id='hbVoiceBubble';voice.className='hb-voice-bubble';voice.type='button';voice.setAttribute('aria-label','Talk to Home Base');voice.setAttribute('aria-pressed','false');voice.innerHTML='<span class="hb-voice-ring"></span><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4M9 21h6"/></svg>';
  const liveText=document.createElement('div');liveText.id='hbVoiceText';liveText.className='hb-voice-text';liveText.setAttribute('aria-live','polite');liveText.setAttribute('dir','auto');
  const chat=document.createElement('section');chat.id='hbChatPanel';chat.className='hb-chat-panel';chat.hidden=true;chat.innerHTML='<div class="hb-chat-head"><button id="hbChatClose" type="button" aria-label="Close Copilot history">‹</button><div><span>HOME BASE COPILOT</span><b>Conversation history</b></div><button id="hbNewChat" type="button">New</button></div><div class="hb-chat-tools"><input id="hbChatSearch" type="search" placeholder="Search conversations" aria-label="Search conversations"></div><div id="hbChatContent" class="hb-chat-content"></div>';
- app.append(backdrop,drawer,homeWord,menuButton,homeControls,weatherCard,voice,liveText,chat);
+ app.append(backdrop,drawer,homeWord,menuButton,homeControls,platformBar,weatherCard,voice,liveText,chat);
  function syncBottomNav(){
   const current=document.querySelector('.nav-btn[aria-current="page"]')?.id||'navMap';
   homeControls.querySelectorAll('.hb-ref-bottom [data-home-target]').forEach(button=>button.classList.toggle('active',button.dataset.homeTarget===current));
@@ -312,7 +325,7 @@ function bootHomeBaseShell(){
  function syncHomeHud(){
   const workspace=document.getElementById('workspaceView'),workspaceOpen=!!(workspace&&!workspace.hidden),menuOpen=drawer.classList.contains('open'),onMap=app.classList.contains('map-mode');
   const mapHudShow=onMap&&!workspaceOpen&&chat.hidden&&!menuOpen,bottomNavShow=chat.hidden&&!menuOpen;
-  for(const node of [homeWord,menuButton,weatherCard])node.hidden=!mapHudShow;
+  for(const node of [homeWord,menuButton,weatherCard,platformBar])node.hidden=!mapHudShow;
   homeControls.hidden=!bottomNavShow;voice.hidden=!bottomNavShow;liveText.hidden=!bottomNavShow;
   app.classList.toggle('hb-home-hud-visible',mapHudShow);
   app.classList.toggle('hb-bottom-nav-visible',bottomNavShow);
