@@ -34,7 +34,7 @@ test('Homebase wordmark is clean and transparent on the home map',()=>{
 
 test('menu commands close the drawer and execute the real target',()=>{
  assert.match(shell,/function runMenuCommand\(/);
- assert.match(shell,/closeMenu\(\);\s*requestAnimationFrame\(\(\)=>\{target\.click\(\)/);
+ assert.match(shell,/closeMenu\(\);\s*queueMicrotask\(\(\)=>\{target\.click\(\)/);
 });
 
 
