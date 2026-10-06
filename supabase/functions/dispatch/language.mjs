@@ -1,14 +1,20 @@
 // Optional language understanding. It only returns a constrained intent; it cannot act on driver apps.
 export function makeLanguageParser({apiKey,model,fetchImpl=fetch,engine}){
  const allowed=['mode','plan','why','earnings','target','unknown'];
- return async (utterance,locale='en-US')=>{
+ return async (utterance,locale='en-US',context={})=>{
   if(typeof utterance!=='string'||utterance.length>1000)throw Error('Voice request must be shorter than 1,000 characters.');
-  const local=/^en(?:-|$)/i.test(locale)?engine.parseCommand(utterance):{type:'unknown'};if(local.type!=='unknown'||!apiKey||!model)return{command:local,provider:local.type==='unknown'?'not_configured':'local',execution:'advisory'};
-  const schema={type:'object',additionalProperties:false,required:['type','mode','amount','additional','thenHome','remaining'],properties:{type:{type:'string',enum:allowed},mode:{type:['string','null'],enum:[...engine.MODES,null]},amount:{type:['number','null']},additional:{type:'boolean'},thenHome:{type:'boolean'},remaining:{type:'boolean'}}};
-  const response=await fetchImpl('https://api.openai.com/v1/responses',{method:'POST',signal:AbortSignal.timeout(10000),headers:{Authorization:'Bearer '+apiKey,'Content-Type':'application/json'},body:JSON.stringify({model,store:false,instructions:'Parse a rideshare driver voice command into the supported intent. Never claim any action executed. Never invent earnings, trips, location, prices or capabilities. Unknown when ambiguous. Do not produce driving directions.',input:utterance,max_output_tokens:300,text:{format:{type:'json_schema',name:'dispatch_intent',strict:true,schema}}})});
-  if(!response.ok)throw Error('Cloud language understanding unavailable. Local commands still work.');
+  const local=/^en(?:-|$)/i.test(locale)?engine.parseCommand(utterance):{type:'unknown'};
+  if(local.type!=='unknown')return{command:local,provider:'local',execution:'advisory'};
+  if(!apiKey||!model)return{command:local,provider:'not_configured',execution:'advisory'};
+  const safeContext=(()=>{const source=context&&typeof context==='object'?context:{},out={};for(const key of ['mode','goal','location','market','platforms','rates','events','zones','shiftHours','activeTrip','waitMinutes','opportunity','driverPreferences','vehicle','currentTotals'])if(source[key]!==undefined)out[key]=source[key];return JSON.stringify(out).slice(0,12000)})();
+  const schema={type:'object',additionalProperties:false,required:['kind','answer','type','mode','amount','additional','thenHome','remaining'],properties:{kind:{type:'string',enum:['command','answer']},answer:{type:['string','null']},type:{type:'string',enum:allowed},mode:{type:['string','null'],enum:[...engine.MODES,null]},amount:{type:['number','null']},additional:{type:'boolean'},thenHome:{type:'boolean'},remaining:{type:'boolean'}}};
+  const response=await fetchImpl('https://api.openai.com/v1/responses',{method:'POST',signal:AbortSignal.timeout(15000),headers:{Authorization:'Bearer '+apiKey,'Content-Type':'application/json'},body:JSON.stringify({model,store:false,instructions:'You are Home Base, a dynamic rideshare driver copilot and general-purpose assistant, not a canned command parser. If the request maps cleanly to a supported Home Base command, return kind command and the structured intent. Otherwise answer the question naturally and concisely using the supplied driver context. For current or changing information such as weather, forecasts, events, sports, traffic, airport or flight activity, schedules, outages, prices, or local conditions, use web search rather than guessing. Distinguish live facts, user-reported data, and Home Base predictions. Never claim an app or platform action executed unless verified. Keep spoken answers concise while the driver may be moving. Current driver context: '+safeContext,input:utterance,max_output_tokens:700,tools:[{type:'web_search'}],tool_choice:'auto',text:{format:{type:'json_schema',name:'homebase_copilot_result',strict:true,schema}}})});
+  if(!response.ok)throw Error('Home Base AI understanding unavailable. Local commands still work.');
   const payload=await response.json(),content=(payload.output||[]).flatMap(o=>o.content||[]).find(c=>c.type==='output_text')?.text;
-  if(!content)throw Error('No supported intent returned.');const command=JSON.parse(content);
+  if(!content)throw Error('No Home Base response returned.');
+  const result=JSON.parse(content);
+  if(result.kind==='answer'&&typeof result.answer==='string'&&result.answer.trim())return{command:{type:'unknown'},answer:result.answer.trim(),provider:'OpenAI',execution:'advisory'};
+  const command={type:result.type,mode:result.mode,amount:result.amount,additional:result.additional,thenHome:result.thenHome,remaining:result.remaining};
   if(!allowed.includes(command.type)||(command.type==='mode'&&!engine.MODES.includes(command.mode))||(command.type==='target'&&(!Number.isFinite(command.amount)||command.amount<=0||command.amount>100000)))throw Error('Unsupported intent.');
   return{command,provider:'OpenAI',execution:'advisory'};
  };
