@@ -50,3 +50,10 @@ test('planner itself force-hides legacy map controls even before shell CSS appli
  assert.match(planner,/showTabs\.style\.display='none'/);
  assert.match(planner,/restore\.style\.display='none'/);
 });
+
+test('Pulse Modern branding uses water-glass Homebase and voice treatments',()=>{
+ assert.match(css,/Pulse Modern brand treatment/);
+ assert.match(css,/\.hb-home-word:before,\.hb-home-word:after/);
+ assert.match(css,/background-clip:text/);
+ assert.match(css,/\.hb-voice-bubble\{[\s\S]*?backdrop-filter:blur\(13px\) saturate\(145%\)/);
+});
