@@ -24,7 +24,7 @@ function commands(){
  const context=vm.createContext({
   navVisible:false,referenceNavVisible:true,menuRestoreState:null,modules:{route:false,conditions:false},defaults:{route:false,conditions:false},moduleMeta:[['route'],['conditions']],menuStatus:{textContent:''},
   app:{classList:{toggle(key,value){if(value)classes.add(key);else classes.delete(key);}}},
-  document:{getElementById:id=>targets.get(id)||null},navigator:{standalone:false},matchMedia:()=>({matches:false}),requestAnimationFrame:fn=>fn(),
+  document:{getElementById:id=>targets.get(id)||null},navigator:{standalone:false},matchMedia:()=>({matches:false}),queueMicrotask:fn=>fn(),
   write:(key,value)=>storage.set(key,value),read:(key,fallback)=>storage.get(key)??fallback,
   syncHomeHud:()=>{},applyModules:()=>{},closeMenu:()=>{},setVoiceStatus:()=>{},
   setAllModules:value=>{for(const key of Object.keys(context.modules))context.modules[key]=value;}
