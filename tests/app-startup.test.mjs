@@ -63,3 +63,11 @@ test('a denied GPS request ends the pending state and can be retried',()=>{
   assert.ok(!app.nodes.get('refreshBtn').classList.contains('refreshing'));
   vm.runInContext('refreshLocationFast()',app.context);assert.equal(app.positions.length,2);
 });
+
+test('provider badges only render values supplied by live provider snapshots',()=>{
+  assert.match(html,/function providerPriceSample\(platform,item\)/);
+  assert.match(html,/providerPricePoints\.push/);
+  assert.match(html,/\['Lyft','lyft'\],\['Empower','empower'\]/);
+  assert.match(html,/no modeled price substituted/);
+  assert.match(html,/class="hb-price-badge /);
+});
