@@ -18,27 +18,29 @@ test('planner mounts hidden drawer command targets before binding their handlers
  for(const id of ['hidePlannerView','driveViewToggle','demandDetails','showPickupCard','hideMapControls','toggleMapTabs'])assert.ok(ids.has(id),'unmounted command '+id);
 });
 
-function commands(){
- const storage=new Map(),clicks=[],classes=new Set();
+function commands(initial={}){
+ const storage=new Map(),clicks=[],classes=new Set(),menuEvents=[];
+ const indicators={toggle:{setAttribute(key,value){this[key]=value;}},state:{textContent:''},hint:{textContent:''}};
  const targets=new Map(['navMap','navEarn','navProfile','navAlerts','navSupport','workspaceClose','demandDetails','showPickupCard','installBtn'].map(id=>[id,{click:()=>clicks.push(id),focus(){}}]));
  const context=vm.createContext({
-  navVisible:false,referenceNavVisible:true,menuRestoreState:null,modules:{route:false,conditions:false},defaults:{route:false,conditions:false},moduleMeta:[['route'],['conditions']],menuStatus:{textContent:''},
+  drivingViewActive:false,drivingRestoreState:null,navVisible:false,referenceNavVisible:true,menuRestoreState:null,modules:{route:false,conditions:false},defaults:{route:false,conditions:false},moduleMeta:[['route'],['conditions']],menuStatus:{textContent:''},
   app:{classList:{toggle(key,value){if(value)classes.add(key);else classes.delete(key);}}},
+  drawer:{querySelector:selector=>({'#hbDrivingViewToggle':indicators.toggle,'#hbDrivingViewState':indicators.state,'#hbDrivingViewHint':indicators.hint}[selector]||null)},
   document:{getElementById:id=>targets.get(id)||null},navigator:{standalone:false},matchMedia:()=>({matches:false}),queueMicrotask:fn=>fn(),
   write:(key,value)=>storage.set(key,value),read:(key,fallback)=>storage.get(key)??fallback,
-  syncHomeHud:()=>{},applyModules:()=>{},closeMenu:()=>{},setVoiceStatus:()=>{},
-  setAllModules:value=>{for(const key of Object.keys(context.modules))context.modules[key]=value;}
+  syncHomeHud:()=>{},applyModules:()=>{},closeMenu:()=>menuEvents.push('close'),setVoiceStatus:()=>{},
+  setAllModules:value=>{for(const key of Object.keys(context.modules))context.modules[key]=value;},...initial
  });
- const start=shell.indexOf(' function setNavVisible('),end=shell.indexOf(" drawer.querySelectorAll('[data-nav]')",start);
+ const start=shell.indexOf(' function syncDrivingPreferences('),end=shell.indexOf(" drawer.querySelectorAll('[data-nav]')",start);
  vm.runInContext(shell.slice(start,end),context);
- return {context,storage,clicks,classes,command:id=>context.runMenuCommand({dataset:{control:id}},'control')};
+ return {context,storage,clicks,classes,menuEvents,indicators,command:(id,keepMenuOpen=false)=>context.runMenuCommand({dataset:{control:id,keepMenuOpen:String(keepMenuOpen)}},'control')};
 }
 
 test('Driving view starts clean from the default Home and restores the saved view',()=>{
  const f=commands();
  assert.equal(f.command('driveViewToggle'),true);
  assert.equal(f.context.referenceNavVisible,false);
- assert.equal(f.storage.get('homeBaseMenuRestoreState').navVisible,true);
+ assert.equal(f.storage.get('homeBaseDrivingRestoreState').navVisible,true);
  assert.equal(f.command('driveViewToggle'),true);
  assert.equal(f.context.referenceNavVisible,true);
  assert.ok(f.clicks.includes('navMap'),'driving commands return from a workspace to Map');
@@ -64,4 +66,52 @@ test('voice status remains visible inside the open submenu',()=>{
  const line=shell.split('\n').find(line=>line.startsWith(' function setVoiceStatus('));
  vm.runInContext(line,context);context.setVoiceStatus('AI voice is unavailable on this device.',true);
  assert.equal(context.menuStatus.textContent,'AI voice is unavailable on this device.');
+});
+
+
+test('Driving Preferences shows ON and OFF without closing its submenu',()=>{
+ const f=commands();
+ f.command('driveViewToggle',true);
+ assert.equal(f.indicators.state.textContent,'ON');
+ assert.equal(f.indicators.toggle['aria-pressed'],'true');
+ assert.equal(f.storage.get('homeBaseDrivingViewActive'),true);
+ assert.deepEqual(f.menuEvents,[]);
+ f.command('driveViewToggle',true);
+ assert.equal(f.indicators.state.textContent,'OFF');
+ assert.equal(f.indicators.toggle['aria-pressed'],'false');
+ assert.equal(f.storage.get('homeBaseDrivingViewActive'),false);
+ assert.deepEqual(f.menuEvents,[]);
+});
+
+test('Changing panels in driving view does not reverse the next toggle or lose the original layout',()=>{
+ const f=commands({modules:{route:true,conditions:false}});
+ f.command('driveViewToggle',true);
+ f.context.modules.conditions=true;
+ f.command('driveViewToggle',true);
+ assert.equal(f.context.drivingViewActive,false);
+ assert.equal(f.context.modules.route,true);
+ assert.equal(f.context.modules.conditions,false);
+ assert.equal(f.context.referenceNavVisible,true);
+});
+
+test('Saved driving preferences restore after reopening the app',()=>{
+ const first=commands({modules:{route:true,conditions:false}});
+ first.command('driveViewToggle',true);
+ const reopened=commands({drivingViewActive:first.storage.get('homeBaseDrivingViewActive'),drivingRestoreState:first.storage.get('homeBaseDrivingRestoreState'),modules:{route:false,conditions:false},referenceNavVisible:false});
+ reopened.context.syncDrivingPreferences();
+ assert.equal(reopened.indicators.state.textContent,'ON');
+ reopened.command('driveViewToggle',true);
+ assert.equal(reopened.context.modules.route,true);
+ assert.equal(reopened.context.referenceNavVisible,true);
+});
+
+test('Restore controls exits driving view and preserves the independently saved layout',()=>{
+ const f=commands({modules:{route:true,conditions:false}});
+ f.command('driveViewToggle',true);
+ f.context.menuRestoreState={modules:{route:false,conditions:true},navVisible:false};
+ f.command('showMapControls');
+ assert.equal(f.context.drivingViewActive,false);
+ assert.equal(f.context.modules.route,true);
+ assert.equal(f.context.modules.conditions,false);
+ assert.equal(f.context.referenceNavVisible,true);
 });
