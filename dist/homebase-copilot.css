@@ -52,3 +52,5 @@
 .hb-conversation-date>div:first-child{display:grid;gap:2px}.hb-conversation-date>div:first-child span{display:block}
 .hb-chat-actions{display:flex;gap:6px;align-items:center}.hb-chat-actions button{min-height:30px;border:1px solid rgba(72,168,223,.24);border-radius:8px;background:#071b2b;color:#dff5ff;padding:0 8px;font-size:.58rem;font-weight:800}.hb-chat-actions button:last-child{color:#ffb4bd;border-color:rgba(255,105,125,.24)}
 @media(max-width:430px){.hb-voice-preferences label{grid-template-columns:86px 1fr}.hb-chat-actions{flex-direction:column;align-items:stretch}.hb-chat-actions button{min-height:28px}}
+
+.hb-voice-availability{margin:-1px 2px 2px;padding:7px 9px;border-radius:9px;background:rgba(5,19,31,.72);color:#86a5b7;font-size:.58rem;line-height:1.35}
