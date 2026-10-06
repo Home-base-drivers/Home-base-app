@@ -283,7 +283,8 @@ function bootHomeBaseShell(){
   navigate:'<path d="m4 12 16-8-7 16-2-7-7-1Z"/>',
   more:'<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
   online:'<circle cx="12" cy="12" r="7"/>',
-  today:'<path d="M5 5h14v15H5V5Zm3-2v4m8-4v4M5 9h14"/>'
+  today:'<path d="M5 5h14v15H5V5Zm3-2v4m8-4v4M5 9h14"/>',
+  eventRoute:'<path d="M6 4v3M18 4v3M4 9h16M5 6h14v14H5V6Z"/><circle cx="9" cy="13" r="1"/><path d="M12 17c2.8-4 4.8-4 7-2M16 13l3 2-2 3"/>'
  };
  drawer.querySelectorAll('.hb-menu-grid button').forEach(button=>{
   const key=button.dataset.nav||button.dataset.control||button.id,path=menuIcons[key];if(!path)return;
@@ -293,7 +294,7 @@ function bootHomeBaseShell(){
  const homeControls=document.createElement('div');homeControls.className='hb-reference-controls';homeControls.setAttribute('aria-label','Home map controls');
  homeControls.innerHTML=
   '<div class="hb-ref-left"><button data-home-target="heatToggle">'+iconSvg('heatToggle')+'<span>Heat Map</span></button><button data-home-target="layerBtn">'+iconSvg('layerBtn')+'<span>Layers</span></button><button data-home-target="refreshBtn">'+iconSvg('refreshBtn')+'<span>Recenter</span></button><button data-home-target="refreshBtn" class="active">'+iconSvg('navigate')+'<span>My Location</span></button></div>'+
-  '<div class="hb-ref-right"><button data-home-action="fullscreen" aria-label="Fullscreen">'+iconSvg('fullscreen')+'</button><button data-home-target="mapsBtn" aria-label="Navigate">'+iconSvg('navigate')+'</button><button data-home-target="driveViewToggle" aria-label="Drive view">'+iconSvg('driveViewToggle')+'</button><button data-home-target="layerBtn" aria-label="Layers">'+iconSvg('layerBtn')+'</button></div>'+
+  '<div class="hb-ref-right"><button data-home-action="fullscreen" aria-label="Fullscreen">'+iconSvg('fullscreen')+'</button><button data-home-target="mapsBtn" aria-label="Navigate">'+iconSvg('navigate')+'</button><button data-home-target="driveViewToggle" aria-label="Drive view">'+iconSvg('driveViewToggle')+'</button><button data-home-action="eventRoute" aria-label="Events and routes">'+iconSvg('eventRoute')+'</button></div>'+
 
   '<nav class="hb-ref-bottom" aria-label="Home navigation"><button data-home-target="navMap" class="active">'+iconSvg('navMap')+'<span>Map</span></button><button data-home-target="navEarn">'+iconSvg('navEarn')+'<span>Earnings</span></button><button data-home-target="navAlerts">'+iconSvg('navAlerts')+'<span>Alerts</span><i>3</i></button><button data-home-action="voice" class="ask">'+iconSvg('hbChatOpen')+'<span>Ask Homebase</span></button><button data-home-target="navProfile">'+iconSvg('navProfile')+'<span>Profile</span></button><button data-home-target="driveViewToggle">'+iconSvg('driveViewToggle')+'<span>Drive</span></button><button data-home-action="menu">'+iconSvg('more')+'<span>More</span></button></nav>';
  const platformBar=document.createElement('div');platformBar.id='hbPlatformBar';platformBar.className='hb-platform-bar';platformBar.setAttribute('aria-label','Current driver platform forecasts');
@@ -340,6 +341,7 @@ function bootHomeBaseShell(){
  syncHomeHud();
  function applyModules(){
   for(const [key] of moduleMeta)app.classList.toggle('hb-show-'+key,!!modules[key]);
+  const eventRouteButton=homeControls.querySelector('[data-home-action="eventRoute"]');if(eventRouteButton){eventRouteButton.classList.toggle('active',!!modules.route);eventRouteButton.setAttribute('aria-pressed',String(!!modules.route));}
   write('homeBaseHomeModules',modules);
   renderModuleList();
  }
@@ -357,6 +359,7 @@ function bootHomeBaseShell(){
   if(action==='menu'){openMenu();return}
   if(action==='voice'){voice.click();return}
   if(action==='fullscreen'){const root=document.documentElement;if(!document.fullscreenElement)root.requestFullscreen?.().catch(()=>{});else document.exitFullscreen?.();return}
+  if(action==='eventRoute'){modules.route=!modules.route;applyModules();button.classList.toggle('active',modules.route);button.setAttribute('aria-pressed',String(modules.route));return}
   if(action==='today'){document.getElementById('time0')?.click();return}
   if(action==='online'){menuNotice('Homebase is online.');return}
  });
