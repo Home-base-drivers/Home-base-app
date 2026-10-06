@@ -57,3 +57,12 @@ test('Pulse Modern branding uses water-glass Homebase and voice treatments',()=>
  assert.match(css,/background-clip:text/);
  assert.match(css,/\.hb-voice-bubble\{[\s\S]*?backdrop-filter:blur\(13px\) saturate\(145%\)/);
 });
+
+
+test('approved charcoal map and smoked-ice microphone treatment stay in the shell',()=>{
+ assert.match(css,/Charcoal \+ smoked-ice refinement/);
+ assert.match(css,/\.hb-shell-active\.app\.dark,\.hb-shell-active \.map\{background:#171d22!important\}/);
+ assert.match(css,/\.hb-voice-bubble\{[\s\S]*?background:rgba\(15,29,39,\.46\)/);
+ assert.match(css,/\.hb-voice-bubble svg\{[\s\S]*?filter:none/);
+ assert.match(html,/homeBaseBaseMapMode'\)\|\|'dark'/);
+});
