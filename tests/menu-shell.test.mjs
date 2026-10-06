@@ -116,7 +116,7 @@ test('Homebase lettering stays visibly above the dark header background',()=>{
 
 
 test('bottom navigation persists across workspace tabs without leaking map controls',()=>{
- assert.match(shell,/const mapHudShow=onMap&&!workspaceOpen&&chat\.hidden&&!menuOpen,bottomNavShow=chat\.hidden&&!menuOpen/);
+ assert.match(shell,/const mapHudShow=onMap&&!workspaceOpen&&chat\.hidden&&!menuOpen,bottomNavShow=chat\.hidden&&!menuOpen&&\(!onMap\|\|workspaceOpen\|\|referenceNavVisible\)/);
  assert.match(shell,/homeControls\.hidden=!bottomNavShow;voice\.hidden=!bottomNavShow;liveText\.hidden=!bottomNavShow/);
  assert.match(css,/\.hb-shell-active:not\(\.hb-home-hud-visible\) \.hb-ref-top,[\s\S]{0,300}\.hb-ref-right\{display:none!important\}/);
  assert.match(css,/\.hb-shell-active\.hb-workspace-open \.hb-ref-bottom\{display:grid!important/);
