@@ -959,7 +959,7 @@ function openHomeNavigation(){
   window.location.assign('https://www.google.com/maps/dir/?api=1&destination='+lat+','+lon+'&travelmode=driving&dir_action=navigate'+origin);
 }
 $('#mapsBtn').addEventListener('click',openHomeNavigation);
-function autoRefreshGps(){if(locationMode==='custom')return;if(Date.now()-lastAutoGpsRefresh<60000)return;lastAutoGpsRefresh=Date.now();refreshLocationFast()}
+function autoRefreshGps(){if(Date.now()-lastAutoGpsRefresh<60000)return;lastAutoGpsRefresh=Date.now();refreshLocationFast()}
 async function refreshLiveDemandLayer(){
   if(demoLocale||document.visibilityState!=='visible'||!currentLocation||gpsRequestInFlight)return;
   const [lat,lon]=currentLocation,provider=await loadProviderSignals(lat,lon,currentMarketName).catch(()=>null);if(!provider)return;
