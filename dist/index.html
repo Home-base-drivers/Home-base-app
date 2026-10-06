@@ -243,7 +243,7 @@ function mapLabels(){return L.tileLayer(esriTiles+'Reference/World_Boundaries_an
 const streetLabelLayer=L.tileLayer(esriTiles+'Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',{...darkMapOptions,pane:'labelsPane',attribution:'Labels © Esri'});
 const streetLayer=L.layerGroup([streetBaseLayer,streetLabelLayer]);
 const satelliteLayer=L.layerGroup([L.tileLayer(esriTiles+'World_Imagery/MapServer/tile/{z}/{y}/{x}',imageryOptions),mapRoads(),mapLabels()]);
-const initialBaseMap='dark';
+const initialBaseMap=(()=>{try{localStorage.getItem('homeBaseBaseMapMode')||'dark';return'dark'}catch{return'dark'}})();
 let activeBaseMapMode='satellite';
 function setBaseLayer(mode){
   const baseMode=mode==='dark'?'dark':'satellite';
