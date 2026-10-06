@@ -212,11 +212,11 @@
 <script src="homebase-config.js?v=111"></script>
 <script src="homebase-backend.js?v=124"></script>
 <script src="homebase-growth.js?v=124"></script>
-<link rel="stylesheet" href="homebase-copilot.css?v=48">
+<link rel="stylesheet" href="homebase-copilot.css?v=49">
 <script src="homebase-dispatch.js?v=2"></script>
 <script src="homebase-languages.js?v=2"></script>
 <script src="homebase-voice.js?v=4"></script>
-<script src="homebase-copilot.js?v=38"></script>
+<script src="homebase-copilot.js?v=39"></script>
 <script src="homebase-live-assistant.js?v=3"></script>
 <script>
 const app=document.getElementById('app');
@@ -288,7 +288,8 @@ function marketParts(when=new Date()){if(!marketTimeZone)return{hour:when.getHou
 function marketTime(when,options={hour:'numeric',minute:'2-digit'}){return when.toLocaleTimeString([],{...options,timeZone:marketTimeZone||undefined})}
 function marketDateTime(value){const when=new Date(value);if(!Number.isFinite(when.getTime()))return 'Date unavailable';return when.toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:marketTimeZone||undefined})+' · '+marketTime(when)}
 
-let currentLocation=null,selectedDestination=[39.2904,-76.6122];
+let locationMode="current",locationRequestId=0;
+let currentLocation=null,selectedDestination=null;
 let currentApps=[],availableApps=[],selectedAppNames=[];
 const appProfiles={
   us:[{name:'Uber',base:30,state:'PRIMARY CHECK'},{name:'Lyft',base:27,state:'BACKUP CHECK'}],
@@ -340,7 +341,7 @@ function renderEventMarkers(events){eventMapLayers.forEach(marker=>liveMap.remov
 function renderEventLegend(){const types=[['ARTS','Arts'],['FESTIVAL','Party'],['MUSIC','Concert'],['THEATER','Theater'],['NIGHTLIFE','Nightlife'],['SPORTS','Sports']],key=$('#eventIconKey');if(!key)return;key.innerHTML=types.map(([type,label])=>{const event={eventType:type};return'<span class="event-legend-item" style="--marker:'+eventColor(event)+'"><i>'+eventIconSvg(event)+'</i>'+label+'</span>'}).join('')}
 renderEventLegend();
 function show(d){$('#detailIcon').textContent=d[0];$('#detailTitle').textContent=d[1];$('#detailText').textContent=d[2];$('#route').textContent=d[3]}
-function renderEvents(events){const box=$('#todayEvents'),pulse=$('#eventPulse');if(events===null){box.innerHTML='<div class="event-empty">Checking current-day events near GPS…</div>';pulse.textContent='Checking active and upcoming events near GPS…';return}currentEventData=events;currentEventCount=events.length;updateClimateAdvisory();renderEventMarkers(events);if(!events.length){box.innerHTML='<div class="event-empty">No major verified events nearby right now.</div>';pulse.textContent='No verified major event now · commute, dining and school activity still included';return}const live=events.filter(e=>e.eventState==='Live').length,next=events.find(e=>e.eventState!=='Live');pulse.textContent=live?`${live} live now${next?` · next: ${next.name}`:''}`:`${events.length} upcoming today · ${events[0].name}`;const sortedEvents=[...events].sort((a,b)=>(a.eventState==='Live'?-1:0)-(b.eventState==='Live'?-1:0)||a.eventStart-b.eventStart),visibleEvents=eventsExpanded?sortedEvents:sortedEvents.slice(0,4);box.innerHTML=visibleEvents.map(e=>{const parts=String(e.name||'Event').split(' · ').map(v=>v.trim()).filter(Boolean),title=parts[0]||'Event',venue=e.venue||((parts.length>2&&parts[1])||''),time=e.eventStart&&Number.isFinite(new Date(e.eventStart).getTime())?marketDateTime(e.eventStart):(parts.at(-1)||''),meta=[venue,time].filter(Boolean).join(' · ');return `<div class="event-item compact-event"><i class="event-list-icon" style="--marker:${eventColor(e)}">${eventIconSvg(e)}</i><div><b>${safeText(title)}</b><span>${safeText(meta)}${e.eventState==='Live'?' · LIVE':''}</span></div></div>`}).join('')+(sortedEvents.length>4?`<button type="button" class="event-more list-expand" data-expand="events" aria-expanded="${eventsExpanded}">${eventsExpanded?'Show less':`+${sortedEvents.length-4} more today`}</button>`:'')}
+function renderEvents(events){const box=$('#todayEvents'),pulse=$('#eventPulse');if(events===null){box.innerHTML='<div class="event-empty">Checking current-day events near GPS…</div>';pulse.textContent='Checking active and upcoming events near GPS…';return}events=events.filter(rideRelevantEvent);currentEventData=events;currentEventCount=events.length;updateClimateAdvisory();renderEventMarkers(events);if(!events.length){box.innerHTML='<div class="event-empty">No major verified events nearby right now.</div>';pulse.textContent='No verified major event now · commute, dining and school activity still included';return}const live=events.filter(e=>e.eventState==='Live').length,next=events.find(e=>e.eventState!=='Live');pulse.textContent=live?`${live} live now${next?` · next: ${next.name}`:''}`:`${events.length} upcoming today · ${events[0].name}`;const sortedEvents=[...events].sort((a,b)=>(a.eventState==='Live'?-1:0)-(b.eventState==='Live'?-1:0)||a.eventStart-b.eventStart),visibleEvents=eventsExpanded?sortedEvents:sortedEvents.slice(0,4);box.innerHTML=visibleEvents.map(e=>{const parts=String(e.name||'Event').split(' · ').map(v=>v.trim()).filter(Boolean),title=parts[0]||'Event',venue=e.venue||((parts.length>2&&parts[1])||''),time=e.eventStart&&Number.isFinite(new Date(e.eventStart).getTime())?marketDateTime(e.eventStart):(parts.at(-1)||''),meta=[venue,time].filter(Boolean).join(' · ');return `<div class="event-item compact-event"><i class="event-list-icon" style="--marker:${eventColor(e)}">${eventIconSvg(e)}</i><div><b>${safeText(title)}</b><span>${safeText(meta)}${e.eventState==='Live'?' · LIVE':''}</span></div></div>`}).join('')+(sortedEvents.length>4?`<button type="button" class="event-more list-expand" data-expand="events" aria-expanded="${eventsExpanded}">${eventsExpanded?'Show less':`+${sortedEvents.length-4} more today`}</button>`:'')}
 function updateClock(){const now=new Date();$('#clock').textContent=now.toLocaleDateString([],{weekday:'short',month:'short',day:'numeric',timeZone:marketTimeZone||undefined})+' · '+marketTime(now)}
 updateClock();setInterval(updateClock,30000);
 function demandWeight(source,when){
@@ -826,7 +827,13 @@ async function loadProviderSignals(lat,lon,market){
     renderFeedSignal();renderDemandCoach();return{events}
   }catch{renderFeedSignal();renderDemandCoach();return null}
 }
-async function loadTodayEvents(lat,lon,market,venues){const results=await Promise.allSettled([loadTodaySports(lat,lon),loadEspnEvents(lat,lon,market,venues),loadProviderSignals(lat,lon,market)]),seen=new Set(),events=[];results.forEach((result,index)=>{if(result.status!=='fulfilled')return;const values=index===2?(result.value&&result.value.events||[]):result.value||[];values.forEach(event=>{const key=`${eventToken(event.name.split(' · ')[0])}:${Number(event.lat).toFixed(3)}:${Number(event.lon).toFixed(3)}`;if(!seen.has(key)){seen.add(key);events.push(event)}})});return events.sort((a,b)=>a.eventStart-b.eventStart)}
+function rideRelevantEvent(event){
+  if(!event?.eventStart||!Number.isFinite(new Date(event.eventStart).getTime())||!Number.isFinite(Number(event.lat))||!Number.isFinite(Number(event.lon)))return false;
+  const text=[event.name,event.venue,event.eventType,event.classification,event.genre].join(' ').toLowerCase();
+  if(/webinar|virtual|online.only|exhibition|gallery|workshop|seminar|office.hours|club.meeting|campus.tour/.test(text))return false;
+  return /sports|concert|festival|convention|conference|football|basketball|baseball|hockey|soccer|stadium|arena|theatre|theater|comedy|performing|music|graduation|commencement|fairground/.test(text)||event.tags?.source==='public sports feed'||(event.tags?.liveEvent&&!event.tags?.providerEvent);
+}
+async function loadTodayEvents(lat,lon,market,venues){const results=await Promise.allSettled([loadTodaySports(lat,lon),loadEspnEvents(lat,lon,market,venues),loadProviderSignals(lat,lon,market)]),seen=new Set(),events=[];results.forEach((result,index)=>{if(result.status!=='fulfilled')return;const values=index===2?(result.value&&result.value.events||[]):result.value||[];values.filter(rideRelevantEvent).forEach(event=>{const key=`${eventToken(event.name.split(' · ')[0])}:${Number(event.lat).toFixed(3)}:${Number(event.lon).toFixed(3)}`;if(!seen.has(key)){seen.add(key);events.push(event)}})});return events.sort((a,b)=>a.eventStart-b.eventStart)}
 function fallbackVenues(lat,lon,market){if(isGreaterBaltimoreLocation(lat,lon))return fallbackDemandSources(lat,lon,'Baltimore').map(source=>({name:source.name,cat:source.cat,lat:source.lat,lon:source.lon,heatOnly:source.cat==='event',tags:{routeAnchor:source.cat!=='event',forecast:true,venueOnly:source.cat==='event'}}));if(/^london$/i.test(market))return[['Westminster & Victoria','transit',51.4988,-.1347],['West End theatres','event',51.5115,-.1281],['Soho nightlife','nightlife',51.5136,-.1365],['King’s Cross St Pancras','transit',51.5308,-.1238],['Shoreditch','nightlife',51.5245,-.0773],['The O2','event',51.503,-.0032],['Canary Wharf','transit',51.5054,-.0235],['Heathrow staging','transit',51.47,-.4543]].map(s=>({name:s[0],cat:s[1],lat:s[2],lon:s[3],tags:{forecast:true}}));const seeds=[['School pickup cluster','school',.012,-.008],['Transit & hotel cluster','transit',.026,-.018],['Downtown activity center','attraction',.014,.012],['Restaurant district','restaurant',-.008,.018],['Arena & event zone','event',-.019,.003],['Nightlife corridor','nightlife',-.012,-.021],['Late-night hotel zone','hotel',.01,-.026],['Airport trip staging','transit',.035,.025]];return seeds.map(s=>({name:`${market} ${s[0]}`,cat:s[1],lat:lat+s[2],lon:lon+s[3],tags:{forecast:true}}))}
 function fallbackDemandSources(lat,lon,market){
   const baltimore=isGreaterBaltimoreLocation(lat,lon);
@@ -889,24 +896,27 @@ function buildRoute(venues,lat,lon,market,publicHeatSources=venues){
 }
 async function refreshLocation(){const btn=$('#refreshBtn');btn.classList.add('refreshing');$('#updated').textContent='Building local 12-hour route…';if(!navigator.geolocation){locationError('GPS is not supported on this device');return}navigator.geolocation.getCurrentPosition(async pos=>{currentLocation=[pos.coords.latitude,pos.coords.longitude];window.HomeBaseCopilot?.observePosition(pos);const accuracy=Math.round(pos.coords.accuracy),[lat,lon]=currentLocation,locale=await detectMarket(lat,lon),market=locale.name;configurePlatforms(locale);liveMap.flyTo([lat,lon],13,{duration:1.2});if(gpsMarker)liveMap.removeLayer(gpsMarker);if(gpsCircle)liveMap.removeLayer(gpsCircle);gpsMarker=L.circleMarker([lat,lon],{radius:9,color:'#fff',weight:4,fillColor:'#2563eb',fillOpacity:1}).addTo(liveMap).bindTooltip('You are here',{permanent:true,direction:'top'});gpsCircle=L.circle([lat,lon],{radius:Math.min(accuracy,1000),color:'#38bdf8',weight:1,fillOpacity:.1}).addTo(liveMap);$('#updated').textContent=`${market} · Finding current hotspots…`;loadWeather(lat,lon);loadHighways(lat,lon);let venues,publicHeatSources=[],forecastOnly=false;try{publicHeatSources=await loadVenues(lat,lon);venues=publicHeatSources;if(venues.length<6){venues=[...publicHeatSources,...fallbackVenues(lat,lon,market)];forecastOnly=true}}catch(e){venues=fallbackVenues(lat,lon,market);publicHeatSources=[];forecastOnly=true}buildRoute(venues,lat,lon,market,publicHeatSources);$('#updated').textContent=`${market} · ${forecastOnly?'Forecast route':'Live venue route'} refreshed`;if(forecastOnly)$('.route-source').textContent='GPS + current time + weather · forecast fallback';else $('.route-source').textContent='GPS + current time + weather + public venue data';btn.classList.remove('refreshing')},err=>locationError(err.code===1?'Location access was denied. Enable Location Services for this site, then refresh.':'Could not get a GPS fix. Move near a window and try again.'),{enableHighAccuracy:true,timeout:12000,maximumAge:60000})}
 function refreshLocationFastLegacy(){/* Retained only for migration history. The unified refresh path below is authoritative. */}
-function refreshLocationFast(){
-  if(gpsRequestInFlight)return;marketTimeZone=null;gpsRequestInFlight=true;renderEvents(null);
+function refreshLocationFast(customPosition){
+  if(gpsRequestInFlight)return;const locationRequest=++locationRequestId;locationMode=customPosition?.coords?'custom':'current';marketTimeZone=null;gpsRequestInFlight=true;renderEvents(null);
   const btn=$('#refreshBtn');btn.classList.add('refreshing');$('#updated').textContent='Connecting GPS automatically…';
-  if(!navigator.geolocation){gpsRequestInFlight=false;locationError('GPS is not supported on this device');return}
-  navigator.geolocation.getCurrentPosition(pos=>{
-    gpsRequestInFlight=false;const lat=pos.coords.latitude,lon=pos.coords.longitude,accuracy=Math.round(pos.coords.accuracy),requestKey=`${lat.toFixed(4)},${lon.toFixed(4)}`;currentLocation=[lat,lon];window.HomeBaseCopilot?.observePosition(pos);
+  if(!customPosition?.coords&&!navigator.geolocation){gpsRequestInFlight=false;locationError('GPS is not supported on this device');return}
+  const applyPosition=pos=>{
+    if(locationRequest!==locationRequestId)return;
+    gpsRequestInFlight=false;const lat=pos.coords.latitude,lon=pos.coords.longitude,accuracy=Math.round(pos.coords.accuracy),requestKey=`${lat.toFixed(4)},${lon.toFixed(4)}`;currentLocation=[lat,lon];if(locationMode==='current')window.HomeBaseCopilot?.observePosition(pos);
     try{localStorage.setItem('driverRouterLocation',JSON.stringify({lat,lon,market:'Local',savedAt:Date.now()}))}catch{}liveMap.setView([lat,lon],13,{animate:false});
-    if(gpsMarker)liveMap.removeLayer(gpsMarker);if(gpsCircle)liveMap.removeLayer(gpsCircle);gpsMarker=L.circleMarker([lat,lon],{radius:9,color:'#fff',weight:4,fillColor:'#2563eb',fillOpacity:1}).addTo(liveMap).bindTooltip('You are here',{permanent:true,direction:'top'});gpsCircle=L.circle([lat,lon],{radius:Math.min(accuracy,1000),color:'#38bdf8',weight:1,fillOpacity:.1}).addTo(liveMap);
-    buildRoute(fallbackVenues(lat,lon,'Local'),lat,lon,'Local');$('.route-source').textContent='Instant GPS route · refining today’s public activity';$('#updated').textContent='Location ready · refining today’s hotspots';btn.classList.remove('refreshing');loadWeather(lat,lon);loadHighways(lat,lon);
+    if(gpsMarker)liveMap.removeLayer(gpsMarker);if(gpsCircle)liveMap.removeLayer(gpsCircle);gpsMarker=L.circleMarker([lat,lon],{radius:9,color:'#fff',weight:4,fillColor:'#2563eb',fillOpacity:1}).addTo(liveMap).bindTooltip(locationMode==='custom'?'Custom location':'You are here',{permanent:true,direction:'top'});if(locationMode==='current')gpsCircle=L.circle([lat,lon],{radius:Math.min(accuracy,1000),color:'#38bdf8',weight:1,fillOpacity:.1}).addTo(liveMap);
+    buildRoute(fallbackVenues(lat,lon,'Local'),lat,lon,'Local');$('.route-source').textContent=(locationMode==='custom'?'Custom location':'GPS')+' · refining public activity';$('#updated').textContent='Location ready · refining today’s hotspots';btn.classList.remove('refreshing');loadWeather(lat,lon);loadHighways(lat,lon);
     Promise.all([detectMarket(lat,lon),loadVenues(lat,lon).catch(()=>[])]).then(async([locale,venues])=>{
-      if(!currentLocation||`${currentLocation[0].toFixed(4)},${currentLocation[1].toFixed(4)}`!==requestKey)return;
+      if(locationRequest!==locationRequestId||!currentLocation||`${currentLocation[0].toFixed(4)},${currentLocation[1].toFixed(4)}`!==requestKey)return;
       const market=locale.name,events=await loadTodayEvents(lat,lon,market,venues).catch(()=>[]);currentMarketName=market;
-      if(!currentLocation||`${currentLocation[0].toFixed(4)},${currentLocation[1].toFixed(4)}`!==requestKey)return;
+      if(locationRequest!==locationRequestId||!currentLocation||`${currentLocation[0].toFixed(4)},${currentLocation[1].toFixed(4)}`!==requestKey)return;
       configurePlatforms(locale);renderEvents(events);$('#marketHeading').textContent=`${market.toUpperCase()} — RIGHT NOW`;try{localStorage.setItem('driverRouterLocation',JSON.stringify({lat,lon,market,countryCode:locale.countryCode,savedAt:Date.now()}))}catch{}
       const live=venues.length>=12,localVenues=live?venues:fallbackVenues(lat,lon,market),routeData=[...events,...localVenues,...providerUberPoints];buildRoute(routeData,lat,lon,market);
       $('.route-source').textContent=events.length?'Metro heat: events + neighborhoods + schools + venues':live?'Metro heat: city + county public activity anchors':'Route ready · metro heat awaiting public data';$('#updated').textContent=`Today’s metro demand ready${events.length?` · ${events.length} current event${events.length===1?'':'s'}`:''}`;
     }).catch(()=>{renderEvents([]);$('#updated').textContent='Location ready · today’s fast forecast active'})
-  },err=>{gpsRequestInFlight=false;renderEvents([]);locationError(err.code===1?'Location access was denied. Enable Location Services for this site, then refresh.':'Could not get a GPS fix. Check signal and try again.')},{enableHighAccuracy:false,timeout:6000,maximumAge:60000})
+  };
+  if(customPosition?.coords){applyPosition(customPosition);return}
+  navigator.geolocation.getCurrentPosition(applyPosition,err=>{if(locationRequest!==locationRequestId)return;gpsRequestInFlight=false;renderEvents([]);locationError(err.code===1?'Location access was denied. Enable Location Services for this site, then refresh.':'Could not get a GPS fix. Check signal and try again.')},{enableHighAccuracy:false,timeout:6000,maximumAge:60000})
 }
 function locationError(message){$('#updated').textContent='GPS connection failed';$('#refreshBtn').classList.remove('refreshing');show(['⚠️','Location needed',message,'TIP · iPhone Settings → Privacy & Security → Location Services'])}
 function initializeInstantRoute(){
@@ -930,14 +940,39 @@ initializeInstantRoute();
 async function loadDemo(){if(!demoLocale)return;renderEvents(null);loadWeather(demoLocale.lat,demoLocale.lon);loadHighways(demoLocale.lat,demoLocale.lon);let venues=[];try{venues=await loadVenues(demoLocale.lat,demoLocale.lon)}catch(e){}const local=venues.length>=6?venues:fallbackVenues(demoLocale.lat,demoLocale.lon,demoLocale.name);buildRoute(local,demoLocale.lat,demoLocale.lon,demoLocale.name);renderEvents([]);$('.route-source').textContent=venues.length>=6?'London time + current weather + public schools, stations, hotels and venues':'London time + current weather + fast public-venue forecast';$('#updated').textContent='London example · 12-hour route ready'}
 loadDemo();
 
-$('#refreshBtn').addEventListener('click',refreshLocationFast);
-$('#mapsBtn').addEventListener('click',()=>{const [lat,lon]=selectedDestination;const origin=currentLocation?`${currentLocation[0]},${currentLocation[1]}`:'';const url=`https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}&travelmode=driving${origin?`&origin=${origin}`:''}`;window.open(url,'_blank','noopener')});
-function autoRefreshGps(){if(Date.now()-lastAutoGpsRefresh<60000)return;lastAutoGpsRefresh=Date.now();refreshLocationFast()}
+$('#refreshBtn').addEventListener('click',()=>{if(locationMode==='custom'&&currentLocation)liveMap.setView(currentLocation,13);else refreshLocationFast()});
+function openLocationOptions(){
+  let dialog=document.getElementById('hbLocationOptions');
+  if(!dialog){
+    dialog=document.createElement('dialog');dialog.id='hbLocationOptions';dialog.setAttribute('aria-labelledby','hbLocationTitle');
+    dialog.innerHTML='<form method="dialog"><header><h2 id="hbLocationTitle">My Location</h2><button formnovalidate aria-label="Close location options">×</button></header><p>Use your GPS, or explore demand near a custom location.</p><button type="button" id="hbUseCurrent">Current location · GPS</button><fieldset><legend>Custom location</legend><p>Pan the map before opening this menu to choose its center, or enter coordinates.</p><label>Latitude<input id="hbCustomLat" type="number" step="any" min="-90" max="90" required></label><label>Longitude<input id="hbCustomLon" type="number" step="any" min="-180" max="180" required></label><button type="button" id="hbUseCustom">Use custom location</button></fieldset><p id="hbLocationStatus" role="status"></p></form>';
+    document.body.append(dialog);
+    dialog.querySelector('#hbUseCurrent').onclick=()=>{locationMode='current';dialog.close();gpsRequestInFlight=false;refreshLocationFast()};
+    dialog.querySelector('#hbUseCustom').onclick=()=>{
+      const inputs=[dialog.querySelector('#hbCustomLat'),dialog.querySelector('#hbCustomLon')];
+      if(!inputs.every(input=>input.reportValidity()))return;
+      const [latitude,longitude]=inputs.map(input=>Number(input.value));
+      locationMode='custom';dialog.close();gpsRequestInFlight=false;refreshLocationFast({coords:{latitude,longitude,accuracy:0}});
+    };
+  }
+  const center=liveMap.getCenter();dialog.querySelector('#hbCustomLat').value=center.lat.toFixed(6);dialog.querySelector('#hbCustomLon').value=center.lng.toFixed(6);
+  dialog.querySelector('#hbLocationStatus').textContent=locationMode==='custom'?'Exploring a custom location — not your GPS position.':'Current location mode';
+  dialog.showModal();
+}
+document.addEventListener('click',event=>{const button=event.target.closest('.hb-ref-left [data-home-target="refreshBtn"]');if(button){event.preventDefault();event.stopImmediatePropagation();openLocationOptions()}},true);
+function openHomeNavigation(){
+  if(!selectedDestination||!selectedDestination.every(Number.isFinite)){show(['🧭','Choose a destination','Choose an event or route stop on the map first.','Select a destination, then tap Navigate']);return}
+  const [lat,lon]=selectedDestination;
+  const origin=locationMode==='custom'&&currentLocation?'&origin='+encodeURIComponent(currentLocation.join(',')):'';
+  window.location.assign('https://www.google.com/maps/dir/?api=1&destination='+lat+','+lon+'&travelmode=driving&dir_action=navigate'+origin);
+}
+$('#mapsBtn').addEventListener('click',openHomeNavigation);
+function autoRefreshGps(){if(locationMode==='custom')return;if(Date.now()-lastAutoGpsRefresh<60000)return;lastAutoGpsRefresh=Date.now();refreshLocationFast()}
 async function refreshLiveDemandLayer(){
   if(demoLocale||document.visibilityState!=='visible'||!currentLocation||gpsRequestInFlight)return;
   const [lat,lon]=currentLocation,provider=await loadProviderSignals(lat,lon,currentMarketName).catch(()=>null);if(!provider)return;
   const publicEvents=currentEventData.filter(event=>!(event.tags&&event.tags.providerEvent)),seen=new Set(),events=[];
-  [...publicEvents,...(provider.events||[])].forEach(event=>{const key=`${eventToken(event.name.split(' · ')[0])}:${Number(event.lat).toFixed(3)}:${Number(event.lon).toFixed(3)}`;if(!seen.has(key)){seen.add(key);events.push(event)}});
+  [...publicEvents,...(provider.events||[])].filter(rideRelevantEvent).forEach(event=>{const key=`${eventToken(event.name.split(' · ')[0])}:${Number(event.lat).toFixed(3)}:${Number(event.lon).toFixed(3)}`;if(!seen.has(key)){seen.add(key);events.push(event)}});
   const publicSources=activeDemandSources.filter(source=>!(source.tags&&(source.tags.providerSignal||source.tags.providerEvent)));
   activeDemandSources=mergeDemandSources(publicSources,[...events,...providerUberPoints,...providerFlightPoints]);
   renderDemandCoach();renderEvents(events);renderDemandGrid(activeDemandSources,0,new Date());$('#updated').textContent=`Demand refreshed · ${marketTime(new Date())}`
@@ -945,7 +980,7 @@ async function refreshLiveDemandLayer(){
 if(!demoLocale)setTimeout(autoRefreshGps,150);
 setInterval(()=>{updateClimateAdvisory();const selected=$('[data-hour][aria-pressed="true"]');if(selected&&selected.dataset.hour==='0'&&activeStops.length)applyTimeForecast(0,new Date());refreshLiveDemandLayer()},300000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-lastAutoGpsRefresh>300000)autoRefreshGps()});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=190',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';}));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=191',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';}));
 </script>
 <script src="homebase-live.js?v=38"></script>
 </body>
