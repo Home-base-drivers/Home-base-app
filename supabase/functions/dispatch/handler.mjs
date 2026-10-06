@@ -1,5 +1,5 @@
 // Shared foreground dispatch endpoint. Auth is checked before reading private driver data.
-export function makeDispatchHandler({engine,authenticate,loadState,loadTrips,parseLanguage,translateLanguage}) {
+export function makeDispatchHandler({engine,authenticate,loadState,loadTrips,parseLanguage,translateLanguage,synthesizeVoice}) {
  const headers={'Content-Type':'application/json','Access-Control-Allow-Origin':'https://home-base-drivers.github.io','Access-Control-Allow-Headers':'authorization,apikey,content-type,x-client-info','Access-Control-Allow-Methods':'POST,OPTIONS'};
  const response=(body,status=200)=>new Response(JSON.stringify(body),{status,headers});
  return async request=>{
@@ -10,7 +10,13 @@ export function makeDispatchHandler({engine,authenticate,loadState,loadTrips,par
   if(!user?.id||user.is_anonymous)return response({error:'Sign in first'},401);
   try{
    const raw=await request.text();if(raw.length>65536)return response({error:'Request too large'},413);
-   const payload=JSON.parse(raw);if(!['score','recommend','chat','translate'].includes(payload.operation))return response({error:'Unsupported operation'},400);
+   const payload=JSON.parse(raw);if(!['score','recommend','chat','translate','voice'].includes(payload.operation))return response({error:'Unsupported operation'},400);
+   if(payload.operation==='voice'){
+    if(!synthesizeVoice)return response({configured:false,provider:'not_configured'});
+    const result=await synthesizeVoice({text:payload.text,locale:payload.locale,voice:payload.voice,style:payload.style});
+    if(!result.configured)return response(result);
+    return new Response(result.audio,{status:200,headers:{...headers,'Content-Type':result.contentType||'audio/mpeg','Cache-Control':'no-store','X-HomeBase-Voice':'ai'}});
+   }
    if(payload.operation==='translate'){if(!translateLanguage)return response({translated:false,provider:'not_configured'});return response(await translateLanguage(payload.text,payload.locale));}
    if(payload.operation==='chat'){const language=parseLanguage?await parseLanguage(payload.utterance,payload.locale):{command:engine.parseCommand(payload.utterance),provider:'not_configured',execution:'advisory'};return response(language);}
    const stored=await loadState(user.id),trips=await loadTrips(user.id);
