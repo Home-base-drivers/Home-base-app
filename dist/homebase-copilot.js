@@ -247,6 +247,30 @@ function bootHomeBaseShell(){
   '<label class="hb-setting-row"><span><b>Voice + text on map</b><small>Optional live transcript; voice-only is the default</small></span><input id="hbShowText" type="checkbox"></label>'+
   '<div class="hb-color-row"><span><b>Voice button color</b><small>Blue is the Home Base default</small></span><div class="hb-swatches"><button data-color="#1769ff" aria-label="Blue"></button><button data-color="#08a9ff" aria-label="Cyan"></button><button data-color="#7047ff" aria-label="Purple"></button><button data-color="#ff2aa7" aria-label="Pink"></button><input id="hbVoiceColor" type="color" aria-label="Custom voice button color"></div></div></section>'+
   '</div>';
+ const menuIcons={
+  navMap:'<path d="M4 6.5 9 4l6 2.5L20 4v13.5L15 20l-6-2.5L4 20V6.5Z"/><path d="M9 4v13.5M15 6.5V20"/>',
+  navEarn:'<path d="M12 3v18M16.5 7.2c0-1.8-1.8-3-4.4-3S7.8 5.4 7.8 7.3c0 4.1 8.7 2.2 8.7 6.6 0 2-1.8 3.5-4.6 3.5s-4.7-1.4-4.7-3.5"/>',
+  navAlerts:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9ZM10 21h4"/>',
+  navProfile:'<circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/>',
+  navSupport:'<path d="M4 13v-2a8 8 0 0 1 16 0v2"/><path d="M4 12H2v5h4v-5H4Zm16 0h2v5h-4v-5h2ZM18 19c-1 1.3-2.8 2-5 2"/>',
+  hbChatOpen:'<path d="M4 5h16v11H9l-5 4V5Z"/><path d="M8 9h8M8 12h5"/>',
+  heatToggle:'<path d="M12 3c1.2 3-1 4.3-1 6.4 0 1.2.8 2.1 1.9 2.1 1.8 0 2.9-1.6 2.5-3.7 2.8 2 4.1 4.4 4.1 7A7.5 7.5 0 0 1 4.5 15c0-3.2 1.8-6 4.7-7.8-.3 2.4.8 3.6 2 3.6"/>',
+  paletteToggle:'<path d="M12 3a9 9 0 1 0 0 18h1.5a2 2 0 0 0 0-4H12a1.5 1.5 0 0 1 0-3h2.5A6.5 6.5 0 0 0 21 7.5C21 5 17 3 12 3Z"/><circle cx="7.5" cy="9" r=".8"/><circle cx="10" cy="6.5" r=".8"/><circle cx="14" cy="6.5" r=".8"/>',
+  layerBtn:'<path d="m4 8 8-4 8 4-8 4-8-4Zm0 4 8 4 8-4M4 16l8 4 8-4"/>',
+  refreshBtn:'<circle cx="12" cy="12" r="7"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>',
+  panelsBtn:'<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M12 4v16M4 11h8"/>',
+  installBtn:'<path d="M12 3v12m-4-4 4 4 4-4M5 19h14"/>',
+  driveViewToggle:'<path d="M5 16h14l-1.5-6h-11L5 16Z"/><path d="m7 10 1.5-3h7L17 10M7 16v3M17 16v3"/><circle cx="8" cy="14" r="1"/><circle cx="16" cy="14" r="1"/>',
+  demandDetails:'<path d="M4 20V12h3v8H4Zm6 0V8h3v12h-3Zm6 0V4h3v16h-3Z"/>',
+  toggleMapTabs:'<rect x="4" y="5" width="16" height="14" rx="2"/><path d="M4 10h16M9 10v9"/>',
+  showPickupCard:'<path d="M12 21s6-5.3 6-11a6 6 0 1 0-12 0c0 5.7 6 11 6 11Z"/><circle cx="12" cy="10" r="2"/>',
+  hideMapControls:'<path d="M4 6.5 9 4l6 2.5L20 4v13.5L15 20l-6-2.5L4 20V6.5Z"/><path d="M3 3l18 18"/>',
+  showMapControls:'<path d="M4 6.5 9 4l6 2.5L20 4v13.5L15 20l-6-2.5L4 20V6.5Z"/><path d="m8 12 2.4 2.4L16 9"/>'
+ };
+ drawer.querySelectorAll('.hb-menu-grid button').forEach(button=>{
+  const key=button.dataset.nav||button.dataset.control||button.id,path=menuIcons[key];if(!path)return;
+  const label=button.textContent.trim();button.innerHTML='<span class="hb-menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24">'+path+'</svg></span><span class="hb-menu-label">'+esc(label)+'</span>';
+ });
  const voice=document.createElement('button');voice.id='hbVoiceBubble';voice.className='hb-voice-bubble';voice.type='button';voice.setAttribute('aria-label','Talk to Home Base');voice.setAttribute('aria-pressed','false');voice.innerHTML='<span class="hb-voice-ring"></span><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4M9 21h6"/></svg>';
  const liveText=document.createElement('div');liveText.id='hbVoiceText';liveText.className='hb-voice-text';liveText.setAttribute('aria-live','polite');liveText.setAttribute('dir','auto');
  const chat=document.createElement('section');chat.id='hbChatPanel';chat.className='hb-chat-panel';chat.hidden=true;chat.innerHTML='<div class="hb-chat-head"><button id="hbChatClose" type="button" aria-label="Close Copilot history">‹</button><div><span>HOME BASE COPILOT</span><b>Conversation history</b></div><button id="hbNewChat" type="button">New</button></div><div class="hb-chat-tools"><input id="hbChatSearch" type="search" placeholder="Search conversations" aria-label="Search conversations"></div><div id="hbChatContent" class="hb-chat-content"></div>';

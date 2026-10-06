@@ -195,3 +195,41 @@
 
 /* Shell-native menu visibility */
 .hb-shell-active.hb-show-nav .home-nav{display:grid!important;pointer-events:auto}
+
+
+/* Street-mode charcoal + ice icon treatment */
+.hb-shell-active.app.dark,.hb-shell-active.app.dark .map{background:#151b20!important}
+.hb-shell-active.app.dark .leaflet-tile-pane{filter:brightness(.79) contrast(1.13) saturate(.72)}
+.hb-shell-active.app.dark .leaflet-labels-pane{opacity:1;filter:brightness(1.12) contrast(1.04) saturate(.72)}
+.hb-shell-active.app.dark .map:after{background:linear-gradient(180deg,rgba(15,28,37,.08),rgba(27,34,40,.12));pointer-events:none}
+.hb-side-menu{background:linear-gradient(180deg,rgba(21,27,32,.995),rgba(12,18,23,.998));border-right-color:rgba(129,188,220,.22)}
+.hb-menu-grid{gap:9px}
+.hb-menu-grid button{
+ min-height:64px;display:grid;grid-template-columns:34px 1fr;align-items:center;gap:9px;
+ border:1px solid rgba(166,211,235,.16);border-radius:14px;
+ background:linear-gradient(145deg,rgba(31,41,48,.96),rgba(21,29,35,.98));
+ color:#edf8ff;padding:10px;text-align:left;box-shadow:inset 0 1px 0 rgba(255,255,255,.035),0 5px 14px rgba(0,0,0,.16)
+}
+.hb-menu-grid button:active{transform:scale(.985);background:linear-gradient(145deg,rgba(36,51,61,.98),rgba(23,34,42,.99))}
+.hb-menu-icon{
+ width:34px;height:34px;border-radius:10px;display:grid;place-items:center;
+ color:#dff5ff;background:linear-gradient(145deg,rgba(51,75,89,.62),rgba(25,39,48,.72));
+ border:1px solid rgba(177,222,245,.18);box-shadow:inset 0 1px 0 rgba(255,255,255,.06)
+}
+.hb-menu-icon svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.hb-menu-label{font-size:.68rem;font-weight:820;line-height:1.18;letter-spacing:.015em}
+.hb-menu-grid button[data-control="heatToggle"] .hb-menu-icon{color:#ff805c}
+.hb-menu-grid button[data-control="paletteToggle"] .hb-menu-icon{color:#d6b7ff}
+.hb-menu-grid button[data-control="layerBtn"] .hb-menu-icon,
+.hb-menu-grid button[data-nav="navMap"] .hb-menu-icon{color:#8ed7ff}
+.hb-menu-grid button[data-control="refreshBtn"] .hb-menu-icon,
+.hb-menu-grid button[data-control="showPickupCard"] .hb-menu-icon{color:#a9e1ff}
+.hb-menu-grid button[data-nav="navEarn"] .hb-menu-icon{color:#6fd7ff}
+.hb-menu-grid button[data-nav="navAlerts"] .hb-menu-icon{color:#ffd27a}
+.hb-menu-grid button[data-nav="navSupport"] .hb-menu-icon{color:#b9d9ec}
+.hb-menu-grid button[data-control="driveViewToggle"] .hb-menu-icon{color:#dbeaf2}
+.hb-menu-grid button[data-control="demandDetails"] .hb-menu-icon{color:#7cc7ff}
+@media(max-width:430px){
+ .hb-menu-grid button{min-height:60px;grid-template-columns:32px 1fr;padding:9px;gap:8px}
+ .hb-menu-icon{width:32px;height:32px}.hb-menu-icon svg{width:19px;height:19px}.hb-menu-label{font-size:.65rem}
+}
