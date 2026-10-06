@@ -24,7 +24,7 @@ export function makeDispatchHandler({engine,authenticate,loadState,loadTrips,par
     return new Response(result.audio,{status:200,headers:{...headers,'Content-Type':'application/octet-stream','Cache-Control':'no-store','X-HomeBase-Voice':'ai','X-HomeBase-Audio-Type':result.contentType||'audio/mpeg'}});
    }
    if(payload.operation==='translate'){if(!translateLanguage)return response({translated:false,provider:'not_configured'});return response(await translateLanguage(payload.text,payload.locale));}
-   if(payload.operation==='chat'){const language=parseLanguage?await parseLanguage(payload.utterance,payload.locale):{command:engine.parseCommand(payload.utterance),provider:'not_configured',execution:'advisory'};return response(language);}
+   if(payload.operation==='chat'){const language=parseLanguage?await parseLanguage(payload.utterance,payload.locale,payload.context):{command:engine.parseCommand(payload.utterance),provider:'not_configured',execution:'advisory'};return response(language);}
    const stored=await loadState(user.id),trips=await loadTrips(user.id);
    const state=engine.DriverState.create({...stored,...payload.state});
    // Request context is driver-reported; no client can create official capability support.
