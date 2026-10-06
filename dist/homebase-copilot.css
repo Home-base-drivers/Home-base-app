@@ -801,15 +801,22 @@
 }
 
 
-/* Keep the entire Events + Route card visibly below the platform-price strip */
+/* Lift Events + Route and keep long lists above navigation and the voice button. */
 .hb-shell-active #routePlan{
- top:max(283px,calc(env(safe-area-inset-top) + 273px))!important;
- max-height:min(50vh,650px)!important;
+ --hb-events-top:max(215px,calc(env(safe-area-inset-top) + 205px));
+ --hb-events-bottom:max(130px,calc(env(safe-area-inset-bottom) + 118px));
+ top:var(--hb-events-top)!important;
+ bottom:auto!important;
+ box-sizing:border-box!important;
+ max-height:min(60vh,650px,calc(100vh - var(--hb-events-top) - var(--hb-events-bottom)))!important;
+ max-height:min(60dvh,650px,calc(100dvh - var(--hb-events-top) - var(--hb-events-bottom)))!important;
+ overflow:auto!important;
+ overscroll-behavior:contain;
+ -webkit-overflow-scrolling:touch;
 }
-@media(max-width:430px){
+@media(max-height:500px){
  .hb-shell-active #routePlan{
-  top:max(281px,calc(env(safe-area-inset-top) + 271px))!important;
-  max-height:48vh!important;
+  --hb-events-top:max(168px,calc(env(safe-area-inset-top) + 158px));
  }
 }
 
