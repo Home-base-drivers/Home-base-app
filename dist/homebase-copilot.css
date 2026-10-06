@@ -1003,3 +1003,13 @@
 .hb-side-menu:not(.open){visibility:hidden;pointer-events:none}
 .hb-side-menu.open{visibility:visible;pointer-events:auto}
 .hb-menu-backdrop[hidden]{display:none!important}
+
+/* An explicitly opened pickup card stays inside the app above navigation. */
+.hb-shell-active #nextMoveCard{
+ position:fixed;z-index:1270;left:50%;transform:translateX(-50%);
+ width:min(calc(100vw - 24px),620px);margin:0!important;
+ bottom:max(116px,calc(102px + env(safe-area-inset-bottom)));
+ max-height:45dvh;overflow:auto;overscroll-behavior:contain;
+ box-shadow:0 10px 32px rgba(0,0,0,.42)
+}
+.hb-shell-active:not(.hb-home-hud-visible) #nextMoveCard{display:none!important}
