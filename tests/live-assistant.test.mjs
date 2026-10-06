@@ -44,6 +44,6 @@ test('anonymous identity can use guest voice without creating an account',async(
  const h=voiceHarness(()=>({id:'anonymous',is_anonymous:true}));await h.start();assert.deepEqual(h.calls,['auth','guest voice']);
 });
 test('confirmed account upgrades to GPT Live while account lookup failures fall back to guest voice',async()=>{
- const h=voiceHarness(()=>({id:'driver'}));await h.start();assert.deepEqual(h.calls,['auth','old voice stopped','microphone']);
+ const h=voiceHarness(()=>({id:'driver'}));await h.start();assert.deepEqual(h.calls,['auth','old voice stopped','microphone','guest voice']);
  const failed=voiceHarness(()=>{throw Error('Network request failed');});await failed.start();assert.deepEqual(failed.calls,['auth','guest voice']);assert.match(failed.messages.at(-1),/no account needed/i);
 });
