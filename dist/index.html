@@ -204,11 +204,11 @@
 <script src="homebase-config.js?v=111"></script>
 <script src="homebase-backend.js?v=124"></script>
 <script src="homebase-growth.js?v=124"></script>
-<link rel="stylesheet" href="homebase-copilot.css?v=22">
+<link rel="stylesheet" href="homebase-copilot.css?v=23">
 <script src="homebase-dispatch.js?v=2"></script>
 <script src="homebase-languages.js?v=2"></script>
 <script src="homebase-voice.js?v=4"></script>
-<script src="homebase-copilot.js?v=23"></script>
+<script src="homebase-copilot.js?v=24"></script>
 <script src="homebase-live-assistant.js?v=2"></script>
 <script>
 const app=document.getElementById('app');
@@ -903,7 +903,7 @@ async function refreshLiveDemandLayer(){
 if(!demoLocale)setTimeout(autoRefreshGps,150);
 setInterval(()=>{updateClimateAdvisory();const selected=$('[data-hour][aria-pressed="true"]');if(selected&&selected.dataset.hour==='0'&&activeStops.length)applyTimeForecast(0,new Date());refreshLiveDemandLayer()},300000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-lastAutoGpsRefresh>300000)autoRefreshGps()});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=150',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';}));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=156',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';}));
 </script>
 <script src="homebase-live.js?v=37"></script>
 </body>
