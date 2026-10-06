@@ -4,7 +4,7 @@
  // Home Base stores the user's language/region/voice preference, but never
  // fabricates a voice ID or assumes a particular system voice is installed.
  const dispatcherNames=['Alex','Aaron','Daniel','Nathan','Guy','Ryan','David','Thomas','Samantha','Ava','Serena','Karen','Moira','Tessa','Monica','Paulina','Jorge','Diego','Carlos'];
- function normalizeLocale(locale='en-US'){return String(locale||'en-US').replace('_','-');}
+ function normalizeLocale(locale='en-US'){return String(locale||'en-US').replaceAll('_','-');}
  function languageOf(locale='en-US'){return normalizeLocale(locale).split('-')[0].toLowerCase();}
  function voicesForLocale(voices,locale='en-US'){
   const all=Array.from(voices||[]),wanted=normalizeLocale(locale),language=languageOf(wanted);
@@ -19,9 +19,9 @@
   const wanted=normalizeLocale(locale);
   const score=v=>{
    const index=dispatcherNames.findIndex(n=>new RegExp('\\b'+n+'\\b','i').test(v.name||''));
-   return(index<0?0:70-index*2)+(normalizeLocale(v.lang).toLowerCase()===wanted.toLowerCase()?40:8)+(/premium|enhanced|natural|neural/i.test(v.name||'')?18:0)+(v.localService===true?5:0)+(v.default?2:0);
+   return(index<0?0:70-index*2)+(normalizeLocale(v.lang).toLowerCase()===wanted.toLowerCase()?1000:0)+(/premium|enhanced|natural|neural/i.test(v.name||'')?18:0)+(v.localService===true?5:0)+(v.default?2:0);
   };
-  return available.map((v,i)=>({v,i,score:score(v)})).sort((a,b)=>b.score-a.score||a.i-b.i)[0]?.v||Array.from(voices||[]).find(v=>v.default)||Array.from(voices||[])[0]||null;
+  return available.map((v,i)=>({v,i,score:score(v)})).sort((a,b)=>b.score-a.score||a.i-b.i)[0]?.v||null;
  }
  function delivery(message,{driverName='',address=false}={}){
   const text=String(message||'').replace(/\s+/g,' ').trim();
