@@ -1021,3 +1021,8 @@
  box-shadow:0 10px 32px rgba(0,0,0,.42)
 }
 .hb-shell-active:not(.hb-home-hud-visible) #nextMoveCard{display:none!important}
+
+/* Driving preferences show the saved state without dismissing the drawer. */
+.hb-driving-toggle>i{min-width:48px;padding:7px 9px;border:1px solid #3a6178;border-radius:999px;text-align:center;font-size:.65rem;font-weight:800;line-height:1.2;color:#aac2d1;background:#0d2736}
+.hb-driving-toggle[aria-pressed="true"]>i{color:#bdeaff;border-color:#249bff;background:#123e60}
+.hb-driving-toggle:focus-visible{outline:2px solid #8bd5ff;outline-offset:-2px}
