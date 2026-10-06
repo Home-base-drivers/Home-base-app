@@ -62,7 +62,8 @@ test('GPT Live creates a full-duplex multilingual session with Responses web sea
  assert.equal(sent.body.session.delegation.responses.parallel_tool_calls,true);
  assert.equal(sent.body.session.delegation.responses.max_output_tokens,1200);
  assert.equal(sent.body.session.delegation.tool_choice,undefined);
- assert.match(sent.body.session.instructions,/full duplex/i);
+ assert.match(sent.body.session.instructions,/hands-free AI dispatcher/i);
+ assert.match(sent.body.session.instructions,/not a canned command bot/i);
  assert.match(sent.body.session.instructions,/substantive request in another language/i);
  assert.equal(sent.body.transport.type,'webrtc');
  assert.equal(result.transport.sdp,'answer-sdp');
@@ -72,5 +73,5 @@ test('dispatch protects GPT Live behind authenticated Home Base session',async()
  let livePayload;
  const handler=makeDispatchHandler({engine:{},authenticate:async()=>({id:'user-1',is_anonymous:false}),loadState:async()=>({}),loadTrips:async()=>[],createLiveSession:async payload=>(livePayload=payload,{configured:true,session:{id:'live_1'},transport:{type:'webrtc',sdp:'answer'}})});
  const response=await handler(new Request('https://example.test/dispatch',{method:'POST',headers:{Authorization:'Bearer test-token','Content-Type':'application/json'},body:JSON.stringify({operation:'live-session',sdp:'v=0 '+'.'.repeat(80),locale:'fr-FR',history:[]})}));
- assert.equal(response.status,200);assert.equal(livePayload.locale,'fr-FR');assert.equal((await response.json()).session.id,'live_1');
+ assert.equal(response.status,200);assert.equal(livePayload.locale,'fr-FR');assert.deepEqual(livePayload.context,undefined);assert.equal((await response.json()).session.id,'live_1');
 });
