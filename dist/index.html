@@ -202,7 +202,7 @@
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="baltimore-market.js?v=72"></script>
-<script src="homebase-heat.js?v=97"></script>
+<script src="homebase-heat.js?v=98"></script>
 <link rel="stylesheet" href="homebase-earnings.css?v=110">
 <link rel="stylesheet" href="homebase-growth.css?v=111">
 <script src="homebase-earnings.js?v=110"></script>
@@ -211,17 +211,18 @@
 <script src="homebase-config.js?v=111"></script>
 <script src="homebase-backend.js?v=124"></script>
 <script src="homebase-growth.js?v=124"></script>
-<link rel="stylesheet" href="homebase-copilot.css?v=39">
+<link rel="stylesheet" href="homebase-copilot.css?v=40">
 <script src="homebase-dispatch.js?v=2"></script>
 <script src="homebase-languages.js?v=2"></script>
 <script src="homebase-voice.js?v=4"></script>
-<script src="homebase-copilot.js?v=31"></script>
+<script src="homebase-copilot.js?v=32"></script>
 <script src="homebase-live-assistant.js?v=3"></script>
 <script>
 const app=document.getElementById('app');
 app.classList.add('map-mode');
 const $=s=>app.querySelector(s), $$=s=>[...app.querySelectorAll(s)];
 const heatPaletteNames=HomeBaseHeat.paletteNames;
+try{const savedCustom=JSON.parse(localStorage.getItem('homeBaseHeatCustomColors')||'null');if(savedCustom)HomeBaseHeat.setCustomColors(savedCustom)}catch{}
 let heatPaletteIndex=(()=>{try{const stored=localStorage.getItem('homeBaseHeatPalette');const index=heatPaletteNames.indexOf(stored);return index<0?0:index}catch{return 0}})();
 HomeBaseHeat.setPalette(heatPaletteNames[heatPaletteIndex]);
 const initialHeatVisible=(()=>{try{return localStorage.getItem('homeBaseHeatVisible')!=='false'}catch{return true}})();
@@ -631,8 +632,9 @@ $('#heatToggle').setAttribute('aria-pressed',String(initialHeatVisible));$('#hea
 $('#heatToggle').addEventListener('click',()=>{const on=app.classList.contains('heat-hidden');app.classList.toggle('heat-hidden',!on);$('#heatToggle').setAttribute('aria-pressed',String(on));$('#heatToggle').textContent=`HEAT · ${on?'ON':'OFF'}`;$('#heatToggle').setAttribute('aria-label',on?'Hide demand heat map':'Show demand heat map');try{localStorage.setItem('homeBaseHeatVisible',String(on))}catch{}});
 function updatePaletteButton(){const name=heatPaletteNames[heatPaletteIndex];$('#paletteToggle').textContent=`COLORS · ${name.toUpperCase()}`;$('#paletteToggle').setAttribute('aria-label',`Heat colors: ${name}. Change heat map colors.`)}
 function setHeatPalette(name){const index=heatPaletteNames.indexOf(name);if(index<0)return HomeBaseHeat.getPalette();heatPaletteIndex=index;const active=HomeBaseHeat.setPalette(name);try{localStorage.setItem('homeBaseHeatPalette',active)}catch{}updatePaletteButton();renderDemandGrid(activeDemandSources,0,selectedForecastTime);return active}
+function setHeatCustomColors(colors){const saved=HomeBaseHeat.setCustomColors(colors);if(!saved)return null;try{localStorage.setItem('homeBaseHeatCustomColors',JSON.stringify(saved))}catch{}setHeatPalette('custom');return saved}
 updatePaletteButton();
-window.HomeBaseHeatControls={setPalette:setHeatPalette,getPalette:()=>HomeBaseHeat.getPalette(),isVisible:()=>!app.classList.contains('heat-hidden'),toggleVisible:()=>{$('#heatToggle').click();return !app.classList.contains('heat-hidden')}};
+window.HomeBaseHeatControls={setPalette:setHeatPalette,setCustomColors:setHeatCustomColors,getCustomColors:()=>HomeBaseHeat.getCustomColors(),getPalette:()=>HomeBaseHeat.getPalette(),isVisible:()=>!app.classList.contains('heat-hidden'),toggleVisible:()=>{$('#heatToggle').click();return !app.classList.contains('heat-hidden')}};
 $('#paletteToggle').addEventListener('click',()=>setHeatPalette(heatPaletteNames[(heatPaletteIndex+1)%heatPaletteNames.length]));
 $('#legendToggle').addEventListener('click',()=>{const legend=$('#legend'),collapsed=!legend.classList.contains('collapsed');legend.classList.toggle('collapsed',collapsed);$('#legendToggle').textContent=collapsed?'KEY':'KEY ×';$('#legendToggle').setAttribute('aria-expanded',String(!collapsed))});
 $('#routeToggle').addEventListener('click',()=>{const route=$('#routePlan'),collapsed=!route.classList.contains('collapsed');route.classList.toggle('collapsed',collapsed);$('#routeToggle').textContent=collapsed?'›':'−';$('#routeToggle').setAttribute('aria-expanded',String(!collapsed))});
