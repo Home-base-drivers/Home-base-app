@@ -516,3 +516,29 @@
  .hb-home-weather{min-width:137px!important;height:58px!important;padding:6px 9px!important;gap:7px!important}
  .hb-weather-now strong{font-size:.9rem}.hb-weather-now span{font-size:.56rem;max-width:65px}.hb-weather-copy small{font-size:.39rem}
 }
+
+
+/* Compact Homebase header — remove empty background space */
+.hb-shell-active .hb-home-word{
+ left:max(5px,calc((100vw - min(100vw,760px))/2 + 5px))!important;
+ top:max(9px,calc(env(safe-area-inset-top) + 3px))!important;
+ width:210px!important;min-height:58px!important;
+ padding:10px 10px 9px 56px!important;border-radius:16px!important;
+}
+.hb-shell-active .hb-home-word strong{font-size:1.18rem!important;letter-spacing:-.03em!important}
+.hb-shell-active .hb-home-word small{font-size:.56rem!important;margin-top:3px!important}
+.hb-shell-active .hb-menu-toggle{
+ left:max(9px,calc((100vw - min(100vw,760px))/2 + 9px))!important;
+ top:max(12px,calc(env(safe-area-inset-top) + 6px))!important;
+ width:38px!important;height:42px!important
+}
+.hb-shell-active .hb-menu-toggle svg{width:25px!important;height:25px!important}
+/* All of these actions remain in the internal menu; do not duplicate them at upper right. */
+.hb-shell-active .hb-ref-right{display:none!important}
+@media(max-width:430px){
+ .hb-shell-active .hb-home-word{left:4px!important;width:195px!important;min-height:54px!important;padding:9px 8px 8px 52px!important;border-radius:15px!important}
+ .hb-shell-active .hb-home-word strong{font-size:1.08rem!important}
+ .hb-shell-active .hb-home-word small{font-size:.52rem!important}
+ .hb-shell-active .hb-menu-toggle{left:8px!important;width:35px!important;height:39px!important}
+ .hb-shell-active .hb-menu-toggle svg{width:23px!important;height:23px!important}
+}
