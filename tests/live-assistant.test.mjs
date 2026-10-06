@@ -21,8 +21,8 @@ test('GPT Live keeps user and assistant transcripts in Copilot history',()=>{
 });
 
 test('GPT Live asset is versioned and cached by the PWA',()=>{
- assert.match(html,/homebase-live-assistant\.js\?v=2/);
- assert.match(sw,/homebase-live-assistant\.js\?v=2/);
+ assert.match(html,/homebase-live-assistant\.js\?v=3/);
+ assert.match(sw,/homebase-live-assistant\.js\?v=3/);
  assert.match(sw,/home-base-v\d+/);
 });
 
@@ -31,19 +31,19 @@ function voiceHarness(getUser){
  const ctx={document:{getElementById:id=>id==='navProfile'?{click:()=>calls.push('profile')}:null,querySelector:()=>({focus:()=>calls.push('focus')}),addEventListener:()=>{}},
   navigator:{mediaDevices:{getUserMedia:async()=>{calls.push('microphone');throw Error('Test microphone unavailable');}}},
   RTCPeerConnection:function(){},HomeBaseAccounts:{backend:{getUser:async()=>{calls.push('auth');return getUser();}}},
-  HomeBaseCopilot:{stopConversation:()=>calls.push('old voice stopped')},HomeBaseShell:{setVoiceStatus:text=>messages.push(text)},clearTimeout,setTimeout,Date};
+  HomeBaseCopilot:{toggleConversation:()=>calls.push('guest voice'),stopConversation:()=>calls.push('old voice stopped')},HomeBaseShell:{setVoiceStatus:text=>messages.push(text)},clearTimeout,setTimeout,Date};
  ctx.window=ctx;vm.createContext(ctx);vm.runInContext(live,ctx);
  return{start:ctx.HomeBaseLiveAssistant.start,calls,messages,assistant:ctx.HomeBaseLiveAssistant};
 }
-test('missing Home Base session opens Profile before microphone or WebRTC access',async()=>{
+test('missing Home Base session starts guest voice without opening Profile',async()=>{
  const h=voiceHarness(()=>{throw Object.assign(Error('Auth session missing!'),{name:'AuthSessionMissingError'});});
- await h.start();assert.deepEqual(h.calls,['auth','profile','focus']);assert.equal(h.assistant.starting,false);
- assert.match(h.messages.at(-1),/Sign in to Home Base in Profile/);assert.doesNotMatch(h.messages.at(-1),/Auth session missing/);
+ await h.start();assert.deepEqual(h.calls,['auth','guest voice']);assert.equal(h.assistant.starting,false);
+ assert.match(h.messages.at(-1),/no account needed/i);
 });
-test('anonymous identity cannot start paid Live voice',async()=>{
- const h=voiceHarness(()=>({id:'anonymous',is_anonymous:true}));await h.start();assert.deepEqual(h.calls,['auth','profile','focus']);
+test('anonymous identity can use guest voice without creating an account',async()=>{
+ const h=voiceHarness(()=>({id:'anonymous',is_anonymous:true}));await h.start();assert.deepEqual(h.calls,['auth','guest voice']);
 });
-test('confirmed account is checked before microphone access and network failures are not mislabeled sign-in errors',async()=>{
+test('confirmed account upgrades to GPT Live while account lookup failures fall back to guest voice',async()=>{
  const h=voiceHarness(()=>({id:'driver'}));await h.start();assert.deepEqual(h.calls,['auth','old voice stopped','microphone']);
- const failed=voiceHarness(()=>{throw Error('Network request failed');});await failed.start();assert.deepEqual(failed.calls,['auth']);assert.match(failed.messages.at(-1),/Network request failed/);
+ const failed=voiceHarness(()=>{throw Error('Network request failed');});await failed.start();assert.deepEqual(failed.calls,['auth','guest voice']);assert.match(failed.messages.at(-1),/no account needed/i);
 });
