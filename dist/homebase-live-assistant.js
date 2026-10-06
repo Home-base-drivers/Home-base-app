@@ -11,7 +11,8 @@ function handleEvent(event){if(event.type==='session.started'){active=true;start
 function waitIce(peer){if(peer.iceGatheringState==='complete')return Promise.resolve();return new Promise((resolve,reject)=>{const timer=setTimeout(()=>{cleanup();reject(Error('Voice connection timed out.'))},8000);function check(){if(peer.iceGatheringState==='complete'){cleanup();resolve()}}function cleanup(){clearTimeout(timer);peer.removeEventListener('icegatheringstatechange',check)}peer.addEventListener('icegatheringstatechange',check)})}
 async function stop(message='Voice stopped. Tap the microphone to talk again.'){if(guestActive){guestActive=false;oldStop?.(message);return}starting=false;active=false;flush('user');flush('assistant');try{if(dc?.readyState==='open')dc.send(JSON.stringify({type:'session.close',event_id:'homebase-close-'+Date.now()}))}catch{}try{dc?.close()}catch{}try{pc?.close()}catch{}try{stream?.getTracks().forEach(t=>t.stop())}catch{}try{if(audio){audio.pause();audio.srcObject=null;audio.remove()}}catch{}dc=null;pc=null;stream=null;audio=null;buttonState(false,message);status(message)}
 async function start(){
- if(active||starting||guestActive)return stop();
+ if(active||starting)return stop();
+ if(guestActive)return oldToggle?.();
  // Voice is a core Homebase feature: never require account creation just to talk.
  // Signed-in drivers get GPT Live; guests use the on-device Homebase voice loop.
  let user=null;
