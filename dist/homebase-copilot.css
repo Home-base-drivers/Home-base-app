@@ -26,6 +26,8 @@
 .hb-shell-active.hb-show-legend .legend{display:block!important;right:10px!important;bottom:95px!important;pointer-events:auto}
 .hb-shell-active.hb-show-briefing .bottom-sheet{display:block!important;bottom:max(14px,env(safe-area-inset-bottom))!important;pointer-events:auto}
 .hb-shell-active .dispatch-card{display:none!important}
+/* The planner's legacy top toolbar and floating restore buttons remain as command targets only. All user-facing controls live in the hamburger drawer. */
+.hb-shell-active .planner-toolbar,.hb-shell-active #showPlannerView,.hb-shell-active #showMapTabs,.hb-shell-active #showMapControls{display:none!important}
 .hb-menu-toggle{position:fixed;z-index:1302;top:max(12px,calc(env(safe-area-inset-top) + 6px));left:max(12px,calc((100vw - min(100vw,760px))/2 + 12px));width:46px;height:46px;border:0;border-radius:12px;background:transparent;color:#f4fbff;display:grid;place-items:center;box-shadow:none;-webkit-tap-highlight-color:transparent}
 .hb-menu-toggle svg{width:25px;height:25px;fill:none;stroke:currentColor;stroke-width:2.1;stroke-linecap:round}
 .hb-home-word{position:fixed;z-index:1248;top:max(18px,calc(env(safe-area-inset-top) + 12px));left:50%;transform:translateX(-50%);margin:0;padding:0;border:0;background:transparent;color:#fff;font-size:1.28rem;line-height:1;font-weight:800;letter-spacing:-.045em;text-shadow:0 1px 5px rgba(0,0,0,.62);pointer-events:none;user-select:none}
