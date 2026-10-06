@@ -775,3 +775,27 @@
   top:max(159px,calc(env(safe-area-inset-top) + 149px))!important;
  }
 }
+
+
+/* Expandable Events / Route list controls */
+.hb-shell-active #routePlan .list-expand{
+ display:block!important;
+ width:100%!important;
+ min-height:34px!important;
+ margin:3px 0 0!important;
+ padding:8px 10px!important;
+ border:0!important;
+ border-radius:10px!important;
+ background:rgba(36,132,190,.10)!important;
+ color:#8fd3ff!important;
+ font:800 .56rem/1.1 -apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",Arial,sans-serif!important;
+ letter-spacing:.01em!important;
+ text-align:center!important;
+ cursor:pointer!important;
+ -webkit-tap-highlight-color:transparent!important;
+ touch-action:manipulation!important;
+}
+.hb-shell-active #routePlan .list-expand:active{
+ background:rgba(36,132,190,.22)!important;
+ transform:scale(.985)!important;
+}
