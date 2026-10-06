@@ -21,8 +21,8 @@ test('GPT Live keeps user and assistant transcripts in Copilot history',()=>{
 });
 
 test('GPT Live asset is versioned and cached by the PWA',()=>{
- assert.match(html,/homebase-live-assistant\.js\?v=3/);
- assert.match(sw,/homebase-live-assistant\.js\?v=3/);
+ assert.match(html,/homebase-live-assistant\.js\?v=4/);
+ assert.match(sw,/homebase-live-assistant\.js\?v=4/);
  assert.match(sw,/home-base-v\d+/);
 });
 
