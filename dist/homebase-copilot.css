@@ -799,3 +799,16 @@
  background:rgba(36,132,190,.22)!important;
  transform:scale(.985)!important;
 }
+
+
+/* Keep the entire Events + Route card visibly below the platform-price strip */
+.hb-shell-active #routePlan{
+ top:max(308px,calc(env(safe-area-inset-top) + 298px))!important;
+ max-height:min(50vh,650px)!important;
+}
+@media(max-width:430px){
+ .hb-shell-active #routePlan{
+  top:max(306px,calc(env(safe-area-inset-top) + 296px))!important;
+  max-height:48vh!important;
+ }
+}
