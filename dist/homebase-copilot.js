@@ -450,7 +450,7 @@ function bootHomeBaseShell(){
   if(attribute==='control'&&targetId==='driveViewToggle'){const clean=moduleMeta.some(([key])=>modules[key])||referenceNavVisible;if(clean){menuRestoreState={modules:{...modules},navVisible:referenceNavVisible};write('homeBaseMenuRestoreState',menuRestoreState);setAllModules(false);setNavVisible(false);menuNotice('Driving view on.')}else{const saved=menuRestoreState||read('homeBaseMenuRestoreState',null);modules={...defaults,...(saved?.modules||Object.fromEntries(moduleMeta.map(([key])=>[key,true])))};applyModules();setNavVisible(saved?.navVisible!==false);menuNotice('Full view restored.')}closeMenu();return true}
   if(attribute==='control'&&targetId==='installBtn'&&(matchMedia('(display-mode: standalone)').matches||navigator.standalone===true)){menuNotice('Home Base is already installed on this device.');closeMenu();return true}
   const target=document.getElementById(targetId);if(!target){menuNotice('That control is temporarily unavailable.');return false}
-  closeMenu();requestAnimationFrame(()=>{target.click();target.focus?.({preventScroll:true})});return true;
+  closeMenu();queueMicrotask(()=>{target.click();target.focus?.({preventScroll:true})});return true;
  }
  drawer.querySelectorAll('[data-nav]').forEach(button=>button.addEventListener('click',()=>runMenuCommand(button,'nav')));
  drawer.querySelectorAll('[data-control]').forEach(button=>button.addEventListener('click',()=>runMenuCommand(button,'control')));
@@ -470,7 +470,7 @@ function bootHomeBaseShell(){
   }
   if(action==='signout'){
    if(!window.HomeBaseAccounts?.backend){closeMenu();document.getElementById('navProfile')?.click();return}
-   let signedIn=true;try{await window.HomeBaseAccounts.backend.getUser()}catch{signedIn=false}
+   let signedIn=false;try{signedIn=!!(await window.HomeBaseAccounts.backend.getUser())}catch{}
    if(!signedIn){closeMenu();document.getElementById('navProfile')?.click();return}
    if(!confirm('Sign out of Homebase on this device? Your local driver data will stay on this phone.'))return;
    button.disabled=true;try{await window.HomeBaseAccounts.backend.signOut();localStorage.removeItem('homeBaseCloudOwner');await window.HomeBaseAccounts.refreshIdentity?.();closeMenu();document.getElementById('navProfile')?.click()}catch(error){button.disabled=false;menuNotice(error?.message||'Sign out could not be completed. Try again.')}return
