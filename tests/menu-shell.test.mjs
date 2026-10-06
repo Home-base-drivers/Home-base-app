@@ -88,7 +88,7 @@ test('clean-shell menu commands have visible native behavior',()=>{
  assert.match(shell,/targetId==='hideMapControls'/);
  assert.match(shell,/targetId==='showMapControls'/);
  assert.match(shell,/targetId==='driveViewToggle'/);
- assert.match(css,/\.hb-shell-active\.hb-show-nav \.home-nav\{display:grid!important/);
+ assert.match(css,/\.hb-shell-active\.hb-show-nav \.home-nav\{display:none!important/);
 });
 
 
