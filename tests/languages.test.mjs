@@ -15,8 +15,8 @@ test('all 20 language choices have valid locales, native examples and six local 
  assert.equal(L.get('ar-SA').dir,'rtl');assert.equal(L.get('ur-PK').dir,'rtl');
 });
 test('language detection and saved Dominican Spanish survive reload; corrupt preferences recover',()=>{
- assert.deepEqual(L.preferences({},['xx-XX','pt-BR']),{language:'pt',locale:'pt-BR',voiceURI:'',conversation:true});
- assert.equal(L.preferences({language:'es',locale:'es-DO',voiceURI:'saved',conversation:false},['en-US']).locale,'es-DO');
+ assert.deepEqual(L.preferences({},['xx-XX','pt-BR']),{language:'pt',locale:'pt-BR',voiceURI:'',voiceStyle:'all',conversation:true});
+ assert.equal(L.preferences({language:'es',locale:'es-DO',voiceURI:'saved',voiceStyle:'masculine',conversation:false},['en-US']).locale,'es-DO');assert.equal(L.preferences({language:'es',locale:'es-DO',voiceStyle:'masculine'},['en-US']).voiceStyle,'masculine');
  assert.equal(L.preferences({language:'es',locale:'xx-XX'}).locale,'es-US');
  assert.equal(L.preferences({language:'unknown',locale:'xx'}).locale,'en-US');
  assert.equal(L.parseCommand('do not take me home','fr'),null);
