@@ -167,6 +167,13 @@
   .earnings-trend{margin:10px 0;padding:12px;border:1px solid rgba(74,163,215,.22);border-radius:13px;background:rgba(5,18,29,.8)}.earnings-trend-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px}.earnings-trend-head b{font-size:.75rem;letter-spacing:.06em}.earnings-trend-head span{color:#8fa8b7;font-size:.62rem}
   .earnings-month{display:grid;grid-template-columns:38px 1fr auto;align-items:center;gap:8px;margin:7px 0;font-size:.67rem}.earnings-month-label{color:#9db3c0}.earnings-month-track{height:10px;border-radius:8px;background:#0c2635;overflow:hidden}.earnings-month-track i{display:block;height:100%;min-width:2px;border-radius:inherit;background:linear-gradient(90deg,#16d697 0%,#ffcf35 47%,#ff7637 72%,#ff2675 100%);box-shadow:0 0 10px rgba(255,71,123,.24)}.earnings-month strong{min-width:58px;text-align:right;color:#eef7fa}
   .earnings-tracker .earnings-metric small{display:block;margin-top:4px;color:#9bb1bf;font-size:.61rem;line-height:1.35}.earnings-entry-details{margin:12px 0;border:1px solid rgba(76,163,215,.28);border-radius:12px;background:rgba(4,17,28,.8);padding:11px}.earnings-entry-details summary{cursor:pointer;color:#dff5ff;font-size:.76rem;font-weight:850;letter-spacing:.045em;padding:3px}.earnings-entry-details form{margin-top:12px}.earnings-platform-list{margin-top:12px}.recent-earnings{margin-top:14px}.recent-earnings .section-head{margin-bottom:4px}.recent-earnings .shift-entry{align-items:flex-start}.recent-earnings .shift-entry strong{display:grid;justify-items:end;gap:6px}.earnings-reset{cursor:pointer}
+    /* Right-side map quick actions */
+    .hb-map-quick-actions{position:absolute;z-index:920;right:14px;top:50%;transform:translateY(-50%);display:grid;gap:12px;pointer-events:auto}
+    .hb-map-quick-action{width:58px;height:58px;border-radius:50%;border:1px solid rgba(89,177,231,.38);background:rgba(5,18,29,.94);color:#eefaff;display:grid;place-items:center;box-shadow:0 8px 22px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.06);padding:0}
+    .hb-map-quick-action svg{width:29px;height:29px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+    .hb-map-quick-action:active{transform:scale(.96)}
+    .hb-map-quick-action[aria-pressed="true"]{border-color:#59c9ff;box-shadow:0 0 0 2px rgba(38,174,255,.18),0 8px 22px rgba(0,0,0,.42)}
+    .hb-timeline-hidden #timeRow{display:none!important}
 </style>
 </head>
 <body>
@@ -190,6 +197,7 @@
     <div class="gross-note" id="forecastNote">USD-equivalent planning estimates · verify local app access and live offers</div>
     <div class="time-row" id="timeRow" aria-label="Hourly demand forecast"></div>
     <section class="map-stage" aria-label="Local ride-demand forecast">
+      <div class="hb-map-quick-actions" aria-label="Map quick actions"><button class="hb-map-quick-action" id="timelineQuickBtn" type="button" aria-label="Open 12-hour timeline" aria-controls="timeRow" aria-pressed="false"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="10.5"/><path d="M16 9.5v7l4.5 2.7"/><path d="M12 3.8h8M13.5 28.2h5"/></svg></button></div>
       <aside class="route-plan" id="routePlan" hidden><div class="route-head"><h2>EVENTS + ROUTE</h2><button class="panel-mini" id="routeToggle" aria-expanded="true">−</button></div><div class="route-body"><div id="todayEvents"><div class="event-empty">Checking current-day events…</div></div><div class="panel-subhead" id="routePlanTitle">NEXT 12 HOURS</div><div id="routeStops"></div><div class="route-source">GPS + current time + weather + public venue data</div></div></aside>
       <aside class="legend collapsed" id="legend" aria-label="Demand and map icon legend"><button class="legend-toggle" id="legendToggle" aria-expanded="false">KEY</button><div class="legend-content"><span><i class="dot" style="background:var(--red);color:var(--red)"></i>Very high</span><span><i class="dot" style="background:var(--orange);color:var(--orange)"></i>High</span><span><i class="dot" style="background:var(--yellow);color:var(--yellow)"></i>Moderate</span><span><i class="dot" style="background:var(--low);color:var(--low)"></i>Lower</span><div class="event-icon-key" id="eventIconKey" aria-label="Event icon types"></div><div class="icon-key"><span>S · School</span><span>T · Transit</span><span>N · Nightlife</span><span>D · Dining</span><span>H · Hotel</span></div><span class="data-source-note">PUBLIC INPUTS · Live: Open-Meteo weather · OpenStreetMap venues · ESPN/MLB schedules · OSRM routes · Static: Baltimore City 2020 Census neighborhood baseline</span><span class="data-source-note">REQUIRED RIDE SIGNAL FEEDS · Ticketmaster events · Uber price proxy · FlightAware BWI activity. Provider authorization is required; no signal is fabricated when a feed is unavailable. Every neighborhood score and hourly forecast is calculated by the Home Base model from available time, weather, event, airport, venue, and aggregate Census inputs; raw source counts are not presented as ride demand.</span></div></aside>
     </section>
@@ -939,6 +947,15 @@ initializeInstantRoute();
 async function loadDemo(){if(!demoLocale)return;renderEvents(null);loadWeather(demoLocale.lat,demoLocale.lon);loadHighways(demoLocale.lat,demoLocale.lon);let venues=[];try{venues=await loadVenues(demoLocale.lat,demoLocale.lon)}catch(e){}const local=venues.length>=6?venues:fallbackVenues(demoLocale.lat,demoLocale.lon,demoLocale.name);buildRoute(local,demoLocale.lat,demoLocale.lon,demoLocale.name);renderEvents([]);$('.route-source').textContent=venues.length>=6?'London time + current weather + public schools, stations, hotels and venues':'London time + current weather + fast public-venue forecast';$('#updated').textContent='London example · 12-hour route ready'}
 loadDemo();
 
+const timelineQuickBtn=$('#timelineQuickBtn');
+function setTimelineOpen(open){
+  app.classList.toggle('hb-timeline-hidden',!open);
+  timelineQuickBtn.setAttribute('aria-pressed',String(open));
+  timelineQuickBtn.setAttribute('aria-label',(open?'Hide':'Open')+' 12-hour timeline');
+  if(open){$('#timeRow').scrollIntoView({behavior:'smooth',block:'nearest'});const active=$('#timeRow [data-hour][aria-pressed="true"]');active?.focus({preventScroll:true});}
+}
+setTimelineOpen(false);
+timelineQuickBtn.addEventListener('click',()=>setTimelineOpen(app.classList.contains('hb-timeline-hidden')));
 $('#refreshBtn').addEventListener('click',()=>refreshLocationFast());
 function refreshCurrentGps(){
   locationMode='current';
