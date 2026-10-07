@@ -485,8 +485,22 @@ function bootHomeBaseShell(){
  async function syncMenuIdentity(){const profile=read('homeBaseDriverProfile',{})||{},nameNode=drawer.querySelector('#hbMenuDriverName'),initialNode=drawer.querySelector('#hbMenuDriverInitial');let name=profile.name||profile.driverName||'Driver';try{const user=await window.HomeBaseAccounts?.backend?.getUser?.();name=profile.name||profile.driverName||user?.user_metadata?.full_name||user?.user_metadata?.name||user?.email?.split('@')[0]||name}catch{}if(nameNode)nameNode.textContent=name;if(initialNode)initialNode.textContent=String(name||'D').trim().charAt(0).toUpperCase()||'D'}
  function openMenu(){closeHomePanels();showMenuView('main');syncMenuIdentity();drawer.inert=false;backdrop.hidden=false;drawer.classList.add('open');backdrop.classList.add('open');drawer.setAttribute('aria-hidden','false');menuButton.setAttribute('aria-expanded','true');syncHomeHud()}
  function closeMenu(){drawer.classList.remove('open');drawer.inert=true;backdrop.classList.remove('open');backdrop.hidden=true;drawer.setAttribute('aria-hidden','true');menuButton.setAttribute('aria-expanded','false');syncHomeHud()}
+ function syncHomeHeatButton(){
+  const button=homeControls.querySelector('[data-home-target="heatToggle"]');if(!button)return;
+  const visible=!app.classList.contains('heat-hidden');
+  button.classList.toggle('active',visible);button.setAttribute('aria-pressed',String(visible));
+  button.setAttribute('aria-label',visible?'Hide heat map':'Show heat map');
+  const label=button.querySelector('span');if(label)label.textContent=visible?'Heat · ON':'Heat · OFF';
+ }
+ syncHomeHeatButton();
+ new MutationObserver(syncHomeHeatButton).observe(app,{attributes:true,attributeFilter:['class']});
  homeControls.addEventListener('click',event=>{
   const button=event.target.closest('button');if(!button)return;
+  if(button.dataset.homeTarget==='heatToggle'){
+   if(window.HomeBaseHeatControls?.toggleVisible)window.HomeBaseHeatControls.toggleVisible();
+   else document.getElementById('heatToggle')?.click();
+   syncHomeHeatButton();return;
+  }
   if(button.dataset.homeTarget){const id=button.dataset.homeTarget,attribute=id.startsWith('nav')?'nav':'control';runMenuCommand({dataset:{[attribute]:id}},attribute);return}
   const action=button.dataset.homeAction;
   if(action==='menu'){openMenu();return}
