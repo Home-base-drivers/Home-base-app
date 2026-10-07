@@ -116,7 +116,7 @@
     // Keep locally scored demand legible above the dark basemap. Opacity still
     // falls to zero with the measured field, so this does not manufacture a
     // surrounding low-demand ring.
-    return clamp(areaIntensity(Math.max(0, Number(value) || 0)) * 1.42 * HEAT_OPACITY_GAIN, 0, .9);
+    return clamp(areaIntensity(Math.max(0, Number(value) || 0)) * 1.34 * HEAT_OPACITY_GAIN, 0, .84);
   }
 
   function sourceRadiusKm(category) {
@@ -197,7 +197,7 @@
 
         // Render a finer geographic field at neighborhood zooms so adjacent
         // demand surfaces melt together instead of reading as chunky tiles.
-        const sample = map.getZoom() < 10 ? 2.5 : 1.75;
+        const sample = map.getZoom() < 9 ? 2.25 : map.getZoom() < 11 ? 1.6 : 1.15;
         const seen = new Set(), sources = [];
         [...this._sources, ...this._areas.flatMap(area => area.sources || [])].forEach(source => {
           const key = `${Number(source.lat).toFixed(5)}:${Number(source.lon).toFixed(5)}:${source.name || ''}`;
