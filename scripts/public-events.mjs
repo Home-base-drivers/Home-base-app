@@ -1,4 +1,5 @@
 // Ingest published JSON-LD, not search snippets or inferred recurring shows.
+import publicData from '../dist/homebase-public-data.js';
 const HOUR = 3_600_000;
 const USER_AGENT = 'HomeBase public event context (+https://github.com/Home-base-drivers/Home-base-app)';
 const cache = new Map();
@@ -72,7 +73,7 @@ export function normalizePublicEvent(event, market, source, now = Date.now()) {
   if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180 || distanceKm(market.center, { lat, lon }) > market.radiusKm) return null;
   const name = String(event.name || '').trim(), eventType = [event['@type']].flat().join(' ');
   const context = [name, venue?.name, eventType, event.description].join(' ');
-  if (!name || /webinar|virtual|online.only|exhibition|gallery|workshop|seminar|campus.tour|all.day.entry|standard.entry|standard.admission|standard.experience/i.test(context)) return null;
+  if (!name || publicData.isTicketAddon(name) || /webinar|virtual|online.only|exhibition|gallery|workshop|seminar|campus.tour|all.day.entry|standard.entry|standard.admission|standard.experience/i.test(context)) return null;
   const performers = [event.performer].flat().filter(Boolean);
   const classification = performers.map(p => p['@type']).flat().join(' ');
   if (!/sports|concert|festival|convention|conference|football|basketball|baseball|hockey|soccer|stadium|arena|theatre|theater|comedy|performing|music|graduation|commencement|fairground|circus|danceevent/i.test(context + ' ' + classification)) return null;
@@ -126,7 +127,7 @@ export async function publicEventCalendars(market, now = Date.now(), request = f
     truncated = !!url;
     return { events, source: { name: source.name, url: source.url, status: error ? loaded ? 'partial' : 'unavailable' : 'active', fetchedAt: loaded ? new Date(now).toISOString() : null, pages: loaded, eventCount: events.length, truncated } };
   }));
-  const events = [...new Map(results.flatMap(r => r.events).map(e => [e.name.toLowerCase() + ':' + e.venue.toLowerCase() + ':' + e.eventStart, e])).values()].sort((a, b) => a.eventStart.localeCompare(b.eventStart));
+  const events = [...new Map(results.flatMap(r => r.events).map(e => [publicData.eventIdentity(e), e])).values()].sort((a, b) => a.eventStart.localeCompare(b.eventStart));
   const succeeded = results.filter(r => r.source.status === 'active').length;
   return { status: succeeded === sources.length ? 'active' : results.some(r => r.source.pages) ? 'partial' : 'unavailable', fetchedAt: new Date(now).toISOString(), events, sources: results.map(r => r.source), truncated: results.some(r => r.source.truncated) };
 }

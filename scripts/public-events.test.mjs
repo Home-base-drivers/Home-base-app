@@ -37,8 +37,24 @@ test('scheduled calendars remain usable beyond the 25-minute pricing expiry and 
   const entry={...market,ticketmaster:{status:'not_configured',events:[]},publicRecords:{calendarStatus:'active',fetchedAt,events:[event,{...event,eventStart:'2026-10-08T01:00:00Z'}]}};
   const payload={generatedAt:fetchedAt,markets:[entry,{...entry,id:'overlap'}]};
   const events=publicData.eventsForLocation(payload,51.5,-.12,now);assert.equal(events.length,2,'different performances are not collapsed by name');
+  assert.equal(publicData.calendarCoverage({...payload,generatedAt:new Date(now).toISOString()},51.5,-.12,now).fetchedAt,fetchedAt,'deployment time cannot replace the actual calendar fetch time');
   assert.equal(publicData.eventsForLocation(payload,40.94,-74.07,now).length,0,'London cannot transplant to Paramus');
   assert.equal(publicData.eventsForLocation({...payload,markets:[{...entry,publicRecords:{...entry.publicRecords,fetchedAt:new Date(now-25*3600000).toISOString()}}]},51.5,-.12,now).length,0);
+});
+test('ticket add-ons are excluded at ingestion and from saved feeds without hiding real shows',()=>{
+  const names=['VIP Bowling Lane Add On - White Denim - Not a Concert Ticket','2026 NY Yankees Division Series Game 3 * Premium Seating *','Pinstripe Pass * 2026 NY Yankees Division Series Game 3','Concert Parking','Concert VIP Upgrade'];
+  for(const name of names)assert.equal(normalizePublicEvent({...show,name},market,source,now),null,name);
+  const event=normalizePublicEvent(show,market,source,now);
+  const payload={markets:[{...market,publicRecords:{calendarStatus:'active',fetchedAt:new Date(now).toISOString(),events:[event,...names.map(name=>({...event,name}))]}}]};
+  assert.equal(publicData.eventsForLocation(payload,51.5,-.12,now).length,1);
+  assert.ok(normalizePublicEvent({...show,name:'An Evening with VIP Orchestra'},market,source,now));
+});
+test('different feed titles for one stadium game dedupe while separate concerts and performance times survive',()=>{
+  const game={name:'2026 Yankees Division Series Game 3',venue:'Yankee Stadium',eventType:'SportsEvent',lat:40.8285,lon:-73.9276,eventStart:'2026-10-08T00:00:00Z'};
+  assert.equal(publicData.eventIdentity(game),publicData.eventIdentity({...game,name:'Tampa Bay Rays at New York Yankees',eventType:'SPORTS',lat:40.8296,lon:-73.9262}));
+  const concert={...game,venue:'The O2',name:'The Strokes',eventType:'MusicEvent'};
+  assert.notEqual(publicData.eventIdentity(concert),publicData.eventIdentity({...concert,name:'Mamma Mia! The Party'}));
+  assert.notEqual(publicData.eventIdentity(concert),publicData.eventIdentity({...concert,eventStart:'2026-10-08T02:00:00Z'}));
 });
 test('public place geometry includes ways and the named-area fallback survives mirror outages',async()=>{
   const rows=normalizePublicPlaces({elements:[{type:'way',id:1,center:{lat:51.51,lon:-.13},tags:{name:'Public station',railway:'station'}},{type:'node',id:2,lat:40.94,lon:-74.07,tags:{name:'Wrong market',place:'town'}}]},market,now);

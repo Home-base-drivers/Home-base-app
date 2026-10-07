@@ -2,13 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import publicData from '../dist/homebase-public-data.js';
 const html=fs.readFileSync(new URL('../dist/index.html',import.meta.url),'utf8');
 function extract(name){return html.match(new RegExp('function '+name+'\\([^]*?\\n\\}'))[0]}
 test('events require dates and exclude low-signal calendar listings',()=>{
- const ctx={};vm.createContext(ctx);vm.runInContext(extract('rideRelevantEvent'),ctx);
+ const ctx={HomeBasePublicData:publicData};vm.createContext(ctx);vm.runInContext(extract('rideRelevantEvent'),ctx);
  const base={eventStart:new Date(Date.now()+3600000).toISOString(),lat:39,lon:-76};
  for(const name of ['concert','football','convention','festival'])assert.equal(ctx.rideRelevantEvent({...base,name}),true);
- for(const name of ['Exhibition in gallery','virtual conference','club meeting','campus tour','unknown activity'])assert.equal(ctx.rideRelevantEvent({...base,name}),false);
+ for(const name of ['Exhibition in gallery','virtual conference','club meeting','campus tour','unknown activity','Concert Parking','Premium Seating - Concert','VIP Bowling Lane Add On - Not a Concert Ticket'])assert.equal(ctx.rideRelevantEvent({...base,name}),false);
  assert.equal(ctx.rideRelevantEvent({...base,name:'concert',eventStart:'invalid'}),false);
 });
 test('navigation requires a destination and uses current position supplied by Maps',()=>{

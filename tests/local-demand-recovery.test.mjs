@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import policy from '../dist/homebase-route-policy.js';
 import planner from '../dist/homebase-planner.js';
+import publicData from '../dist/homebase-public-data.js';
 const html=fs.readFileSync(new URL('../dist/index.html',import.meta.url),'utf8');
 function extract(name){const match=html.match(new RegExp('(?:async )?function '+name+'\\('));assert.ok(match,name);const start=match.index,body=html.indexOf('{',start);let depth=0;for(let i=body;i<html.length;i++){if(html[i]==='{')depth++;else if(html[i]==='}'&&!--depth)return html.slice(start,i+1);}throw Error(name);}
 function routeFixture(){
@@ -22,6 +23,12 @@ function routeFixture(){
   applyTimeForecast(){},show(){},marketTime:when=>when.toISOString(),setTimeout(){},$,publicSignalsRefreshedAt:null,selectedForecastTime:new Date(),forecastStartTime:new Date(),routeStopsExpanded:false};
  vm.createContext(context);vm.runInContext(extract('mergeDemandSources')+'\n'+extract('buildRoute'),context);return{context,calls,nodes};
 }
+test('the events panel merges one game across sports and ticket feeds and preserves two distinct evening shows',async()=>{
+ const start=new Date(Date.now()+3600000),game={name:'Away at Home',cat:'event',venue:'Public Stadium',eventType:'SPORTS',lat:41,lon:-74,eventStart:start,tags:{source:'public sports feed'}},concert={name:'Named artist',cat:'event',venue:'Public Arena',eventType:'MusicEvent',lat:41.01,lon:-74,eventStart:start};
+ const context={HomeBasePublicData:publicData,rideRelevantEvent:()=>true,loadTodaySports:async()=>[game],loadEspnEvents:async()=>[],loadProviderSignals:async()=>({events:[{...game,name:'Home Division Series Game 3',eventType:'SportsEvent',lat:41.001,lon:-74.001},concert,{...concert,name:'Separate theatre performance'}]})};
+ vm.createContext(context);vm.runInContext(extract('loadTodayEvents'),context);
+ const events=await context.loadTodayEvents(41,-74,'Local',[]);assert.equal(events.length,3);assert.equal(events.filter(e=>e.venue==='Public Stadium').length,1);assert.equal(events.filter(e=>e.venue==='Public Arena').length,2);
+});
 test('an empty current hour does not suppress a later verified event in the 12-hour route',()=>{
  const {context,calls}=routeFixture(),event={name:'Scheduled game',cat:'event',lat:41.001,lon:-74,eventStart:new Date(Date.now()+4*3600000),tags:{liveEvent:true}};
  context.buildRoute([event],41,-74,'Local',[event]);

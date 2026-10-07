@@ -1,6 +1,15 @@
 /* Public calendars age separately from short-lived pricing proxies. */
 (function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.HomeBasePublicData=api;})(typeof globalThis!=='undefined'?globalThis:this,function(){
   const HOUR=3600000;
+  function isTicketAddon(name){return /\b(?:add[ -]?ons?|parking|premium seating|pinstripe pass|not a concert ticket|vip (?:upgrade|package)|meet\s*(?:&|and)\s*greet)\b/i.test(String(name||''));}
+  function eventIdentity(event){
+    const token=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]/g,''),start=new Date(event.eventStart).getTime(),name=String(event.name||'').split(' · ')[0];
+    const sports=/sport|baseball|football|basketball|hockey|soccer/i.test([event.eventType,event.classification,event.genre].join(' '))||event.tags?.source==='public sports feed';
+    const location=token(event.venue)||Number(event.lat).toFixed(3)+':'+Number(event.lon).toFixed(3);
+    // One game may have different feed titles and ticket products. Separate
+    // performances or simultaneous concerts retain their own titles.
+    return(sports?'sports':token(name))+':'+location+':'+start;
+  }
   function distance(a,b){const rad=n=>n*Math.PI/180,h=Math.sin(rad(b[0]-a[0])/2)**2+Math.cos(rad(a[0]))*Math.cos(rad(b[0]))*Math.sin(rad(b[1]-a[1])/2)**2;return 6371*2*Math.atan2(Math.sqrt(h),Math.sqrt(1-h));}
   function point(item){return item&&item.lat!=null&&item.lon!=null&&Number.isFinite(Number(item.lat))&&Number.isFinite(Number(item.lon))&&Math.abs(Number(item.lat))<=90&&Math.abs(Number(item.lon))<=180;}
   function matchingMarkets(payload,lat,lon){return(payload?.markets||[]).filter(m=>point(m.center)&&distance([lat,lon],[Number(m.center.lat),Number(m.center.lon)])<=Number(m.radiusKm||0)).sort((a,b)=>distance([lat,lon],[a.center.lat,a.center.lon])-distance([lat,lon],[b.center.lat,b.center.lon]));}
@@ -11,8 +20,8 @@
       if(!feed||!['active','partial','stale'].includes(feed.calendarStatus||feed.status)||!calendarFresh(feed,payload.generatedAt,now))continue;
       for(const e of feed.events||[]){
         const start=Date.parse(e.eventStart),end=Date.parse(e.eventEnd||'');
-        if(!point(e)||!Number.isFinite(start)||!/^\d{4}-\d\d-\d\dT\d\d:\d\d/.test(e.eventStart)||start>now+12*HOUR||(Number.isFinite(end)&&end>start?end<now-90*60000:start<now-30*60000)||distance([lat,lon],[Number(e.lat),Number(e.lon)])>65)continue;
-        const token=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]/g,''),key=token(e.name)+':'+token(e.venue)+':'+start;
+        if(isTicketAddon(e.name)||!point(e)||!Number.isFinite(start)||!/^\d{4}-\d\d-\d\dT\d\d:\d\d/.test(e.eventStart)||start>now+12*HOUR||(Number.isFinite(end)&&end>start?end<now-90*60000:start<now-30*60000)||distance([lat,lon],[Number(e.lat),Number(e.lon)])>65)continue;
+        const key=eventIdentity(e);
         if(seen.has(key))continue;seen.add(key);
         rows.push({...e,lat:Number(e.lat),lon:Number(e.lon),eventStart:new Date(start),eventEnd:Number.isFinite(end)&&end>start?new Date(end):null});
       }
@@ -35,7 +44,8 @@
   function calendarCoverage(payload,lat,lon,now=Date.now()){
     const markets=matchingMarkets(payload,lat,lon),feeds=markets.flatMap(m=>[m.ticketmaster,m.publicRecords]).filter(Boolean),usable=feeds.filter(f=>['active','partial','stale'].includes(f.calendarStatus||f.status)&&calendarFresh(f,payload.generatedAt,now));
     const sources=[...new Map(markets.flatMap(m=>m.publicRecords?.sources||[]).map(s=>[s.url,s])).values()];
-    return{status:!markets.length?'unsupported':!usable.length?'unavailable':usable.some(f=>(f.calendarStatus||f.status)==='stale')?'stale':usable.some(f=>(f.calendarStatus||f.status)==='partial'||f.calendarTruncated||f.truncated)?'partial':'active',sourceCount:sources.filter(s=>s.pages>0).length,failedSources:sources.filter(s=>s.status==='unavailable').length,ticketmasterConfigured:markets.some(m=>m.ticketmaster?.status!=='not_configured'&&m.ticketmaster?.status!=='not_supported')};
+    const dates=usable.map(f=>Date.parse(f.fetchedAt||payload.generatedAt)).filter(Number.isFinite);
+    return{status:!markets.length?'unsupported':!usable.length?'unavailable':usable.some(f=>(f.calendarStatus||f.status)==='stale')?'stale':usable.some(f=>(f.calendarStatus||f.status)==='partial'||f.calendarTruncated||f.truncated)?'partial':'active',fetchedAt:dates.length?new Date(Math.min(...dates)).toISOString():null,sourceCount:sources.filter(s=>s.pages>0).length,failedSources:sources.filter(s=>s.status==='unavailable').length,ticketmasterConfigured:markets.some(m=>m.ticketmaster?.status&&!['not_configured','not_supported'].includes(m.ticketmaster.status))};
   }
-  return{matchingMarkets,eventsForLocation,placesForLocation,calendarCoverage};
+  return{matchingMarkets,eventsForLocation,placesForLocation,calendarCoverage,isTicketAddon,eventIdentity};
 });

@@ -23,6 +23,11 @@ test('Ticketmaster events require real coordinates and a start time', () => {
   assert.equal(event.lat, 39.29);
   assert.equal(normalizeTicketmasterEvent({ name: 'No coordinate' }, new Date('2026-09-25T12:00:00Z')), null);
 });
+test('Ticketmaster API add-ons cannot become extra pickup events',()=>{
+  const event={name:'Show',dates:{start:{dateTime:'2026-10-07T18:30:00Z'}},_embedded:{venues:[{name:'Arena',location:{latitude:51.51,longitude:-.13}}]}};
+  for(const name of ['Show Parking','Show VIP Upgrade','Show - Premium Seating','Not a Concert Ticket - Bowling Lane Add On'])assert.equal(normalizeTicketmasterEvent({...event,name},new Date('2026-10-07T14:00:00Z')),null);
+  assert.ok(normalizeTicketmasterEvent(event,new Date('2026-10-07T14:00:00Z')));
+});
 
 test('Uber samples retain independently rated low and high price areas', () => {
   const origin = { name: 'Towson', lat: 39.4, lon: -76.6 };

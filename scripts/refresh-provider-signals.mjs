@@ -2,6 +2,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { publicRecords } from './public-records.mjs';
 import { publicPlaces } from './public-places.mjs';
+import publicData from '../dist/homebase-public-data.js';
 
 const ROOT = new URL('../', import.meta.url);
 const CONFIG_URL = new URL('config/provider-markets.json', ROOT);
@@ -50,7 +51,7 @@ export function normalizeTicketmasterEvent(event, now = NOW) {
   const end = event?.dates?.end?.dateTime || null;
   if (startMs < now.getTime() - 6 * 60 * 60_000 || startMs > now.getTime() + 36 * 60 * 60_000) return null;
   const name = String(event?.name || '').trim();
-  if (!name) return null;
+  if (!name || publicData.isTicketAddon(name)) return null;
   return {
     id: String(event.id || `${name}:${start}`),
     name,
