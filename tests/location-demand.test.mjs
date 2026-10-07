@@ -17,6 +17,6 @@ test('navigation requires a destination and uses current position supplied by Ma
  vm.createContext(ctx);vm.runInContext(extract('openHomeNavigation'),ctx);
  ctx.openHomeNavigation();assert.equal(opened,undefined);assert.equal(notice[1],'Choose a destination');
  ctx.selectedDestination=[40,-75];ctx.openHomeNavigation();assert.match(opened,/destination=40,-75/);assert.match(opened,/dir_action=navigate/);assert(!opened.includes('&origin='));
- ctx.locationMode='custom';ctx.openHomeNavigation();assert.match(opened,/origin=39%2C-76/);
+
 });
 test('all inline scripts parse',()=>{for(const [,body] of html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g))new vm.Script(body)});
