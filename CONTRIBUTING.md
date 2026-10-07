@@ -2,10 +2,34 @@
 
 ## Publish workflow
 
-1. Make one coherent change and run the repository checks.
-2. Contributors with write access may commit or push directly to `main`.
-3. Pull requests are available for discussion, but review is not required to publish.
-4. GitHub Pages deploys changes from `main` automatically.
+Christopher and Elizabeth are equal owners/developers. Preserve both owners'
+updates, and submit one update at a time.
+
+1. Fetch the latest remote branch and integrate all existing changes. Make one
+   coherent change and run the repository checks.
+2. Run `npm run setup:hooks` once in every developer checkout. Before every
+   submission, run `npm run check:update -- --expected-head <current-main-SHA>`.
+3. Wait until **all** repository workflows have finished processing, regardless
+   of which owner or agent started them. Queued, requested, pending, waiting,
+   and running updates block new submissions. API errors block submission too.
+   Do not cancel somebody else's update. After waiting, fetch and check again.
+   An obsolete waiting/pending run whose commit is already included in a later
+   successful release may be cancelled and reported. Cancel obsolete pending
+   runs before releasing their queue; never deploy old code over the current app.
+4. If main changes while you work, integrate the newer update and rerun your
+   checks. A new commit awaiting deployment registration/completion is busy.
+   A completed failure must be reported; a corrective update may follow once idle.
+5. Contributors may publish directly to `main` after the guard passes. Use normal
+   fast-forward pushes; connector/API updates must use the checked `expected_sha`
+   and `force: false`. Never force-push or overwrite files from a stale checkout.
+6. Pull requests remain available; review is not required. Apply the same guard
+   immediately before merging or making any connector/GitHub web change.
+7. GitHub Pages deploys automatically. Wait for your update to finish and verify it
+   before submitting another update.
+
+The local hook protects Git pushes from checkouts where it is enabled. It cannot
+intercept GitHub web edits, API calls, or unpublished work on another computer;
+those require the shared rules in `AGENTS.md` and coordination between owners.
 
 ## Preserve these systems
 

@@ -6,6 +6,8 @@
     "node": ">=22"
   },
   "scripts": {
+    "check:update": "node scripts/check-update-ready.mjs",
+    "setup:hooks": "git config core.hooksPath .githooks",
     "build:backend-client": "node scripts/build-backend-client.mjs",
     "test": "node --test scripts/*.test.mjs tests/*.test.mjs",
     "test:backend": "node --test tests/backend*.test.mjs",
