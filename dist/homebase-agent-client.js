@@ -6,7 +6,7 @@
   refresh:()=>click('refreshBtn'),
   bonuses:()=>click('bonusToggle'),
   navigate:()=>click('mapsBtn'),
-  events:()=>click('eventsQuickBtn'),
+  events:()=>{const el=document.getElementById('todayEvents');if(!el)return{ok:false,error:'events_unavailable'};el.scrollIntoView({behavior:'smooth',block:'center'});return{ok:true}},
   heatmap:()=>click('layerBtn'),
   twelve_hour:()=>click('timelineQuickBtn')
  });
