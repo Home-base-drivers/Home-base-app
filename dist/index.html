@@ -442,7 +442,7 @@ const globalHeatStatus=document.createElement('div');
 globalHeatStatus.id='globalHeatStatus';globalHeatStatus.setAttribute('role','status');globalHeatStatus.hidden=true;
 globalHeatStatus.style.cssText='position:absolute;top:170px;left:50%;transform:translateX(-50%);max-width:calc(100% - 120px);padding:6px 10px;border-radius:9px;background:#071923e8;color:#c8e4ef;font:11px/1.35 system-ui;text-align:center;z-index:700;pointer-events:none';
 document.getElementById('app').append(globalHeatStatus);
-globalHeatExplorer=HomeBaseGlobalHeat.create({
+if(typeof HomeBaseGlobalHeat!=='undefined')globalHeatExplorer=HomeBaseGlobalHeat.create({
  load:loadVenues,
  center:()=>{const p=liveMap.getCenter();return [Math.max(-85,Math.min(85,p.lat)),((p.lng+180)%360+360)%360-180]},
  zoom:()=>liveMap.getZoom(),
@@ -450,7 +450,7 @@ globalHeatExplorer=HomeBaseGlobalHeat.create({
  render:()=>renderDemandGrid(activeDemandSources,0,selectedForecastTime),
  status:text=>{globalHeatStatus.textContent=text;globalHeatStatus.hidden=!text}
 });
-liveMap.on('moveend',()=>globalHeatExplorer.changed());
+liveMap.on('moveend',()=>globalHeatExplorer?.changed());
 const BALTIMORE_CENTER=[39.2904,-76.6122];
 function isGreaterBaltimoreLocation(lat,lon){return HomeBaseMarket.isBaltimorePoint(lat,lon)}
 async function loadBaltimoreDemandAreas(lat,lon){if(!isGreaterBaltimoreLocation(lat,lon))return[];try{const response=await fetch('./baltimore-demand-areas.geojson',{cache:'force-cache',headers:{Accept:'application/geo+json, application/json'}});if(!response.ok)throw Error('Bundled Baltimore boundary data unavailable');const collection=await response.json();return(collection.features||[]).filter(feature=>feature.geometry&&feature.properties&&feature.properties.areaName).map((feature,index)=>({id:feature.properties.areaId||`baltimore-area-${index}`,name:String(feature.properties.areaName),detailName:String(feature.properties.detailName||''),areaType:feature.properties.areaType||'neighborhood',city:feature.properties.areaType==='neighborhood',feature}))}catch(e){return[]}}
