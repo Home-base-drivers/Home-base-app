@@ -192,7 +192,8 @@
         const output = canvas.getContext('2d', { alpha: true });
         output.setTransform(dpr, 0, 0, dpr, 0, 0);
         output.clearRect(0, 0, size.x, size.y);
-        if (!this._areas.length) return;
+        // Geographic boundaries are optional: other markets use real point sources.
+        if (!this._areas.length && !this._sources.length) return;
 
         // Render a finer geographic field at neighborhood zooms so adjacent
         // demand surfaces melt together instead of reading as chunky tiles.
