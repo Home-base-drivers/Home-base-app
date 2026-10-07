@@ -57,7 +57,9 @@ test('GPT Live creates a full-duplex multilingual session with Responses web sea
  assert.equal(sent.body.session.model,'gpt-live-1');
  assert.equal(sent.body.session.delegation.type,'responses');
  assert.equal(sent.body.session.delegation.responses.model,'gpt-6-luna');
- assert.deepEqual(sent.body.session.delegation.responses.tools,[{type:'web_search'}]);
+ assert.equal(sent.body.session.delegation.responses.tools[0].type,'web_search');
+ assert.equal(sent.body.session.delegation.responses.tools[1].type,'function');
+ assert.equal(sent.body.session.delegation.responses.tools[1].name,'homebase_action');
  assert.equal(sent.body.session.delegation.responses.tool_choice,'auto');
  assert.equal(sent.body.session.delegation.responses.parallel_tool_calls,true);
  assert.equal(sent.body.session.delegation.responses.max_output_tokens,1200);
