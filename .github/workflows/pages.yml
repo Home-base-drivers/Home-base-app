@@ -4,7 +4,8 @@ on:
   push:
     branches: [main]
   schedule:
-    - cron: '7,37 * * * *'
+    # Hourly production QA heartbeat. Scheduled workflows run from main.
+    - cron: '17 * * * *'
   workflow_dispatch:
 
 permissions:
@@ -32,7 +33,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - name: Validate application before deployment
+      - name: Home Base QA agent · validate full application
         run: |
           npm ci --ignore-scripts
           npm test
@@ -51,7 +52,7 @@ jobs:
           node --check dist/homebase-copilot.js
           node --check dist/homebase-live-assistant.js
           node --check dist/sw.js
-      - name: Fetch provider signals
+      - name: Home Base QA agent · refresh external signals
         run: node scripts/refresh-provider-signals.mjs
         env:
           TICKETMASTER_API_KEY: ${{ secrets.TICKETMASTER_API_KEY }}
@@ -62,7 +63,7 @@ jobs:
           BOOKING_API_KEY: ${{ secrets.BOOKING_API_KEY }}
           BOOKING_AFFILIATE_ID: ${{ secrets.BOOKING_AFFILIATE_ID }}
           FLIGHTAWARE_API_KEY: ${{ secrets.FLIGHTAWARE_API_KEY }}
-      - name: Build public runtime configuration
+      - name: Home Base QA agent · verify runtime configuration
         run: node scripts/write-runtime-config.mjs
         env:
           SUPABASE_URL: ${{ vars.SUPABASE_URL }}
