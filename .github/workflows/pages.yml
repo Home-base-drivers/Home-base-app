@@ -34,6 +34,7 @@ jobs:
         run: |
           npm ci --ignore-scripts
           npm test
+          npm run test:release
           npm run build:backend-client
           git diff --exit-code -- dist/homebase-backend.js
           npm run build:dispatch-function
