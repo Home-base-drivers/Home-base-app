@@ -6,9 +6,9 @@
   refresh:()=>click('refreshBtn'),
   bonuses:()=>click('bonusToggle'),
   navigate:()=>click('mapsBtn'),
-  events:()=>click('eventBtn'),
+  events:()=>click('eventsQuickBtn'),
   heatmap:()=>click('layerBtn'),
-  twelve_hour:()=>click('forecastBtn')
+  twelve_hour:()=>click('timelineQuickBtn')
  });
  async function execute(action){if(!action||typeof action!=='object')return{ok:false,error:'invalid_action'};const name=String(action.name||action.type||'').toLowerCase().replaceAll('-','_');const fn=actions[name];if(!fn)return{ok:false,error:'unsupported_action',action:name};try{return{action:name,...await fn(action.arguments||action.args||{})}}catch(error){return{ok:false,error:String(error?.message||error),action:name}}}
  async function ask(raw,prefs={}){
