@@ -211,6 +211,7 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="baltimore-market.js?v=72"></script>
 <script src="homebase-heat.js?v=99"></script>
+<script src="homebase-global-heat.js?v=1"></script>
 <link rel="stylesheet" href="homebase-earnings.css?v=110">
 <link rel="stylesheet" href="homebase-growth.css?v=111">
 <script src="homebase-earnings.js?v=110"></script>
@@ -408,16 +409,23 @@ function normalizedAreaName(name){return String(name||'').toLowerCase().replace(
 function demandAreaScore(area,when){const sources=(area.sources||[]).filter(source=>demandWeight(source,when)>0);if(!sources.length)return 0;const surges=sources.map(source=>Number(source.tags&&source.tags.uberSurgeMultiplier)).filter(Number.isFinite);if(surges.length)return Math.max(0,Math.min(1,(Math.max(...surges)-1)/.85));const total=sources.reduce((sum,source)=>sum+demandWeight(source,when),0);return 1-Math.exp(-total/18)}
 function demandAreaStyle(){return{stroke:false,fill:false,fillOpacity:0,opacity:0}}
 function showDemandAreaLabel(name,zoom,areaType='neighborhood'){if(areaType==='label')return zoom>=15;if(areaType==='county')return zoom>=9&&zoom<13;return areaType==='neighborhood'&&zoom>=12}
+let globalHeatExplorer=null;
 function renderDemandGrid(sources,index,when){
   if(when)selectedForecastTime=when;
   if(sources&&sources!==demandAreaSourceRef)bindDemandSources(sources);
-  if(!heatAreaLayer)return;
+  if(!heatAreaLayer)heatAreaLayer=L.layerGroup().addTo(liveMap);
   heatAreaLayer.clearLayers();
   if(!heatLayer)heatLayer=HomeBaseHeat.createLayer(L).addTo(liveMap);
   // Render one continuous demand surface. Fine neighborhood polygons guide
   // the surface inside Baltimore, while point interpolation carries the same
   // visual language through surrounding counties. Neither layer creates a
   // second map or clips a source sitting on a boundary.
+  const explored=globalHeatExplorer?.getSources();
+  if(explored!==null&&explored!==undefined){
+    // Place density only: do not apply home-market weather or timezone abroad.
+    const score=source=>source.cat==='event'||source.tags?.amenity==='fast_food'?0:({transit:10,hotel:7,restaurant:5,nightlife:5,shopping:6,medical:6,neighborhood:4}[source.cat]||2);
+    heatLayer.setData([],selectedForecastTime,score,explored);return;
+  }
   heatLayer.setData(demandAreas,selectedForecastTime,demandWeight,demandAreaSources);
   const zoom=liveMap.getZoom(),visible=liveMap.getBounds(),occupied=[];
   demandAreas.forEach(area=>{
@@ -430,6 +438,19 @@ function renderDemandGrid(sources,index,when){
   });
 }
 liveMap.on('zoomend',()=>renderDemandGrid(activeDemandSources,0,selectedForecastTime));
+const globalHeatStatus=document.createElement('div');
+globalHeatStatus.id='globalHeatStatus';globalHeatStatus.setAttribute('role','status');globalHeatStatus.hidden=true;
+globalHeatStatus.style.cssText='position:absolute;top:170px;left:50%;transform:translateX(-50%);max-width:calc(100% - 120px);padding:6px 10px;border-radius:9px;background:#071923e8;color:#c8e4ef;font:11px/1.35 system-ui;text-align:center;z-index:700;pointer-events:none';
+document.getElementById('app').append(globalHeatStatus);
+globalHeatExplorer=HomeBaseGlobalHeat.create({
+ load:loadVenues,
+ center:()=>{const p=liveMap.getCenter();return [Math.max(-85,Math.min(85,p.lat)),((p.lng+180)%360+360)%360-180]},
+ zoom:()=>liveMap.getZoom(),
+ nearHome:point=>!!currentLocation&&distanceKm(point,currentLocation)<30,
+ render:()=>renderDemandGrid(activeDemandSources,0,selectedForecastTime),
+ status:text=>{globalHeatStatus.textContent=text;globalHeatStatus.hidden=!text}
+});
+liveMap.on('moveend',()=>globalHeatExplorer.changed());
 const BALTIMORE_CENTER=[39.2904,-76.6122];
 function isGreaterBaltimoreLocation(lat,lon){return HomeBaseMarket.isBaltimorePoint(lat,lon)}
 async function loadBaltimoreDemandAreas(lat,lon){if(!isGreaterBaltimoreLocation(lat,lon))return[];try{const response=await fetch('./baltimore-demand-areas.geojson',{cache:'force-cache',headers:{Accept:'application/geo+json, application/json'}});if(!response.ok)throw Error('Bundled Baltimore boundary data unavailable');const collection=await response.json();return(collection.features||[]).filter(feature=>feature.geometry&&feature.properties&&feature.properties.areaName).map((feature,index)=>({id:feature.properties.areaId||`baltimore-area-${index}`,name:String(feature.properties.areaName),detailName:String(feature.properties.detailName||''),areaType:feature.properties.areaType||'neighborhood',city:feature.properties.areaType==='neighborhood',feature}))}catch(e){return[]}}
@@ -1009,7 +1030,7 @@ async function refreshLiveDemandLayer(){
 if(!demoLocale)setTimeout(autoRefreshGps,150);
 setInterval(()=>{updateClimateAdvisory();const selected=$('[data-hour][aria-pressed="true"]');if(selected&&selected.dataset.hour==='0'&&activeStops.length)applyTimeForecast(0,new Date());refreshLiveDemandLayer()},300000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-lastAutoGpsRefresh>300000)autoRefreshGps()});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=199',{updateViaCache:'none'}).then(r=>{r.update();navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!sessionStorage.getItem('hb-release-reload')){sessionStorage.setItem('hb-release-reload','1');location.reload()}})}).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';}));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=200',{updateViaCache:'none'}).then(r=>{r.update();navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!sessionStorage.getItem('hb-release-reload')){sessionStorage.setItem('hb-release-reload','1');location.reload()}})}).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';}));
 </script>
 <script src="homebase-live.js?v=38"></script>
 </body>
