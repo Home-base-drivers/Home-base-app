@@ -23,9 +23,18 @@ Driver privacy: exact home location is sensitive; minimize storage and never exp
 
 function safe(value,limit=14000){try{return JSON.stringify(value??{}).slice(0,limit)}catch{return'{}'}}
 function outputText(payload){return(payload?.output||[]).flatMap(x=>x.content||[]).filter(x=>x.type==='output_text').map(x=>x.text||'').join('\n').trim()}
+function actionCalls(payload){return(payload?.output||[]).filter(x=>x?.type==='function_call').flatMap(x=>{try{return[{callId:x.call_id||x.id,name:x.name,arguments:JSON.parse(x.arguments||'{}')}]}catch{return[]}})}
+const ACTION_TOOLS=[
+ {type:'function',name:'refresh',description:'Refresh Home Base GPS and live signals when the driver explicitly asks to refresh or update their current position.',parameters:{type:'object',properties:{},additionalProperties:false}},
+ {type:'function',name:'heatmap',description:'Toggle the Home Base demand heat map when the driver explicitly asks to show, hide, enable, disable, or toggle it.',parameters:{type:'object',properties:{},additionalProperties:false}},
+ {type:'function',name:'bonuses',description:'Toggle confirmed live driver bonus markers when explicitly requested.',parameters:{type:'object',properties:{},additionalProperties:false}},
+ {type:'function',name:'events',description:'Open the Home Base rideshare-relevant events view when explicitly requested.',parameters:{type:'object',properties:{},additionalProperties:false}},
+ {type:'function',name:'twelve_hour',description:'Open the Home Base 12-hour demand timeline when explicitly requested.',parameters:{type:'object',properties:{},additionalProperties:false}},
+ {type:'function',name:'navigate',description:'Start navigation to the destination already selected in Home Base. Use only when the driver clearly asks to navigate/go/take me there; never invent a destination.',parameters:{type:'object',properties:{},additionalProperties:false}}
+];
 
 export function makeHomeBaseAgent({apiKey,model='gpt-6-luna',fetchImpl=fetch,loadMemory,loadTurns,saveTurn,upsertMemories}={}){
- return async({userId,utterance,context={},conversationId='default'}={})=>{
+ return async({userId,utterance,context={},conversationId='default',capabilities=[],actionResults=[]}={})=>{
   if(!apiKey)throw Error('Home Base AI is not configured.');
   if(!userId)throw Error('Sign in first.');
   if(typeof utterance!=='string'||!utterance.trim()||utterance.length>4000)throw Error('Ask Home Base a shorter question.');
@@ -53,16 +62,20 @@ Behavior:
 - Never self-modify code or security rules. Learning means updating driver memory and future recommendations.
 - If the driver is moving, lead with the decision and use short spoken-friendly paragraphs. If parked or asking for detail, be more comprehensive.
 - Sound like a capable human dispatcher, not a radio parody.`;
-  const input=[...turns.slice(-20).map(t=>({role:t.role,content:t.content})),{role:'user',content:utterance}];
-  const response=await fetchImpl('https://api.openai.com/v1/responses',{method:'POST',signal:AbortSignal.timeout(25000),headers:{Authorization:'Bearer '+apiKey,'Content-Type':'application/json'},body:JSON.stringify({model,store:false,instructions,input,reasoning:{effort:'medium'},tools:[{type:'web_search'}],tool_choice:'auto',max_output_tokens:1400})});
+  const verifiedResults=Array.isArray(actionResults)?actionResults.slice(0,8):[];
+  const input=[...turns.slice(-20).map(t=>({role:t.role,content:t.content})),{role:'user',content:utterance+(verifiedResults.length?'\n\nVERIFIED HOME BASE ACTION RESULTS:\n'+safe(verifiedResults,5000):'')}];
+  const response=await fetchImpl('https://api.openai.com/v1/responses',{method:'POST',signal:AbortSignal.timeout(25000),headers:{Authorization:'Bearer '+apiKey,'Content-Type':'application/json'},body:JSON.stringify({model,store:false,instructions,input,reasoning:{effort:'medium'},tools:[{type:'web_search'},...ACTION_TOOLS.filter(t=>!Array.isArray(capabilities)||!capabilities.length||capabilities.includes(t.name))],tool_choice:'auto',max_output_tokens:1400})});
   const payload=await response.json().catch(()=>({}));if(!response.ok)throw Error(payload?.error?.message||'Home Base AI is unavailable.');
-  const answer=outputText(payload);if(!answer)throw Error('Home Base AI returned no answer.');
+  const actions=actionCalls(payload);
+  const answer=outputText(payload);
+  if(actions.length)return{answer:answer||'Executing the requested Home Base action.',actions,provider:'OpenAI',agent:true,execution:'action_required'};
+  if(!answer)throw Error('Home Base AI returned no answer.');
   await saveTurn(userId,conversationId,'user',utterance,context);
   await saveTurn(userId,conversationId,'assistant',answer,{});
   try{
    const learn=await fetchImpl('https://api.openai.com/v1/responses',{method:'POST',signal:AbortSignal.timeout(9000),headers:{Authorization:'Bearer '+apiKey,'Content-Type':'application/json'},body:JSON.stringify({model,store:false,instructions:'Extract only durable driver-specific information that should improve future Home Base recommendations: explicit preferences, goals, constraints, repeated lessons, stable facts, or strategies. Do not save transient weather, one-time locations, secrets, passwords, exact home address, health data, or guesses. Return JSON only.',input:'User: '+utterance+'\nAssistant: '+answer,max_output_tokens:400,text:{format:{type:'json_schema',name:'homebase_memory_update',strict:true,schema:{type:'object',additionalProperties:false,required:['memories'],properties:{memories:{type:'array',maxItems:5,items:{type:'object',additionalProperties:false,required:['key','type','summary','confidence'],properties:{key:{type:'string'},type:{type:'string',enum:['preference','goal','constraint','lesson','fact','strategy']},summary:{type:'string'},confidence:{type:'number'}}}}}}}}})});
    if(learn.ok){const lp=await learn.json(),raw=outputText(lp),parsed=JSON.parse(raw||'{"memories":[]}');if(Array.isArray(parsed.memories)&&parsed.memories.length)await upsertMemories(userId,parsed.memories);}
   }catch{}
-  return{answer,provider:'OpenAI',agent:true,execution:'advisory'};
+  return{answer,provider:'OpenAI',agent:true,execution:verifiedResults.length?'verified_action_result':'advisory'};
  };
 }
