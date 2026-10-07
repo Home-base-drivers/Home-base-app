@@ -7,7 +7,7 @@ const event={name:'Verified concert',cat:'event',lat:39.31,lon:-76.61,eventStart
 const area={name:'Neighborhood',cat:'neighborhood',lat:39.29,lon:-76.61};
 function plan(sources,when=at('11:00'),parts={day:2,hour:11},radiusMiles=25){const e=P.candidatesForHour(sources,when,parts,at('11:00'));return P.selectRanked(R.rankCandidates([...e.events,...e.general].map(s=>({...s,score:s.routeBasis==='verified_event'?3:40})),{origin,radiusMiles,hourlyRate:30,costPerMile:.3}));}
 test('dated events outrank a closer, higher-scoring area for every applicable hour',()=>{
-  for(const [hour,phase] of [['11:00','arrival'],['12:30','underway'],['14:30','exit']]){const result=plan([event,area],at(hour));assert.equal(result[0].name,event.name);assert.equal(result[0].routeEventPhase,phase);assert.equal(result.length,1);}
+  for(const [hour,phase] of [['11:00','arrival'],['12:30','underway'],['14:30','exit']]){const result=plan([event,area],at(hour));assert.equal(result[0].name,event.name);assert.equal(result[0].routeEventPhase,phase);assert.equal(result.length,2);assert.equal(result[1].name,area.name);}
 });
 test('no relevant or reachable event uses general area demand',()=>{
   assert.equal(plan([event,area],at('09:00'))[0].routeBasis,'general_area');

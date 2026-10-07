@@ -1,0 +1,5 @@
+Public geographic baseline: GeoNames (https://www.geonames.org/) cities1000, downloaded 2026-10-07, filtered to supported market areas. Licensed under Creative Commons Attribution 4.0 International (https://creativecommons.org/licenses/by/4.0/). Coordinates identify real populated places; demand at these places is modeled.
+
+Public place snapshots: © OpenStreetMap contributors (https://www.openstreetmap.org/copyright), Open Database License.
+
+Event facts: published dated venue calendars and Ticketmaster public listings, with the original source URL and refresh time stored per record. No ticket prices, descriptions, images, or invented show schedules are republished.

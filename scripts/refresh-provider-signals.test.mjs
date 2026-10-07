@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { haversineKm, normalizeTicketmasterEvent, normalizeUberSurge } from './refresh-provider-signals.mjs';
+import { haversineKm, normalizeTicketmasterEvent, normalizeUberSurge, ticketmasterProvider } from './refresh-provider-signals.mjs';
 
 test('canceled, postponed and unspecified event times cannot become route signals', () => {
   const event={name:'Concert',_embedded:{venues:[{name:'Arena',location:{latitude:'39.29',longitude:'-76.61'}}]},dates:{start:{dateTime:'2026-10-06T20:00:00Z'}}},now=new Date('2026-10-06T12:00:00Z');
@@ -28,4 +28,12 @@ test('Uber samples retain independently rated low and high price areas', () => {
   const origin = { name: 'Towson', lat: 39.4, lon: -76.6 };
   assert.equal(normalizeUberSurge(origin, { prices: [{ surge_multiplier: 1 }, { surge_multiplier: 1.02 }] }).surgeMultiplier, 1.01);
   assert.equal(normalizeUberSurge(origin, { prices: [{ surge_multiplier: 1.1 }, { surge_multiplier: 1.4 }] }).surgeMultiplier, 1.25);
+});
+test('Ticketmaster keeps music classification, uses the market country, and reads additional pages', async () => {
+  const saved=process.env.TICKETMASTER_API_KEY;process.env.TICKETMASTER_API_KEY='fixture-key';
+  try{
+    const urls=[],event={id:'fixture',name:'Named artist',classifications:[{segment:{name:'Music'},genre:{name:'Rock'}}],dates:{start:{dateTime:'2026-10-07T18:30:00Z'}},_embedded:{venues:[{name:'Public venue',location:{latitude:51.51,longitude:-.13}}]}};
+    const data=await ticketmasterProvider({center:{lat:51.5,lon:-.12},radiusKm:30,countryCode:'GB'},async url=>{urls.push(new URL(url));return{ok:true,json:async()=>({page:{totalPages:2},_embedded:{events:[event]}})};},new Date('2026-10-07T14:00:00Z'));
+    assert.equal(urls.length,2);assert.equal(urls[0].searchParams.get('countryCode'),'GB');assert.equal(urls[1].searchParams.get('page'),'1');assert.equal(data.events.length,1);assert.equal(data.events[0].classification,'Music Rock');
+  }finally{if(saved===undefined)delete process.env.TICKETMASTER_API_KEY;else process.env.TICKETMASTER_API_KEY=saved;}
 });

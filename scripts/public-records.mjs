@@ -1,3 +1,4 @@
+import { publicEventCalendars } from './public-events.mjs';
 const validTime=value=>typeof value==='string'&&/T.*(?:Z|[+-]\d\d:\d\d)$/.test(value)&&Number.isFinite(Date.parse(value));
 export function normalizeCampusEvents(payload,now=Date.now()){
   const rows=[];
@@ -9,7 +10,10 @@ export function normalizeCampusEvents(payload,now=Date.now()){
 }
 export function normalizeWeather(payload){return(payload?.properties?.periods||[]).filter(p=>validTime(p.startTime)&&validTime(p.endTime)).map(p=>({start:p.startTime,end:p.endTime,rainProbability:p.probabilityOfPrecipitation?.value==null?null:Math.max(0,Math.min(100,Number(p.probabilityOfPrecipitation.value))),source:'National Weather Service forecast'}));}
 export async function publicRecords(market,now=Date.now(),request=fetch){
-  if(!/baltimore/i.test(market.name))return{status:'not_supported',events:[],weather:[]};
+  if(!/baltimore/i.test(market.name)){
+    const calendar=await publicEventCalendars(market,now,request);
+    return{status:calendar.status,fetchedAt:calendar.fetchedAt,calendarStatus:calendar.status,calendarTruncated:calendar.truncated||false,sources:calendar.sources,events:calendar.events,weatherStatus:'not_supported',weather:[]};
+  }
   const get=async url=>{const r=await request(url,{signal:AbortSignal.timeout(12000),headers:{Accept:'application/json','User-Agent':'HomeBase public event context (github.com/Home-base-drivers/Home-base-app)'}});if(!r.ok)throw Error('Public source unavailable');return r.json();};
   const [campus,weather]=await Promise.allSettled([
     get('https://events.towson.edu/api/2/events?days=2&pp=100').then(p=>({events:normalizeCampusEvents(p,now),truncated:Number(p.page?.total)>100})),

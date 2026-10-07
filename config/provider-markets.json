@@ -1,10 +1,13 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "markets": [
     {
       "id": "baltimore",
       "name": "Baltimore",
-      "center": { "lat": 39.2904, "lon": -76.6122 },
+      "center": {
+        "lat": 39.2904,
+        "lon": -76.6122
+      },
       "radiusKm": 58,
       "flightawareAirport": {
         "id": "KBWI",
@@ -13,50 +16,308 @@
         "lon": -76.6684
       },
       "uberDestinations": [
-        { "name": "Downtown Baltimore", "lat": 39.2904, "lon": -76.6122 },
-        { "name": "BWI Airport", "lat": 39.1774, "lon": -76.6684 }
+        {
+          "name": "Downtown Baltimore",
+          "lat": 39.2904,
+          "lon": -76.6122
+        },
+        {
+          "name": "BWI Airport",
+          "lat": 39.1774,
+          "lon": -76.6684
+        }
       ],
       "sampleAreas": [
-        { "name": "Downtown", "lat": 39.2904, "lon": -76.6122 },
-        { "name": "Inner Harbor", "lat": 39.2851, "lon": -76.6132 },
-        { "name": "Harbor East", "lat": 39.2831, "lon": -76.6022 },
-        { "name": "Fells Point", "lat": 39.2825, "lon": -76.5934 },
-        { "name": "Canton", "lat": 39.2803, "lon": -76.5754 },
-        { "name": "Federal Hill", "lat": 39.2750, "lon": -76.6135 },
-        { "name": "Mount Vernon", "lat": 39.2984, "lon": -76.6157 },
-        { "name": "Station North", "lat": 39.3114, "lon": -76.6162 },
-        { "name": "Charles Village", "lat": 39.3271, "lon": -76.6190 },
-        { "name": "Johns Hopkins Medical", "lat": 39.2973, "lon": -76.5903 },
-        { "name": "Morgan State", "lat": 39.3448, "lon": -76.5844 },
-        { "name": "West Baltimore", "lat": 39.2998, "lon": -76.6497 },
-        { "name": "Hampden", "lat": 39.3314, "lon": -76.6315 },
-        { "name": "Roland Park", "lat": 39.3537, "lon": -76.6350 },
-        { "name": "Waverly", "lat": 39.3298, "lon": -76.6070 },
-        { "name": "Hamilton-Lauraville", "lat": 39.3564, "lon": -76.5655 },
-        { "name": "Belair-Edison", "lat": 39.3169, "lon": -76.5733 },
-        { "name": "Highlandtown", "lat": 39.2862, "lon": -76.5688 },
-        { "name": "Locust Point", "lat": 39.2681, "lon": -76.5904 },
-        { "name": "Cherry Hill", "lat": 39.2522, "lon": -76.6216 },
-        { "name": "Brooklyn", "lat": 39.2387, "lon": -76.6037 },
-        { "name": "Catonsville", "lat": 39.2721, "lon": -76.7319 },
-        { "name": "Arbutus", "lat": 39.2546, "lon": -76.6997 },
-        { "name": "Towson", "lat": 39.4015, "lon": -76.6019 },
-        { "name": "Parkville", "lat": 39.3773, "lon": -76.5397 },
-        { "name": "Pikesville", "lat": 39.3743, "lon": -76.7225 },
-        { "name": "Owings Mills", "lat": 39.4195, "lon": -76.7803 },
-        { "name": "White Marsh", "lat": 39.3837, "lon": -76.4586 },
-        { "name": "Essex", "lat": 39.3093, "lon": -76.4750 },
-        { "name": "Dundalk", "lat": 39.2507, "lon": -76.5205 },
-        { "name": "Glen Burnie", "lat": 39.1626, "lon": -76.6247 },
-        { "name": "BWI Airport", "lat": 39.1774, "lon": -76.6684 },
-        { "name": "Columbia", "lat": 39.2037, "lon": -76.8610 },
-        { "name": "Ellicott City", "lat": 39.2673, "lon": -76.7983 },
-        { "name": "Timonium", "lat": 39.4371, "lon": -76.6197 },
-        { "name": "Cockeysville", "lat": 39.4812, "lon": -76.6439 },
-        { "name": "Rosedale", "lat": 39.3201, "lon": -76.5155 },
-        { "name": "Middle River", "lat": 39.3343, "lon": -76.4394 },
-        { "name": "Brooklyn Park", "lat": 39.2284, "lon": -76.6164 },
-        { "name": "Annapolis", "lat": 38.9784, "lon": -76.4922 }
+        {
+          "name": "Downtown",
+          "lat": 39.2904,
+          "lon": -76.6122
+        },
+        {
+          "name": "Inner Harbor",
+          "lat": 39.2851,
+          "lon": -76.6132
+        },
+        {
+          "name": "Harbor East",
+          "lat": 39.2831,
+          "lon": -76.6022
+        },
+        {
+          "name": "Fells Point",
+          "lat": 39.2825,
+          "lon": -76.5934
+        },
+        {
+          "name": "Canton",
+          "lat": 39.2803,
+          "lon": -76.5754
+        },
+        {
+          "name": "Federal Hill",
+          "lat": 39.275,
+          "lon": -76.6135
+        },
+        {
+          "name": "Mount Vernon",
+          "lat": 39.2984,
+          "lon": -76.6157
+        },
+        {
+          "name": "Station North",
+          "lat": 39.3114,
+          "lon": -76.6162
+        },
+        {
+          "name": "Charles Village",
+          "lat": 39.3271,
+          "lon": -76.619
+        },
+        {
+          "name": "Johns Hopkins Medical",
+          "lat": 39.2973,
+          "lon": -76.5903
+        },
+        {
+          "name": "Morgan State",
+          "lat": 39.3448,
+          "lon": -76.5844
+        },
+        {
+          "name": "West Baltimore",
+          "lat": 39.2998,
+          "lon": -76.6497
+        },
+        {
+          "name": "Hampden",
+          "lat": 39.3314,
+          "lon": -76.6315
+        },
+        {
+          "name": "Roland Park",
+          "lat": 39.3537,
+          "lon": -76.635
+        },
+        {
+          "name": "Waverly",
+          "lat": 39.3298,
+          "lon": -76.607
+        },
+        {
+          "name": "Hamilton-Lauraville",
+          "lat": 39.3564,
+          "lon": -76.5655
+        },
+        {
+          "name": "Belair-Edison",
+          "lat": 39.3169,
+          "lon": -76.5733
+        },
+        {
+          "name": "Highlandtown",
+          "lat": 39.2862,
+          "lon": -76.5688
+        },
+        {
+          "name": "Locust Point",
+          "lat": 39.2681,
+          "lon": -76.5904
+        },
+        {
+          "name": "Cherry Hill",
+          "lat": 39.2522,
+          "lon": -76.6216
+        },
+        {
+          "name": "Brooklyn",
+          "lat": 39.2387,
+          "lon": -76.6037
+        },
+        {
+          "name": "Catonsville",
+          "lat": 39.2721,
+          "lon": -76.7319
+        },
+        {
+          "name": "Arbutus",
+          "lat": 39.2546,
+          "lon": -76.6997
+        },
+        {
+          "name": "Towson",
+          "lat": 39.4015,
+          "lon": -76.6019
+        },
+        {
+          "name": "Parkville",
+          "lat": 39.3773,
+          "lon": -76.5397
+        },
+        {
+          "name": "Pikesville",
+          "lat": 39.3743,
+          "lon": -76.7225
+        },
+        {
+          "name": "Owings Mills",
+          "lat": 39.4195,
+          "lon": -76.7803
+        },
+        {
+          "name": "White Marsh",
+          "lat": 39.3837,
+          "lon": -76.4586
+        },
+        {
+          "name": "Essex",
+          "lat": 39.3093,
+          "lon": -76.475
+        },
+        {
+          "name": "Dundalk",
+          "lat": 39.2507,
+          "lon": -76.5205
+        },
+        {
+          "name": "Glen Burnie",
+          "lat": 39.1626,
+          "lon": -76.6247
+        },
+        {
+          "name": "BWI Airport",
+          "lat": 39.1774,
+          "lon": -76.6684
+        },
+        {
+          "name": "Columbia",
+          "lat": 39.2037,
+          "lon": -76.861
+        },
+        {
+          "name": "Ellicott City",
+          "lat": 39.2673,
+          "lon": -76.7983
+        },
+        {
+          "name": "Timonium",
+          "lat": 39.4371,
+          "lon": -76.6197
+        },
+        {
+          "name": "Cockeysville",
+          "lat": 39.4812,
+          "lon": -76.6439
+        },
+        {
+          "name": "Rosedale",
+          "lat": 39.3201,
+          "lon": -76.5155
+        },
+        {
+          "name": "Middle River",
+          "lat": 39.3343,
+          "lon": -76.4394
+        },
+        {
+          "name": "Brooklyn Park",
+          "lat": 39.2284,
+          "lon": -76.6164
+        },
+        {
+          "name": "Annapolis",
+          "lat": 38.9784,
+          "lon": -76.4922
+        }
+      ],
+      "countryCode": "US",
+      "timeZone": "America/New_York",
+      "placeRadiusKm": 20
+    },
+    {
+      "id": "north-jersey",
+      "name": "North Jersey",
+      "center": {
+        "lat": 40.94454,
+        "lon": -74.07542
+      },
+      "radiusKm": 65,
+      "placeRadiusKm": 20,
+      "countryCode": "US",
+      "timeZone": "America/New_York",
+      "sampleAreas": [],
+      "uberDestinations": [],
+      "publicCalendars": [
+        {
+          "name": "Ticketmaster New York public calendar",
+          "url": "https://www.ticketmaster.com/discover/new-york-city",
+          "maxPages": 6
+        }
+      ]
+    },
+    {
+      "id": "new-york",
+      "name": "New York",
+      "center": {
+        "lat": 40.758,
+        "lon": -73.9855
+      },
+      "radiusKm": 65,
+      "placeRadiusKm": 20,
+      "countryCode": "US",
+      "timeZone": "America/New_York",
+      "sampleAreas": [],
+      "uberDestinations": [],
+      "publicCalendars": [
+        {
+          "name": "Ticketmaster New York public calendar",
+          "url": "https://www.ticketmaster.com/discover/new-york-city",
+          "maxPages": 6
+        }
+      ]
+    },
+    {
+      "id": "london",
+      "name": "London",
+      "center": {
+        "lat": 51.5074,
+        "lon": -0.1278
+      },
+      "radiusKm": 65,
+      "placeRadiusKm": 25,
+      "countryCode": "GB",
+      "timeZone": "Europe/London",
+      "sampleAreas": [],
+      "uberDestinations": [],
+      "publicCalendars": [
+        {
+          "name": "Ticketmaster London public calendar",
+          "url": "https://www.ticketmaster.co.uk/discover/london",
+          "maxPages": 6
+        },
+        {
+          "name": "Hamilton published performances",
+          "url": "https://www.ticketmaster.co.uk/hamilton-tickets/artist/5218048?venueId=434783"
+        },
+        {
+          "name": "Les Misérables published performances",
+          "url": "https://www.ticketmaster.co.uk/les-miserables-tickets/artist/803968?venueId=434617"
+        },
+        {
+          "name": "The Book of Mormon published performances",
+          "url": "https://www.ticketmaster.co.uk/the-book-of-mormon-london-tickets/artist/1747137"
+        },
+        {
+          "name": "Beetlejuice published performances",
+          "url": "https://www.ticketmaster.co.uk/beetlejuice-the-musical-tickets/artist/5376080"
+        },
+        {
+          "name": "Avenue Q published performances",
+          "url": "https://www.ticketmaster.co.uk/avenue-q-tickets/artist/973986"
+        },
+        {
+          "name": "Sinatra published performances",
+          "url": "https://www.ticketmaster.co.uk/sinatra-the-musical-tickets/artist/5674208"
+        }
       ]
     }
   ]

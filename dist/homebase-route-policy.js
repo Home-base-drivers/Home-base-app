@@ -44,6 +44,6 @@
     const general=sources.filter(source=>fallbackEligible(source,parts,when)).map(source=>({...source,routeBasis:'general_area'}));
     return {events,general};
   }
-  function selectRanked(ranked){const events=ranked.filter(source=>source.routeBasis==='verified_event');return events.length?events:ranked.filter(source=>source.routeBasis==='general_area');}
+  function selectRanked(ranked){return [...ranked.filter(source=>source.routeBasis==='verified_event'),...ranked.filter(source=>source.routeBasis==='general_area')];}
   return {eventPhase,schoolStage,schoolWeight,fallbackEligible,candidatesForHour,selectRanked};
 });

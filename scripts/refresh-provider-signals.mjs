@@ -1,6 +1,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { publicRecords } from './public-records.mjs';
+import { publicPlaces } from './public-places.mjs';
 
 const ROOT = new URL('../', import.meta.url);
 const CONFIG_URL = new URL('config/provider-markets.json', ROOT);
@@ -44,7 +45,7 @@ export function normalizeTicketmasterEvent(event, now = NOW) {
   const venue = event?._embedded?.venues?.[0];
   const lat = Number(venue?.location?.latitude), lon = Number(venue?.location?.longitude);
   const start = event?.dates?.start?.dateTime;
-  if (!Number.isFinite(lat) || !Number.isFinite(lon) || !start || !Number.isFinite(Date.parse(start))) return null;
+  if (venue?.location?.latitude == null || venue?.location?.longitude == null || !Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180 || !start || !Number.isFinite(Date.parse(start))) return null;
   const startMs = Date.parse(start);
   const end = event?.dates?.end?.dateTime || null;
   if (startMs < now.getTime() - 6 * 60 * 60_000 || startMs > now.getTime() + 36 * 60 * 60_000) return null;
@@ -59,7 +60,10 @@ export function normalizeTicketmasterEvent(event, now = NOW) {
     eventStart: new Date(start).toISOString(),
     eventEnd: end && Number.isFinite(Date.parse(end)) ? new Date(end).toISOString() : null,
     url: typeof event.url === 'string' ? event.url : null,
-    source: 'Ticketmaster Discovery API'
+    source: 'Ticketmaster Discovery API',
+    classification: (event.classifications || []).flatMap(c => [c.segment?.name, c.genre?.name, c.subGenre?.name]).filter(Boolean).join(' '),
+    eventType: event.type || '',
+    genre: (event.classifications || []).map(c => c.genre?.name).filter(Boolean).join(' ')
   };
 }
 
@@ -101,6 +105,7 @@ async function uberToken() {
 }
 
 async function uberProvider(market) {
+  if (!market.sampleAreas?.length || !market.uberDestinations?.length) return { status: 'not_supported', fetchedAt: null, samples: [] };
   let token;
   try { token = await uberToken(); } catch (error) { return { status: safeStatus(error), fetchedAt: NOW.toISOString(), samples: [] }; }
   if (!token) return { status: 'not_configured', fetchedAt: null, samples: [] };
@@ -131,11 +136,11 @@ async function uberProvider(market) {
   return { status: failures && !samples.length ? 'provider_unavailable' : 'active', fetchedAt: NOW.toISOString(), samples };
 }
 
-async function ticketmasterProvider(market) {
+export async function ticketmasterProvider(market, request = boundedFetch, now = NOW) {
   const key = process.env.TICKETMASTER_API_KEY;
   if (!key) return { status: 'not_configured', fetchedAt: null, events: [] };
   const url = new URL('https://app.ticketmaster.com/discovery/v2/events.json');
-  const start = new Date(NOW.getTime() - 6 * 60 * 60_000), end = new Date(NOW.getTime() + 36 * 60 * 60_000);
+  const start = new Date(now.getTime() - 6 * 60 * 60_000), end = new Date(now.getTime() + 36 * 60 * 60_000);
   url.search = new URLSearchParams({
     apikey: key,
     latlong: `${market.center.lat},${market.center.lon}`,
@@ -144,19 +149,24 @@ async function ticketmasterProvider(market) {
     startDateTime: start.toISOString().replace(/\.\d{3}Z$/, 'Z'),
     endDateTime: end.toISOString().replace(/\.\d{3}Z$/, 'Z'),
     sort: 'date,asc', size: '200',
-    countryCode: 'US'
+    ...(market.countryCode ? { countryCode: market.countryCode } : {})
   });
   try {
-    const data = await readJson(await boundedFetch(url, { headers: { Accept: 'application/json' } }));
-    const events = (data?._embedded?.events || []).map((event) => normalizeTicketmasterEvent(event)).filter(Boolean)
-      .filter((event) => haversineKm(market.center, event) <= market.radiusKm);
-    return { status: 'active', fetchedAt: NOW.toISOString(), events };
-  } catch (error) { return { status: safeStatus(error), fetchedAt: NOW.toISOString(), events: [] }; }
+    const events = []; let pages = 0, totalPages = 1;
+    do {
+      url.searchParams.set('page', String(pages));
+      const data = await readJson(await request(url, { headers: { Accept: 'application/json' } }));
+      events.push(...(data?._embedded?.events || []).map(event => normalizeTicketmasterEvent(event, now)).filter(Boolean).filter(event => haversineKm(market.center, event) <= market.radiusKm));
+      totalPages = Number(data.page?.totalPages) || 1; pages++;
+    } while (pages < totalPages && pages < 5);
+    return { status: 'active', fetchedAt: now.toISOString(), events: [...new Map(events.map(e => [e.id, e])).values()], truncated: pages < totalPages };
+  } catch (error) { return { status: safeStatus(error), fetchedAt: now.toISOString(), events: [] }; }
 }
 
 function isoDate(date) { return date.toISOString().slice(0, 10); }
 
 async function bookingProvider(market) {
+  if (!market.sampleAreas?.length) return { status: 'not_supported', fetchedAt: null, checkin: null, areas: [] };
   const key = process.env.BOOKING_API_KEY, affiliateId = process.env.BOOKING_AFFILIATE_ID;
   if (!key || !affiliateId) return { status: 'not_configured', fetchedAt: null, checkin: null, areas: [] };
   const checkin = new Date(NOW); checkin.setUTCDate(checkin.getUTCDate() + 1);
@@ -269,7 +279,7 @@ async function flightAwareProvider(market) {
 function retainRecent(previous, current, key, maxAgeMs = 25 * 60_000) {
   if (current.status === 'active') return current;
   const old = previous?.[key];
-  if (old?.fetchedAt && Date.now() - Date.parse(old.fetchedAt) < maxAgeMs && old.status === 'active') {
+  if (old?.fetchedAt && Date.now() - Date.parse(old.fetchedAt) < maxAgeMs && ['active', 'partial', 'stale'].includes(old.status)) {
     return { ...old, status: 'stale' };
   }
   return current;
@@ -279,31 +289,39 @@ async function main() {
   const config = JSON.parse(await readFile(CONFIG_URL, 'utf8'));
   let previous = {};
   try { previous = JSON.parse(await readFile(OUTPUT_URL, 'utf8')); } catch { /* first run */ }
-  const markets = [];
-  for (const market of config.markets) {
-    const [uber, ticketmaster, booking, flightaware, records] = await Promise.all([
-      uberProvider(market), ticketmasterProvider(market), bookingProvider(market), flightAwareProvider(market), publicRecords(market, NOW.getTime())
-    ]);
+  // Scheduled Pages builds must retain the last deployed snapshot, rather than
+  // only the snapshot committed with the release, when a public source fails.
+  try {
+    const deployed = await readJson(await boundedFetch('https://home-base-drivers.github.io/Home-base-app/provider-signals.json', { headers: { Accept: 'application/json' } }));
+    if (Date.parse(deployed.generatedAt) > Date.parse(previous.generatedAt || '1970-01-01')) previous = deployed;
+  } catch { /* Local/committed verified data is still available offline. */ }
+  const markets = await Promise.all(config.markets.map(async market => {
     const old = previous.markets?.find((entry) => entry.id === market.id);
-    markets.push({
-      id: market.id, name: market.name, center: market.center, radiusKm: market.radiusKm,
+    const [uber, ticketmaster, booking, flightaware, records, places] = await Promise.all([
+      uberProvider(market), ticketmasterProvider(market), bookingProvider(market), flightAwareProvider(market), publicRecords(market, NOW.getTime()), publicPlaces(market, NOW.getTime(), old?.publicPlaces)
+    ]);
+    const calendar = retainRecent(old, { ...records, status: records.calendarStatus }, 'publicRecords', 24 * 60 * 60_000);
+    return {
+      id: market.id, name: market.name, center: market.center, radiusKm: market.radiusKm, countryCode: market.countryCode, timeZone: market.timeZone,
       uber: retainRecent(old, uber, 'uber'),
-      ticketmaster: retainRecent(old, ticketmaster, 'ticketmaster'),
+      ticketmaster: retainRecent(old, ticketmaster, 'ticketmaster', 24 * 60 * 60_000),
       booking: retainRecent(old, booking, 'booking'),
       flightaware: retainRecent(old, flightaware, 'flightaware')
-      ,publicRecords: records
-    });
-  }
+      ,publicRecords: calendar.status === 'stale' ? { ...calendar, calendarStatus: 'stale', weather: records.weather, weatherStatus: records.weatherStatus } : records,
+      publicPlaces: places
+    };
+  }));
   const output = {
-    schemaVersion: 3,
+    schemaVersion: 4,
     generatedAt: NOW.toISOString(),
-    refreshTargetSeconds: 300,
+    refreshTargetSeconds: 1800,
+    calendarMaxAgeSeconds: 86400,
     expiresAt: new Date(NOW.getTime() + 25 * 60_000).toISOString(),
     markets
   };
-  await writeFile(OUTPUT_URL, `${JSON.stringify(output, null, 2)}\n`);
+  await writeFile(OUTPUT_URL, `${JSON.stringify(output)}\n`);
   for (const market of markets) {
-    console.log(`${market.name}: Uber ${market.uber.status}, Ticketmaster ${market.ticketmaster.status}, Booking.com ${market.booking.status}, FlightAware ${market.flightaware.status}`);
+    console.log(`${market.name}: Uber ${market.uber.status}, Ticketmaster ${market.ticketmaster.status} (${market.ticketmaster.events.length}), public calendar ${market.publicRecords.calendarStatus} (${market.publicRecords.events.length}), places ${market.publicPlaces.status} (${market.publicPlaces.places.length}), Booking.com ${market.booking.status}, FlightAware ${market.flightaware.status}`);
   }
 }
 

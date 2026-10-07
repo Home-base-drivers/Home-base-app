@@ -3,6 +3,8 @@ name: Deploy Home Base to GitHub Pages
 on:
   push:
     branches: [main]
+  schedule:
+    - cron: '7,37 * * * *'
     workflow_dispatch:
 
 permissions:
@@ -14,7 +16,7 @@ permissions:
 # a running release validation or deployment.
 concurrency:
   group: pages-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -41,6 +43,8 @@ jobs:
           node scripts/check-index-syntax.mjs
           node --check dist/homebase-growth.js
           node --check dist/homebase-planner.js
+          node --check dist/homebase-public-data.js
+          node --check dist/homebase-route-policy.js
           node --check dist/homebase-earnings.js
           node --check dist/homebase-live.js
           node --check dist/homebase-dispatch.js
