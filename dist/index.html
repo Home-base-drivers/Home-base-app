@@ -379,9 +379,9 @@ function demandWeightBase(source,when){
   // A venue is not demand by itself. Stadium and arena heat only activates
   // when a dated event feed supplies an eventStart value.
   if(source.cat==='event'&&!source.eventStart)return 0;
-  const school=source.cat==='school'||source.cat==='k12',schoolPrior=school?HomeBaseRoutePolicy.schoolWeight(source,{day:parts.day,hour:h},when):0;
+  const school=source.cat==='school'||source.cat==='k12',publicPlace=!!(source.tags&&source.tags.publicVenue),schoolPrior=school?HomeBaseRoutePolicy.schoolWeight(source,{day:parts.day,hour:h},when):0;
   if(school&&!schoolPrior)return 0;
-  let weight=Math.max(0,(school?schoolPrior:hourWeight(source.cat,h,when))+eventTimeWeight(source,when)*eventScale(source));
+  let weight=Math.max(0,(school?schoolPrior:hourWeight(source.cat,h,when))+eventTimeWeight(source,when)*eventScale(source));if(publicPlace&&!source.eventStart&&weight<=0){const publicPrior={transit:9,nightlife:8,restaurant:5,hotel:4,shopping:5,medical:4,attraction:5,neighborhood:4,university:3}[source.cat]||2;weight=publicPrior;}
   weight+=rainDemandBoost(source,when);
   if(source.tags&&source.tags.areaCoverageAnchor)weight*=Number(source.tags.modelBias)||1;
   if(source.tags&&source.tags.liveEvent&&HomeBaseRoutePolicy.eventPhase(source,when)==='live')weight+=14;
@@ -925,7 +925,7 @@ function renderRouteStopsPanel(stops=activeStops){
 function buildRoute(venues,lat,lon,market,publicHeatSources=venues){
   hourlyDestinations=[];
   routeLayers.forEach(x=>liveMap.removeLayer(x));routeLayers=[];routeStrokeLayers=[];if(heatAreaLayer)liveMap.removeLayer(heatAreaLayer);heatAreaLayer=L.layerGroup().addTo(liveMap);demandAreaSourceRef=null;if(!heatLayer)heatLayer=HomeBaseHeat.createLayer(L).addTo(liveMap);
-  const routeRequest=++routeRequestSerial,start=new Date(),stops=[],regionalVenues=isGreaterBaltimoreLocation(lat,lon)?venues.filter(v=>isGreaterBaltimoreLocation(v.lat,v.lon)):venues,publicRegional=isGreaterBaltimoreLocation(lat,lon)?(publicHeatSources||[]).filter(v=>isGreaterBaltimoreLocation(v.lat,v.lon)):(publicHeatSources||[]),pool=[...regionalVenues,...fallbackVenues(lat,lon,market)].filter(v=>Number.isFinite(v.lat)&&Number.isFinite(v.lon));
+  const routeRequest=++routeRequestSerial,start=new Date(),stops=[],regionalVenues=isGreaterBaltimoreLocation(lat,lon)?venues.filter(v=>isGreaterBaltimoreLocation(v.lat,v.lon)):venues,publicRegional=isGreaterBaltimoreLocation(lat,lon)?(publicHeatSources||[]).filter(v=>isGreaterBaltimoreLocation(v.lat,v.lon)):(publicHeatSources||[]),localPublic=regionalVenues.filter(v=>Number.isFinite(v.lat)&&Number.isFinite(v.lon)&&distanceKm([lat,lon],[v.lat,v.lon])<=65),pool=[...localPublic,...fallbackVenues(lat,lon,market)].filter(v=>Number.isFinite(v.lat)&&Number.isFinite(v.lon));
   for(let i=0;i<12;i++){
     const when=new Date(start.getTime()+i*3600000),parts=marketParts(when),eligible=HomeBaseRoutePolicy.candidatesForHour([...pool,...restaurantDistrictCandidates(lat,lon,when)],when,{day:parts.day,hour:parts.hour+when.getMinutes()/60},start),eventCandidates=eligible.events.map(v=>({...v,score:demandWeight(v,when)+28})),generalCandidates=eligible.general.map(v=>({...v,score:(v.tags&&v.tags.aggregateDistrict?8:demandWeight(v,when))+(v.tags&&v.tags.providerSignal?18:0)})),destinations=[...eventCandidates,...generalCandidates],candidates=HomeBaseRoutePolicy.selectRanked(HomeBasePlanner.rankCandidates(destinations,{origin:[lat,lon],radiusMiles:Number(readProfile().radius)||25,hourlyRate:currentApps[0]?.base||23,costPerMile:Number(readCostPrefs().reserveRate)||.2})),seen=new Set(),options=[];
     for(const candidate of candidates){const key=`${candidate.lat.toFixed(5)}|${candidate.lon.toFixed(5)}`;if(seen.has(key))continue;seen.add(key);candidate.when=when;candidate.color=categoryColor(candidate.cat);options.push(candidate);if(options.length===12)break}
