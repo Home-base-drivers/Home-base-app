@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Home Base">
-  <meta name="homebase-build" content="v213">
+  <meta name="homebase-build" content="v214">
   <meta name="description" content="Home Base connects local driver platforms, earnings forecasts, events and a GPS-based 12-hour route in one app.">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icon-192.png">
@@ -163,7 +163,8 @@
   .app.dark .leaflet-tile-pane{filter:brightness(1.1) contrast(1.08) saturate(.8)}
 .bonus-toggle{width:42px;min-width:42px;padding:7px 8px}.bonus-toggle svg{width:23px;height:23px}.bonus-toggle[aria-pressed="true"]{border-color:#dce7ee;background:#173849}.live-bonus-label{min-width:58px;padding:6px 9px;border:0;border-radius:8px;background:var(--bonus);color:#fff;font:900 12px/1 Arial,sans-serif;text-align:center;white-space:nowrap;box-shadow:0 3px 10px rgba(0,0,0,.5)}
     .event-coverage{font-size:.62rem;line-height:1.4;color:#9bb8c9;padding:7px 0}.hb-shell-active #routeTimeRow{display:flex!important}.route-time-row{display:flex!important;gap:5px;overflow-x:auto;padding:8px 0;margin:0}.route-time-row button{flex:0 0 auto;min-width:48px;padding:6px 8px;font-size:.62rem}.event-popup a{color:#70d8ff}
-  </style>
+  a.event-item{color:inherit;text-decoration:none;cursor:pointer}a.event-item:focus-visible{outline:2px solid #439ee8;outline-offset:2px;border-radius:4px}
+</style>
 <style id="gridwise-earnings-styles">
   .gridwise-sync-status{display:flex;align-items:flex-start;gap:9px;margin:9px 0;padding:10px 11px;border:1px solid rgba(46,201,145,.28);border-radius:11px;background:linear-gradient(105deg,rgba(15,94,79,.22),rgba(5,23,38,.72));font-size:.7rem;line-height:1.35;color:#bfd5df}
   .gridwise-sync-status:before{content:'↻';display:grid;place-items:center;flex:0 0 22px;width:22px;height:22px;border-radius:50%;background:rgba(46,201,145,.16);color:#49e3ae;font-size:1rem;font-weight:900}
@@ -373,6 +374,11 @@ function renderEventMarkers(events){
 function renderEventLegend(){const types=[['ARTS','Arts'],['FESTIVAL','Party'],['MUSIC','Concert'],['THEATER','Theater'],['NIGHTLIFE','Nightlife'],['SPORTS','Sports']],key=$('#eventIconKey');if(!key)return;key.innerHTML=types.map(([type,label])=>{const event={eventType:type};return'<span class="event-legend-item" style="--marker:'+eventColor(event)+'"><i>'+eventIconSvg(event)+'</i>'+label+'</span>'}).join('')}
 renderEventLegend();
 function show(d){$('#detailIcon').textContent=d[0];$('#detailTitle').textContent=d[1];$('#detailText').textContent=d[2];$('#route').textContent=d[3]}
+function eventDirectionsUrl(event){
+  const {lat,lon}=event;
+  if(typeof lat!=='number'||typeof lon!=='number'||!Number.isFinite(lat)||!Number.isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180)return '';
+  return 'https://www.google.com/maps/dir/?api=1&destination='+lat+','+lon+'&travelmode=driving&dir_action=navigate';
+}
 function renderEvents(events){
   const box=$('#todayEvents'),pulse=$('#eventPulse');
   if(events===null){box.innerHTML='<div class="event-empty">Checking dated events for the next 12 hours…</div>';pulse.textContent='Checking dated events for the next 12 hours…';return}
@@ -381,7 +387,7 @@ function renderEvents(events){
   if(!events.length){box.innerHTML='<div class="event-empty">No verified dated listings returned for the next 12 hours.'+(limited?' Public calendar coverage is limited.':'')+'</div>';pulse.textContent=coverageText+' · no dated listings returned';return}
   const live=events.filter(e=>e.eventState==='Live').length,next=events.find(e=>e.eventState==='Preview');pulse.textContent=live?`${live} live now${next?` · next: ${next.name}`:''}`:`${events.length} in next 12 hours · ${events[0].name}`;
   const sortedEvents=[...events].sort((a,b)=>(a.eventState==='Live'?-1:0)-(b.eventState==='Live'?-1:0)||a.eventStart-b.eventStart),visibleEvents=eventsExpanded?sortedEvents:sortedEvents.slice(0,4);
-  box.innerHTML='<div class="event-coverage">'+safeText(events.length+' dated events · '+coverageText+snapshot)+'</div>'+visibleEvents.map(e=>{const parts=String(e.name||'Event').split(' · ').map(v=>v.trim()).filter(Boolean),title=parts[0]||'Event',venue=e.venue||((parts.length>2&&parts[1])||''),time=e.eventStart&&Number.isFinite(new Date(e.eventStart).getTime())?marketDateTime(e.eventStart):(parts.at(-1)||''),meta=[venue,time].filter(Boolean).join(' · ');return `<div class="event-item compact-event"><i class="event-list-icon" style="--marker:${eventColor(e)}">${eventIconSvg(e)}</i><div><b>${safeText(title)}</b><span>${safeText(meta)}${e.eventState==='Live'?' · LIVE':e.eventState==='Departure'?' · departure window':''}</span></div></div>`}).join('')+(sortedEvents.length>4?`<button type="button" class="event-more list-expand" data-expand="events" aria-expanded="${eventsExpanded}">${eventsExpanded?'Show less':`+${sortedEvents.length-4} more events`}</button>`:'');
+  box.innerHTML='<div class="event-coverage">'+safeText(events.length+' dated events · '+coverageText+snapshot)+'</div>'+visibleEvents.map(e=>{const parts=String(e.name||'Event').split(' · ').map(v=>v.trim()).filter(Boolean),title=parts[0]||'Event',venue=e.venue||((parts.length>2&&parts[1])||''),time=e.eventStart&&Number.isFinite(new Date(e.eventStart).getTime())?marketDateTime(e.eventStart):(parts.at(-1)||''),meta=[venue,time].filter(Boolean).join(' · ');const directions=eventDirectionsUrl(e),tag=directions?'a':'div',link=directions?` href="${safeText(directions)}" target="_blank" rel="noopener noreferrer" aria-label="${safeText('Navigate to '+title+(venue?' at '+venue:''))}"`:"";return `<${tag} class="event-item compact-event"${link}><i class="event-list-icon" style="--marker:${eventColor(e)}">${eventIconSvg(e)}</i><div><b>${safeText(title)}</b><span>${safeText(meta)}${e.eventState==='Live'?' · LIVE':e.eventState==='Departure'?' · departure window':''}</span></div></${tag}>`}).join('')+(sortedEvents.length>4?`<button type="button" class="event-more list-expand" data-expand="events" aria-expanded="${eventsExpanded}">${eventsExpanded?'Show less':`+${sortedEvents.length-4} more events`}</button>`:'');
 }
 function updateClock(){const now=new Date();$('#clock').textContent=now.toLocaleDateString([],{weekday:'short',month:'short',day:'numeric',timeZone:marketTimeZone||undefined})+' · '+marketTime(now)}
 updateClock();setInterval(updateClock,30000);
@@ -1125,7 +1131,7 @@ async function refreshLiveDemandLayer(){
 if(!demoLocale)setTimeout(autoRefreshGps,150);
 setInterval(()=>{updateClimateAdvisory();const selected=$('[data-hour][aria-pressed="true"]');if(selected&&selected.dataset.hour==='0'&&activeStops.length)applyTimeForecast(0,new Date());refreshLiveDemandLayer()},300000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-lastAutoGpsRefresh>300000){if(demoLocale)refreshLiveDemandLayer();else autoRefreshGps()}});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=213',{updateViaCache:'none'}).then(r=>{r.update();navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!sessionStorage.getItem('hb-release-reload-v213')){sessionStorage.setItem('hb-release-reload-v213','1');location.reload()}})}).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';}));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=214',{updateViaCache:'none'}).then(r=>{r.update();navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!sessionStorage.getItem('hb-release-reload-v214')){sessionStorage.setItem('hb-release-reload-v214','1');location.reload()}})}).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';}));
 </script>
 <script src="homebase-live.js?v=38"></script>
 </body>
