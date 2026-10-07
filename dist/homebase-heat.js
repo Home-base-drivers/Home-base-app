@@ -116,7 +116,7 @@
     // Keep locally scored demand legible above the dark basemap. Opacity still
     // falls to zero with the measured field, so this does not manufacture a
     // surrounding low-demand ring.
-    return clamp(areaIntensity(Math.max(0, Number(value) || 0)) * 1.34 * HEAT_OPACITY_GAIN, 0, .84);
+    return clamp(areaIntensity(Math.max(0, Number(value) || 0)) * 1.42 * HEAT_OPACITY_GAIN, 0, .84);
   }
 
   function sourceRadiusKm(category) {

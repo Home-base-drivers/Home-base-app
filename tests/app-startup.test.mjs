@@ -64,6 +64,25 @@ test('a denied GPS request ends the pending state and can be retried',()=>{
   vm.runInContext('refreshLocationFast()',app.context);assert.equal(app.positions.length,2);
 });
 
+test('local areas and events reach the map while the public venue request is still pending',async()=>{
+  const app=startApp();
+  vm.runInContext(`
+    const earlyRoutes=[];
+    buildRoute=sources=>earlyRoutes.push(sources);
+    loadWeather=()=>{};loadHighways=()=>{};
+    detectMarket=async()=>({name:'Local town',countryCode:'US',areaSources:[{name:'Verified town',cat:'neighborhood',lat:41.01,lon:-74.01,tags:{publicVenue:true}}]});
+    loadVenues=()=>new Promise(()=>{});
+    loadTodayEvents=async()=>[{name:'Scheduled sports event',cat:'event',lat:41.02,lon:-74.02,eventStart:new Date(Date.now()+3600000),tags:{liveEvent:true}}];
+    renderEvents=events=>{};
+  `,app.context);
+  app.timers.find(t=>t.ms===150).cb();
+  app.positions[0].ok({coords:{latitude:41,longitude:-74,accuracy:20}});
+  await new Promise(setImmediate);
+  assert.equal(vm.runInContext('earlyRoutes.some(sources=>sources.some(source=>source.name==="Verified town"))',app.context),true);
+  assert.equal(vm.runInContext('earlyRoutes.some(sources=>sources.some(source=>source.name==="Scheduled sports event"))',app.context),true);
+  assert.ok(!app.nodes.get('refreshBtn').classList.contains('refreshing'));
+});
+
 test('provider badges only render values supplied by live provider snapshots',()=>{
   assert.match(html,/function providerPriceSample\(platform,item\)/);
   assert.match(html,/providerPricePoints\.push/);

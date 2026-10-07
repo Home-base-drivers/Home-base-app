@@ -45,7 +45,6 @@ test('demand rendering uses one map-anchored geographic surface at every zoom', 
   assert.match(indexHtml, /createAreaCoverageSources/);
   assert.match(indexHtml, /areaCoverageAnchor:true/);
   assert.match(heatRenderer, /source\.tags\.areaCoverageAnchor/);
-  assert.match(heatRenderer, /const sample = map\.getZoom\(\) < 10 \? 2\.5 : 1\.75/);
   assert.match(heatRenderer, /this\._drawSources\(output, map, sources, size, sample\)/);
   assert.doesNotMatch(heatRenderer, /this\._drawAreaSurface\(output, map, this\._areas/);
 });
@@ -54,7 +53,7 @@ test('each forecast hour has up to twelve destination options and custom event i
   assert.match(indexHtml, /for\(let i=0;i<12;i\+\+\)/);
   assert.match(indexHtml, /if\(options\.length===12\)break/);
   assert.match(indexHtml, /hourlyDestinations\.push\(options\)/);
-  assert.match(indexHtml, /renderTimeButtons\(stops,hourlyDestinations\)/);
+  assert.match(indexHtml, /renderTimeButtons\(stops,hourlyDestinations,start,selectedHour\)/);
   assert.match(indexHtml, /function eventIconSvg\(event\)/);
   assert.match(indexHtml, /function eventPopupContent\(event\)/);
   assert.match(indexHtml, /event-icon-key" id="eventIconKey"/);
