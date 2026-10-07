@@ -61,7 +61,7 @@ test('GPT Live creates a full-duplex multilingual session with Responses web sea
  assert.equal(sent.body.session.delegation.responses.tools[1].type,'function');
  assert.equal(sent.body.session.delegation.responses.tools[1].name,'homebase_action');
  assert.equal(sent.body.session.delegation.responses.tool_choice,'auto');
- assert.equal(sent.body.session.delegation.responses.parallel_tool_calls,true);
+ assert.equal(sent.body.session.delegation.responses.parallel_tool_calls,false);
  assert.equal(sent.body.session.delegation.responses.max_output_tokens,1200);
  assert.equal(sent.body.session.delegation.tool_choice,undefined);
  assert.match(sent.body.session.instructions,/hands-free AI dispatcher/i);
