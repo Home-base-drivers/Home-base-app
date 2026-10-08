@@ -73,6 +73,8 @@
     if(tags.historicalPrior)return 'history';
     const sampled=Date.parse(tags.providerSampledAt||'');
     if(tags.providerSignal&&Number.isFinite(sampled)&&now>=sampled&&now-sampled<=25*60000&&Math.abs(time-sampled)<=25*60000&&Number.isFinite(Number(tags.uberSurgeMultiplier)))return Number(tags.uberSurgeMultiplier)>1?'surge':'current';
+    const fetchedActivity=Date.parse(tags.sourceFetchedAt||''),flightHour=Date.parse(tags.flightHour||'');
+    if(tags.airportActivity&&Number.isFinite(fetchedActivity)&&now>=fetchedActivity&&now-fetchedActivity<=25*60000&&time>=flightHour&&time<flightHour+3600000&&Number(tags.arrivals)>0)return 'activity';
     const start=+new Date(source.eventStart||NaN),end=+new Date(source.eventEnd||NaN);
     if((tags.providerEvent||tags.liveEvent||tags.publicCalendar||source.verifiedEvent===true)&&Number.isFinite(start)&&!source.allDay&&!source.virtual&&!source.private&&!/cancel|postpon/i.test(source.status||'')){
       const fetched=Date.parse(source.fetchedAt||tags.sourceFetchedAt||tags.fetchedAt||'');
@@ -104,6 +106,7 @@
     if (!Number.isFinite(weight) || weight <= 0) return 0;
     let strength = weight / 10;
     const tags = source.tags || {};
+    if(tags.providerSignal&&currentEvidence(source,when)==='modeled')return 0;
     // Public points describe activity density, not verified ride requests. They
     // become useful when several nearby places overlap, without turning every
     // restaurant or school into a red hotspot by itself.
@@ -125,6 +128,15 @@
     if (tags.areaCoverageAnchor) strength *= .42;
     if (tags.metroBaseline || tags.forecast) strength *= .85;
     return clamp(strength, 0, 1.25);
+  }
+
+  function composeFields(signal,signalShade,background,backgroundShade,evidence={},history=0){
+    // Background density cannot accumulate into a city-wide surge. Fresh
+    // signals replace context inside their own geographically anchored field.
+    const prior=evidence.current>.12?0:Math.min(Math.max(0,background),.1),ratio=background>0?prior/background:0;
+    const pixel=composePixel(signal+prior,signalShade+backgroundShade*ratio,evidence,history);
+    if(!(evidence.event>0||evidence.surge>0)){pixel.opacity=Math.min(pixel.opacity,.18);pixel.level=Math.min(pixel.level,.45);}
+    return pixel;
   }
 
   function areaIntensity(weightedValue) {
@@ -380,7 +392,7 @@
           const evidence=currentEvidence(source,this._when);
           if ((!strength&&evidence!=='current') || !Number.isFinite(source.lat) || !Number.isFinite(source.lon)) return null;
           const center = map.latLngToContainerPoint([source.lat, source.lon]);
-          const zoom = map.getZoom(), baseKm = sourceFootprintKm(source), km = source.tags && source.tags.publicVenue ? Math.max(baseKm, zoom < 8 ? 3.4 : zoom < 10 ? 2.6 : zoom < 12 ? 1.8 : baseKm) : baseKm, north = map.latLngToContainerPoint([source.lat + km / 111.32, source.lon]);
+          const zoom = map.getZoom(), baseKm = sourceFootprintKm(source)*(evidence==='modeled'?.65:1), km = baseKm, north = map.latLngToContainerPoint([source.lat + km / 111.32, source.lon]);
           const radius = Math.max(1.25, Math.abs(center.y - north.y));
           const angle = stableAngle(source, index);
           let rx = radius * (.62 + (index % 5) * .055);
@@ -389,7 +401,7 @@
           // neighborhood. This retains the useful neighborhood-block character
           // without restoring hard polygon edges or separate city/county maps.
           const bounds = source.heatAreaBounds;
-          if ((source.heatAreaType === 'label' || source.heatAreaType === 'neighborhood') && Array.isArray(bounds) && bounds.length === 4) {
+          if (evidence!=='modeled'&&source.cat==='neighborhood'&&(source.heatAreaType === 'label' || source.heatAreaType === 'neighborhood') && Array.isArray(bounds) && bounds.length === 4) {
             const nw = map.latLngToContainerPoint([bounds[2], bounds[1]]);
             const se = map.latLngToContainerPoint([bounds[0], bounds[3]]);
             const areaRx = clamp(Math.abs(se.x - nw.x) * .28, radius * .55, radius * 2.35);
@@ -427,6 +439,7 @@
         const width = gridWidth * sample, height = gridHeight * sample;
         const field = new Float32Array(gridWidth * gridHeight);
         const shadeField = new Float32Array(gridWidth * gridHeight);
+        const backgroundField=new Float32Array(field.length),backgroundShade=new Float32Array(field.length);
         const eventField=new Float32Array(field.length),surgeField=new Float32Array(field.length),historyField=new Float32Array(field.length),currentField=new Float32Array(field.length);
 
         sources.forEach(source => {
@@ -457,10 +470,14 @@
               const texture = clamp(.82 + .11 * Math.sin(rx * 3.3 + source.angle * 5) + .08 * Math.cos(ry * 4.1 - source.angle * 3), .62, 1.04);
               const contribution = source.strength * profile * texture * source.detailOpacity;
               const offset = y * gridWidth + x;
-              if(['event','current','surge'].includes(source.evidence))currentField[offset]=Math.max(currentField[offset],profile);
+              if(['event','current','surge','activity'].includes(source.evidence))currentField[offset]=Math.max(currentField[offset],profile);
               if(source.evidence==='history'){historyField[offset]=Math.max(historyField[offset],contribution);continue;}
-              if(source.evidence==='event')eventField[offset]=Math.max(eventField[offset],profile*source.shade);
+              if(source.evidence==='event'||source.evidence==='activity')eventField[offset]=Math.max(eventField[offset],profile*source.shade);
               if(source.evidence==='surge')surgeField[offset]=Math.max(surgeField[offset],profile*source.shade);
+              if(source.evidence==='modeled'){
+                if(contribution>backgroundField[offset]){backgroundField[offset]=contribution;backgroundShade[offset]=contribution*source.shade;}
+                continue;
+              }
               field[offset] += contribution;
               // Color belongs to each locally measured source, while distance
               // controls opacity. A red source therefore feathers to clear
@@ -476,7 +493,7 @@
         paint.width = gridWidth; paint.height = gridHeight;
         const context = paint.getContext('2d'), image = context.createImageData(gridWidth, gridHeight), pixels = image.data;
         for (let i = 0; i < field.length; i++) {
-          const composed=composePixel(field[i],shadeField[i],{event:eventField[i],surge:surgeField[i],current:currentField[i]},historyField[i]);
+          const composed=composeFields(field[i],shadeField[i],backgroundField[i],backgroundShade[i],{event:eventField[i],surge:surgeField[i],current:currentField[i]},historyField[i]);
           if(!composed.opacity)continue;
           const rgb=colorAt(composed.level),offset=i*4;
           pixels[offset] = rgb[0]; pixels[offset + 1] = rgb[1]; pixels[offset + 2] = rgb[2];
@@ -493,5 +510,5 @@
     return new HeatLayer();
   }
 
-  return { historicalPriorForSource, composePixel, currentEvidence, evidenceLevel, evidenceOpacity, colorAt, setPalette, getCustomColors, setCustomColors, getPalette: () => activePalette, paletteNames: Object.keys(PALETTES), sourceStrength, areaIntensity, sourceShade, compositeLevel, compositeOpacity, sourceRadiusKm, sourceFootprintKm, anchoredGridOrigin, createLayer };
+  return { historicalPriorForSource, composeFields, composePixel, currentEvidence, evidenceLevel, evidenceOpacity, colorAt, setPalette, getCustomColors, setCustomColors, getPalette: () => activePalette, paletteNames: Object.keys(PALETTES), sourceStrength, areaIntensity, sourceShade, compositeLevel, compositeOpacity, sourceRadiusKm, sourceFootprintKm, anchoredGridOrigin, createLayer };
 });

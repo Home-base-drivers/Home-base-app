@@ -29,7 +29,7 @@
     // Suppress the old campus; do not guess the temporary pickup entrance.
     const time=stamp(when);
     if(/baltimore city college/i.test(source.name||'')&&source.lat>39.32&&time>=Date.parse('2025-08-01T00:00:00Z')&&time<Date.parse('2029-08-01T00:00:00Z'))return 0;
-    const active=hour>=7&&hour<9?6:hour>=14&&hour<16?8:0;
+    const active=hour>=7&&hour<9?6:hour>=14&&hour<14.75?6+(hour-14)*8/3:hour>=14.75&&hour<16.5?8*(16.5-hour)/1.75:0;
     // Generic windows are modeled family activity, not bell schedules or rides
     // for unaccompanied minors. High schools receive a smaller prior.
     return active*(stage==='primary'||stage==='middle'?1:stage==='high'?.45:.65);

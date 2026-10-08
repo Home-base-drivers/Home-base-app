@@ -5,6 +5,22 @@ import history from '../dist/homebase-demand-history.js';
 import publicData from '../dist/homebase-public-data.js';
 import {normalizeCampusEvents} from '../scripts/public-records.mjs';
 const now=Date.parse('2026-10-08T00:26:00-04:00');
+test('dense modeled context stays faint and cannot wash out a changing live peak',()=>{
+ const background=heat.composeFields(0,0,1000,700,{});
+ assert.ok(background.opacity<=.18);assert.ok(background.level<=.45);
+ const live={current:1,surge:.95};
+ assert.deepEqual(heat.composeFields(.8,.7,1000,700,live),heat.composeFields(.8,.7,0,0,live));
+ assert.ok(heat.composeFields(.8,.7,1000,700,live).opacity>background.opacity);
+ assert.equal(heat.composeFields(0,0,1000,700,{current:1},.08).opacity,0);
+ assert.ok(heat.composeFields(.8,.6,0,0,{current:1,event:.7}).level<heat.composeFields(.8,.7,0,0,live).level);
+});
+test('fresh airport arrival activity changes its published hour without becoming price surge',()=>{
+ const time=Date.now(),hour=new Date(time);hour.setMinutes(0,0,0);
+ const airport={tags:{providerSignal:true,airportActivity:true,flightHour:hour.toISOString(),sourceFetchedAt:new Date(time).toISOString(),arrivals:8}};
+ assert.equal(heat.currentEvidence(airport,new Date(time),time),'activity');
+ assert.equal(heat.currentEvidence(airport,new Date(+hour+3600000),time),'modeled');
+ assert.equal(heat.sourceStrength({...airport,tags:{...airport.tags,sourceFetchedAt:new Date(time-26*60000).toISOString()}},new Date(time),()=>30),0);
+});
 test('hundreds of overlapping priors never become surge, and current zero overrides history',()=>{
  for(const weight of [.1,1,10,1000])assert.ok(heat.evidenceLevel(weight,weight)<=.57);
  assert.ok(heat.evidenceLevel(10,10,{event:1})<=.78);

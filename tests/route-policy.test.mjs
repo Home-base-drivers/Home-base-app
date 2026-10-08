@@ -53,7 +53,9 @@ test('unknown or estimated event end never creates an exit peak or future live s
 test('school family activity uses weekday arrival/dismissal, not all-day campus demand',()=>{
   const primary={...area,cat:'k12',name:'Elementary School'},middle={...primary,name:'Middle School'},high={...primary,name:'High School'};
   for(const hour of [7.5,14.5]){assert.ok(P.schoolWeight(primary,{day:2,hour},at('14:30'))>P.schoolWeight(high,{day:2,hour},at('14:30')));assert.equal(P.schoolWeight(primary,{day:2,hour},at('14:30')),P.schoolWeight(middle,{day:2,hour},at('14:30')));}
-  for(const hour of [0,10.5,13,16,20])assert.equal(P.schoolWeight(primary,{day:2,hour},at('14:30')),0);
+  for(const hour of [0,10.5,13,16.5,20])assert.equal(P.schoolWeight(primary,{day:2,hour},at('14:30')),0);
+  assert.ok(P.schoolWeight(primary,{day:2,hour:15.43},at('14:30'))<P.schoolWeight(primary,{day:2,hour:14.75},at('14:30')));
+  assert.ok(P.schoolWeight(primary,{day:2,hour:16},at('14:30'))<P.schoolWeight(primary,{day:2,hour:15.43},at('14:30')));
   for(const day of [0,6])assert.equal(P.schoolWeight(primary,{day,hour:14.5},at('14:30')),0);
   assert.equal(P.schoolWeight({...primary,tags:{schoolClosed:true}},{day:2,hour:14.5},at('14:30')),0);
   assert.equal(P.schoolWeight({...primary,name:'Driving school'},{day:2,hour:14.5},at('14:30')),0);
