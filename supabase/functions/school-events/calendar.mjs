@@ -241,6 +241,47 @@ function structuredEvents(html) {
   }
   return events;
 }
+function publishedVenueEvents(html, source) {
+  if (source.adapter !== "soundstage") return [];
+  const text2 = (value) => String(value).replace(/<[^>]*>/g, " ").replace(/&#(?:0?38|x26);/gi, "&").replace(/&amp;/g, "&").replace(/&#(?:0?39|x27);/gi, "'").replace(/&quot;/g, '"').replace(/\s+/g, " ").trim();
+  return [...String(html).matchAll(/<article\b[^>]*data-start=["'](\d{4}-\d{2}-\d{2} \d{2}:\d{2})["'][^>]*>([\s\S]*?)<\/article>/gi)].map((match) => {
+    const block = match[2], title = block.match(/<span[^>]*class=["']title["'][^>]*>([\s\S]*?)<\/span>/i), link = block.match(/href=["'](https:\/\/www\.baltimoresoundstage\.com\/events\/[^"']+)["']/i);
+    return title && link ? { "@type": "MusicEvent", name: text2(title[1]), startDate: match[1].replace(" ", "T"), url: link[1], eventStatus: /cancelled|canceled/i.test(text2(block)) ? "EventCancelled" : "EventScheduled", location: { name: source.venue.name, geo: { latitude: source.venue.lat, longitude: source.venue.lon } } } : null;
+  }).filter(Boolean);
+}
+function safeUrl(value, fallback) {
+  try {
+    const url = new URL(value || fallback, fallback);
+    return url.protocol === "https:" ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+function publishedAttendance(event, sourceUrl) {
+  const count = Number(event.expectedAttendance);
+  return event.expectedAttendance != null && Number.isFinite(count) && count >= 0 && count <= 1e6 && /^https:\/\//.test(sourceUrl || "") ? { expectedAttendance: count, attendanceBasis: "organizer_estimate", attendanceSourceUrl: sourceUrl, attendanceConfidence: 0.75 } : {};
+}
+function normalizePublicEvent(event, market, source, now = Date.now()) {
+  if (event.private || event.allDay || event.isAllDay || /cancel|postpon|reschedul/i.test(String(event.eventStatus || "")) || /OnlineEventAttendanceMode/.test(String(event.eventAttendanceMode || ""))) return null;
+  const start = zonedEventTime(event.startDate, market.timeZone);
+  if (!start) return null;
+  const reportedEnd = zonedEventTime(event.endDate, market.timeZone);
+  const end = reportedEnd && Date.parse(reportedEnd) > Date.parse(start) ? reportedEnd : null;
+  if ((end ? Date.parse(end) < now - 90 * 6e4 : Date.parse(start) < now - 6 * HOUR) || Date.parse(start) > now + 36 * HOUR) return null;
+  const venue = [event.location].flat().find((place) => place && typeof place === "object");
+  const geo = venue?.geo;
+  const known = (source.venues || []).find((place) => place.name.toLowerCase() === String(venue?.name || "").toLowerCase());
+  const lat = geo?.latitude == null ? known?.lat : Number(geo.latitude), lon = geo?.longitude == null ? known?.lon : Number(geo.longitude);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180 || distanceKm(market.center, { lat, lon }) > market.radiusKm) return null;
+  const name = String(event.name || "").trim(), eventType = [event["@type"]].flat().join(" ");
+  const context = [name, venue?.name, eventType, event.description].join(" ");
+  if (!name || import_homebase_public_data.default.isTicketAddon(name) || /webinar|virtual|online.only|exhibition|gallery|workshop|seminar|campus.tour|all.day.entry|standard.entry|standard.admission|standard.experience/i.test(context)) return null;
+  const performers = [event.performer].flat().filter(Boolean);
+  const classification = performers.map((p) => p["@type"]).flat().join(" ");
+  if (!/sports|concert|festival|convention|conference|football|basketball|baseball|hockey|soccer|stadium|arena|theatre|theater|comedy|performing|music|graduation|commencement|fairground|circus|danceevent|homecoming|prom\b|tailgate|bonfire|reunion|gala|party|social|community|screening/i.test(context + " " + classification)) return null;
+  const url = safeUrl(event.url || event.offers?.url, source.url);
+  return { id: "public:" + (url || `${name}:${lat}:${lon}`) + ":" + start, name: name.slice(0, 180), venue: String(venue?.name || known?.name || "").slice(0, 160), lat, lon, eventStart: start, eventEnd: end, url, source: source.name, sourceUrl: source.url, eventType, classification, ...publishedAttendance(event, url || source.url), fetchedAt: new Date(now).toISOString() };
+}
 
 // scripts/school-events.mjs
 var DAY = 864e5;
@@ -499,6 +540,589 @@ async function schoolCalendars(market, schools, now = Date.now(), request = fetc
   return { status: results.some((r) => ["active", "partial"].includes(r.source.status)) ? "partial" : "unavailable", fetchedAt: new Date(now).toISOString(), sources: results.map((r) => r.source), events: results.flatMap((r) => r.events), context: results.flatMap((r) => r.context) };
 }
 
+// config/provider-markets.json
+var provider_markets_default = {
+  schemaVersion: 2,
+  markets: [
+    {
+      id: "baltimore",
+      name: "Baltimore",
+      center: {
+        lat: 39.2904,
+        lon: -76.6122
+      },
+      radiusKm: 58,
+      flightawareAirport: {
+        id: "KBWI",
+        name: "BWI Airport",
+        lat: 39.1774,
+        lon: -76.6684
+      },
+      uberDestinations: [
+        {
+          name: "Downtown Baltimore",
+          lat: 39.2904,
+          lon: -76.6122
+        },
+        {
+          name: "BWI Airport",
+          lat: 39.1774,
+          lon: -76.6684
+        }
+      ],
+      sampleAreas: [
+        {
+          name: "Downtown",
+          lat: 39.2904,
+          lon: -76.6122
+        },
+        {
+          name: "Inner Harbor",
+          lat: 39.2851,
+          lon: -76.6132
+        },
+        {
+          name: "Harbor East",
+          lat: 39.2831,
+          lon: -76.6022
+        },
+        {
+          name: "Fells Point",
+          lat: 39.2825,
+          lon: -76.5934
+        },
+        {
+          name: "Canton",
+          lat: 39.2803,
+          lon: -76.5754
+        },
+        {
+          name: "Federal Hill",
+          lat: 39.275,
+          lon: -76.6135
+        },
+        {
+          name: "Mount Vernon",
+          lat: 39.2984,
+          lon: -76.6157
+        },
+        {
+          name: "Station North",
+          lat: 39.3114,
+          lon: -76.6162
+        },
+        {
+          name: "Charles Village",
+          lat: 39.3271,
+          lon: -76.619
+        },
+        {
+          name: "Johns Hopkins Medical",
+          lat: 39.2973,
+          lon: -76.5903
+        },
+        {
+          name: "Morgan State",
+          lat: 39.3448,
+          lon: -76.5844
+        },
+        {
+          name: "West Baltimore",
+          lat: 39.2998,
+          lon: -76.6497
+        },
+        {
+          name: "Hampden",
+          lat: 39.3314,
+          lon: -76.6315
+        },
+        {
+          name: "Roland Park",
+          lat: 39.3537,
+          lon: -76.635
+        },
+        {
+          name: "Waverly",
+          lat: 39.3298,
+          lon: -76.607
+        },
+        {
+          name: "Hamilton-Lauraville",
+          lat: 39.3564,
+          lon: -76.5655
+        },
+        {
+          name: "Belair-Edison",
+          lat: 39.3169,
+          lon: -76.5733
+        },
+        {
+          name: "Highlandtown",
+          lat: 39.2862,
+          lon: -76.5688
+        },
+        {
+          name: "Locust Point",
+          lat: 39.2681,
+          lon: -76.5904
+        },
+        {
+          name: "Cherry Hill",
+          lat: 39.2522,
+          lon: -76.6216
+        },
+        {
+          name: "Brooklyn",
+          lat: 39.2387,
+          lon: -76.6037
+        },
+        {
+          name: "Catonsville",
+          lat: 39.2721,
+          lon: -76.7319
+        },
+        {
+          name: "Arbutus",
+          lat: 39.2546,
+          lon: -76.6997
+        },
+        {
+          name: "Towson",
+          lat: 39.4015,
+          lon: -76.6019
+        },
+        {
+          name: "Parkville",
+          lat: 39.3773,
+          lon: -76.5397
+        },
+        {
+          name: "Pikesville",
+          lat: 39.3743,
+          lon: -76.7225
+        },
+        {
+          name: "Owings Mills",
+          lat: 39.4195,
+          lon: -76.7803
+        },
+        {
+          name: "White Marsh",
+          lat: 39.3837,
+          lon: -76.4586
+        },
+        {
+          name: "Essex",
+          lat: 39.3093,
+          lon: -76.475
+        },
+        {
+          name: "Dundalk",
+          lat: 39.2507,
+          lon: -76.5205
+        },
+        {
+          name: "Glen Burnie",
+          lat: 39.1626,
+          lon: -76.6247
+        },
+        {
+          name: "BWI Airport",
+          lat: 39.1774,
+          lon: -76.6684
+        },
+        {
+          name: "Columbia",
+          lat: 39.2037,
+          lon: -76.861
+        },
+        {
+          name: "Ellicott City",
+          lat: 39.2673,
+          lon: -76.7983
+        },
+        {
+          name: "Timonium",
+          lat: 39.4371,
+          lon: -76.6197
+        },
+        {
+          name: "Cockeysville",
+          lat: 39.4812,
+          lon: -76.6439
+        },
+        {
+          name: "Rosedale",
+          lat: 39.3201,
+          lon: -76.5155
+        },
+        {
+          name: "Middle River",
+          lat: 39.3343,
+          lon: -76.4394
+        },
+        {
+          name: "Brooklyn Park",
+          lat: 39.2284,
+          lon: -76.6164
+        },
+        {
+          name: "Annapolis",
+          lat: 38.9784,
+          lon: -76.4922
+        }
+      ],
+      countryCode: "US",
+      timeZone: "America/New_York",
+      placeRadiusKm: 20,
+      publicCalendars: [
+        {
+          name: "Ticketmaster Baltimore public listings",
+          url: "https://www.ticketmaster.com/discover/baltimore",
+          maxPages: 6
+        },
+        {
+          name: "Baltimore Soundstage calendar",
+          url: "https://www.baltimoresoundstage.com/calendar/",
+          adapter: "soundstage",
+          venue: {
+            name: "Baltimore Soundstage",
+            lat: 39.2875169,
+            lon: -76.607604,
+            coordinateSource: "https://baltimore.org/listings/baltimore-soundstage/"
+          }
+        },
+        {
+          name: "Nevermore Hall published AXS calendar",
+          url: "https://www.axs.com/venues/134269/nevermore-hall-baltimore-tickets",
+          nextOnly: true
+        },
+        {
+          name: "Ottobar published AXS calendar",
+          url: "https://www.axs.com/venues/128508/ottobar-baltimore-tickets",
+          nextOnly: true
+        },
+        {
+          name: "Power Plant Live district calendar",
+          url: "https://powerplantlive.com/events-and-entertainment/events",
+          followEvents: true,
+          venues: [
+            {
+              name: "Power Plant Live!",
+              lat: 39.28936,
+              lon: -76.60689,
+              coordinateSource: "Home Base existing mapped venue anchor",
+              locationPrecision: "venue_complex"
+            },
+            {
+              name: "Luckie's Tavern",
+              lat: 39.28936,
+              lon: -76.60689,
+              coordinateSource: "Home Base existing mapped venue anchor",
+              locationPrecision: "venue_complex"
+            }
+          ]
+        },
+        {
+          name: "Baltimore Convention Center calendar",
+          url: "https://www.bccenter.org/events",
+          followEvents: true,
+          venues: [
+            {
+              name: "Baltimore Convention Center",
+              lat: 39.28578,
+              lon: -76.61802,
+              coordinateSource: "Home Base existing mapped venue anchor",
+              locationPrecision: "venue"
+            }
+          ]
+        },
+        {
+          name: "CFG Bank Arena calendar",
+          url: "https://cfgbankarena.com/events/",
+          followEvents: true,
+          venues: [
+            {
+              name: "CFG Bank Arena",
+              lat: 39.28861,
+              lon: -76.61889,
+              coordinateSource: "Home Base existing mapped venue anchor",
+              locationPrecision: "venue"
+            }
+          ]
+        },
+        {
+          name: "M&T Bank Stadium calendar",
+          url: "https://www.mandtbankstadium.com/events",
+          followEvents: true,
+          venues: [
+            {
+              name: "M&T Bank Stadium",
+              lat: 39.278,
+              lon: -76.6227,
+              coordinateSource: "Home Base existing mapped venue anchor",
+              locationPrecision: "venue"
+            }
+          ]
+        },
+        {
+          name: "Maryland Stadium Authority events",
+          url: "https://mdstad.com/events",
+          followEvents: true,
+          venues: [
+            {
+              name: "M&T Bank Stadium",
+              lat: 39.278,
+              lon: -76.6227,
+              coordinateSource: "Home Base existing mapped venue anchor",
+              locationPrecision: "venue"
+            },
+            {
+              name: "Oriole Park at Camden Yards",
+              lat: 39.2838,
+              lon: -76.6217,
+              coordinateSource: "Home Base existing mapped venue anchor",
+              locationPrecision: "venue"
+            }
+          ]
+        },
+        {
+          name: "Orioles Camden Yards calendar",
+          url: "https://www.mlb.com/orioles/schedule",
+          followEvents: true,
+          venues: [
+            {
+              name: "Oriole Park at Camden Yards",
+              lat: 39.2838,
+              lon: -76.6217,
+              coordinateSource: "Home Base existing mapped venue anchor",
+              locationPrecision: "venue"
+            }
+          ]
+        },
+        {
+          name: "Pier Six Pavilion calendar",
+          url: "https://piersixbaltimore.com/event-dates/",
+          followEvents: true,
+          venues: [
+            {
+              name: "Pier Six Pavilion",
+              lat: 39.284,
+              lon: -76.6043,
+              coordinateSource: "Home Base existing mapped venue anchor",
+              locationPrecision: "venue"
+            }
+          ]
+        },
+        {
+          name: "Maryland State Fairgrounds calendar",
+          url: "https://marylandstatefair.com/events/",
+          followEvents: true,
+          venues: [
+            {
+              name: "Maryland State Fairgrounds",
+              lat: 39.4371,
+              lon: -76.6197,
+              coordinateSource: "Home Base existing mapped venue anchor",
+              locationPrecision: "venue"
+            }
+          ]
+        },
+        {
+          name: "Baltimore City Recreation & Parks events",
+          url: "https://www.baltimorecity.gov/bcrp/events",
+          followEvents: true,
+          venues: []
+        },
+        {
+          name: "Baltimore City recreation sports calendar",
+          url: "https://www.bcrpsports.org/calendar",
+          followEvents: true,
+          venues: []
+        },
+        {
+          name: "Baltimore County Recreation & Parks calendar",
+          url: "https://recandparks.baltimorecountymd.gov/MD/baltimore-co-md/catalog",
+          followEvents: true,
+          venues: []
+        },
+        {
+          name: "Lake Roland calendar",
+          url: "https://www.lakeroland.org/calendar/",
+          followEvents: true,
+          venues: []
+        },
+        {
+          name: "Baltimore Peninsula calendar",
+          url: "https://baltimorepeninsula.com/whats-happening/",
+          followEvents: true,
+          venues: []
+        },
+        {
+          name: "Visit Baltimore community and venue calendar",
+          url: "https://baltimore.org/events/",
+          followEvents: true,
+          venues: []
+        }
+      ]
+    },
+    {
+      id: "north-jersey",
+      name: "North Jersey",
+      center: {
+        lat: 40.94454,
+        lon: -74.07542
+      },
+      radiusKm: 65,
+      placeRadiusKm: 20,
+      countryCode: "US",
+      timeZone: "America/New_York",
+      sampleAreas: [],
+      uberDestinations: [],
+      publicCalendars: [
+        {
+          name: "Ticketmaster New York public calendar",
+          url: "https://www.ticketmaster.com/discover/new-york-city",
+          maxPages: 6
+        }
+      ]
+    },
+    {
+      id: "new-york",
+      name: "New York",
+      center: {
+        lat: 40.758,
+        lon: -73.9855
+      },
+      radiusKm: 65,
+      placeRadiusKm: 20,
+      countryCode: "US",
+      timeZone: "America/New_York",
+      sampleAreas: [],
+      uberDestinations: [],
+      publicCalendars: [
+        {
+          name: "Ticketmaster New York public calendar",
+          url: "https://www.ticketmaster.com/discover/new-york-city",
+          maxPages: 6
+        }
+      ]
+    },
+    {
+      id: "london",
+      name: "London",
+      center: {
+        lat: 51.5074,
+        lon: -0.1278
+      },
+      radiusKm: 65,
+      placeRadiusKm: 25,
+      countryCode: "GB",
+      timeZone: "Europe/London",
+      sampleAreas: [],
+      uberDestinations: [],
+      publicCalendars: [
+        {
+          name: "Ticketmaster London public calendar",
+          url: "https://www.ticketmaster.co.uk/discover/london",
+          maxPages: 6
+        },
+        {
+          name: "Hamilton published performances",
+          url: "https://www.ticketmaster.co.uk/hamilton-tickets/artist/5218048?venueId=434783"
+        },
+        {
+          name: "Les Mis\xE9rables published performances",
+          url: "https://www.ticketmaster.co.uk/les-miserables-tickets/artist/803968?venueId=434617"
+        },
+        {
+          name: "The Book of Mormon published performances",
+          url: "https://www.ticketmaster.co.uk/the-book-of-mormon-london-tickets/artist/1747137"
+        },
+        {
+          name: "Beetlejuice published performances",
+          url: "https://www.ticketmaster.co.uk/beetlejuice-the-musical-tickets/artist/5376080"
+        },
+        {
+          name: "Avenue Q published performances",
+          url: "https://www.ticketmaster.co.uk/avenue-q-tickets/artist/973986"
+        },
+        {
+          name: "Sinatra published performances",
+          url: "https://www.ticketmaster.co.uk/sinatra-the-musical-tickets/artist/5674208"
+        }
+      ]
+    }
+  ]
+};
+
+// scripts/venue-calendars.mjs
+var import_homebase_public_data2 = __toESM(require_homebase_public_data(), 1);
+function registeredVenueCalendars(market) {
+  return [...new Map(provider_markets_default.markets.filter((m) => distanceKm(market.center, m.center) <= m.radiusKm + market.radiusKm).flatMap((m) => m.publicCalendars || []).map((s) => [s.url, { ...s, kind: "venue" }])).values()];
+}
+function venuesFromOsm(payload, market) {
+  return (payload?.elements || []).flatMap((e) => {
+    const t = e.tags || {}, lat = e.lat ?? e.center?.lat, lon = e.lon ?? e.center?.lon, url = publicSchoolUrl(t.website || t["contact:website"]);
+    if (!url || !t.name || !Number.isFinite(lat) || !Number.isFinite(lon) || distanceKm(market.center, { lat, lon }) > market.radiusKm) return [];
+    return [{ name: t.name + " public calendar", url, kind: "venue", followEvents: true, venues: [{ name: t.name, lat, lon, coordinateSource: `https://www.openstreetmap.org/${e.type}/${e.id}` }] }];
+  });
+}
+async function discoverVenueCalendars(market, request = fetch) {
+  const query = `[out:json][timeout:12];(nwr(around:${market.radiusKm * 1e3},${market.center.lat},${market.center.lon})[name][leisure~"^(stadium|park|sports_centre)$"];nwr(around:${market.radiusKm * 1e3},${market.center.lat},${market.center.lon})[name][amenity~"^(theatre|arts_centre|events_venue|conference_centre|nightclub)$"];);out center tags 1000;`;
+  for (const base of ["https://overpass-api.de/api/interpreter", "https://overpass.private.coffee/api/interpreter"]) try {
+    const url = new URL(base);
+    url.searchParams.set("data", query);
+    const r = await request(url, { signal: AbortSignal.timeout(15e3) });
+    if (!r.ok) continue;
+    const p = await r.json();
+    return { sources: venuesFromOsm(p, market), status: p.remark || p.elements?.length >= 1e3 ? "partial" : "active" };
+  } catch {
+  }
+  return { sources: [], status: "unavailable" };
+}
+async function readVenueCalendar(source, market, now = Date.now(), request = fetch, lookup) {
+  const queue = [source.url], visited = /* @__PURE__ */ new Set(), events = [], context = [];
+  let pages = 0, parsed = false, failed = false, limited = false;
+  for (let n = 0; queue.length && n < 4; n++) {
+    const url = queue.shift(), key = url.toLowerCase();
+    if (visited.has(key)) {
+      n--;
+      continue;
+    }
+    visited.add(key);
+    try {
+      const result = await schoolPage(url, request, lookup);
+      pages++;
+      const ics = /BEGIN:VCALENDAR/.test(result.body) ? schoolIcsEvents(result.body, market.timeZone) : null;
+      const records = ics?.events || [...structuredEvents(result.body), ...publishedVenueEvents(result.body, source)];
+      parsed ||= !!ics || records.length > 0;
+      limited ||= !!ics?.recurrenceLimited;
+      for (const row of records) {
+        const event = normalizePublicEvent(row, market, source, now);
+        if (event) events.push({ ...event, demandEligible: true, timePrecision: "minute", locationPrecision: row.location?.geo ? "venue" : source.venues?.find((v) => v.name.toLowerCase() === String(event.venue).toLowerCase())?.locationPrecision || "venue" });
+        else if (/^\d{4}-\d{2}-\d{2}$/.test(row.startDate || "") && Date.parse(row.startDate + "T12:00:00Z") >= now - 864e5 && Date.parse(row.startDate + "T12:00:00Z") <= now + 7 * 864e5) context.push({ name: row.name, eventDate: row.startDate, id: source.url + ":" + row.name + ":" + row.startDate, demandEligible: false });
+      }
+      if (source.followEvents) {
+        const origin = new URL(result.url).origin;
+        queue.push(...schoolCalendarLinks(result.body, result.url).filter((u) => new URL(u).origin === origin && /(?:\/events?\/[^/?]+|\.ics(?:\?|$)|[?&]ical)/i.test(u) && !visited.has(u.toLowerCase()) && !queue.includes(u)));
+      }
+    } catch {
+      failed = true;
+    }
+  }
+  limited ||= queue.length > 0;
+  return { source: { name: source.name, url: source.url, status: !parsed ? "unavailable" : failed || limited ? "partial" : "active", pages, eventCount: events.length, truncated: limited, fetchedAt: parsed ? new Date(now).toISOString() : null }, events: [...new Map(events.map((e) => [import_homebase_public_data2.default.eventIdentity(e), e])).values()], context };
+}
+async function venueCalendars(market, sources, now = Date.now(), request = fetch, lookup) {
+  const results = [];
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(6, sources.length) }, async () => {
+    while (next < sources.length) results.push(await readVenueCalendar(sources[next++], market, now, request, lookup));
+  }));
+  return { status: results.length && results.every((r) => r.source.status === "active") ? "active" : results.some((r) => r.source.status !== "unavailable") ? "partial" : "unavailable", fetchedAt: new Date(now).toISOString(), sources: results.map((r) => r.source), events: [...new Map(results.flatMap((r) => r.events).map((e) => [import_homebase_public_data2.default.eventIdentity(e), e])).values()], context: results.flatMap((r) => r.context) };
+}
+
 // scripts/school-service.mjs
 function schoolSearchMarket(input) {
   const lat = Number(input?.lat), lon = Number(input?.lon);
@@ -530,11 +1154,18 @@ function makeSchoolSearch({ request = fetch, lookup, now = () => Date.now() } = 
   const cache = /* @__PURE__ */ new Map(), pages = /* @__PURE__ */ new Map();
   return async (input) => {
     const market = schoolSearchMarket(input), key = JSON.stringify(market), stamp = now();
+    if (input.refresh === true && Number(input.cursor || 0) === 0) {
+      cache.delete(key);
+      for (const k of pages.keys()) if (k.startsWith(key + ":")) pages.delete(k);
+    }
     if (cache.size > 100) cache.delete(cache.keys().next().value);
     if (pages.size > 500) pages.delete(pages.keys().next().value);
     let entry = cache.get(key);
     if (!entry || stamp - entry.stamp > 30 * 6e4) {
-      const task = discoverSchools(market, request).then((d) => ({ schools: mergeSchoolRegistry(market, d.schools), discoveryStatus: d.status }));
+      const task = Promise.all([discoverSchools(market, request), discoverVenueCalendars(market, request)]).then(([d, v]) => {
+        const venues = [...new Map([...registeredVenueCalendars(market), ...v.sources].map((s) => [s.url, s])).values()];
+        return { schools: [...venues, ...mergeSchoolRegistry(market, d.schools)], discoveryStatus: d.status === "active" && v.status === "active" ? "active" : "partial" };
+      });
       entry = { stamp, task };
       cache.set(key, entry);
     }
@@ -543,7 +1174,7 @@ function makeSchoolSearch({ request = fetch, lookup, now = () => Date.now() } = 
     const selected = discovery.schools.slice(cursor, cursor + 12), pageKey = key + ":" + cursor;
     let page = pages.get(pageKey);
     if (!page || stamp - page.stamp > 30 * 6e4) {
-      page = { stamp, task: schoolCalendars(market, [...selected, ...cursor === 0 ? districtSchoolCalendars(market, discovery.schools) : []], stamp, request, lookup) };
+      page = { stamp, task: Promise.all([schoolCalendars(market, [...selected.filter((s) => s.kind !== "venue"), ...cursor === 0 ? districtSchoolCalendars(market, discovery.schools.filter((s) => s.kind !== "venue")) : []], stamp, request, lookup), venueCalendars(market, selected.filter((s) => s.kind === "venue"), stamp, request, lookup)]).then((results) => ({ status: results.some((r) => r.status !== "unavailable") ? "partial" : "unavailable", sources: results.flatMap((r) => r.sources), events: results.flatMap((r) => r.events), context: results.flatMap((r) => r.context), fetchedAt: new Date(stamp).toISOString() })) };
       pages.set(pageKey, page);
     }
     const result = await page.task, nextCursor = cursor + selected.length < discovery.schools.length ? cursor + selected.length : null;

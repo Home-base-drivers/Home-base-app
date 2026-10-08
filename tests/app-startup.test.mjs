@@ -2,6 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
+import publicData from '../dist/homebase-public-data.js';
 
 const html=readFileSync(new URL('../dist/index.html',import.meta.url),'utf8');
 const script=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m=>m[1]).find(s=>s.includes('function refreshLocationFast('));
@@ -20,7 +21,7 @@ function startApp(){
   const L={map:layer,tileLayer:layer,layerGroup:layer,circleMarker:layer,circle:layer,polyline:layer,marker:layer,divIcon:layer,CircleMarker:class{}};
   const localStorage={getItem:()=>null,setItem(){},removeItem(){}};
   const context={document,L,HomeBaseHeat:{paletteNames:['classic'],setPalette:()=>{},createLayer:layer},HomeBaseMarket:{isBaltimorePoint:()=>true},HomeBasePlanner:{rankCandidates:()=>[]},localStorage,navigator:{userAgent:'iPhone',geolocation:{getCurrentPosition:(ok,fail,options)=>positions.push({ok,fail,options})}},location:{search:''},matchMedia:()=>({matches:false}),URLSearchParams,URL,AbortController,Intl,Date,console,setTimeout:(cb,ms)=>{timers.push({cb,ms});return timers.length;},clearTimeout(){},setInterval(){},fetch:async()=>{throw Error('Offline fixture');},crypto:{}};
-  context.window=context;context.addEventListener=(name,cb)=>{listeners[name]=cb;};context.scrollTo=()=>{};
+  context.HomeBasePublicData=publicData;context.window=context;context.addEventListener=(name,cb)=>{listeners[name]=cb;};context.scrollTo=()=>{};
   vm.createContext(context);vm.runInContext(script,context);
   return{context,nodes,timers,positions,views,localStorage};
 }

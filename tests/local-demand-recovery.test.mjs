@@ -11,7 +11,7 @@ function routeFixture(){
  const nodes=new Map(),calls={markers:[],heat:[],hours:null};
  const $=id=>{if(!nodes.has(id))nodes.set(id,{textContent:'',hidden:false});return nodes.get(id);};
  const layer={addTo(){return this;},clearLayers(){}};
- const context={Date,Number,Math,Set,HomeBaseRoutePolicy:policy,HomeBasePlanner:planner,HomeBaseHeat:{createLayer:()=>layer},
+ const context={Date,Number,Math,Set,HomeBasePublicData:publicData,HomeBaseRoutePolicy:policy,HomeBasePlanner:planner,HomeBaseHeat:{createLayer:()=>layer},
   hourlyDestinations:[],activeStops:[],routeLayers:[],routeStrokeLayers:[],heatAreaLayer:null,heatLayer:null,demandAreaSourceRef:null,routeRequestSerial:0,demandAreas:[],providerFlightPoints:[],currentApps:[{base:30}],selectedDestination:null,
   liveMap:{removeLayer(){},once(){},fitBounds(){},setView(){}},L:{layerGroup:()=>layer,latLngBounds:()=>({pad(){return this}})},
   isGreaterBaltimoreLocation:()=>false,distanceKm:(a,b)=>planner.distance?planner.distance(a,b):Math.hypot(a[0]-b[0],a[1]-b[1])*111,
@@ -28,6 +28,11 @@ test('the events panel merges one game across sports and ticket feeds and preser
  const context={refreshSchoolEvents(){},schoolEventRows:[],HomeBasePublicData:publicData,rideRelevantEvent:()=>true,loadTodaySports:async()=>[game],loadEspnEvents:async()=>[],loadProviderSignals:async()=>({events:[{...game,name:'Home Division Series Game 3',eventType:'SportsEvent',lat:41.001,lon:-74.001},concert,{...concert,name:'Separate theatre performance'}]})};
  vm.createContext(context);vm.runInContext(extract('loadTodayEvents'),context);
  const events=await context.loadTodayEvents(41,-74,'Local',[]);assert.equal(events.length,3);assert.equal(events.filter(e=>e.venue==='Public Stadium').length,1);assert.equal(events.filter(e=>e.venue==='Public Arena').length,2);
+});
+test('the same dated event in startup and snapshot feeds contributes once to heat',()=>{
+ const {context}=routeFixture(),event={name:'Homecoming Kickoff',venue:'Inn at Colonnade',cat:'event',lat:39.334,lon:-76.619,eventStart:new Date(Date.now()+3600000)};
+ assert.equal(context.mergeDemandSources([event],[{...event,name:event.name+' · Inn at Colonnade · 6:30 PM'}]).length,1);
+ assert.equal(context.mergeDemandSources([event],[{...event,eventStart:new Date(Date.now()+3*3600000)}]).length,2);
 });
 test('an empty current hour does not suppress a later verified event in the 12-hour route',()=>{
  const {context,calls}=routeFixture(),event={name:'Scheduled game',cat:'event',lat:41.001,lon:-74,eventStart:new Date(Date.now()+4*3600000),tags:{liveEvent:true}};

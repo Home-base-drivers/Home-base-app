@@ -4,7 +4,7 @@
  }
  async function page(config,location,timeZone,cursor=0,request=fetch){
   if(!/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(config?.supabaseUrl||'')||!/^sb_publishable_/.test(config?.supabasePublishableKey||''))throw Error('School calendar service unavailable');
-  const r=await request(config.supabaseUrl+'/functions/v1/school-events',{method:'POST',headers:{apikey:config.supabasePublishableKey,'Content-Type':'application/json'},signal:AbortSignal.timeout(110000),body:JSON.stringify({lat:Math.round(location[0]*100)/100,lon:Math.round(location[1]*100)/100,timeZone,cursor,radiusKm:35})});
+  const r=await request(config.supabaseUrl+'/functions/v1/school-events',{method:'POST',headers:{apikey:config.supabasePublishableKey,'Content-Type':'application/json'},signal:AbortSignal.timeout(110000),body:JSON.stringify({lat:Math.round(location[0]*100)/100,lon:Math.round(location[1]*100)/100,timeZone,cursor,radiusKm:35,refresh:cursor===0})});
   if(!r.ok)throw Error('School calendar search unavailable');return r.json();
  }
  return{mapEvents,page};

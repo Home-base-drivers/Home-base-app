@@ -258,6 +258,168 @@
           "name": "Ottobar published AXS calendar",
           "url": "https://www.axs.com/venues/128508/ottobar-baltimore-tickets",
           "nextOnly": true
+        },
+        {
+          "name": "Power Plant Live district calendar",
+          "url": "https://powerplantlive.com/events-and-entertainment/events",
+          "followEvents": true,
+          "venues": [
+            {
+              "name": "Power Plant Live!",
+              "lat": 39.28936,
+              "lon": -76.60689,
+              "coordinateSource": "Home Base existing mapped venue anchor",
+              "locationPrecision": "venue_complex"
+            },
+            {
+              "name": "Luckie's Tavern",
+              "lat": 39.28936,
+              "lon": -76.60689,
+              "coordinateSource": "Home Base existing mapped venue anchor",
+              "locationPrecision": "venue_complex"
+            }
+          ]
+        },
+        {
+          "name": "Baltimore Convention Center calendar",
+          "url": "https://www.bccenter.org/events",
+          "followEvents": true,
+          "venues": [
+            {
+              "name": "Baltimore Convention Center",
+              "lat": 39.28578,
+              "lon": -76.61802,
+              "coordinateSource": "Home Base existing mapped venue anchor",
+              "locationPrecision": "venue"
+            }
+          ]
+        },
+        {
+          "name": "CFG Bank Arena calendar",
+          "url": "https://cfgbankarena.com/events/",
+          "followEvents": true,
+          "venues": [
+            {
+              "name": "CFG Bank Arena",
+              "lat": 39.28861,
+              "lon": -76.61889,
+              "coordinateSource": "Home Base existing mapped venue anchor",
+              "locationPrecision": "venue"
+            }
+          ]
+        },
+        {
+          "name": "M&T Bank Stadium calendar",
+          "url": "https://www.mandtbankstadium.com/events",
+          "followEvents": true,
+          "venues": [
+            {
+              "name": "M&T Bank Stadium",
+              "lat": 39.278,
+              "lon": -76.6227,
+              "coordinateSource": "Home Base existing mapped venue anchor",
+              "locationPrecision": "venue"
+            }
+          ]
+        },
+        {
+          "name": "Maryland Stadium Authority events",
+          "url": "https://mdstad.com/events",
+          "followEvents": true,
+          "venues": [
+            {
+              "name": "M&T Bank Stadium",
+              "lat": 39.278,
+              "lon": -76.6227,
+              "coordinateSource": "Home Base existing mapped venue anchor",
+              "locationPrecision": "venue"
+            },
+            {
+              "name": "Oriole Park at Camden Yards",
+              "lat": 39.2838,
+              "lon": -76.6217,
+              "coordinateSource": "Home Base existing mapped venue anchor",
+              "locationPrecision": "venue"
+            }
+          ]
+        },
+        {
+          "name": "Orioles Camden Yards calendar",
+          "url": "https://www.mlb.com/orioles/schedule",
+          "followEvents": true,
+          "venues": [
+            {
+              "name": "Oriole Park at Camden Yards",
+              "lat": 39.2838,
+              "lon": -76.6217,
+              "coordinateSource": "Home Base existing mapped venue anchor",
+              "locationPrecision": "venue"
+            }
+          ]
+        },
+        {
+          "name": "Pier Six Pavilion calendar",
+          "url": "https://piersixbaltimore.com/event-dates/",
+          "followEvents": true,
+          "venues": [
+            {
+              "name": "Pier Six Pavilion",
+              "lat": 39.284,
+              "lon": -76.6043,
+              "coordinateSource": "Home Base existing mapped venue anchor",
+              "locationPrecision": "venue"
+            }
+          ]
+        },
+        {
+          "name": "Maryland State Fairgrounds calendar",
+          "url": "https://marylandstatefair.com/events/",
+          "followEvents": true,
+          "venues": [
+            {
+              "name": "Maryland State Fairgrounds",
+              "lat": 39.4371,
+              "lon": -76.6197,
+              "coordinateSource": "Home Base existing mapped venue anchor",
+              "locationPrecision": "venue"
+            }
+          ]
+        },
+        {
+          "name": "Baltimore City Recreation & Parks events",
+          "url": "https://www.baltimorecity.gov/bcrp/events",
+          "followEvents": true,
+          "venues": []
+        },
+        {
+          "name": "Baltimore City recreation sports calendar",
+          "url": "https://www.bcrpsports.org/calendar",
+          "followEvents": true,
+          "venues": []
+        },
+        {
+          "name": "Baltimore County Recreation & Parks calendar",
+          "url": "https://recandparks.baltimorecountymd.gov/MD/baltimore-co-md/catalog",
+          "followEvents": true,
+          "venues": []
+        },
+        {
+          "name": "Lake Roland calendar",
+          "url": "https://www.lakeroland.org/calendar/",
+          "followEvents": true,
+          "venues": []
+        },
+        {
+          "name": "Baltimore Peninsula calendar",
+          "url": "https://baltimorepeninsula.com/whats-happening/",
+          "followEvents": true,
+          "venues": []
+        },
+        {
+          "name": "Visit Baltimore community and venue calendar",
+          "url": "https://baltimore.org/events/",
+          "followEvents": true,
+          "venues": []
         }
       ]
     },

@@ -97,7 +97,7 @@ export function normalizePublicEvent(event, market, source, now = Date.now()) {
   if (!name || publicData.isTicketAddon(name) || /webinar|virtual|online.only|exhibition|gallery|workshop|seminar|campus.tour|all.day.entry|standard.entry|standard.admission|standard.experience/i.test(context)) return null;
   const performers = [event.performer].flat().filter(Boolean);
   const classification = performers.map(p => p['@type']).flat().join(' ');
-  if (!/sports|concert|festival|convention|conference|football|basketball|baseball|hockey|soccer|stadium|arena|theatre|theater|comedy|performing|music|graduation|commencement|fairground|circus|danceevent|homecoming|prom\b|tailgate|bonfire|reunion|gala/i.test(context + ' ' + classification)) return null;
+  if (!/sports|concert|festival|convention|conference|football|basketball|baseball|hockey|soccer|stadium|arena|theatre|theater|comedy|performing|music|graduation|commencement|fairground|circus|danceevent|homecoming|prom\b|tailgate|bonfire|reunion|gala|party|social|community|screening/i.test(context + ' ' + classification)) return null;
   const url = safeUrl(event.url || event.offers?.url, source.url);
   return { id: 'public:' + (url || `${name}:${lat}:${lon}`) + ':' + start, name: name.slice(0, 180), venue: String(venue?.name || known?.name || '').slice(0, 160), lat, lon, eventStart: start, eventEnd: end, url, source: source.name, sourceUrl: source.url, eventType, classification, ...publishedAttendance(event,url||source.url), fetchedAt: new Date(now).toISOString() };
 }

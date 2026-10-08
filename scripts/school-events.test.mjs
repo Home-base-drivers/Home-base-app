@@ -49,7 +49,7 @@ test('search coarsens driver position and paginates all discovered schools witho
  const input={lat:51.50123,lon:-.12121,timeZone:'Europe/London',userId:'private',url:'https://evil.example/'};assert.deepEqual(schoolSearchMarket(input),{center:{lat:51.5,lon:-.12},radiusKm:35,timeZone:'Europe/London'});
  assert.throws(()=>schoolSearchMarket({...input,timeZone:'bad'}));assert.throws(()=>schoolSearchMarket({...input,lat:null}));
  const elements=Array.from({length:15},(_,i)=>({type:'node',id:i,lat:51.5+i/1000,lon:-.12,tags:{name:'High School '+i,amenity:'school'}}));let calls=0;const search=makeSchoolSearch({request:async()=>{calls++;return new Response(JSON.stringify({elements}));},now:()=>now});
- const a=await search(input),b=await search({...input,cursor:a.nextCursor});assert.equal(a.nextCursor,12);assert.equal(b.nextCursor,null);assert.equal(b.checkedCount,15);assert.equal(a.exhaustive,false);assert.equal(calls,1);assert.equal(a.sources[0].status,'no_public_website');
+ const a=await search(input),b=await search({...input,cursor:a.nextCursor});assert.equal(a.nextCursor,12);assert.equal(b.nextCursor,null);assert.equal(b.checkedCount,22);assert.equal(a.exhaustive,false);assert.equal(calls,9);assert.ok(a.sources.some(s=>s.status==='no_public_website'));assert.ok(a.sources.some(s=>/Ticketmaster London/.test(s.name)));
 });
 
 test('independent public school index retains published sites and excludes distant or private targets',()=>{

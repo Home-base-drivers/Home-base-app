@@ -1,6 +1,7 @@
 import registry from '../config/school-calendar-sources.json' with {type:'json'};
 import {distanceKm} from './public-events.mjs';
 import {discoverSchools,schoolCalendars} from './school-events.mjs';
+import {registeredVenueCalendars,discoverVenueCalendars,venueCalendars} from './venue-calendars.mjs';
 
 export function schoolSearchMarket(input){
  const lat=Number(input?.lat),lon=Number(input?.lon);
@@ -28,17 +29,18 @@ export function makeSchoolSearch({request=fetch,lookup,now=()=>Date.now()}={}){
  const cache=new Map(),pages=new Map();
  return async input=>{
   const market=schoolSearchMarket(input),key=JSON.stringify(market),stamp=now();
+  if(input.refresh===true&&Number(input.cursor||0)===0){cache.delete(key);for(const k of pages.keys())if(k.startsWith(key+':'))pages.delete(k);}
   if(cache.size>100)cache.delete(cache.keys().next().value);if(pages.size>500)pages.delete(pages.keys().next().value);
   let entry=cache.get(key);
   if(!entry||stamp-entry.stamp>30*60000){
-   const task=discoverSchools(market,request).then(d=>({schools:mergeSchoolRegistry(market,d.schools),discoveryStatus:d.status}));
+   const task=Promise.all([discoverSchools(market,request),discoverVenueCalendars(market,request)]).then(([d,v])=>{const venues=[...new Map([...registeredVenueCalendars(market),...v.sources].map(s=>[s.url,s])).values()];return{schools:[...venues,...mergeSchoolRegistry(market,d.schools)],discoveryStatus:d.status==='active'&&v.status==='active'?'active':'partial'};});
    entry={stamp,task};cache.set(key,entry);
   }
   const discovery=await entry.task,cursor=Number(input.cursor)||0;
   if(!Number.isInteger(cursor)||cursor<0||cursor>discovery.schools.length)throw Error('Invalid school page');
   const selected=discovery.schools.slice(cursor,cursor+12),pageKey=key+':'+cursor;
   let page=pages.get(pageKey);
-  if(!page||stamp-page.stamp>30*60000){page={stamp,task:schoolCalendars(market,[...selected,...(cursor===0?districtSchoolCalendars(market,discovery.schools):[])],stamp,request,lookup)};pages.set(pageKey,page);}
+  if(!page||stamp-page.stamp>30*60000){page={stamp,task:Promise.all([schoolCalendars(market,[...selected.filter(s=>s.kind!=='venue'),...(cursor===0?districtSchoolCalendars(market,discovery.schools.filter(s=>s.kind!=='venue')):[])],stamp,request,lookup),venueCalendars(market,selected.filter(s=>s.kind==='venue'),stamp,request,lookup)]).then(results=>({status:results.some(r=>r.status!=='unavailable')?'partial':'unavailable',sources:results.flatMap(r=>r.sources),events:results.flatMap(r=>r.events),context:results.flatMap(r=>r.context),fetchedAt:new Date(stamp).toISOString()}))};pages.set(pageKey,page);}
   const result=await page.task,nextCursor=cursor+selected.length<discovery.schools.length?cursor+selected.length:null;
   return{...result,discoveryStatus:discovery.discoveryStatus,schoolCount:discovery.schools.length,checkedCount:cursor+selected.length,nextCursor,center:market.center,radiusKm:market.radiusKm,exhaustive:false};
  };
