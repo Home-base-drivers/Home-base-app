@@ -381,7 +381,7 @@ async function discoverSchools(market, request = fetch) {
   for (const base of ["https://overpass-api.de/api/interpreter", "https://overpass.private.coffee/api/interpreter"]) try {
     const u = new URL(base);
     u.searchParams.set("data", query);
-    const r = await request(u, { signal: AbortSignal.timeout(15e3) });
+    const r = await request(u, { signal: AbortSignal.timeout(15e3), headers: { Accept: "application/json", "User-Agent": "HomeBase public school calendar discovery (+https://github.com/Home-base-drivers/Home-base-app)" } });
     if (!r.ok) continue;
     const p = await r.json();
     return { schools: schoolsFromOsm(p, market), status: p.remark || p.elements?.length >= 1e3 ? "partial" : "active" };
