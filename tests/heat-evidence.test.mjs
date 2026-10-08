@@ -75,3 +75,17 @@ test('event heat switches off between arrival and departure and at the one-hour 
  for(const hour of ['06:59','12:00','23:00'])assert.equal(heat.currentEvidence(event,new Date('2026-10-08T'+hour+':00-04:00'),now),'modeled');
  assert.equal(heat.sourceStrength(event,new Date('2026-10-08T12:00:00-04:00'),()=>20),0);
 });
+test('modeled neighborhoods retain distinct green-to-yellow intensity instead of one clipped yellow',()=>{
+ const quiet=heat.composeFields(0,0,.05,.015,{}),busy=heat.composeFields(0,0,.8,.48,{});
+ assert.ok(busy.level>quiet.level);assert.ok(busy.opacity>quiet.opacity);
+ assert.ok(quiet.level<.27);assert.ok(busy.level<.42);assert.ok(busy.opacity<=.16);
+ assert.equal(heat.composeFields(0,0,0,0,{}).opacity,0);
+});
+test('routine school background has an immediate-area footprint and hard geographic limit',()=>{
+ for(const cat of ['school','k12']){
+  const source={cat,tags:{publicVenue:true}};
+  assert.ok(heat.sourceFootprintKm(source)<=.25);
+  assert.equal(heat.sourceInfluenceLimitKm(source),.4);
+ }
+ assert.equal(heat.sourceInfluenceLimitKm({cat:'event',eventStart:'2026-10-08T19:00:00-04:00'}),Infinity);
+});

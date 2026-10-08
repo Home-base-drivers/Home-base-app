@@ -132,8 +132,16 @@
   function composeFields(signal,signalShade,background,backgroundShade,evidence={},history=0){
     // Background density cannot accumulate into a city-wide surge. Fresh
     // signals replace context inside their own geographically anchored field.
-    const prior=evidence.current>.12?0:Math.min(Math.max(0,background),.1),ratio=background>0?prior/background:0;
-    const pixel=composePixel(signal+prior,signalShade+backgroundShade*ratio,evidence,history);
+    const prior=evidence.current>.12?0:Math.max(0,Number(background)||0);
+    if(!signal&&!(evidence.event>0||evidence.surge>0)){
+      if(evidence.current>.12)return {level:0,opacity:0};
+      // Retain local differences instead of clipping every busy POI to the
+      // same yellow. Background context runs from faint green to soft yellow.
+      const activity=1-Math.exp(-prior*.85),shade=prior>0?clamp(backgroundShade/prior,0,1):0;
+      return {level:.12+.25*activity+.04*shade,opacity:Math.min(.16,activity*.16+clamp(history,0,.08))};
+    }
+    const capped=Math.min(prior,.1),ratio=prior>0?capped/prior:0;
+    const pixel=composePixel(signal+capped,signalShade+backgroundShade*ratio,evidence,history);
     if(!(evidence.event>0||evidence.surge>0)){pixel.opacity=Math.min(pixel.opacity,.18);pixel.level=Math.min(pixel.level,.45);}
     return pixel;
   }
@@ -170,8 +178,11 @@
     return RADII_KM[String(category || '').toLowerCase()] || 1.5;
   }
 
+  function sourceInfluenceLimitKm(source){return ['school','k12'].includes(source.cat)&&!source.eventStart? .4:Infinity;}
+
   function sourceFootprintKm(source) {
     const tags = source.tags || {};
+    if(['school','k12'].includes(source.cat)&&!source.eventStart)return .25;
     if (tags.providerSignal) return 1.35;
     if (tags.metroBaseline) {
       // Community anchors represent an area, not a single address. Wider,
@@ -409,7 +420,7 @@
             ry = ry * .58 + areaRy * .42;
           }
           return {
-            center, strength, angle, rx, ry, evidence:currentEvidence(source,this._when),
+            center, strength, angle, rx, ry, influenceLimit:sourceInfluenceLimitKm(source)*radius/km, evidence:currentEvidence(source,this._when),
             blockShape: (source.heatAreaType === 'label' || source.heatAreaType === 'neighborhood') && Array.isArray(bounds),
             shade: sourceShade(strength),
             detailOpacity: source.tags && (source.tags.providerSignal || source.tags.providerEvent || source.tags.liveEvent) ? .76 :
@@ -451,6 +462,7 @@
           for (let y = top; y <= bottom; y++) for (let x = left; x <= right; x++) {
             const px = gridLeft + (x + .5) * sample, py = gridTop + (y + .5) * sample;
             const dx = px - source.center.x, dy = py - source.center.y;
+            if(dx*dx+dy*dy>source.influenceLimit*source.influenceLimit)continue;
             const rx = (dx * cos + dy * sin) / source.rx, ry = (-dx * sin + dy * cos) / source.ry;
             // Two close, asymmetrical lobes keep the interpolation geographic
             // but avoid the artificial bullseye/ring effect of a single radial
@@ -509,5 +521,5 @@
     return new HeatLayer();
   }
 
-  return { historicalPriorForSource, composeFields, composePixel, currentEvidence, evidenceLevel, evidenceOpacity, colorAt, setPalette, getCustomColors, setCustomColors, getPalette: () => activePalette, paletteNames: Object.keys(PALETTES), sourceStrength, areaIntensity, sourceShade, compositeLevel, compositeOpacity, sourceRadiusKm, sourceFootprintKm, anchoredGridOrigin, createLayer };
+  return { historicalPriorForSource, composeFields, composePixel, currentEvidence, evidenceLevel, evidenceOpacity, colorAt, setPalette, getCustomColors, setCustomColors, getPalette: () => activePalette, paletteNames: Object.keys(PALETTES), sourceStrength, areaIntensity, sourceShade, compositeLevel, compositeOpacity, sourceRadiusKm, sourceFootprintKm, sourceInfluenceLimitKm, anchoredGridOrigin, createLayer };
 });

@@ -23,7 +23,7 @@
     for(const row of rows||[]){const time=Date.parse(row.observed_at),score=Number(row.modeled_score);
       if(row.modeled_score==null||!Number.isFinite(time)||time>now||now-time>90*86400000||!Number.isFinite(score)||score<0||score>1)continue;
       const key=row.area;if(!groups.has(key))groups.set(key,[]);groups.get(key).push({...row,time,score});}
-    return [...groups].map(([area,items])=>{items.sort((a,b)=>b.time-a.time);const latest=items[0],prior=items.find(r=>latest.time-r.time>=15*60000&&latest.time-r.time<=90*60000);
+    return [...groups].map(([area,items])=>{items.sort((a,b)=>b.time-a.time);const latest=items[0],prior=items.find(r=>latest.time-r.time>=15*60000&&latest.time-r.time<=60*60000);
       return{area,score:latest.score,observedAt:latest.observed_at,count:items.length,arrivals:latest.event_arrivals??null,exits:latest.event_exits??null,delta:prior?latest.score-prior.score:null,stale:now-latest.time>15*60000};}).sort((a,b)=>Date.parse(b.observedAt)-Date.parse(a.observedAt));
   }
   function matchingAreaObservation(row,name){
@@ -36,21 +36,22 @@
     if(!isBaltimore)return{distinctDates:0,band:null,confidence:0};
     const target=when instanceof Date?when:new Date(when),name=String(areaName||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
     if(!Number.isFinite(+target))return{distinctDates:0,band:null,confidence:0};
-    const bands={moderate:1,elevated:2,high:3,very_high:4},counts=new Map(),marketParts=date=>{const p=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',weekday:'short',hour:'numeric',hour12:false}).formatToParts(date).map(x=>[x.type,x.value]));return{hour:Number(p.hour)%24,day:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(p.weekday)};},targetLocal=marketParts(target),targetHour=targetLocal.hour,targetDay=targetLocal.day;
+    const bands={moderate:1,elevated:2,high:3,very_high:4},counts=new Map(),marketParts=date=>{const p=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',weekday:'short',hour:'numeric',minute:'numeric',hour12:false}).formatToParts(date).map(x=>[x.type,x.value]));return{hour:Number(p.hour)%24,minute:Number(p.minute),day:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(p.weekday)};},targetLocal=marketParts(target),targetMinute=targetLocal.day*1440+targetLocal.hour*60+targetLocal.minute;
     for(const row of screenshotBenchmarks){
       if(!['uber_reference','empower_reference'].includes(row.record_type)||(Object.prototype.hasOwnProperty.call(row,'captured_at')&&!row.captured_at)||!Number.isFinite(Number(row.capture_hour_local)))continue;
       const stamp=Date.parse(row.captured_at||row.observed_at),captured=new Date(stamp),age=+target-stamp;
       if(!Number.isFinite(stamp)||age<0||age>120*86400000)continue;
-      const observedLocal=marketParts(captured),delta=Math.abs(observedLocal.day*24+Number(row.capture_hour_local)-(targetDay*24+targetHour));if(Math.min(delta,168-delta)>1)continue;
+      const observedLocal=marketParts(captured),delta=Math.abs(observedLocal.day*1440+Number(row.capture_hour_local)*60+observedLocal.minute-targetMinute),timeWeight=Math.max(0,1-Math.min(delta,10080-delta)/60);if(!timeWeight)continue;
       const item=matchingAreaObservation(row,name);if(!item)continue;
       // One overnight cluster remains one independent night across midnight.
       const key=new Date(stamp-4*3600000).toLocaleDateString('en-CA',{timeZone:'America/New_York'});
-      const old=counts.get(key);if(!old||bands[item.band]>bands[old.band])counts.set(key,{band:item.band,stamp});
+      const old=counts.get(key);if(!old||timeWeight*bands[item.band]>old.timeWeight*bands[old.band])counts.set(key,{band:item.band,stamp,timeWeight});
     }
     const dates=[...counts.values()];
-    if(dates.length<2)return{distinctDates:dates.length,band:dates.sort((a,b)=>b.stamp-a.stamp)[0]?.band||null,confidence:dates.length?.01*Math.exp(-(+target-dates[0].stamp)/86400000/90):0};
+    if(dates.length<2)return{distinctDates:dates.length,band:dates.sort((a,b)=>b.stamp-a.stamp)[0]?.band||null,confidence:dates.length?.01*dates[0].timeWeight*(bands[dates[0].band]||1)/4*Math.exp(-(+target-dates[0].stamp)/86400000/90):0};
     const ageDays=dates.reduce((sum,row)=>sum+(+target-row.stamp)/86400000,0)/dates.length;
-    const confidence=Math.min(.08,.02*(dates.length-1))*Math.exp(-ageDays/90);
+    const localWeight=dates.reduce((sum,row)=>sum+row.timeWeight*(bands[row.band]||1)/4,0)/dates.length;
+    const confidence=Math.min(.08,.02*(dates.length-1))*Math.exp(-ageDays/90)*localWeight;
     return{distinctDates:dates.length,band:dates.sort((a,b)=>b.stamp-a.stamp)[0].band,confidence};
   }
   function rememberSignal(sample,platform='Uber',now=Date.now()){
@@ -73,9 +74,9 @@
   function adjustWeight(weight){return Number(weight);}
   function eventPhase(event,when=Date.now()){
     const start=Date.parse(event.eventStart),end=Date.parse(event.eventEnd);if(!Number.isFinite(start))return'unknown';
-    if(when<start)return start-when<=90*60000?'arrival':'upcoming';
+    if(when<start)return start-when<=60*60000?'arrival':'upcoming';
     if(!Number.isFinite(end))return'unknown_end';
-    if(when<=end)return'during';return when-end<=90*60000?'exit':'ended';
+    if(when<=end)return'during';return when-end<=60*60000?'exit':'ended';
   }
   function context(area,when=new Date()){
     const events=(area?.sources||[]).filter(s=>s.eventStart).map(s=>({eventStart:s.eventStart,eventEnd:s.eventEnd}));
@@ -91,7 +92,7 @@
   function html(rows,esc){const trends=compare(rows),benchmarks=Array.isArray(screenshotBenchmarks)?screenshotBenchmarks:[];
     const benchmarkSection='<h4>SCREENSHOT HISTORY</h4>'+(benchmarks.length?benchmarks.map(row=>benchmarkHtml(row,esc)).join(''):'<p>No reference screenshots stored.</p>');
     const modelHistory=trends.length?trends.slice(0,12).map(r=>'<p><b>'+esc(r.area)+'</b> · '+Math.round(r.score*100)+'/100 · '+(r.stale?'stale':r.delta===null?'baseline needed':r.delta>.03?'rising':r.delta<-.03?'falling':'steady')+' · '+r.count+' snapshots<br><small>'+esc(new Date(r.observedAt).toLocaleString('en-US',{timeZone:'America/New_York'}))+' ET'+(r.arrivals===null?'':' · '+r.arrivals+' nearby arrival windows · '+r.exits+' exit windows')+'</small></p>').join(''):'<p>No Home Base shift history yet. In Profile, enable Help evaluate the forecast model, then start a shift. Model snapshots are taken every five minutes while the app is visible.</p>';
-    return '<h3>NEIGHBORHOOD DEMAND HISTORY</h3><p>Home Base shift scores are calculated by its model. They are not confirmed ride counts or Uber surge payments.</p>'+benchmarkSection+modelHistory+'<p>Screenshot records preserve the first-share time and the clock visible in the image. Screenshot activity bands are low-confidence, per-neighborhood reference signals. Their immediate effect fades within 30 minutes. A separate recurrence prior gains confidence when independent dated observations repeat in the same neighborhood, weekday, and hour window; duplicate zoom views count once, and ambiguous AM/PM captures are excluded. The prior is capped at 8% and decays over 90 days. A single dated observation contributes only a faint provisional forecast; repeated independent dates strengthen it. History is drawn separately and fresh evidence replaces it at the same location. Screenshots show app estimates, not confirmed requests or completed trips. They are not request counts or confirmed Uber activity. Displayed bonus and wait labels are stored as shown, not used as numeric training targets. Actual gross earnings with online hours are evaluated separately in Earnings.</p>';
+    return '<h3>NEIGHBORHOOD DEMAND HISTORY</h3><p>Home Base shift scores are calculated by its model. They are not confirmed ride counts or Uber surge payments.</p>'+benchmarkSection+modelHistory+'<p>Screenshot records preserve the first-share time and the clock visible in the image. Screenshot activity bands are low-confidence, per-neighborhood reference signals. Their immediate effect fades within 30 minutes. A separate recurrence prior gains confidence when independent dated observations repeat in the same neighborhood and local weekday/time; its strength tapers continuously to zero one hour away from the recorded time; duplicate zoom views count once, and ambiguous AM/PM captures are excluded. The prior is capped at 8% and decays over 90 days. A single dated observation contributes only a faint provisional forecast; repeated independent dates strengthen it. History is drawn separately and fresh evidence replaces it at the same location. Screenshots show app estimates, not confirmed requests or completed trips. They are not request counts or confirmed Uber activity. Displayed bonus and wait labels are stored as shown, not used as numeric training targets. Actual gross earnings with online hours are evaluated separately in Earnings.</p>';
   }
   return{compare,eventPhase,context,html,adjustWeight,recurrenceFor,forecastFor,rememberSignal};
 });
