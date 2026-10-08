@@ -87,10 +87,11 @@
     const raw=compositeLevel(value,weightedShade);
     // Confirmed scheduled activity is demand context, not platform price surge.
     const event=clamp(Number(evidence.event)||0,0,1),surge=clamp(Number(evidence.surge)||0,0,1);
-    return Math.max(Math.min(raw,.57),Math.min(raw,.78)*event,surge>0?Math.max(.82,surge):0);
+    return Math.max(Math.min(raw,event>0?.42:.57),Math.min(raw,.78)*event,surge>0?Math.max(.82,surge):0);
   }
   function evidenceOpacity(value,evidence = {}) {
-    return Math.min(compositeOpacity(value),evidence.surge>0||evidence.event>0?.8:.38);
+    const ceiling=evidence.surge>0?.8:evidence.event>0?.35+.45*clamp(Number(evidence.event)||0,0,1):.38;
+    return Math.min(compositeOpacity(value),ceiling);
   }
   function composePixel(value,weightedShade,evidence={},history=0){
     // Fresh evidence wins even when it reports no surge. Background history is
@@ -126,7 +127,8 @@
     // timed events, nightlife and other local signals create the stronger peaks.
     if (tags.areaCoverageAnchor) strength *= .42;
     if (tags.metroBaseline || tags.forecast) strength *= .85;
-    return clamp(strength, 0, 1.25);
+    // Event-size variation must survive normalization; background stays capped.
+    return clamp(strength, 0, source.eventStart&&currentEvidence(source,when)==='event'?3:1.25);
   }
 
   function composeFields(signal,signalShade,background,backgroundShade,evidence={},history=0){

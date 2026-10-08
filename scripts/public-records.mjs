@@ -1,4 +1,4 @@
-import { publicEventCalendars } from './public-events.mjs';
+import { publicEventCalendars, publishedAttendance } from './public-events.mjs';
 import { scheduledSchoolCalendars } from './school-service.mjs';
 const validTime=value=>typeof value==='string'&&/T.*(?:Z|[+-]\d\d:\d\d)$/.test(value)&&Number.isFinite(Date.parse(value));
 export function normalizeCampusEvents(payload,now=Date.now(),source={id:"towson",name:"Towson University",origin:"https://events.towson.edu"}){
@@ -6,7 +6,7 @@ export function normalizeCampusEvents(payload,now=Date.now(),source={id:"towson"
   for(const wrapper of payload?.events||[]){const e=wrapper.event;if(!e||e.private||e.rejected||e.experience==='virtual'||e.status==='cancelled'||e.publish_status!=='published')continue;
     const lat=Number(e.geo?.latitude),lon=Number(e.geo?.longitude);if(e.geo?.latitude==null||e.geo?.longitude==null||!Number.isFinite(lat)||!Number.isFinite(lon)||lat<38||lat>40||lon< -78||lon> -75)continue;
     for(const instance of e.event_instances||[]){const i=instance.event_instance;if(!i||i.all_day||!validTime(i.start)||(i.end!=null&&(!validTime(i.end)||Date.parse(i.end)<=Date.parse(i.start)))||(i.end?Date.parse(i.end)<now-90*60000:Date.parse(i.start)<now-6*3600000)||Date.parse(i.start)>now+36*3600000)continue;
-      rows.push({id:source.id+':'+String(i.id),name:String(e.title||'Campus event').slice(0,180),venue:String(e.location_name||source.name).slice(0,160),lat,lon,eventStart:new Date(i.start).toISOString(),eventEnd:i.end?new Date(i.end).toISOString():null,url:typeof e.localist_url==='string'&&e.localist_url.startsWith(source.origin+'/')?e.localist_url:null,source:source.name+' public calendar',fetchedAt:new Date(now).toISOString(),attendance:null,eventType:'campus',classification:Object.values(e.filters||{}).flat().map(f=>f.name).join(' ')});}
+      rows.push({id:source.id+':'+String(i.id),name:String(e.title||'Campus event').slice(0,180),venue:String(e.location_name||source.name).slice(0,160),lat,lon,eventStart:new Date(i.start).toISOString(),eventEnd:i.end?new Date(i.end).toISOString():null,url:typeof e.localist_url==='string'&&e.localist_url.startsWith(source.origin+'/')?e.localist_url:null,source:source.name+' public calendar',fetchedAt:new Date(now).toISOString(),attendance:null,...publishedAttendance(e,e.localist_url||source.origin),eventType:'campus',classification:Object.values(e.filters||{}).flat().map(f=>f.name).join(' ')});}
   }return [...new Map(rows.map(r=>[r.id,r])).values()];
 }
 export function normalizeWeather(payload){return(payload?.properties?.periods||[]).filter(p=>validTime(p.startTime)&&validTime(p.endTime)).map(p=>({start:p.startTime,end:p.endTime,rainProbability:p.probabilityOfPrecipitation?.value==null?null:Math.max(0,Math.min(100,Number(p.probabilityOfPrecipitation.value))),source:'National Weather Service forecast'}));}

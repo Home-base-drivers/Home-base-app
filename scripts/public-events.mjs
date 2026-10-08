@@ -72,6 +72,14 @@ function safeUrl(value, fallback) {
   try { const url = new URL(value || fallback, fallback); return url.protocol === 'https:' ? url.href : null; } catch { return null; }
 }
 
+export function publishedAttendance(event, sourceUrl){
+  // Only an explicit organizer forecast is attendance. Venue capacity, ticket
+  // availability and RSVP/follower counts cannot stand in for turnout.
+  const count=Number(event.expectedAttendance);
+  return event.expectedAttendance!=null&&Number.isFinite(count)&&count>=0&&count<=1000000&&/^https:\/\//.test(sourceUrl||'')?
+    {expectedAttendance:count,attendanceBasis:'organizer_estimate',attendanceSourceUrl:sourceUrl,attendanceConfidence:.75}:{};
+}
+
 export function normalizePublicEvent(event, market, source, now = Date.now()) {
   if (event.private || event.allDay || event.isAllDay || /cancel|postpon|reschedul/i.test(String(event.eventStatus || '')) || /OnlineEventAttendanceMode/.test(String(event.eventAttendanceMode || ''))) return null;
   const start = zonedEventTime(event.startDate, market.timeZone);
@@ -91,7 +99,7 @@ export function normalizePublicEvent(event, market, source, now = Date.now()) {
   const classification = performers.map(p => p['@type']).flat().join(' ');
   if (!/sports|concert|festival|convention|conference|football|basketball|baseball|hockey|soccer|stadium|arena|theatre|theater|comedy|performing|music|graduation|commencement|fairground|circus|danceevent|homecoming|prom\b|tailgate|bonfire|reunion|gala/i.test(context + ' ' + classification)) return null;
   const url = safeUrl(event.url || event.offers?.url, source.url);
-  return { id: 'public:' + (url || `${name}:${lat}:${lon}`) + ':' + start, name: name.slice(0, 180), venue: String(venue?.name || known?.name || '').slice(0, 160), lat, lon, eventStart: start, eventEnd: end, url, source: source.name, sourceUrl: source.url, eventType, classification, fetchedAt: new Date(now).toISOString() };
+  return { id: 'public:' + (url || `${name}:${lat}:${lon}`) + ':' + start, name: name.slice(0, 180), venue: String(venue?.name || known?.name || '').slice(0, 160), lat, lon, eventStart: start, eventEnd: end, url, source: source.name, sourceUrl: source.url, eventType, classification, ...publishedAttendance(event,url||source.url), fetchedAt: new Date(now).toISOString() };
 }
 
 export function nextPublicPage(html, current) {

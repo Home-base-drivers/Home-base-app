@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Home Base">
-  <meta name="homebase-build" content="v223">
+  <meta name="homebase-build" content="v224">
   <meta name="description" content="Home Base connects local driver platforms, earnings forecasts, events and a GPS-based 12-hour route in one app.">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icon-192.png">
@@ -216,15 +216,15 @@
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="baltimore-market.js?v=72"></script>
-<script src="homebase-heat.js?v=107"></script>
+<script src="homebase-heat.js?v=108"></script>
 <script src="homebase-global-heat.js?v=3"></script>
 <link rel="stylesheet" href="homebase-earnings.css?v=110">
 <link rel="stylesheet" href="homebase-growth.css?v=111">
 <script src="homebase-earnings.js?v=110"></script>
 <script src="homebase-demand-history.js?v=126"></script>
-<script src="homebase-route-policy.js?v=5"></script>
+<script src="homebase-route-policy.js?v=6"></script>
 <script src="homebase-public-data.js?v=3"></script>
-<script src="homebase-school-events.js?v=1"></script>
+<script src="homebase-school-events.js?v=2"></script>
 <script src="homebase-planner.js?v=127"></script>
 <script src="homebase-config.js?v=111"></script>
 <script src="homebase-backend.js?v=124"></script>
@@ -413,9 +413,10 @@ function demandWeightBase(source,when){
   const worker=HomeBaseRoutePolicy.workerWeight(source,{day:parts.day,hour:h}),warehouse=HomeBaseRoutePolicy.warehouse(source);
   if(warehouse&&!worker)return 0;
   if(source.eventStart&&!eventTimeWeight(source,when))return 0;
+  if(source.eventStart&&HomeBaseRoutePolicy.eventImpact(source).scale===0)return 0;
   const school=source.cat==='school'||source.cat==='k12',publicPlace=!!(source.tags&&source.tags.publicVenue),schoolPrior=school?HomeBaseRoutePolicy.schoolWeight(source,{day:parts.day,hour:h},when):0;
   if(school&&!schoolPrior)return 0;
-  let weight=Math.max(0,(school?schoolPrior:warehouse?worker:hourWeight(source.cat,h,when)+worker)+eventTimeWeight(source,when)*eventScale(source));if(publicPlace&&!source.eventStart&&weight<=0){const publicPrior={transit:9,nightlife:8,restaurant:5,hotel:4,shopping:5,medical:4,attraction:5,neighborhood:4,university:3}[source.cat]||2;weight=publicPrior;}
+  let weight=Math.max(0,(school?schoolPrior:warehouse?worker:hourWeight(source.cat,h,when)+worker)+eventTimeWeight(source,when)*eventScale(source)*HomeBaseRoutePolicy.eventImpact(source).scale);if(publicPlace&&!source.eventStart&&weight<=0){const publicPrior={transit:9,nightlife:8,restaurant:5,hotel:4,shopping:5,medical:4,attraction:5,neighborhood:4,university:3}[source.cat]||2;weight=publicPrior;}
   weight+=rainDemandBoost(source,when);
   if(source.tags&&source.tags.areaCoverageAnchor)weight*=Number(source.tags.modelBias)||1;
   if(source.tags&&source.tags.metroBaseline)weight*=.78;
@@ -780,6 +781,7 @@ function demandEvidence(source,when=new Date()){
   if(source&&source.eventStart){
     const phase=HomeBaseRoutePolicy.eventPhase(source,when),state=phase==='exit'?'in its departure window':phase==='arrival'?'in its arrival window':phase==='underway'||phase==='live'?'underway':phase==='start'?'starting':source.eventEnd&&when>source.eventEnd?'ended':'scheduled; end time unconfirmed';
     parts.push('Event signal: '+name+(venue?' at '+venue:'')+' is '+state+' ('+marketTime(source.eventStart)+(source.eventEnd?'–'+marketTime(source.eventEnd):'')+'). Timing is event-based; pickup demand is modeled, not confirmed ride requests.');
+    parts.push(HomeBaseRoutePolicy.eventImpact(source).label+'.');
   }else if(tags.airportActivity){
     parts.push('Airport signal: '+(tags.arrivals||0)+' arrivals and '+(tags.departures||0)+' departures in the '+(tags.flightHour?marketTime(new Date(tags.flightHour)):'selected')+' hour at '+(venue||name)+'. Flight activity is a modeled pickup proxy.');
   }else if(Number.isFinite(Number(tags.uberSurgeMultiplier))){
@@ -959,7 +961,7 @@ async function loadProviderSignals(lat,lon,market){
     }
     const events=HomeBasePublicData.eventsForLocation(payload,lat,lon).map(item=>{
       const start=item.eventStart,end=item.eventEnd,live=!!end&&start.getTime()<=Date.now()&&end.getTime()>Date.now(),departure=!!end&&end.getTime()<=Date.now();
-      return{name:`${item.name}${item.venue?` · ${item.venue}`:''} · ${marketTime(start)}`,cat:'event',lat:item.lat,lon:item.lon,venue:item.venue||'',eventType:item.eventType||'',classification:item.classification||'',genre:item.genre||'',url:item.url||item.sourceUrl||null,eventStart:start,eventEnd:end,eventState:live?'Live':departure?'Departure':start.getTime()<Date.now()?'Scheduled · end unverified':'Preview',tags:{providerEvent:true,schoolEvent:String(item.eventType||'').includes('school_event'),publicCalendar:item.source!=='Ticketmaster Discovery API',source:item.source||'Published event calendar',sourceUrl:item.sourceUrl||item.url,sourceFetchedAt:item.fetchedAt||records?.fetchedAt}}
+      return{name:`${item.name}${item.venue?` · ${item.venue}`:''} · ${marketTime(start)}`,cat:'event',lat:item.lat,lon:item.lon,venue:item.venue||'',eventType:item.eventType||'',classification:item.classification||'',genre:item.genre||'',expectedAttendance:item.expectedAttendance,attendanceBasis:item.attendanceBasis,attendanceSourceUrl:item.attendanceSourceUrl,attendanceConfidence:item.attendanceConfidence,url:item.url||item.sourceUrl||null,eventStart:start,eventEnd:end,eventState:live?'Live':departure?'Departure':start.getTime()<Date.now()?'Scheduled · end unverified':'Preview',tags:{providerEvent:true,schoolEvent:String(item.eventType||'').includes('school_event'),publicCalendar:item.source!=='Ticketmaster Discovery API',source:item.source||'Published event calendar',sourceUrl:item.sourceUrl||item.url,sourceFetchedAt:item.fetchedAt||records?.fetchedAt}}
     }).filter(item=>!isGreaterBaltimoreLocation(lat,lon)||isGreaterBaltimoreLocation(item.lat,item.lon));
     renderFeedSignal();renderDemandCoach();return{events}
   }catch{publicCalendarCoverage={status:'unavailable',sourceCount:0};renderFeedSignal();renderDemandCoach();return null}
@@ -1159,7 +1161,7 @@ async function refreshLiveDemandLayer(){
 if(!demoLocale)setTimeout(autoRefreshGps,150);
 setInterval(()=>{updateClimateAdvisory();const selected=$('[data-hour][aria-pressed="true"]');if(selected&&selected.dataset.hour==='0')applyTimeForecast(0,new Date());refreshLiveDemandLayer()},300000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-lastAutoGpsRefresh>300000){if(demoLocale)refreshLiveDemandLayer();else autoRefreshGps()}});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=223',{updateViaCache:'none'}).then(r=>{r.update();navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!sessionStorage.getItem('hb-release-reload-v223')){sessionStorage.setItem('hb-release-reload-v223','1');location.reload()}})}).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';}));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=224',{updateViaCache:'none'}).then(r=>{r.update();navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!sessionStorage.getItem('hb-release-reload-v224')){sessionStorage.setItem('hb-release-reload-v224','1');location.reload()}})}).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';}));
 </script>
 <script src="homebase-live.js?v=38"></script>
 </body>

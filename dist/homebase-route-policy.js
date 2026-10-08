@@ -1,6 +1,14 @@
 /* Route eligibility sits ahead of economic ranking. POIs are not events. */
 (function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.HomeBaseRoutePolicy=api;})(typeof globalThis!=='undefined'?globalThis:this,function(){
   const stamp=value=>value instanceof Date?value.getTime():typeof value==='string'&&/T\d{2}:\d{2}/.test(value)?Date.parse(value):NaN;
+  function eventImpact(source){
+    const count=Number(source.expectedAttendance),url=source.attendanceSourceUrl||source.tags?.attendanceSourceUrl,basis=source.attendanceBasis;
+    const supported=source.expectedAttendance!=null&&Number.isFinite(count)&&count>=0&&count<=1000000&&/^https:\/\//.test(url||'')&&['reported','organizer_estimate','published_estimate'].includes(basis);
+    if(!supported)return {attendance:null,basis:'unknown',scale:.6,label:'Attendance unknown · conservative event forecast'};
+    const confidence=Number.isFinite(source.attendanceConfidence)?Math.max(0,Math.min(1,source.attendanceConfidence)):basis==='reported'?1:.75;
+    const size=count===0?0:Math.max(.4,Math.min(2.4,.35+.55*Math.log10(1+count/100)));
+    return {attendance:count,basis,scale:count===0?0:.6*(1-confidence)+size*confidence,label:(basis==='reported'?'Reported attendance: ':'Published attendance estimate: ')+Math.round(count).toLocaleString('en-US')+' · ride demand is modeled'};
+  }
   function eventPhase(source,when,now=new Date()){
     const tags=source.tags||{},start=stamp(source.eventStart),time=stamp(when);
     if(!Number.isFinite(start)||!Number.isFinite(time)||!(tags.providerEvent||tags.liveEvent||tags.publicCalendar||source.verifiedEvent===true))return null;
@@ -106,5 +114,5 @@
     // Six modeled points is the route hot-spot floor, not a live-demand claim.
     return ranked.filter(source=>source.routeBasis==='general_area'&&Number(source.routeDemand??source.score)>=6);
   }
-  return {eventPhase,liveSignal,schoolStage,schoolWeight,warehouse,workerWeight,mallClosingHours,fallbackEligible,candidatesForHour,selectRanked};
+  return {eventImpact,eventPhase,liveSignal,schoolStage,schoolWeight,warehouse,workerWeight,mallClosingHours,fallbackEligible,candidatesForHour,selectRanked};
 });
