@@ -42,3 +42,10 @@ test('Ticketmaster keeps music classification, uses the market country, and read
     assert.equal(urls.length,2);assert.equal(urls[0].searchParams.get('countryCode'),'GB');assert.equal(urls[1].searchParams.get('page'),'1');assert.equal(data.events.length,1);assert.equal(data.events[0].classification,'Music Rock');
   }finally{if(saved===undefined)delete process.env.TICKETMASTER_API_KEY;else process.env.TICKETMASTER_API_KEY=saved;}
 });
+test('fresh partial calendar is never erased by an older cached calendar',async()=>{
+ const {retainRecent}=await import('./refresh-provider-signals.mjs');
+ const prior={publicRecords:{status:'active',fetchedAt:new Date().toISOString(),events:[{name:'Old Towson only'}]}};
+ const current={status:'partial',fetchedAt:new Date().toISOString(),events:[{name:'New Morgan concert'}],sources:[{status:'active'},{status:'unavailable'}]};
+ assert.equal(retainRecent(prior,current,'publicRecords',86400000),current);
+ assert.equal(retainRecent(prior,{status:'unavailable'},'publicRecords',86400000).status,'stale');
+});

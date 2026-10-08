@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Home Base">
-  <meta name="homebase-build" content="v215">
+  <meta name="homebase-build" content="v216">
   <meta name="description" content="Home Base connects local driver platforms, earnings forecasts, events and a GPS-based 12-hour route in one app.">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icon-192.png">
@@ -216,7 +216,7 @@
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="baltimore-market.js?v=72"></script>
-<script src="homebase-heat.js?v=102"></script>
+<script src="homebase-heat.js?v=103"></script>
 <script src="homebase-global-heat.js?v=3"></script>
 <link rel="stylesheet" href="homebase-earnings.css?v=110">
 <link rel="stylesheet" href="homebase-growth.css?v=111">
@@ -385,9 +385,9 @@ function renderEvents(events){
   events=events.filter(rideRelevantEvent);currentEventData=events;currentEventCount=events.length;updateClimateAdvisory();renderEventMarkers(events);
   const coverage=publicCalendarCoverage,limited=coverage.status!=='active',snapshot=coverage.fetchedAt?' · listings fetched '+marketTime(new Date(coverage.fetchedAt)):'',coverageText=coverage.status==='unavailable'||coverage.status==='unsupported'?'Public calendar coverage unavailable':coverage.status==='stale'?'Saved dated listings · calendar refresh unavailable':limited?'Public calendars · coverage is partial':'Public calendars';
   if(!events.length){box.innerHTML='<div class="event-empty">No ride-relevant dated listings returned. This does not mean no events exist.'+(limited?' Public calendar coverage is limited.':'')+'</div>';pulse.textContent=coverageText+' · no dated listings returned';return}
-  const live=events.filter(e=>e.eventState==='Live').length,next=events.find(e=>e.eventState==='Preview');pulse.textContent=live?`${live} live now${next?` · next: ${next.name}`:''}`:`${events.length} in next 12 hours · ${events[0].name}`;
+  const live=events.filter(e=>e.eventState==='Live').length,next=events.find(e=>e.eventState==='Preview');pulse.textContent=live?`${live} live now${next?` · next: ${next.name}`:''}`:`${events.length} recent + upcoming listings · ${events[0].name}`;
   const sortedEvents=[...events].sort((a,b)=>(a.eventState==='Live'?-1:0)-(b.eventState==='Live'?-1:0)||a.eventStart-b.eventStart),visibleEvents=eventsExpanded?sortedEvents:sortedEvents.slice(0,4);
-  box.innerHTML='<div class="event-coverage">'+safeText(events.length+' dated events · '+coverageText+snapshot)+'</div>'+visibleEvents.map(e=>{const parts=String(e.name||'Event').split(' · ').map(v=>v.trim()).filter(Boolean),title=parts[0]||'Event',venue=e.venue||((parts.length>2&&parts[1])||''),time=e.eventStart&&Number.isFinite(new Date(e.eventStart).getTime())?marketDateTime(e.eventStart):(parts.at(-1)||''),meta=[venue,time].filter(Boolean).join(' · ');const directions=eventDirectionsUrl(e),tag=directions?'a':'div',link=directions?` href="${safeText(directions)}" target="_blank" rel="noopener noreferrer" aria-label="${safeText('Navigate to '+title+(venue?' at '+venue:''))}"`:"";return `<${tag} class="event-item compact-event"${link}><i class="event-list-icon" style="--marker:${eventColor(e)}">${eventIconSvg(e)}</i><div><b>${safeText(title)}</b><span>${safeText(meta)}${e.eventState==='Live'?' · LIVE':e.eventState==='Departure'?' · departure window':''}</span></div></${tag}>`}).join('')+(sortedEvents.length>4?`<button type="button" class="event-more list-expand" data-expand="events" aria-expanded="${eventsExpanded}">${eventsExpanded?'Show less':`+${sortedEvents.length-4} more events`}</button>`:'');
+  box.innerHTML='<div class="event-coverage">'+safeText(events.length+' dated events · '+coverageText+snapshot)+'</div>'+visibleEvents.map(e=>{const parts=String(e.name||'Event').split(' · ').map(v=>v.trim()).filter(Boolean),title=parts[0]||'Event',venue=e.venue||((parts.length>2&&parts[1])||''),time=e.eventStart&&Number.isFinite(new Date(e.eventStart).getTime())?marketDateTime(e.eventStart):(parts.at(-1)||''),meta=[venue,time].filter(Boolean).join(' · ');const directions=eventDirectionsUrl(e),tag=directions?'a':'div',link=directions?` href="${safeText(directions)}" target="_blank" rel="noopener noreferrer" aria-label="${safeText('Navigate to '+title+(venue?' at '+venue:''))}"`:"";return `<${tag} class="event-item compact-event"${link}><i class="event-list-icon" style="--marker:${eventColor(e)}">${eventIconSvg(e)}</i><div><b>${safeText(title)}</b><span>${safeText(meta)}${e.eventState==='Live'?' · LIVE':e.eventState==='Departure'?' · departure window':e.eventState==='Scheduled · end unverified'?' · end time unverified':''}</span></div></${tag}>`}).join('')+(sortedEvents.length>4?`<button type="button" class="event-more list-expand" data-expand="events" aria-expanded="${eventsExpanded}">${eventsExpanded?'Show less':`+${sortedEvents.length-4} more events`}</button>`:'');
 }
 function updateClock(){const now=new Date();$('#clock').textContent=now.toLocaleDateString([],{weekday:'short',month:'short',day:'numeric',timeZone:marketTimeZone||undefined})+' · '+marketTime(now)}
 updateClock();setInterval(updateClock,30000);
@@ -964,7 +964,7 @@ function rideRelevantEvent(event){
   if(!activeNow&&(start<now-6*3600000||start>now+12*3600000))return false;
   const text=[event.name,event.venue,event.eventType,event.classification,event.genre].join(' ').toLowerCase();
   if(/webinar|virtual|online.only|exhibition|gallery|workshop|seminar|office.hours|club.meeting|campus.tour/.test(text))return false;
-  return /sports|concert|festival|convention|conference|football|basketball|baseball|hockey|soccer|stadium|arena|theatre|theater|comedy|performing|music|graduation|commencement|fairground/.test(text)||event.tags?.source==='public sports feed'||!!(event.tags?.liveEvent&&!event.tags?.providerEvent);
+  return /sports|concert|festival|convention|conference|football|basketball|baseball|hockey|soccer|stadium|arena|theatre|theater|comedy|performing|music|graduation|commencement|fairground|homecoming|gala|party|screening/.test(text)||event.tags?.source==='public sports feed'||!!(event.tags?.liveEvent&&!event.tags?.providerEvent);
 }
 async function loadTodayEvents(lat,lon,market,venues){const results=await Promise.allSettled([loadTodaySports(lat,lon),loadEspnEvents(lat,lon,market,venues),loadProviderSignals(lat,lon,market)]),seen=new Set(),events=[];results.forEach((result,index)=>{if(result.status!=='fulfilled')return;const values=index===2?(result.value&&result.value.events||[]):result.value||[];values.filter(rideRelevantEvent).forEach(event=>{const key=HomeBasePublicData.eventIdentity(event);if(!seen.has(key)){seen.add(key);events.push(event)}})});return events.sort((a,b)=>a.eventStart-b.eventStart)}
 function fallbackVenues(lat,lon,market){if(isGreaterBaltimoreLocation(lat,lon))return fallbackDemandSources(lat,lon,'Baltimore').map(source=>({name:source.name,cat:source.cat,lat:source.lat,lon:source.lon,heatOnly:source.cat==='event',tags:{routeAnchor:source.cat!=='event',forecast:true,venueOnly:source.cat==='event'}}));if(/^london$/i.test(market))return[['Westminster & Victoria','transit',51.4988,-.1347],['West End theatres','event',51.5115,-.1281],['Soho nightlife','nightlife',51.5136,-.1365],['King’s Cross St Pancras','transit',51.5308,-.1238],['Shoreditch','nightlife',51.5245,-.0773],['The O2','event',51.503,-.0032],['Canary Wharf','transit',51.5054,-.0235],['Heathrow staging','transit',51.47,-.4543]].map(s=>({name:s[0],cat:s[1],lat:s[2],lon:s[3],tags:{forecast:true}}));return[]}
@@ -1132,7 +1132,7 @@ async function refreshLiveDemandLayer(){
 if(!demoLocale)setTimeout(autoRefreshGps,150);
 setInterval(()=>{updateClimateAdvisory();const selected=$('[data-hour][aria-pressed="true"]');if(selected&&selected.dataset.hour==='0'&&activeStops.length)applyTimeForecast(0,new Date());refreshLiveDemandLayer()},300000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-lastAutoGpsRefresh>300000){if(demoLocale)refreshLiveDemandLayer();else autoRefreshGps()}});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=215',{updateViaCache:'none'}).then(r=>{r.update();navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!sessionStorage.getItem('hb-release-reload-v215')){sessionStorage.setItem('hb-release-reload-v215','1');location.reload()}})}).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';}));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=216',{updateViaCache:'none'}).then(r=>{r.update();navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!sessionStorage.getItem('hb-release-reload-v216')){sessionStorage.setItem('hb-release-reload-v216','1');location.reload()}})}).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';}));
 </script>
 <script src="homebase-live.js?v=38"></script>
 </body>

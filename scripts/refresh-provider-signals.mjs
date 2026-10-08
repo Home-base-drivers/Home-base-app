@@ -277,8 +277,8 @@ async function flightAwareProvider(market) {
   }
 }
 
-function retainRecent(previous, current, key, maxAgeMs = 25 * 60_000) {
-  if (current.status === 'active') return current;
+export function retainRecent(previous, current, key, maxAgeMs = 25 * 60_000) {
+  if (['active','partial'].includes(current.status)) return current;
   const old = previous?.[key];
   if (old?.fetchedAt && Date.now() - Date.parse(old.fetchedAt) < maxAgeMs && ['active', 'partial', 'stale'].includes(old.status)) {
     return { ...old, status: 'stale' };

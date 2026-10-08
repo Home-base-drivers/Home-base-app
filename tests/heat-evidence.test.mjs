@@ -47,3 +47,8 @@ test('fresh feed observations persist once and stale pricing cannot enter surge 
  const learned=history.forecastFor('Morgan State',new Date('2026-10-15T00:00:00-04:00'),true);
  assert.ok(learned.strength>0&&learned.strength<=.08);
 });
+test('history follows the named Morgan venue even if its assigned neighborhood has another name',()=>{
+ const source={name:'Morgan State University',heatAreaName:'Original Northwood',lat:39.3448,lon:-76.5844};
+ assert.ok(heat.historicalPriorForSource(source,new Date('2026-10-14T23:00:00-04:00'),history)>0);
+ assert.equal(heat.historicalPriorForSource({...source,lat:51.51,lon:-.13},new Date('2026-10-14T23:00:00-04:00'),history),0);
+});

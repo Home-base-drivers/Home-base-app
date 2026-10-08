@@ -63,6 +63,11 @@
     return low[1].map((channel, i) => Math.round(channel + (high[1][i] - channel) * eased));
   }
 
+  function historicalPriorForSource(source,when,historyApi){
+    // Baltimore references must never paint another city's similarly named areas.
+    if(!historyApi||source.lat<38.8||source.lat>39.75||source.lon< -77.3||source.lon> -75.9)return 0;
+    return Math.max(...[source.heatAreaName,source.name].filter(Boolean).map(name=>historyApi.forecastFor(name,when,true).strength),0);
+  }
   function currentEvidence(source, when, now = Date.now()) {
     const tags=source.tags||{},time=+new Date(when);
     if(tags.historicalPrior)return 'history';
@@ -364,7 +369,7 @@
         if (!Array.isArray(sourceData) || !sourceData.length) return;
         const zoomFactor = 1;
         const historyApi=globalThis.HomeBaseDemandHistory;
-        const history=historyApi?sourceData.filter(s=>!(s.tags&&(s.tags.providerSignal||s.tags.providerEvent||s.tags.liveEvent))&&s.heatAreaName).map(s=>{const prior=historyApi.forecastFor(s.heatAreaName,this._when,true);return prior.strength>0?{...s,eventStart:null,eventEnd:null,tags:{historicalPrior:prior.strength}}:null;}).filter(Boolean):[];
+        const history=historyApi?sourceData.filter(s=>!(s.tags&&(s.tags.providerSignal||s.tags.providerEvent||s.tags.liveEvent))).map(s=>{const strength=historicalPriorForSource(s,this._when,historyApi);return strength>0?{...s,eventStart:null,eventEnd:null,tags:{historicalPrior:strength}}:null;}).filter(Boolean):[];
         const sources = [...sourceData,...history].map((source, index) => {
           // Label/county anchors exist only to name areas. Neighborhood
           // coverage anchors remain fixed geographic sources at every zoom.
@@ -488,5 +493,5 @@
     return new HeatLayer();
   }
 
-  return { composePixel, currentEvidence, evidenceLevel, evidenceOpacity, colorAt, setPalette, getCustomColors, setCustomColors, getPalette: () => activePalette, paletteNames: Object.keys(PALETTES), sourceStrength, areaIntensity, sourceShade, compositeLevel, compositeOpacity, sourceRadiusKm, sourceFootprintKm, anchoredGridOrigin, createLayer };
+  return { historicalPriorForSource, composePixel, currentEvidence, evidenceLevel, evidenceOpacity, colorAt, setPalette, getCustomColors, setCustomColors, getPalette: () => activePalette, paletteNames: Object.keys(PALETTES), sourceStrength, areaIntensity, sourceShade, compositeLevel, compositeOpacity, sourceRadiusKm, sourceFootprintKm, anchoredGridOrigin, createLayer };
 });
