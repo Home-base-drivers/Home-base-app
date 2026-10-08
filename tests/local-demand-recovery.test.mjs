@@ -44,12 +44,12 @@ test('a real local area remains a destination and heat source without Baltimore 
  assert.equal(context.activeStops.length,1,'one real source stays one location, never twelve duplicate rows');assert.equal(context.hourlyDestinations.length,12);
  assert.equal(calls.markers[0][0].name,area.name);assert.ok(calls.heat.at(-1).includes(area));
 });
-test('one dated event fills the selected-hour route with eleven distinct real locations, with heat independent of the twelve picks',()=>{
+test('one dated event remains the only destination while history stays on the independent heat layer',()=>{
  const {context,calls}=routeFixture(),areas=Array.from({length:20},(_,i)=>({name:'Public area '+i,cat:'neighborhood',lat:41.01+i*.004,lon:-74.01,tags:{publicVenue:true}})),event={name:'Published concert',cat:'event',lat:41.002,lon:-74,eventStart:new Date(Date.now()+30*60000),eventEnd:new Date(Date.now()+2*3600000),tags:{providerEvent:true}};
  context.buildRoute([event,...areas],41,-74,'Local',[event,...areas]);
- assert.equal(context.activeStops.length,12);assert.equal(context.activeStops[0].name,event.name);assert.equal(context.activeStops.filter(s=>s.routeBasis==='general_area').length,11);
- assert.equal(new Set(context.activeStops.map(s=>s.lat+'|'+s.lon)).size,12);assert.equal(calls.markers.at(-1).length,12);assert.equal(calls.stops.length,12);
- assert.ok(context.hourlyDestinations.every(options=>options.length===12));assert.equal(calls.heat[0].length,21,'heat must retain public locations beyond the selected route');
+ assert.equal(context.activeStops.length,1);assert.equal(context.activeStops[0].name,event.name);assert.equal(context.activeStops.filter(s=>s.routeBasis==='general_area').length,0);
+ assert.equal(calls.markers.at(-1).length,1);assert.equal(calls.stops.length,1);
+ assert.equal(context.hourlyDestinations[0].length,1);assert.equal(context.hourlyDestinations.at(-1).length,12,'hours without event or live evidence may use historical hot spots');assert.equal(calls.heat[0].length,21,'heat must retain public locations beyond the selected route');
 });
 test('scheduled events get real map pins even when they are not current-hour pickups',()=>{
  const pins=[];const L={divIcon:x=>x,marker:point=>{const marker={point,addTo(){pins.push(this);return this},bindPopup(){return this},on(){return this}};return marker}};

@@ -35,15 +35,35 @@
     return active*(stage==='primary'||stage==='middle'?1:stage==='high'?.45:.65);
   }
   function fallbackEligible(source,parts,when){
-    if(source.tags?.deliveryRelevant||source.cat==='university'||source.cat==='event'||source.eventStart)return false;
+    if(source.tags?.deliveryRelevant||source.tags?.providerSignal||source.cat==='university'||source.cat==='event'||source.eventStart)return false;
     if(source.cat==='school'||source.cat==='k12')return schoolWeight(source,parts,when)>0&&!/pickup cluster/i.test(source.name||'');
     return ['neighborhood','nightlife','transit','hotel','medical','shopping','attraction','restaurant_district'].includes(source.cat);
   }
+  function liveSignal(source,when,now=new Date()){
+    const tags=source.tags||{},time=stamp(when),current=stamp(now);
+    if(!tags.providerSignal||tags.deliveryRelevant||!Number.isFinite(time)||!Number.isFinite(current))return null;
+    const sampled=stamp(tags.providerSampledAt||tags.sourceFetchedAt),age=current-sampled;
+    if(!Number.isFinite(sampled)||age< -2*60000||age>25*60000)return null;
+    if(tags.airportActivity){
+      const hour=stamp(tags.flightHour);
+      return Number(tags.arrivals)>0&&Number.isFinite(hour)&&time>=hour&&time<hour+3600000?'airport_activity':null;
+    }
+    // Ordinary prices and historic screenshots are not current hot spots.
+    return Number(tags.uberSurgeMultiplier)>1&&Math.abs(time-sampled)<=25*60000?'pricing_proxy':null;
+  }
   function candidatesForHour(sources,when,parts,now=new Date()){
     const events=sources.filter(source=>eventPhase(source,when,now)).map(source=>({...source,routeBasis:'verified_event',routeEventPhase:eventPhase(source,when,now)}));
+    const live=sources.filter(source=>liveSignal(source,when,now)).map(source=>({...source,routeBasis:'live_signal',routeSignalType:liveSignal(source,when,now)}));
     const general=sources.filter(source=>fallbackEligible(source,parts,when)).map(source=>({...source,routeBasis:'general_area'}));
-    return {events,general};
+    return {events,live,general};
   }
-  function selectRanked(ranked){return [...ranked.filter(source=>source.routeBasis==='verified_event'),...ranked.filter(source=>source.routeBasis==='general_area')];}
-  return {eventPhase,schoolStage,schoolWeight,fallbackEligible,candidatesForHour,selectRanked};
+  function selectRanked(ranked){
+    // Apply after geographic/economic ranking: an unreachable event must not
+    // suppress local fallback. Never pad an evidence-backed list with history.
+    const evidence=ranked.filter(source=>['verified_event','live_signal'].includes(source.routeBasis));
+    if(evidence.length){const current=evidence.filter(s=>s.routeDemand==null||s.routeDemand>0);return [...current.filter(s=>s.routeBasis==='verified_event'),...current.filter(s=>s.routeBasis==='live_signal')];}
+    // Six modeled points is the route hot-spot floor, not a live-demand claim.
+    return ranked.filter(source=>source.routeBasis==='general_area'&&Number(source.routeDemand??source.score)>=6);
+  }
+  return {eventPhase,liveSignal,schoolStage,schoolWeight,fallbackEligible,candidatesForHour,selectRanked};
 });

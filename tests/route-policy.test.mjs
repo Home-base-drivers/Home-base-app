@@ -5,9 +5,28 @@ const require=createRequire(import.meta.url),P=require('../dist/homebase-route-p
 const at=value=>new Date(`2026-10-06T${value}:00-04:00`),origin=[39.29,-76.61];
 const event={name:'Verified concert',cat:'event',lat:39.31,lon:-76.61,eventStart:at('12:00'),eventEnd:at('14:00'),tags:{providerEvent:true,source:'official calendar'}};
 const area={name:'Neighborhood',cat:'neighborhood',lat:39.29,lon:-76.61};
-function plan(sources,when=at('11:00'),parts={day:2,hour:11},radiusMiles=25){const e=P.candidatesForHour(sources,when,parts,at('11:00'));return P.selectRanked(R.rankCandidates([...e.events,...e.general].map(s=>({...s,score:s.routeBasis==='verified_event'?3:40})),{origin,radiusMiles,hourlyRate:30,costPerMile:.3}));}
-test('dated events outrank a closer, higher-scoring area for every applicable hour',()=>{
-  for(const [hour,phase] of [['11:00','arrival'],['12:30','underway'],['14:30','exit']]){const result=plan([event,area],at(hour));assert.equal(result[0].name,event.name);assert.equal(result[0].routeEventPhase,phase);assert.equal(result.length,2);assert.equal(result[1].name,area.name);}
+function plan(sources,when=at('11:00'),parts={day:2,hour:11},radiusMiles=25){const e=P.candidatesForHour(sources,when,parts,at('11:00'));return P.selectRanked(R.rankCandidates([...e.events,...e.live,...e.general].map(s=>({...s,score:s.routeBasis==='verified_event'?3:40})),{origin,radiusMiles,hourlyRate:30,costPerMile:.3}));}
+test('dated event hot spots exclude every historical-only area in applicable hours',()=>{
+  for(const [hour,phase] of [['11:00','arrival'],['12:30','underway'],['14:30','exit']]){const result=plan([event,area],at(hour));assert.equal(result[0].name,event.name);assert.equal(result[0].routeEventPhase,phase);assert.equal(result.length,1);}
+});
+test('fresh elevated provider prices suppress historical destinations without becoming future surge',()=>{
+  const live={...area,name:'Current price proxy',tags:{providerSignal:true,uberSurgeMultiplier:1.5,providerSampledAt:at('10:55').toISOString()}};
+  assert.deepEqual(plan([live,area]).map(s=>s.routeBasis),['live_signal']);
+  assert.deepEqual(plan([live,event,area]).map(s=>s.routeBasis),['verified_event','live_signal']);
+  for(const tags of [{...live.tags,providerSampledAt:at('09:00').toISOString()},{...live.tags,uberSurgeMultiplier:1},{providerSignal:true,uberSurgeMultiplier:2},{providerSignal:true,historicalSurgeMultiplier:2}])assert.deepEqual(plan([{...live,tags},area]).map(s=>s.name),[area.name]);
+  assert.equal(P.liveSignal(live,at('13:00'),at('11:00')),null);
+});
+test('airport arrival activity is eligible only in its published hour and from a fresh feed',()=>{
+  const airport={...area,cat:'transit',tags:{providerSignal:true,airportActivity:true,flightHour:at('11:00').toISOString(),arrivals:4,sourceFetchedAt:at('10:55').toISOString()}};
+  assert.equal(P.liveSignal(airport,at('11:30'),at('11:00')),'airport_activity');
+  assert.equal(P.liveSignal(airport,at('12:00'),at('11:00')),null);
+  assert.equal(P.liveSignal({...airport,tags:{...airport.tags,arrivals:0}},at('11:00'),at('11:00')),null);
+  assert.equal(P.liveSignal(airport,at('11:30'),at('12:00')),null);
+});
+test('historical fallback contains only modeled hot spots, never weak areas or zero-demand signals',()=>{
+  assert.deepEqual(P.selectRanked([{...area,routeBasis:'general_area',score:30,routeDemand:2}]),[]);
+  const fallback={...area,routeBasis:'general_area',score:8,routeDemand:7};
+  assert.deepEqual(P.selectRanked([{...event,routeBasis:'verified_event',score:28,routeDemand:0},fallback]),[]);
 });
 test('no relevant or reachable event uses general area demand',()=>{
   assert.equal(plan([event,area],at('09:00'))[0].routeBasis,'general_area');
