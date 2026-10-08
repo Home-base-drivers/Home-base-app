@@ -20,7 +20,7 @@
       if(!feed||!['active','partial','stale'].includes(feed.calendarStatus||feed.status)||!calendarFresh(feed,payload.generatedAt,now))continue;
       for(const e of feed.events||[]){
         const start=Date.parse(e.eventStart),end=Date.parse(e.eventEnd||'');
-        if(isTicketAddon(e.name)||!point(e)||!Number.isFinite(start)||!/^\d{4}-\d\d-\d\dT\d\d:\d\d/.test(e.eventStart)||start>now+12*HOUR||(Number.isFinite(end)&&end>start?end<now-90*60000:start<now-30*60000)||distance([lat,lon],[Number(e.lat),Number(e.lon)])>65)continue;
+        if(isTicketAddon(e.name)||!point(e)||!Number.isFinite(start)||!/^\d{4}-\d\d-\d\dT\d\d:\d\d/.test(e.eventStart)||start>now+12*HOUR||(Number.isFinite(end)&&end>start?end<now-90*60000:start<now-6*HOUR)||distance([lat,lon],[Number(e.lat),Number(e.lon)])>65)continue;
         const key=eventIdentity(e);
         if(seen.has(key))continue;seen.add(key);
         rows.push({...e,lat:Number(e.lat),lon:Number(e.lon),eventStart:new Date(start),eventEnd:Number.isFinite(end)&&end>start?new Date(end):null});

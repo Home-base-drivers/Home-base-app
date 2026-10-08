@@ -231,7 +231,35 @@
       ],
       "countryCode": "US",
       "timeZone": "America/New_York",
-      "placeRadiusKm": 20
+      "placeRadiusKm": 20,
+      "publicCalendars": [
+        {
+          "name": "Ticketmaster Baltimore public listings",
+          "url": "https://www.ticketmaster.com/discover/baltimore",
+          "maxPages": 6
+        },
+        {
+          "name": "Baltimore Soundstage calendar",
+          "url": "https://www.baltimoresoundstage.com/calendar/",
+          "adapter": "soundstage",
+          "venue": {
+            "name": "Baltimore Soundstage",
+            "lat": 39.2875169,
+            "lon": -76.607604,
+            "coordinateSource": "https://baltimore.org/listings/baltimore-soundstage/"
+          }
+        },
+        {
+          "name": "Nevermore Hall published AXS calendar",
+          "url": "https://www.axs.com/venues/134269/nevermore-hall-baltimore-tickets",
+          "nextOnly": true
+        },
+        {
+          "name": "Ottobar published AXS calendar",
+          "url": "https://www.axs.com/venues/128508/ottobar-baltimore-tickets",
+          "nextOnly": true
+        }
+      ]
     },
     {
       "id": "north-jersey",
@@ -299,7 +327,7 @@
           "url": "https://www.ticketmaster.co.uk/hamilton-tickets/artist/5218048?venueId=434783"
         },
         {
-          "name": "Les Misérables published performances",
+          "name": "Les Mis\u00e9rables published performances",
           "url": "https://www.ticketmaster.co.uk/les-miserables-tickets/artist/803968?venueId=434617"
         },
         {

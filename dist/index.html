@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Home Base">
-  <meta name="homebase-build" content="v214">
+  <meta name="homebase-build" content="v215">
   <meta name="description" content="Home Base connects local driver platforms, earnings forecasts, events and a GPS-based 12-hour route in one app.">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icon-192.png">
@@ -205,7 +205,7 @@
     <section class="map-stage" aria-label="Local ride-demand forecast">
       
       <aside class="route-plan" id="routePlan" hidden><div class="route-head"><h2>EVENTS + ROUTE</h2><button class="panel-mini" id="routeToggle" aria-expanded="true">−</button></div><div class="route-body"><div id="todayEvents"><div class="event-empty">Checking current-day events…</div></div><div class="time-row route-time-row" id="routeTimeRow" aria-label="Choose the hour for pickup locations"></div><div class="panel-subhead" id="routePlanTitle">NEXT 12 HOURS</div><div id="routeStops"></div><div class="route-source">GPS + current time + weather + public venue data</div></div></aside>
-      <aside class="legend collapsed" id="legend" aria-label="Demand and map icon legend"><button class="legend-toggle" id="legendToggle" aria-expanded="false">KEY</button><div class="legend-content"><span><i class="dot" style="background:var(--red);color:var(--red)"></i>Very high</span><span><i class="dot" style="background:var(--orange);color:var(--orange)"></i>High</span><span><i class="dot" style="background:var(--yellow);color:var(--yellow)"></i>Moderate</span><span><i class="dot" style="background:var(--low);color:var(--low)"></i>Lower</span><div class="event-icon-key" id="eventIconKey" aria-label="Event icon types"></div><div class="icon-key"><span>S · School</span><span>T · Transit</span><span>N · Nightlife</span><span>D · Dining</span><span>H · Hotel</span></div><span class="data-source-note">PUBLIC INPUTS · Live: Open-Meteo weather · OpenStreetMap venues · ESPN/MLB schedules · OSRM routes · Static: Baltimore City 2020 Census neighborhood baseline</span><span class="data-source-note">REQUIRED RIDE SIGNAL FEEDS · Ticketmaster events · Uber price proxy · FlightAware BWI activity. Provider authorization is required; no signal is fabricated when a feed is unavailable. Every neighborhood score and hourly forecast is calculated by the Home Base model from available time, weather, event, airport, venue, and aggregate Census inputs; raw source counts are not presented as ride demand.</span></div></aside>
+      <aside class="legend collapsed" id="legend" aria-label="Demand and map icon legend"><button class="legend-toggle" id="legendToggle" aria-expanded="false">KEY</button><div class="legend-content"><span><i class="dot" style="background:var(--red);color:var(--red)"></i>Very high</span><span><i class="dot" style="background:var(--orange);color:var(--orange)"></i>High</span><span><i class="dot" style="background:var(--yellow);color:var(--yellow)"></i>Moderate</span><span><i class="dot" style="background:var(--low);color:var(--low)"></i>Lower</span><div class="event-icon-key" id="eventIconKey" aria-label="Event icon types"></div><div class="icon-key"><span>S · School</span><span>T · Transit</span><span>N · Nightlife</span><span>D · Dining</span><span>H · Hotel</span></div><span class="data-source-note">Thin history = forecast. Orange/red = modeled or scheduled activity. Purple requires fresh platform pricing evidence. PUBLIC INPUTS · Live: Open-Meteo weather · OpenStreetMap venues · ESPN/MLB schedules · OSRM routes · Static: Baltimore City 2020 Census neighborhood baseline</span><span class="data-source-note">REQUIRED RIDE SIGNAL FEEDS · Ticketmaster events · Uber price proxy · FlightAware BWI activity. Provider authorization is required; no signal is fabricated when a feed is unavailable. Every neighborhood score and hourly forecast is calculated by the Home Base model from available time, weather, event, airport, venue, and aggregate Census inputs; raw source counts are not presented as ride demand.</span></div></aside>
     </section>
   </main>
   <section class="bottom-sheet" id="bottomSheet" aria-live="polite"><div class="best-move-kicker">BEST MOVE RIGHT NOW</div><button class="sheet-toggle" id="sheetToggle" aria-expanded="true" aria-label="Collapse bottom briefing">⌄</button><div class="decision-grid"><div class="decision"><span>BEST TIME</span><b id="bestTime">NOW</b></div><div class="decision"><span>BEST ROUTE</span><b id="bestRoute">Connecting GPS…</b></div><div class="decision"><span>BEST PLATFORM</span><b id="bestPlatform">Uber first</b></div></div><div class="pulse-grid"><div class="pulse"><span>CITY PULSE</span><b id="cityPulse">Reading commute, schools, dining and nightlife…</b></div><div class="pulse"><span>EVENT WATCH</span><b id="eventPulse">Checking active and upcoming events…</b></div></div><div class="sheet-top"><div class="sheet-icon" id="detailIcon">•</div><div><b id="detailTitle">Connecting to your current market</b><p id="detailText">GPS starts automatically and builds today’s route from schools, weather and nearby public venues.</p></div></div><div class="route-row"><div class="route" id="route">AUTO-CONNECTING GPS · Route appears immediately</div><button class="maps-btn" id="mapsBtn">GOOGLE MAPS ↗</button></div></section>
@@ -216,14 +216,14 @@
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="baltimore-market.js?v=72"></script>
-<script src="homebase-heat.js?v=101"></script>
+<script src="homebase-heat.js?v=102"></script>
 <script src="homebase-global-heat.js?v=3"></script>
 <link rel="stylesheet" href="homebase-earnings.css?v=110">
 <link rel="stylesheet" href="homebase-growth.css?v=111">
 <script src="homebase-earnings.js?v=110"></script>
-<script src="homebase-demand-history.js?v=123"></script>
+<script src="homebase-demand-history.js?v=124"></script>
 <script src="homebase-route-policy.js?v=2"></script>
-<script src="homebase-public-data.js?v=2"></script>
+<script src="homebase-public-data.js?v=3"></script>
 <script src="homebase-planner.js?v=127"></script>
 <script src="homebase-config.js?v=111"></script>
 <script src="homebase-backend.js?v=124"></script>
@@ -384,7 +384,7 @@ function renderEvents(events){
   if(events===null){box.innerHTML='<div class="event-empty">Checking dated events for the next 12 hours…</div>';pulse.textContent='Checking dated events for the next 12 hours…';return}
   events=events.filter(rideRelevantEvent);currentEventData=events;currentEventCount=events.length;updateClimateAdvisory();renderEventMarkers(events);
   const coverage=publicCalendarCoverage,limited=coverage.status!=='active',snapshot=coverage.fetchedAt?' · listings fetched '+marketTime(new Date(coverage.fetchedAt)):'',coverageText=coverage.status==='unavailable'||coverage.status==='unsupported'?'Public calendar coverage unavailable':coverage.status==='stale'?'Saved dated listings · calendar refresh unavailable':limited?'Public calendars · coverage is partial':'Public calendars';
-  if(!events.length){box.innerHTML='<div class="event-empty">No verified dated listings returned for the next 12 hours.'+(limited?' Public calendar coverage is limited.':'')+'</div>';pulse.textContent=coverageText+' · no dated listings returned';return}
+  if(!events.length){box.innerHTML='<div class="event-empty">No ride-relevant dated listings returned. This does not mean no events exist.'+(limited?' Public calendar coverage is limited.':'')+'</div>';pulse.textContent=coverageText+' · no dated listings returned';return}
   const live=events.filter(e=>e.eventState==='Live').length,next=events.find(e=>e.eventState==='Preview');pulse.textContent=live?`${live} live now${next?` · next: ${next.name}`:''}`:`${events.length} in next 12 hours · ${events[0].name}`;
   const sortedEvents=[...events].sort((a,b)=>(a.eventState==='Live'?-1:0)-(b.eventState==='Live'?-1:0)||a.eventStart-b.eventStart),visibleEvents=eventsExpanded?sortedEvents:sortedEvents.slice(0,4);
   box.innerHTML='<div class="event-coverage">'+safeText(events.length+' dated events · '+coverageText+snapshot)+'</div>'+visibleEvents.map(e=>{const parts=String(e.name||'Event').split(' · ').map(v=>v.trim()).filter(Boolean),title=parts[0]||'Event',venue=e.venue||((parts.length>2&&parts[1])||''),time=e.eventStart&&Number.isFinite(new Date(e.eventStart).getTime())?marketDateTime(e.eventStart):(parts.at(-1)||''),meta=[venue,time].filter(Boolean).join(' · ');const directions=eventDirectionsUrl(e),tag=directions?'a':'div',link=directions?` href="${safeText(directions)}" target="_blank" rel="noopener noreferrer" aria-label="${safeText('Navigate to '+title+(venue?' at '+venue:''))}"`:"";return `<${tag} class="event-item compact-event"${link}><i class="event-list-icon" style="--marker:${eventColor(e)}">${eventIconSvg(e)}</i><div><b>${safeText(title)}</b><span>${safeText(meta)}${e.eventState==='Live'?' · LIVE':e.eventState==='Departure'?' · departure window':''}</span></div></${tag}>`}).join('')+(sortedEvents.length>4?`<button type="button" class="event-more list-expand" data-expand="events" aria-expanded="${eventsExpanded}">${eventsExpanded?'Show less':`+${sortedEvents.length-4} more events`}</button>`:'');
@@ -430,8 +430,8 @@ function layeredDemandOverlap(source,when){
   return Math.min(24,additive)+(intersections>=2?Math.min(8,(intersections-1)*1.5):0);
 }
 function demandWeight(source,when){
-  const base=demandWeightBase(source,when);
-  return base>0?base+layeredDemandOverlap(source,when):0;
+  // Stack context once in the geographic renderer, not again in every source.
+  return demandWeightBase(source,when);
 }
 function pointInRing(lon,lat,ring){let inside=false;for(let i=0,j=ring.length-1;i<ring.length;j=i++){const a=ring[i],b=ring[j];if(((a[1]>lat)!==(b[1]>lat))&&(lon<(b[0]-a[0])*(lat-a[1])/(b[1]-a[1]||1e-12)+a[0]))inside=!inside}return inside}
 function pointInArea(lon,lat,geometry){if(!geometry)return false;const polygons=geometry.type==='Polygon'?[geometry.coordinates]:geometry.type==='MultiPolygon'?geometry.coordinates:[];return polygons.some(rings=>rings.length&&pointInRing(lon,lat,rings[0])&&!rings.slice(1).some(ring=>pointInRing(lon,lat,ring)))}
@@ -801,7 +801,7 @@ function demandEvidence(source,when=new Date()){
 }
 function hourWeight(cat,h,when=new Date()){const night=h>=21||h<3,day=marketParts(when).day,weekday=day>=1&&day<=5,cooling=surgeTrend==='cooling';if(cat==='school'||cat==='k12')return HomeBaseRoutePolicy.schoolWeight({cat},{day,hour:h},when);if(cat==='university')return h>=7&&h<22?(h>=16?6:4):1;if(cat==='nightlife')return(night?12:h>=18?7:1)-(cooling?1:0);if(cat==='event')return 0;if(cat==='restaurant')return((h>=11&&h<14)||(h>=17&&h<22)?9:2)+(cooling?1:0);if(cat==='transit')return((h>=5&&h<10)||(h>=15.5&&h<20)||h>=22?10:4)+(cooling?1:0);if(cat==='hotel')return(h<9||h>=20)?7:3;if(cat==='attraction')return h>=10&&h<18?7:1;if(cat==='shopping')return h>=10&&h<21?6:1;if(cat==='medical')return(h>=6&&h<9)||(h>=14&&h<17)||(h>=22)?7:3;if(cat==='neighborhood'){/* Sunday morning prior; dated events add their own arrival/exit peaks. */if(day===0)return h>=6&&h<12?7:h>=12&&h<17?4:h>=17&&h<21?5:3;return weekday&&h>=13&&h<19?7:(h>=6&&h<9)||(h>=16&&h<20)?5:3;}return 2}
 function eventTimeWeight(v,when){const phase=HomeBaseRoutePolicy.eventPhase(v,when);return ({arrival:12,start:11,underway:4,exit:16,live:11})[phase]||0}
-function eventScale(v){if(v.tags&&v.tags.publicCalendar&&v.eventType==='campus')return .2;const name=eventToken(`${v.venue||''} ${v.name||''}`);if(/m t bank stadium|camden yards/.test(name))return 1.35;if(/cfg bank arena/.test(name))return 1.2;if(/convention center|pier six|rams head/.test(name))return 1.05;return 1}
+function eventScale(v){if(v.tags&&v.tags.publicCalendar&&v.eventType==='campus'&&!/concert|perform|festival|gala|homecoming|football/i.test(v.name+' '+v.classification))return .2;const name=eventToken(`${v.venue||''} ${v.name||''}`);if(/m t bank stadium|camden yards/.test(name))return 1.35;if(/cfg bank arena/.test(name))return 1.2;if(/convention center|pier six|rams head/.test(name))return 1.05;return 1}
 function rainDemandBoost(source,when=new Date()){const target=when instanceof Date?when.getTime():Date.parse(when);const nearest=hourlyRainForecast.reduce((best,item)=>!best||Math.abs(item.time-target)<Math.abs(best.time-target)?item:best,null);const chance=nearest&&Math.abs(nearest.time-target)<=5400000?nearest.probability:Number(currentRainChance)||0;if(chance<25)return 0;if(!['event','transit','restaurant','nightlife','neighborhood','hotel'].includes(source.cat))return 0;let boost=chance>=75?4:chance>=50?2.5:1;if(source.eventStart)boost*=1.35;return boost}
 function schoolWeight(when){const mp=marketParts(when),day=mp.day,hour=mp.hour+when.getMinutes()/60;if(day<1||day>5||hour<13.5||hour>=17)return 0;if(hour<15.75)return 12;if(hour<16.5)return 7;return 3}
 function trendWeight(cat,stopIndex){if(surgeTrend!=='cooling'||stopIndex>0)return 0;if(cat==='school'||cat==='k12')return 4;if(cat==='transit'||cat==='restaurant')return 1;return-2}
@@ -932,6 +932,7 @@ async function loadProviderSignals(lat,lon,market){
     }
     const uber=match.uber;
     if(uber&&['active','stale'].includes(uber.status)&&Date.now()-Date.parse(uber.fetchedAt||0)<=25*60000){
+      if(isGreaterBaltimoreLocation(lat,lon)&&window.HomeBaseDemandHistory)for(const sample of uber.samples||[])HomeBaseDemandHistory.rememberSignal(sample,'Uber');
       providerUberPoints=(uber.samples||[]).filter(item=>Number.isFinite(Number(item.surgeMultiplier))).map(item=>({name:'Uber pricing · '+item.name,cat:'neighborhood',lat:Number(item.lat),lon:Number(item.lon),heatOnly:true,tags:{providerSignal:true,uberSurgeMultiplier:Number(item.surgeMultiplier),providerSampledAt:item.sampledAt,source:'Uber price estimate proxy'}})).filter(item=>Number.isFinite(item.lat)&&Number.isFinite(item.lon));
       providerPricePoints.push(...(uber.samples||[]).map(item=>providerPriceSample('Uber',item)).filter(Boolean));
     }
@@ -951,7 +952,7 @@ async function loadProviderSignals(lat,lon,market){
     }
     const events=HomeBasePublicData.eventsForLocation(payload,lat,lon).map(item=>{
       const start=item.eventStart,end=item.eventEnd,live=!!end&&start.getTime()<=Date.now()&&end.getTime()>Date.now(),departure=!!end&&end.getTime()<=Date.now();
-      return{name:`${item.name}${item.venue?` · ${item.venue}`:''} · ${marketTime(start)}`,cat:'event',lat:item.lat,lon:item.lon,venue:item.venue||'',eventType:item.eventType||'',classification:item.classification||'',genre:item.genre||'',url:item.url||item.sourceUrl||null,eventStart:start,eventEnd:end,eventState:live?'Live':departure?'Departure':'Preview',tags:{providerEvent:true,publicCalendar:item.source!=='Ticketmaster Discovery API',source:item.source||'Published event calendar',sourceUrl:item.sourceUrl||item.url,sourceFetchedAt:item.fetchedAt||records?.fetchedAt}}
+      return{name:`${item.name}${item.venue?` · ${item.venue}`:''} · ${marketTime(start)}`,cat:'event',lat:item.lat,lon:item.lon,venue:item.venue||'',eventType:item.eventType||'',classification:item.classification||'',genre:item.genre||'',url:item.url||item.sourceUrl||null,eventStart:start,eventEnd:end,eventState:live?'Live':departure?'Departure':start.getTime()<Date.now()?'Scheduled · end unverified':'Preview',tags:{providerEvent:true,publicCalendar:item.source!=='Ticketmaster Discovery API',source:item.source||'Published event calendar',sourceUrl:item.sourceUrl||item.url,sourceFetchedAt:item.fetchedAt||records?.fetchedAt}}
     }).filter(item=>!isGreaterBaltimoreLocation(lat,lon)||isGreaterBaltimoreLocation(item.lat,item.lon));
     renderFeedSignal();renderDemandCoach();return{events}
   }catch{publicCalendarCoverage={status:'unavailable',sourceCount:0};renderFeedSignal();renderDemandCoach();return null}
@@ -960,7 +961,7 @@ function rideRelevantEvent(event){
   if(HomeBasePublicData.isTicketAddon(event?.name)||!event?.eventStart||!Number.isFinite(new Date(event.eventStart).getTime())||!Number.isFinite(Number(event.lat))||!Number.isFinite(Number(event.lon)))return false;
   const now=Date.now(),start=new Date(event.eventStart).getTime(),end=event.eventEnd?new Date(event.eventEnd).getTime():NaN;
   const activeNow=Number.isFinite(end)&&end>start&&start<=now&&end+90*60000>now;
-  if(!activeNow&&(start<now-30*60000||start>now+12*3600000))return false;
+  if(!activeNow&&(start<now-6*3600000||start>now+12*3600000))return false;
   const text=[event.name,event.venue,event.eventType,event.classification,event.genre].join(' ').toLowerCase();
   if(/webinar|virtual|online.only|exhibition|gallery|workshop|seminar|office.hours|club.meeting|campus.tour/.test(text))return false;
   return /sports|concert|festival|convention|conference|football|basketball|baseball|hockey|soccer|stadium|arena|theatre|theater|comedy|performing|music|graduation|commencement|fairground/.test(text)||event.tags?.source==='public sports feed'||!!(event.tags?.liveEvent&&!event.tags?.providerEvent);
@@ -1131,7 +1132,7 @@ async function refreshLiveDemandLayer(){
 if(!demoLocale)setTimeout(autoRefreshGps,150);
 setInterval(()=>{updateClimateAdvisory();const selected=$('[data-hour][aria-pressed="true"]');if(selected&&selected.dataset.hour==='0'&&activeStops.length)applyTimeForecast(0,new Date());refreshLiveDemandLayer()},300000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-lastAutoGpsRefresh>300000){if(demoLocale)refreshLiveDemandLayer();else autoRefreshGps()}});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=214',{updateViaCache:'none'}).then(r=>{r.update();navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!sessionStorage.getItem('hb-release-reload-v214')){sessionStorage.setItem('hb-release-reload-v214','1');location.reload()}})}).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';}));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=215',{updateViaCache:'none'}).then(r=>{r.update();navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!sessionStorage.getItem('hb-release-reload-v215')){sessionStorage.setItem('hb-release-reload-v215','1');location.reload()}})}).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';}));
 </script>
 <script src="homebase-live.js?v=38"></script>
 </body>

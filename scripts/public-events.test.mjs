@@ -62,3 +62,13 @@ test('public place geometry includes ways and the named-area fallback survives m
   const result=await publicPlaces(market,now,null,async()=>({ok:false}));assert.equal(result.status,'baseline');assert.ok(result.places.length>=12);assert.ok(result.places.every(p=>p.tags.modelEstimate));
   const payload={markets:[{...market,publicPlaces:result}]};assert.ok(publicData.placesForLocation(payload,51.5,-.12,18,now).length>=12);assert.equal(publicData.placesForLocation(payload,40.94,-74.07,18,now).length,0);
 });
+test('venue parent coordinates and published HTML show times remain usable without invented ends',async()=>{
+ const {publishedVenueEvents}=await import('./public-events.mjs');
+ const html='<article class="event" data-start="2026-10-08 20:00"><a href="https://www.baltimoresoundstage.com/events/show/"><span class="title">R&#038;B Party</span></a></article>';
+ const s={...source,adapter:'soundstage',venue:{name:'Baltimore Soundstage',lat:39.2875169,lon:-76.607604}};
+ const e=publishedVenueEvents(html,s)[0];
+ assert.equal(e.name,'R&B Party');assert.equal(e.endDate,undefined);
+ assert.equal(normalizePublicEvent(e,{center:{lat:39.29,lon:-76.61},radiusKm:58,timeZone:'America/New_York'},s,Date.parse('2026-10-08T14:00:00Z')).eventStart,'2026-10-09T00:00:00.000Z');
+ const parent={ '@type':'MusicVenue',name:'Ottobar',geo:{latitude:39.3188405,longitude:-76.6194969},event:{'@type':'MusicEvent',name:'Published show',startDate:'2026-10-08T19:00:00-04:00',location:{name:'Ottobar'}}};
+ assert.equal(structuredEvents('<script type="application/ld+json">'+JSON.stringify(parent)+'</script>')[0].location.geo.latitude,39.3188405);
+});

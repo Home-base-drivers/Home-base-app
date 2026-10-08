@@ -47,12 +47,25 @@ export function structuredEvents(html) {
     if (Array.isArray(value)) { value.forEach(walk); return; }
     if (!value || typeof value !== 'object') return;
     if ([value['@type']].flat().some(type => /Event$/.test(String(type)))) events.push(value);
+    // Venue calendars may place their verified geo on the parent MusicVenue.
+    if(value.geo&&value.event&&value.name)for(const event of [value.event].flat())if(event&&event.location?.name===value.name&&!event.location.geo)event.location.geo=value.geo;
     for (const child of Object.values(value)) if (child && typeof child === 'object') walk(child);
   };
   for (const match of String(html).matchAll(/<script\b[^>]*\btype\s*=\s*["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)) {
     try { walk(JSON.parse(match[1].replace(/^\s*<!--|-->\s*$/g, ''))); } catch { /* A malformed unrelated block does not erase other records. */ }
   }
   return events;
+}
+
+// Soundstage publishes explicit local show times in data-start attributes.
+// Coordinates come from Visit Baltimore's venue listing, not guessed venues.
+export function publishedVenueEvents(html,source){
+  if(source.adapter!=='soundstage')return [];
+  const text=value=>String(value).replace(/<[^>]*>/g,' ').replace(/&#(?:0?38|x26);/gi,'&').replace(/&amp;/g,'&').replace(/&#(?:0?39|x27);/gi,"'").replace(/&quot;/g,'"').replace(/\s+/g,' ').trim();
+  return [...String(html).matchAll(/<article\b[^>]*data-start=["'](\d{4}-\d{2}-\d{2} \d{2}:\d{2})["'][^>]*>([\s\S]*?)<\/article>/gi)].map(match=>{
+    const block=match[2],title=block.match(/<span[^>]*class=["']title["'][^>]*>([\s\S]*?)<\/span>/i),link=block.match(/href=["'](https:\/\/www\.baltimoresoundstage\.com\/events\/[^"']+)["']/i);
+    return title&&link?{'@type':'MusicEvent',name:text(title[1]),startDate:match[1].replace(' ','T'),url:link[1],eventStatus:/cancelled|canceled/i.test(text(block))?'EventCancelled':'EventScheduled',location:{name:source.venue.name,geo:{latitude:source.venue.lat,longitude:source.venue.lon}}}:null;
+  }).filter(Boolean);
 }
 
 function safeUrl(value, fallback) {
@@ -65,7 +78,7 @@ export function normalizePublicEvent(event, market, source, now = Date.now()) {
   if (!start) return null;
   const reportedEnd = zonedEventTime(event.endDate, market.timeZone);
   const end = reportedEnd && Date.parse(reportedEnd) > Date.parse(start) ? reportedEnd : null;
-  if ((end ? Date.parse(end) < now - 90 * 60_000 : Date.parse(start) < now - HOUR / 2) || Date.parse(start) > now + 36 * HOUR) return null;
+  if ((end ? Date.parse(end) < now - 90 * 60_000 : Date.parse(start) < now - 6 * HOUR) || Date.parse(start) > now + 36 * HOUR) return null;
   const venue = [event.location].flat().find(place => place && typeof place === 'object');
   const geo = venue?.geo;
   const known = (source.venues || []).find(place => place.name.toLowerCase() === String(venue?.name || '').toLowerCase());
@@ -114,7 +127,7 @@ export async function publicEventCalendars(market, now = Date.now(), request = f
       if (seenPages.has(url)) break;
       seenPages.add(url);
       try {
-        const html = await publicPage(url, request), records = structuredEvents(html);
+        const html = await publicPage(url, request), records = [...structuredEvents(html),...publishedVenueEvents(html,source)];
         if (!records.length) throw Error('No machine-readable public calendar');
         loaded++;
         events.push(...records.map(event => normalizePublicEvent(event, market, { ...source, url }, now)).filter(Boolean));
@@ -124,7 +137,7 @@ export async function publicEventCalendars(market, now = Date.now(), request = f
         url = source.maxPages > 1 ? nextPublicPage(html, url) : null;
       } catch { error = true; break; }
     }
-    truncated = !!url;
+    truncated = !!url || !!source.nextOnly;
     return { events, source: { name: source.name, url: source.url, status: error ? loaded ? 'partial' : 'unavailable' : 'active', fetchedAt: loaded ? new Date(now).toISOString() : null, pages: loaded, eventCount: events.length, truncated } };
   }));
   const events = [...new Map(results.flatMap(r => r.events).map(e => [publicData.eventIdentity(e), e])).values()].sort((a, b) => a.eventStart.localeCompare(b.eventStart));

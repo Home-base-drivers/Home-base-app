@@ -63,7 +63,38 @@
     return low[1].map((channel, i) => Math.round(channel + (high[1][i] - channel) * eased));
   }
 
+  function currentEvidence(source, when, now = Date.now()) {
+    const tags=source.tags||{},time=+new Date(when);
+    if(tags.historicalPrior)return 'history';
+    const sampled=Date.parse(tags.providerSampledAt||'');
+    if(tags.providerSignal&&Number.isFinite(sampled)&&now>=sampled&&now-sampled<=25*60000&&Math.abs(time-sampled)<=25*60000&&Number.isFinite(Number(tags.uberSurgeMultiplier)))return Number(tags.uberSurgeMultiplier)>1?'surge':'current';
+    const start=+new Date(source.eventStart||NaN),end=+new Date(source.eventEnd||NaN);
+    if((tags.providerEvent||tags.liveEvent||tags.publicCalendar||source.verifiedEvent===true)&&Number.isFinite(start)&&!source.allDay&&!source.virtual&&!source.private&&!/cancel|postpon/i.test(source.status||'')){
+      const fetched=Date.parse(source.fetchedAt||tags.sourceFetchedAt||tags.fetchedAt||'');
+      if(Number.isFinite(fetched)&&(now-fetched>24*3600000||fetched>now+5*60000))return 'modeled';
+      if(source.eventState==='Live'&&Number.isFinite(fetched)&&now-fetched<=5*60000&&Math.abs(time-now)<=30*60000)return 'event';
+      if(time>=start-90*60000&&time<=(Number.isFinite(end)&&end>start&&!source.eventEndEstimated?end+90*60000:start+30*60000))return 'event';
+    }
+    return 'modeled';
+  }
+  function evidenceLevel(value, weightedShade, evidence = {}) {
+    const raw=compositeLevel(value,weightedShade);
+    // Confirmed scheduled activity is demand context, not platform price surge.
+    const event=clamp(Number(evidence.event)||0,0,1),surge=clamp(Number(evidence.surge)||0,0,1);
+    return Math.max(Math.min(raw,.57),Math.min(raw,.78)*event,surge>0?Math.max(.82,surge):0);
+  }
+  function evidenceOpacity(value,evidence = {}) {
+    return Math.min(compositeOpacity(value),evidence.surge>0||evidence.event>0?.8:.38);
+  }
+  function composePixel(value,weightedShade,evidence={},history=0){
+    // Fresh evidence wins even when it reports no surge. Background history is
+    // a small separate prior and cannot increase current event/provider heat.
+    const prior=evidence.current>.12?0:clamp(Number(history)||0,0,.08);
+    if(value<.018)return {level:.32,opacity:prior>.006?Math.min(.14,compositeOpacity(prior)):0};
+    return {level:Math.min(evidenceLevel(value,weightedShade,evidence)+(prior>0?.04:0),evidence.surge>0?1:evidence.event>0?.78:.57),opacity:Math.min(evidenceOpacity(value,evidence)+(prior>0?.035:0),evidence.current>.12?.8:.38)};
+  }
   function sourceStrength(source, when, scoreSource) {
+    if(source.tags?.historicalPrior)return clamp(Number(source.tags.historicalPrior),0,.08);
     const weight = Number(scoreSource(source, when));
     if (!Number.isFinite(weight) || weight <= 0) return 0;
     let strength = weight / 10;
@@ -236,7 +267,8 @@
         const prepared = active.map(area => {
           const sources = (area.sources || []).map((source, index) => {
             const strength = sourceStrength(source, this._when, this._scoreSource);
-            if (!strength || !Number.isFinite(source.lat) || !Number.isFinite(source.lon)) return null;
+            const evidence=currentEvidence(source,this._when);
+          if ((!strength&&evidence!=='current') || !Number.isFinite(source.lat) || !Number.isFinite(source.lon)) return null;
             const center = map.latLngToContainerPoint([source.lat, source.lon]);
             const km = sourceFootprintKm(source);
             const north = map.latLngToContainerPoint([source.lat + km / 111.32, source.lon]);
@@ -331,14 +363,17 @@
       _drawSources(output, map, sourceData, size, sample) {
         if (!Array.isArray(sourceData) || !sourceData.length) return;
         const zoomFactor = 1;
-        const sources = sourceData.map((source, index) => {
+        const historyApi=globalThis.HomeBaseDemandHistory;
+        const history=historyApi?sourceData.filter(s=>!(s.tags&&(s.tags.providerSignal||s.tags.providerEvent||s.tags.liveEvent))&&s.heatAreaName).map(s=>{const prior=historyApi.forecastFor(s.heatAreaName,this._when,true);return prior.strength>0?{...s,eventStart:null,eventEnd:null,tags:{historicalPrior:prior.strength}}:null;}).filter(Boolean):[];
+        const sources = [...sourceData,...history].map((source, index) => {
           // Label/county anchors exist only to name areas. Neighborhood
           // coverage anchors remain fixed geographic sources at every zoom.
           if (source.tags && source.tags.areaCoverageAnchor) {
             if (source.heatAreaType !== 'neighborhood') return null;
           }
           const strength = sourceStrength(source, this._when, this._scoreSource);
-          if (!strength || !Number.isFinite(source.lat) || !Number.isFinite(source.lon)) return null;
+          const evidence=currentEvidence(source,this._when);
+          if ((!strength&&evidence!=='current') || !Number.isFinite(source.lat) || !Number.isFinite(source.lon)) return null;
           const center = map.latLngToContainerPoint([source.lat, source.lon]);
           const zoom = map.getZoom(), baseKm = sourceFootprintKm(source), km = source.tags && source.tags.publicVenue ? Math.max(baseKm, zoom < 8 ? 3.4 : zoom < 10 ? 2.6 : zoom < 12 ? 1.8 : baseKm) : baseKm, north = map.latLngToContainerPoint([source.lat + km / 111.32, source.lon]);
           const radius = Math.max(1.25, Math.abs(center.y - north.y));
@@ -358,7 +393,7 @@
             ry = ry * .58 + areaRy * .42;
           }
           return {
-            center, strength, angle, rx, ry,
+            center, strength, angle, rx, ry, evidence:currentEvidence(source,this._when),
             blockShape: (source.heatAreaType === 'label' || source.heatAreaType === 'neighborhood') && Array.isArray(bounds),
             shade: sourceShade(strength),
             detailOpacity: source.tags && (source.tags.providerSignal || source.tags.providerEvent || source.tags.liveEvent) ? .76 :
@@ -387,6 +422,7 @@
         const width = gridWidth * sample, height = gridHeight * sample;
         const field = new Float32Array(gridWidth * gridHeight);
         const shadeField = new Float32Array(gridWidth * gridHeight);
+        const eventField=new Float32Array(field.length),surgeField=new Float32Array(field.length),historyField=new Float32Array(field.length),currentField=new Float32Array(field.length);
 
         sources.forEach(source => {
           const radius = Math.max(source.rx, source.ry) * 3.1;
@@ -416,6 +452,10 @@
               const texture = clamp(.82 + .11 * Math.sin(rx * 3.3 + source.angle * 5) + .08 * Math.cos(ry * 4.1 - source.angle * 3), .62, 1.04);
               const contribution = source.strength * profile * texture * source.detailOpacity;
               const offset = y * gridWidth + x;
+              if(['event','current','surge'].includes(source.evidence))currentField[offset]=Math.max(currentField[offset],profile);
+              if(source.evidence==='history'){historyField[offset]=Math.max(historyField[offset],contribution);continue;}
+              if(source.evidence==='event')eventField[offset]=Math.max(eventField[offset],profile*source.shade);
+              if(source.evidence==='surge')surgeField[offset]=Math.max(surgeField[offset],profile*source.shade);
               field[offset] += contribution;
               // Color belongs to each locally measured source, while distance
               // controls opacity. A red source therefore feathers to clear
@@ -431,11 +471,11 @@
         paint.width = gridWidth; paint.height = gridHeight;
         const context = paint.getContext('2d'), image = context.createImageData(gridWidth, gridHeight), pixels = image.data;
         for (let i = 0; i < field.length; i++) {
-          const value = field[i];
-          if (value < .018) continue;
-          const level = compositeLevel(value, shadeField[i]), rgb = colorAt(level), offset = i * 4;
+          const composed=composePixel(field[i],shadeField[i],{event:eventField[i],surge:surgeField[i],current:currentField[i]},historyField[i]);
+          if(!composed.opacity)continue;
+          const rgb=colorAt(composed.level),offset=i*4;
           pixels[offset] = rgb[0]; pixels[offset + 1] = rgb[1]; pixels[offset + 2] = rgb[2];
-          pixels[offset + 3] = Math.round(255 * compositeOpacity(value) * zoomFactor);
+          pixels[offset + 3] = Math.round(255 * composed.opacity * zoomFactor);
         }
         context.putImageData(image, 0, 0);
         output.save();
@@ -448,5 +488,5 @@
     return new HeatLayer();
   }
 
-  return { colorAt, setPalette, getCustomColors, setCustomColors, getPalette: () => activePalette, paletteNames: Object.keys(PALETTES), sourceStrength, areaIntensity, sourceShade, compositeLevel, compositeOpacity, sourceRadiusKm, sourceFootprintKm, anchoredGridOrigin, createLayer };
+  return { composePixel, currentEvidence, evidenceLevel, evidenceOpacity, colorAt, setPalette, getCustomColors, setCustomColors, getPalette: () => activePalette, paletteNames: Object.keys(PALETTES), sourceStrength, areaIntensity, sourceShade, compositeLevel, compositeOpacity, sourceRadiusKm, sourceFootprintKm, anchoredGridOrigin, createLayer };
 });
