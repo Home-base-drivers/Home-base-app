@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Home Base">
-  <meta name="homebase-build" content="v218">
+  <meta name="homebase-build" content="v219">
   <meta name="description" content="Home Base connects local driver platforms, earnings forecasts, events and a GPS-based 12-hour route in one app.">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icon-192.png">
@@ -506,6 +506,7 @@ function applyTimeForecast(index,forecastWhen){
   activeStops=hourlyDestinations[index]||[];routeStopsExpanded=false;renderRouteStopsPanel(activeStops);renderDemandCoach();
   selectedDestination=s?[s.lat,s.lon]:null;$('#bestRoute').textContent=s?s.name:'No pickup suggestion for this hour';
   if(s)show(['🧭',`${isNow?'Right now':marketTime(when)} · ${s.name}`,`${demandReason(s.cat,marketParts(when).hour)}. Heat and hourly estimates now reflect this time.`, 'OPEN THIS STOP IN GOOGLE MAPS']);
+  renderDestinationPoints(activeStops);
 }
 
 function hourColor(when){const m=demandMultiplier(when);return m>=1.18?'#ff294f':m>=1?'#ff8a2a':m>=.86?'#ffd83d':'#2ee681'}
@@ -515,7 +516,7 @@ function renderDestinationPoints(options){destinationMarkers.forEach(marker=>liv
 function renderTimeButtons(stops,optionsByHour,start=forecastStartTime,selectedHour=0){
   const rows=[$('#timeRow'),$('#routeTimeRow')].filter(Boolean),hours=Array.from({length:12},(_,i)=>new Date(start.getTime()+i*3600000));
   for(const row of rows){row.innerHTML=hours.map((when,i)=>`<button style="--hour:${hourColor(when)}" data-hour="${i}" aria-pressed="${i===selectedHour}">${i===0?'NOW':marketTime(when,{hour:'numeric'})}</button>`).join('');
-    row.querySelectorAll('[data-hour]').forEach(button=>button.addEventListener('click',()=>{const index=Number(button.dataset.hour);for(const otherRow of rows)otherRow.querySelectorAll('[data-hour]').forEach(other=>other.setAttribute('aria-pressed',String(Number(other.dataset.hour)===index)));applyTimeForecast(index,hours[index]);renderDestinationPoints(optionsByHour[index]||[]);}));
+    row.querySelectorAll('[data-hour]').forEach(button=>button.addEventListener('click',()=>{const index=Number(button.dataset.hour);for(const otherRow of rows)otherRow.querySelectorAll('[data-hour]').forEach(other=>other.setAttribute('aria-pressed',String(Number(other.dataset.hour)===index)));applyTimeForecast(index,hours[index]);}));
   }
 }
 
@@ -984,7 +985,7 @@ async function refreshSchoolEvents(lat,lon){
     schoolEventRows=HomeBaseSchoolEvents.mapEvents(rows);schoolDateContext=[...new Map(dates.map(e=>[e.id,e])).values()];
     schoolCoverage={status:result.status,checkedCount:result.checkedCount,schoolCount:result.schoolCount};
     const seen=new Set(),events=[...currentEventData.filter(e=>!e.tags?.schoolEvent),...schoolEventRows].filter(rideRelevantEvent).filter(e=>{const id=HomeBasePublicData.eventIdentity(e);if(seen.has(id))return false;seen.add(id);return true;});
-    if(activeDemandSources.length){activeDemandSources=mergeDemandSources(activeDemandSources.filter(e=>!e.tags?.schoolEvent),schoolEventRows.filter(rideRelevantEvent));const hour=Number(document.querySelector('[data-hour][aria-pressed="true"]')?.dataset.hour)||0;buildRoute(activeDemandSources,lat,lon,currentMarketName,activeDemandSources);applyTimeForecast(hour,new Date());}
+    if(activeDemandSources.length){activeDemandSources=mergeDemandSources(activeDemandSources.filter(e=>!e.tags?.schoolEvent),schoolEventRows.filter(rideRelevantEvent));const hour=Number(document.querySelector('[data-hour][aria-pressed="true"]')?.dataset.hour)||0;buildRoute(activeDemandSources,lat,lon,currentMarketName,activeDemandSources);applyTimeForecast(hour);}
     renderEvents(events);renderDemandCoach();
     const next=result.nextCursor;if(next!==null&&(!Number.isInteger(next)||next<=cursor))throw Error('Invalid calendar continuation');cursor=next;
   }while(cursor!==null);}catch{if(serial===schoolSearchSerial){schoolCoverage.status=schoolCoverage.checkedCount?'partial':'unavailable';schoolSearchAt=Date.now()-25*60000;renderEvents(currentEventData);}}
@@ -1144,17 +1145,19 @@ $('#mapsBtn').addEventListener('click',openHomeNavigation);
 function autoRefreshGps(){if(Date.now()-lastAutoGpsRefresh<60000)return;lastAutoGpsRefresh=Date.now();refreshLocationFast()}
 async function refreshLiveDemandLayer(){
   if(document.visibilityState!=='visible'||!currentLocation||gpsRequestInFlight)return;
-  const [lat,lon]=currentLocation;refreshSchoolEvents(lat,lon);const provider=await loadProviderSignals(lat,lon,currentMarketName).catch(()=>null);if(!provider)return;
-  const publicEvents=currentEventData.filter(event=>!(event.tags&&event.tags.providerEvent)),seen=new Set(),events=[];
-  [...publicEvents,...(provider.events||[]),...schoolEventRows].filter(rideRelevantEvent).forEach(event=>{const key=HomeBasePublicData.eventIdentity(event);if(!seen.has(key)){seen.add(key);events.push(event)}});
-  const publicSources=activeDemandSources.filter(source=>!(source.tags&&(source.tags.providerSignal||source.tags.providerEvent)));
+  const [lat,lon]=currentLocation,selectedHour=Number(document.querySelector('[data-hour][aria-pressed="true"]')?.dataset.hour)||0;refreshSchoolEvents(lat,lon);const provider=await loadProviderSignals(lat,lon,currentMarketName).catch(()=>null);
+  // Retain published records during a feed outage; the route policy still
+  // expires their event windows and provider sample timestamps locally.
+  const publicEvents=provider?currentEventData.filter(event=>!(event.tags&&event.tags.providerEvent)):currentEventData,seen=new Set(),events=[];
+  [...publicEvents,...(provider?.events||[]),...schoolEventRows].filter(rideRelevantEvent).forEach(event=>{const key=HomeBasePublicData.eventIdentity(event);if(!seen.has(key)){seen.add(key);events.push(event)}});
+  const publicSources=provider?activeDemandSources.filter(source=>!(source.tags&&(source.tags.providerSignal||source.tags.providerEvent))):activeDemandSources;
   activeDemandSources=mergeDemandSources(publicSources,[...events,...providerUberPoints,...providerFlightPoints]);
-  buildRoute(activeDemandSources,lat,lon,currentMarketName,activeDemandSources);renderDemandCoach();renderEvents(events);renderDemandGrid(activeDemandSources,0,new Date());$('#updated').textContent=`Demand refreshed · ${marketTime(new Date())}`
+  buildRoute(activeDemandSources,lat,lon,currentMarketName,activeDemandSources);applyTimeForecast(selectedHour);document.querySelectorAll('[data-hour]').forEach(button=>button.setAttribute('aria-pressed',String(Number(button.dataset.hour)===selectedHour)));renderDemandCoach();renderEvents(events);$('#updated').textContent=provider?`Demand refreshed · ${marketTime(new Date())}`:'Feed unavailable · destination timing rechecked locally';
 }
 if(!demoLocale)setTimeout(autoRefreshGps,150);
 setInterval(()=>{updateClimateAdvisory();const selected=$('[data-hour][aria-pressed="true"]');if(selected&&selected.dataset.hour==='0'&&activeStops.length)applyTimeForecast(0,new Date());refreshLiveDemandLayer()},300000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-lastAutoGpsRefresh>300000){if(demoLocale)refreshLiveDemandLayer();else autoRefreshGps()}});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=218',{updateViaCache:'none'}).then(r=>{r.update();navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!sessionStorage.getItem('hb-release-reload-v218')){sessionStorage.setItem('hb-release-reload-v218','1');location.reload()}})}).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';}));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=219',{updateViaCache:'none'}).then(r=>{r.update();navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!sessionStorage.getItem('hb-release-reload-v219')){sessionStorage.setItem('hb-release-reload-v219','1');location.reload()}})}).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';}));
 </script>
 <script src="homebase-live.js?v=38"></script>
 </body>
