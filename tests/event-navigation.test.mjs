@@ -6,7 +6,7 @@ const html=fs.readFileSync(new URL('../dist/index.html',import.meta.url),'utf8')
 const source=html.slice(html.indexOf('function eventDirectionsUrl('),html.indexOf('function updateClock('));
 function setup(){
  const box={},pulse={};
- const context={currentEventData:[],currentEventCount:0,eventsExpanded:false,publicCalendarCoverage:{status:'active'},$:id=>id==='#todayEvents'?box:pulse,rideRelevantEvent:()=>true,updateClimateAdvisory(){},renderEventMarkers(){},marketTime:()=> '7 PM',marketDateTime:()=> 'Oct 7 · 7 PM',safeText:s=>String(s).replaceAll('&','&amp;').replaceAll('"','&quot;').replaceAll('<','&lt;').replaceAll('>','&gt;'),eventColor:()=> '#abc',eventIconSvg:()=>'<span>Music</span>'};
+ const context={schoolDateContext:[],schoolCoverage:{status:'partial',checkedCount:2,schoolCount:2},currentEventData:[],currentEventCount:0,eventsExpanded:false,publicCalendarCoverage:{status:'active'},$:id=>id==='#todayEvents'?box:pulse,rideRelevantEvent:()=>true,updateClimateAdvisory(){},renderEventMarkers(){},marketTime:()=> '7 PM',marketDateTime:()=> 'Oct 7 · 7 PM',safeText:s=>String(s).replaceAll('&','&amp;').replaceAll('"','&quot;').replaceAll('<','&lt;').replaceAll('>','&gt;'),eventColor:()=> '#abc',eventIconSvg:()=>'<span>Music</span>'};
  vm.createContext(context);vm.runInContext(source,context);return {context,box};
 }
 test('each list event links directly to its own coordinates without changing the compact row',()=>{

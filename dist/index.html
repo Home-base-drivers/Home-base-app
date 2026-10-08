@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Home Base">
-  <meta name="homebase-build" content="v216">
+  <meta name="homebase-build" content="v217">
   <meta name="description" content="Home Base connects local driver platforms, earnings forecasts, events and a GPS-based 12-hour route in one app.">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icon-192.png">
@@ -224,6 +224,7 @@
 <script src="homebase-demand-history.js?v=124"></script>
 <script src="homebase-route-policy.js?v=2"></script>
 <script src="homebase-public-data.js?v=3"></script>
+<script src="homebase-school-events.js?v=1"></script>
 <script src="homebase-planner.js?v=127"></script>
 <script src="homebase-config.js?v=111"></script>
 <script src="homebase-backend.js?v=124"></script>
@@ -295,6 +296,7 @@ let currentRainChance=0,currentEventCount=0,hourlyRainForecast=[];
 let eventsExpanded=false,routeStopsExpanded=false;
 let providerUberPoints=[],providerPricePoints=[],providerFlightPoints=[],providerBookingNote='',currentEventData=[],currentMarketName='Baltimore';
 let weatherFeedAt=null;
+let schoolEventRows=[],schoolDateContext=[],schoolCoverage={status:'loading',checkedCount:0,schoolCount:0},schoolSearchKey='',schoolSearchAt=0,schoolSearchSerial=0;
 let publicSnapshotRequest=null,publicSnapshotLoadedAt=0,publicCalendarCoverage={status:'loading',sourceCount:0};
 let providerFeedTimes={},providerSnapshotAt=null,providerStatuses={uber:'unknown',ticketmaster:'unknown',flightaware:'unknown'},publicSignalsRefreshedAt=null;
 let shiftResults=(()=>{try{return JSON.parse(localStorage.getItem('homeBaseShiftResults'))||[]}catch(e){return[]}})();
@@ -384,10 +386,11 @@ function renderEvents(events){
   if(events===null){box.innerHTML='<div class="event-empty">Checking dated events for the next 12 hours…</div>';pulse.textContent='Checking dated events for the next 12 hours…';return}
   events=events.filter(rideRelevantEvent);currentEventData=events;currentEventCount=events.length;updateClimateAdvisory();renderEventMarkers(events);
   const coverage=publicCalendarCoverage,limited=coverage.status!=='active',snapshot=coverage.fetchedAt?' · listings fetched '+marketTime(new Date(coverage.fetchedAt)):'',coverageText=coverage.status==='unavailable'||coverage.status==='unsupported'?'Public calendar coverage unavailable':coverage.status==='stale'?'Saved dated listings · calendar refresh unavailable':limited?'Public calendars · coverage is partial':'Public calendars';
-  if(!events.length){box.innerHTML='<div class="event-empty">No ride-relevant dated listings returned. This does not mean no events exist.'+(limited?' Public calendar coverage is limited.':'')+'</div>';pulse.textContent=coverageText+' · no dated listings returned';return}
+  const schoolNote='<div class="event-coverage">'+safeText(schoolCoverage.status==='loading'?'Checking nearby college and high school calendars…':schoolCoverage.status==='unavailable'?'School calendar discovery unavailable':schoolCoverage.checkedCount+' / '+schoolCoverage.schoolCount+' mapped schools checked · public coverage partial')+'</div>'+schoolDateContext.slice(0,3).map(e=>'<div class="event-coverage">'+safeText(e.name+' · '+e.eventDate+' · time unconfirmed; excluded from hourly heat')+'</div>').join('');
+  if(!events.length){box.innerHTML='<div class="event-empty">No ride-relevant dated listings returned. This does not mean no events exist.'+(limited?' Public calendar coverage is limited.':'')+'</div>';pulse.textContent=coverageText+' · no dated listings returned';box.innerHTML+=schoolNote;return}
   const live=events.filter(e=>e.eventState==='Live').length,next=events.find(e=>e.eventState==='Preview');pulse.textContent=live?`${live} live now${next?` · next: ${next.name}`:''}`:`${events.length} recent + upcoming listings · ${events[0].name}`;
   const sortedEvents=[...events].sort((a,b)=>(a.eventState==='Live'?-1:0)-(b.eventState==='Live'?-1:0)||a.eventStart-b.eventStart),visibleEvents=eventsExpanded?sortedEvents:sortedEvents.slice(0,4);
-  box.innerHTML='<div class="event-coverage">'+safeText(events.length+' dated events · '+coverageText+snapshot)+'</div>'+visibleEvents.map(e=>{const parts=String(e.name||'Event').split(' · ').map(v=>v.trim()).filter(Boolean),title=parts[0]||'Event',venue=e.venue||((parts.length>2&&parts[1])||''),time=e.eventStart&&Number.isFinite(new Date(e.eventStart).getTime())?marketDateTime(e.eventStart):(parts.at(-1)||''),meta=[venue,time].filter(Boolean).join(' · ');const directions=eventDirectionsUrl(e),tag=directions?'a':'div',link=directions?` href="${safeText(directions)}" target="_blank" rel="noopener noreferrer" aria-label="${safeText('Navigate to '+title+(venue?' at '+venue:''))}"`:"";return `<${tag} class="event-item compact-event"${link}><i class="event-list-icon" style="--marker:${eventColor(e)}">${eventIconSvg(e)}</i><div><b>${safeText(title)}</b><span>${safeText(meta)}${e.eventState==='Live'?' · LIVE':e.eventState==='Departure'?' · departure window':e.eventState==='Scheduled · end unverified'?' · end time unverified':''}</span></div></${tag}>`}).join('')+(sortedEvents.length>4?`<button type="button" class="event-more list-expand" data-expand="events" aria-expanded="${eventsExpanded}">${eventsExpanded?'Show less':`+${sortedEvents.length-4} more events`}</button>`:'');
+  box.innerHTML='<div class="event-coverage">'+safeText(events.length+' dated events · '+coverageText+snapshot)+'</div>'+visibleEvents.map(e=>{const parts=String(e.name||'Event').split(' · ').map(v=>v.trim()).filter(Boolean),title=parts[0]||'Event',venue=e.venue||((parts.length>2&&parts[1])||''),time=e.eventStart&&Number.isFinite(new Date(e.eventStart).getTime())?marketDateTime(e.eventStart):(parts.at(-1)||''),meta=[venue,time].filter(Boolean).join(' · ');const directions=eventDirectionsUrl(e),tag=directions?'a':'div',link=directions?` href="${safeText(directions)}" target="_blank" rel="noopener noreferrer" aria-label="${safeText('Navigate to '+title+(venue?' at '+venue:''))}"`:"";return `<${tag} class="event-item compact-event"${link}><i class="event-list-icon" style="--marker:${eventColor(e)}">${eventIconSvg(e)}</i><div><b>${safeText(title)}</b><span>${safeText(meta)}${e.eventState==='Live'?' · LIVE':e.eventState==='Departure'?' · departure window':e.eventState==='Scheduled · end unverified'?' · end time unverified':''}</span></div></${tag}>`}).join('')+(sortedEvents.length>4?`<button type="button" class="event-more list-expand" data-expand="events" aria-expanded="${eventsExpanded}">${eventsExpanded?'Show less':`+${sortedEvents.length-4} more events`}</button>`:'')+schoolNote;
 }
 function updateClock(){const now=new Date();$('#clock').textContent=now.toLocaleDateString([],{weekday:'short',month:'short',day:'numeric',timeZone:marketTimeZone||undefined})+' · '+marketTime(now)}
 updateClock();setInterval(updateClock,30000);
@@ -801,7 +804,7 @@ function demandEvidence(source,when=new Date()){
 }
 function hourWeight(cat,h,when=new Date()){const night=h>=21||h<3,day=marketParts(when).day,weekday=day>=1&&day<=5,cooling=surgeTrend==='cooling';if(cat==='school'||cat==='k12')return HomeBaseRoutePolicy.schoolWeight({cat},{day,hour:h},when);if(cat==='university')return h>=7&&h<22?(h>=16?6:4):1;if(cat==='nightlife')return(night?12:h>=18?7:1)-(cooling?1:0);if(cat==='event')return 0;if(cat==='restaurant')return((h>=11&&h<14)||(h>=17&&h<22)?9:2)+(cooling?1:0);if(cat==='transit')return((h>=5&&h<10)||(h>=15.5&&h<20)||h>=22?10:4)+(cooling?1:0);if(cat==='hotel')return(h<9||h>=20)?7:3;if(cat==='attraction')return h>=10&&h<18?7:1;if(cat==='shopping')return h>=10&&h<21?6:1;if(cat==='medical')return(h>=6&&h<9)||(h>=14&&h<17)||(h>=22)?7:3;if(cat==='neighborhood'){/* Sunday morning prior; dated events add their own arrival/exit peaks. */if(day===0)return h>=6&&h<12?7:h>=12&&h<17?4:h>=17&&h<21?5:3;return weekday&&h>=13&&h<19?7:(h>=6&&h<9)||(h>=16&&h<20)?5:3;}return 2}
 function eventTimeWeight(v,when){const phase=HomeBaseRoutePolicy.eventPhase(v,when);return ({arrival:12,start:11,underway:4,exit:16,live:11})[phase]||0}
-function eventScale(v){if(v.tags&&v.tags.publicCalendar&&v.eventType==='campus'&&!/concert|perform|festival|gala|homecoming|football/i.test(v.name+' '+v.classification))return .2;const name=eventToken(`${v.venue||''} ${v.name||''}`);if(/m t bank stadium|camden yards/.test(name))return 1.35;if(/cfg bank arena/.test(name))return 1.2;if(/convention center|pier six|rams head/.test(name))return 1.05;return 1}
+function eventScale(v){if(v.tags?.schoolEvent&&v.classification==='high_school')return /homecoming|prom|graduation|commencement|football/i.test(v.name)? .85:.55;if(v.tags&&v.tags.publicCalendar&&v.eventType==='campus'&&!/concert|perform|festival|gala|homecoming|football/i.test(v.name+' '+v.classification))return .2;const name=eventToken(`${v.venue||''} ${v.name||''}`);if(/m t bank stadium|camden yards/.test(name))return 1.35;if(/cfg bank arena/.test(name))return 1.2;if(/convention center|pier six|rams head/.test(name))return 1.05;return 1}
 function rainDemandBoost(source,when=new Date()){const target=when instanceof Date?when.getTime():Date.parse(when);const nearest=hourlyRainForecast.reduce((best,item)=>!best||Math.abs(item.time-target)<Math.abs(best.time-target)?item:best,null);const chance=nearest&&Math.abs(nearest.time-target)<=5400000?nearest.probability:Number(currentRainChance)||0;if(chance<25)return 0;if(!['event','transit','restaurant','nightlife','neighborhood','hotel'].includes(source.cat))return 0;let boost=chance>=75?4:chance>=50?2.5:1;if(source.eventStart)boost*=1.35;return boost}
 function schoolWeight(when){const mp=marketParts(when),day=mp.day,hour=mp.hour+when.getMinutes()/60;if(day<1||day>5||hour<13.5||hour>=17)return 0;if(hour<15.75)return 12;if(hour<16.5)return 7;return 3}
 function trendWeight(cat,stopIndex){if(surgeTrend!=='cooling'||stopIndex>0)return 0;if(cat==='school'||cat==='k12')return 4;if(cat==='transit'||cat==='restaurant')return 1;return-2}
@@ -876,7 +879,7 @@ async function loadVenues(lat,lon,radius=18000){
     if(hosted.length>=12)return hosted;
     let saved=[];
     try{saved=(JSON.parse(localStorage.getItem('homeBasePublicPlaces')||'[]')||[]).filter(source=>Number.isFinite(source.lat)&&Number.isFinite(source.lon)&&Date.now()-Number(source.tags?.publicFetchedAt||0)<7*86400000&&distanceKm([lat,lon],[source.lat,source.lon])*1000<=searchRadius).map(source=>({...source,tags:{...source.tags,cachedPublicVenue:true}}));}catch{}
-    const queryFor=r=>`[out:json][timeout:8];(node(around:${r},${lat},${lon})[name][place~"neighbourhood|suburb|quarter|town|city|village"];nwr(around:${r},${lat},${lon})[name][railway=station];nwr(around:${r},${lat},${lon})[name][amenity~"bus_station|hospital|clinic|school|kindergarten|nightclub|bar|pub|casino|theatre"];nwr(around:${r},${lat},${lon})[name][tourism~"hotel|attraction"];nwr(around:${r},${lat},${lon})[name][shop=mall];nwr(around:${r},${lat},${lon})[name][leisure=stadium];);out center tags 1000;`;
+    const queryFor=r=>`[out:json][timeout:8];(node(around:${r},${lat},${lon})[name][place~"neighbourhood|suburb|quarter|town|city|village"];nwr(around:${r},${lat},${lon})[name][railway=station];nwr(around:${r},${lat},${lon})[name][amenity~"bus_station|hospital|clinic|school|college|university|kindergarten|nightclub|bar|pub|casino|theatre"];nwr(around:${r},${lat},${lon})[name][tourism~"hotel|attraction"];nwr(around:${r},${lat},${lon})[name][shop=mall];nwr(around:${r},${lat},${lon})[name][leisure=stadium];);out center tags 1000;`;
     let data=await overpassMarketQuery(queryFor(searchRadius));
     if(!data?.elements?.length&&searchRadius>6000)data=await overpassMarketQuery(queryFor(6000));
     const seen=new Set(),fresh=(data?.elements||[]).map(x=>{const tags={...x.tags,publicVenue:true,publicFetchedAt:Date.now()},point={name:tags.name,lat:x.lat??x.center?.lat,lon:x.lon??x.center?.lon,cat:category(tags),tags,heatOnly:!!tags.place};return point;}).filter(source=>{const id=source.name+'|'+source.lat+'|'+source.lon;if(!source.name||!Number.isFinite(source.lat)||!Number.isFinite(source.lon)||seen.has(id))return false;seen.add(id);return true;});
@@ -945,6 +948,7 @@ async function loadProviderSignals(lat,lon,market){
     renderProviderPriceBadges(providerPricePoints);
     const booking=match.booking;if(booking&&['active','stale'].includes(booking.status)&&Date.now()-Date.parse(booking.fetchedAt||'')<=25*60000&&Array.isArray(booking.areas)){const zones=booking.areas.filter(area=>Number(area.returnedListings)>0).length;providerBookingNote=`${zones} metro areas had lodging listings returned for ${booking.checkin||'the next-night sample'}`;}
     const records=match.publicRecords;
+    if(records?.schoolCoverage&&!schoolCoverage.checkedCount){schoolCoverage={...records.schoolCoverage,status:schoolCoverage.status==='loading'?'loading':'partial'};schoolDateContext=records.schoolContext||[];}
     providerStatuses.public_calendar=records&&records.calendarStatus||'unavailable';providerStatuses.public_weather=records&&records.weatherStatus||'unavailable';
     if(records&&Date.now()-Date.parse(records.fetchedAt||'')<=25*60000&&records.weatherStatus==='active'){
       const rain=(records.weather||[]).filter(p=>p.rainProbability!=null&&Number.isFinite(Number(p.rainProbability))).map(p=>({time:Date.parse(p.start),probability:Number(p.rainProbability)})).filter(p=>Number.isFinite(p.time));
@@ -952,7 +956,7 @@ async function loadProviderSignals(lat,lon,market){
     }
     const events=HomeBasePublicData.eventsForLocation(payload,lat,lon).map(item=>{
       const start=item.eventStart,end=item.eventEnd,live=!!end&&start.getTime()<=Date.now()&&end.getTime()>Date.now(),departure=!!end&&end.getTime()<=Date.now();
-      return{name:`${item.name}${item.venue?` · ${item.venue}`:''} · ${marketTime(start)}`,cat:'event',lat:item.lat,lon:item.lon,venue:item.venue||'',eventType:item.eventType||'',classification:item.classification||'',genre:item.genre||'',url:item.url||item.sourceUrl||null,eventStart:start,eventEnd:end,eventState:live?'Live':departure?'Departure':start.getTime()<Date.now()?'Scheduled · end unverified':'Preview',tags:{providerEvent:true,publicCalendar:item.source!=='Ticketmaster Discovery API',source:item.source||'Published event calendar',sourceUrl:item.sourceUrl||item.url,sourceFetchedAt:item.fetchedAt||records?.fetchedAt}}
+      return{name:`${item.name}${item.venue?` · ${item.venue}`:''} · ${marketTime(start)}`,cat:'event',lat:item.lat,lon:item.lon,venue:item.venue||'',eventType:item.eventType||'',classification:item.classification||'',genre:item.genre||'',url:item.url||item.sourceUrl||null,eventStart:start,eventEnd:end,eventState:live?'Live':departure?'Departure':start.getTime()<Date.now()?'Scheduled · end unverified':'Preview',tags:{providerEvent:true,schoolEvent:String(item.eventType||'').includes('school_event'),publicCalendar:item.source!=='Ticketmaster Discovery API',source:item.source||'Published event calendar',sourceUrl:item.sourceUrl||item.url,sourceFetchedAt:item.fetchedAt||records?.fetchedAt}}
     }).filter(item=>!isGreaterBaltimoreLocation(lat,lon)||isGreaterBaltimoreLocation(item.lat,item.lon));
     renderFeedSignal();renderDemandCoach();return{events}
   }catch{publicCalendarCoverage={status:'unavailable',sourceCount:0};renderFeedSignal();renderDemandCoach();return null}
@@ -964,9 +968,27 @@ function rideRelevantEvent(event){
   if(!activeNow&&(start<now-6*3600000||start>now+12*3600000))return false;
   const text=[event.name,event.venue,event.eventType,event.classification,event.genre].join(' ').toLowerCase();
   if(/webinar|virtual|online.only|exhibition|gallery|workshop|seminar|office.hours|club.meeting|campus.tour/.test(text))return false;
-  return /sports|concert|festival|convention|conference|football|basketball|baseball|hockey|soccer|stadium|arena|theatre|theater|comedy|performing|music|graduation|commencement|fairground|homecoming|gala|party|screening/.test(text)||event.tags?.source==='public sports feed'||!!(event.tags?.liveEvent&&!event.tags?.providerEvent);
+  return /sports|concert|festival|convention|conference|football|basketball|baseball|hockey|soccer|stadium|arena|theatre|theater|comedy|performing|music|graduation|commencement|fairground|homecoming|prom\b|tailgate|bonfire|reunion|family.weekend|parents.weekend|gala|party|screening/.test(text)||event.tags?.source==='public sports feed'||!!(event.tags?.liveEvent&&!event.tags?.providerEvent);
 }
-async function loadTodayEvents(lat,lon,market,venues){const results=await Promise.allSettled([loadTodaySports(lat,lon),loadEspnEvents(lat,lon,market,venues),loadProviderSignals(lat,lon,market)]),seen=new Set(),events=[];results.forEach((result,index)=>{if(result.status!=='fulfilled')return;const values=index===2?(result.value&&result.value.events||[]):result.value||[];values.filter(rideRelevantEvent).forEach(event=>{const key=HomeBasePublicData.eventIdentity(event);if(!seen.has(key)){seen.add(key);events.push(event)}})});return events.sort((a,b)=>a.eventStart-b.eventStart)}
+async function loadTodayEvents(lat,lon,market,venues){refreshSchoolEvents(lat,lon);const results=await Promise.allSettled([loadTodaySports(lat,lon),loadEspnEvents(lat,lon,market,venues),loadProviderSignals(lat,lon,market)]),seen=new Set(),events=[];results.forEach((result,index)=>{if(result.status!=='fulfilled')return;const values=index===2?(result.value&&result.value.events||[]):result.value||[];values.filter(rideRelevantEvent).forEach(event=>{const key=HomeBasePublicData.eventIdentity(event);if(!seen.has(key)){seen.add(key);events.push(event)}})});for(const event of schoolEventRows.filter(rideRelevantEvent)){const key=HomeBasePublicData.eventIdentity(event);if(!seen.has(key)){seen.add(key);events.push(event)}}return events.sort((a,b)=>a.eventStart-b.eventStart)}
+async function refreshSchoolEvents(lat,lon){
+  const key=lat.toFixed(2)+','+lon.toFixed(2),changed=key!==schoolSearchKey;
+  if(!changed&&Date.now()-schoolSearchAt<30*60000)return;
+  const serial=++schoolSearchSerial;schoolSearchKey=key;schoolSearchAt=Date.now();
+  if(changed){schoolEventRows=[];schoolDateContext=[];}schoolCoverage={status:'loading',checkedCount:0,schoolCount:0};
+  let cursor=0;const rows=[],dates=[];
+  try{do{
+    const result=await HomeBaseSchoolEvents.page(HomeBaseConfig,[lat,lon],marketTimeZone||Intl.DateTimeFormat().resolvedOptions().timeZone,cursor);
+    if(serial!==schoolSearchSerial||!currentLocation||currentLocation[0].toFixed(2)+','+currentLocation[1].toFixed(2)!==key)return;
+    rows.push(...result.events||[]);dates.push(...result.context||[]);
+    schoolEventRows=HomeBaseSchoolEvents.mapEvents(rows);schoolDateContext=[...new Map(dates.map(e=>[e.id,e])).values()];
+    schoolCoverage={status:result.status,checkedCount:result.checkedCount,schoolCount:result.schoolCount};
+    const seen=new Set(),events=[...currentEventData.filter(e=>!e.tags?.schoolEvent),...schoolEventRows].filter(rideRelevantEvent).filter(e=>{const id=HomeBasePublicData.eventIdentity(e);if(seen.has(id))return false;seen.add(id);return true;});
+    if(activeDemandSources.length){activeDemandSources=mergeDemandSources(activeDemandSources.filter(e=>!e.tags?.schoolEvent),schoolEventRows.filter(rideRelevantEvent));const hour=Number(document.querySelector('[data-hour][aria-pressed="true"]')?.dataset.hour)||0;buildRoute(activeDemandSources,lat,lon,currentMarketName,activeDemandSources);applyTimeForecast(hour,new Date());}
+    renderEvents(events);renderDemandCoach();
+    const next=result.nextCursor;if(next!==null&&(!Number.isInteger(next)||next<=cursor))throw Error('Invalid calendar continuation');cursor=next;
+  }while(cursor!==null);}catch{if(serial===schoolSearchSerial){schoolCoverage.status=schoolCoverage.checkedCount?'partial':'unavailable';schoolSearchAt=Date.now()-25*60000;renderEvents(currentEventData);}}
+}
 function fallbackVenues(lat,lon,market){if(isGreaterBaltimoreLocation(lat,lon))return fallbackDemandSources(lat,lon,'Baltimore').map(source=>({name:source.name,cat:source.cat,lat:source.lat,lon:source.lon,heatOnly:source.cat==='event',tags:{routeAnchor:source.cat!=='event',forecast:true,venueOnly:source.cat==='event'}}));if(/^london$/i.test(market))return[['Westminster & Victoria','transit',51.4988,-.1347],['West End theatres','event',51.5115,-.1281],['Soho nightlife','nightlife',51.5136,-.1365],['King’s Cross St Pancras','transit',51.5308,-.1238],['Shoreditch','nightlife',51.5245,-.0773],['The O2','event',51.503,-.0032],['Canary Wharf','transit',51.5054,-.0235],['Heathrow staging','transit',51.47,-.4543]].map(s=>({name:s[0],cat:s[1],lat:s[2],lon:s[3],tags:{forecast:true}}));return[]}
 function fallbackDemandSources(lat,lon,market){
   const baltimore=isGreaterBaltimoreLocation(lat,lon);
@@ -1122,9 +1144,9 @@ $('#mapsBtn').addEventListener('click',openHomeNavigation);
 function autoRefreshGps(){if(Date.now()-lastAutoGpsRefresh<60000)return;lastAutoGpsRefresh=Date.now();refreshLocationFast()}
 async function refreshLiveDemandLayer(){
   if(document.visibilityState!=='visible'||!currentLocation||gpsRequestInFlight)return;
-  const [lat,lon]=currentLocation,provider=await loadProviderSignals(lat,lon,currentMarketName).catch(()=>null);if(!provider)return;
+  const [lat,lon]=currentLocation;refreshSchoolEvents(lat,lon);const provider=await loadProviderSignals(lat,lon,currentMarketName).catch(()=>null);if(!provider)return;
   const publicEvents=currentEventData.filter(event=>!(event.tags&&event.tags.providerEvent)),seen=new Set(),events=[];
-  [...publicEvents,...(provider.events||[])].filter(rideRelevantEvent).forEach(event=>{const key=HomeBasePublicData.eventIdentity(event);if(!seen.has(key)){seen.add(key);events.push(event)}});
+  [...publicEvents,...(provider.events||[]),...schoolEventRows].filter(rideRelevantEvent).forEach(event=>{const key=HomeBasePublicData.eventIdentity(event);if(!seen.has(key)){seen.add(key);events.push(event)}});
   const publicSources=activeDemandSources.filter(source=>!(source.tags&&(source.tags.providerSignal||source.tags.providerEvent)));
   activeDemandSources=mergeDemandSources(publicSources,[...events,...providerUberPoints,...providerFlightPoints]);
   buildRoute(activeDemandSources,lat,lon,currentMarketName,activeDemandSources);renderDemandCoach();renderEvents(events);renderDemandGrid(activeDemandSources,0,new Date());$('#updated').textContent=`Demand refreshed · ${marketTime(new Date())}`
@@ -1132,7 +1154,7 @@ async function refreshLiveDemandLayer(){
 if(!demoLocale)setTimeout(autoRefreshGps,150);
 setInterval(()=>{updateClimateAdvisory();const selected=$('[data-hour][aria-pressed="true"]');if(selected&&selected.dataset.hour==='0'&&activeStops.length)applyTimeForecast(0,new Date());refreshLiveDemandLayer()},300000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-lastAutoGpsRefresh>300000){if(demoLocale)refreshLiveDemandLayer();else autoRefreshGps()}});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=216',{updateViaCache:'none'}).then(r=>{r.update();navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!sessionStorage.getItem('hb-release-reload-v216')){sessionStorage.setItem('hb-release-reload-v216','1');location.reload()}})}).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';}));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=217',{updateViaCache:'none'}).then(r=>{r.update();navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!sessionStorage.getItem('hb-release-reload-v217')){sessionStorage.setItem('hb-release-reload-v217','1');location.reload()}})}).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';}));
 </script>
 <script src="homebase-live.js?v=38"></script>
 </body>

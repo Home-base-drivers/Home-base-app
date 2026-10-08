@@ -12,7 +12,8 @@
     "test": "node --test scripts/*.test.mjs tests/*.test.mjs",
     "test:backend": "node --test tests/backend*.test.mjs",
     "build:dispatch-function": "node scripts/build-dispatch-function.mjs",
-    "test:release": "node --test tests/release-integrity.test.mjs tests/global-heat.test.mjs && node scripts/check-index-syntax.mjs && node --check dist/sw.js"
+    "test:release": "node --test tests/release-integrity.test.mjs tests/global-heat.test.mjs && node scripts/check-index-syntax.mjs && node --check dist/sw.js",
+    "build:school-function": "node scripts/build-school-function.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.117.2"

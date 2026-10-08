@@ -1,0 +1,73 @@
+{
+  "sources": [
+    {
+      "name": "Morgan State University",
+      "lat": 39.3448,
+      "lon": -76.5844,
+      "url": "https://events.morgan.edu",
+      "adapter": "localist",
+      "kind": "college"
+    },
+    {
+      "name": "Towson University",
+      "lat": 39.3933,
+      "lon": -76.6122,
+      "url": "https://events.towson.edu",
+      "adapter": "localist",
+      "kind": "college"
+    },
+    {
+      "name": "University of Maryland, Baltimore County",
+      "lat": 39.2555,
+      "lon": -76.7113,
+      "url": "https://umbc.edu/events/",
+      "kind": "college"
+    },
+    {
+      "name": "Mercy High School",
+      "lat": 39.36714,
+      "lon": -76.58874,
+      "url": "https://www.mercyhighschool.com/quicklinks/calendar",
+      "kind": "high_school",
+      "campusVenues": [
+        "Mercy High School",
+        "Mary Ella Marion \u201976 Court",
+        "Sisters of Mercy Field",
+        "Mary Ella Marion \u201976 Court, Sisters of Mercy Field",
+        "The Harry and Jeanette Weinberg Auditorium",
+        "The Votta Family Dining Hall"
+      ],
+      "coordinateSource": "https://www.openstreetmap.org/way/31119916"
+    },
+    {
+      "name": "Dulaney High School",
+      "lat": 39.460917,
+      "lon": -76.612039,
+      "url": "https://dulaneyhs.bcps.org/calendar",
+      "kind": "high_school"
+    },
+    {
+      "name": "Towson High School",
+      "lat": 39.3914,
+      "lon": -76.6014,
+      "url": "https://towsonhs.bcps.org/calendar",
+      "kind": "high_school"
+    },
+    {
+      "name": "Coppin State University",
+      "lat": 39.31104,
+      "lon": -76.6581,
+      "url": "https://www.coppin.edu/events",
+      "kind": "college",
+      "coordinateSource": "https://www.openstreetmap.org/way/124259655"
+    },
+    {
+      "name": "Loyola University Maryland",
+      "lat": 39.3465,
+      "lon": -76.61913,
+      "url": "https://www.loyola.edu/events/",
+      "kind": "college",
+      "coordinateSource": "https://www.geonames.org/4361355/"
+    }
+  ]
+}

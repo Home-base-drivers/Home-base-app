@@ -40,6 +40,8 @@ jobs:
           npm run test:release
           npm run build:backend-client
           git diff --exit-code -- dist/homebase-backend.js
+          npm run build:school-function
+          git diff --exit-code -- supabase/functions/school-events/calendar.mjs
           npm run build:dispatch-function
           node scripts/check-index-syntax.mjs
           node --check dist/homebase-growth.js

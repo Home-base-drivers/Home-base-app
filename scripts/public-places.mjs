@@ -5,6 +5,7 @@ export function placeCategory(tags = {}) {
   if (tags.place) return 'neighborhood';
   if (tags.shop === 'mall') return 'shopping';
   if (/hospital|clinic/.test(tags.amenity || '')) return 'medical';
+  if (/university|college/.test(tags.amenity || '')) return 'university';
   if (/school|kindergarten/.test(tags.amenity || '')) return 'k12';
   if (tags.railway === 'station' || tags.amenity === 'bus_station' || tags.aeroway === 'aerodrome') return 'transit';
   if (tags.leisure === 'stadium' || tags.amenity === 'theatre') return 'event';
@@ -35,7 +36,7 @@ async function baseline(market) {
 
 export async function publicPlaces(market, now = Date.now(), previous, request = fetch) {
   const radius = Math.min(30, Number(market.placeRadiusKm || 20)) * 1000;
-  const query = `[out:json][timeout:20];(node(around:${radius},${market.center.lat},${market.center.lon})[name][place~"neighbourhood|suburb|quarter|town|city|village"];nwr(around:${radius},${market.center.lat},${market.center.lon})[name][railway=station];nwr(around:${radius},${market.center.lat},${market.center.lon})[name][amenity~"bus_station|hospital|clinic|school|kindergarten|nightclub|bar|pub|casino|theatre"];nwr(around:${radius},${market.center.lat},${market.center.lon})[name][tourism~"hotel|attraction"];nwr(around:${radius},${market.center.lat},${market.center.lon})[name][shop=mall];nwr(around:${radius},${market.center.lat},${market.center.lon})[name][leisure=stadium];);out center tags 3500;`;
+  const query = `[out:json][timeout:20];(node(around:${radius},${market.center.lat},${market.center.lon})[name][place~"neighbourhood|suburb|quarter|town|city|village"];nwr(around:${radius},${market.center.lat},${market.center.lon})[name][railway=station];nwr(around:${radius},${market.center.lat},${market.center.lon})[name][amenity~"bus_station|hospital|clinic|school|college|university|kindergarten|nightclub|bar|pub|casino|theatre"];nwr(around:${radius},${market.center.lat},${market.center.lon})[name][tourism~"hotel|attraction"];nwr(around:${radius},${market.center.lat},${market.center.lon})[name][shop=mall];nwr(around:${radius},${market.center.lat},${market.center.lon})[name][leisure=stadium];);out center tags 3500;`;
   const areas = await baseline(market);
   for (const base of ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter']) {
     try {

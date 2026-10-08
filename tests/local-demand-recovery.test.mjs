@@ -25,7 +25,7 @@ function routeFixture(){
 }
 test('the events panel merges one game across sports and ticket feeds and preserves two distinct evening shows',async()=>{
  const start=new Date(Date.now()+3600000),game={name:'Away at Home',cat:'event',venue:'Public Stadium',eventType:'SPORTS',lat:41,lon:-74,eventStart:start,tags:{source:'public sports feed'}},concert={name:'Named artist',cat:'event',venue:'Public Arena',eventType:'MusicEvent',lat:41.01,lon:-74,eventStart:start};
- const context={HomeBasePublicData:publicData,rideRelevantEvent:()=>true,loadTodaySports:async()=>[game],loadEspnEvents:async()=>[],loadProviderSignals:async()=>({events:[{...game,name:'Home Division Series Game 3',eventType:'SportsEvent',lat:41.001,lon:-74.001},concert,{...concert,name:'Separate theatre performance'}]})};
+ const context={refreshSchoolEvents(){},schoolEventRows:[],HomeBasePublicData:publicData,rideRelevantEvent:()=>true,loadTodaySports:async()=>[game],loadEspnEvents:async()=>[],loadProviderSignals:async()=>({events:[{...game,name:'Home Division Series Game 3',eventType:'SportsEvent',lat:41.001,lon:-74.001},concert,{...concert,name:'Separate theatre performance'}]})};
  vm.createContext(context);vm.runInContext(extract('loadTodayEvents'),context);
  const events=await context.loadTodayEvents(41,-74,'Local',[]);assert.equal(events.length,3);assert.equal(events.filter(e=>e.venue==='Public Stadium').length,1);assert.equal(events.filter(e=>e.venue==='Public Arena').length,2);
 });
