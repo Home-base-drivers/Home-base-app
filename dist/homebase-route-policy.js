@@ -2,16 +2,16 @@
 (function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.HomeBaseRoutePolicy=api;})(typeof globalThis!=='undefined'?globalThis:this,function(){
   const stamp=value=>value instanceof Date?value.getTime():typeof value==='string'&&/T\d{2}:\d{2}/.test(value)?Date.parse(value):NaN;
   function eventPhase(source,when,now=new Date()){
-    const tags=source.tags||{},start=stamp(source.eventStart),time=stamp(when),current=stamp(now);
+    const tags=source.tags||{},start=stamp(source.eventStart),time=stamp(when);
     if(!Number.isFinite(start)||!Number.isFinite(time)||!(tags.providerEvent||tags.liveEvent||tags.publicCalendar||source.verifiedEvent===true))return null;
     if(source.allDay||source.virtual||source.private||tags.allDay||tags.virtual||tags.private||/cancel|postpon|completed|post$/i.test(String(source.eventState||source.status||'')))return null;
     const end=source.eventEndEstimated?NaN:stamp(source.eventEnd);
-    if(time<start-90*60000)return null;
-    if(time<start)return 'arrival';
-    if(Number.isFinite(end)&&end>start)return time<=end?'underway':time<=end+90*60000?'exit':null;
-    // An unknown end must never invent an exit surge or future live status.
-    if(time<=start+30*60000)return 'start';
-    return source.eventState==='Live'&&Number.isFinite(current)&&Math.abs(time-current)<30*60000?'live':null;
+    // Ride activity follows arrivals and departures, not the whole event.
+    if(time>=start-60*60000&&time<start)return 'arrival';
+    if(time===start)return 'start';
+    if(Number.isFinite(end)&&end>start&&time>=end&&time<end+60*60000)return 'exit';
+    // Unknown/estimated ends cannot invent a departure window.
+    return null;
   }
   function schoolStage(source){
     const tags=source.tags||{},level=String(tags.schoolLevel||tags['school:level']||tags['school:grades']||tags['isced:level']||'').toLowerCase(),name=String(source.name||'').toLowerCase();
@@ -29,13 +29,54 @@
     // Suppress the old campus; do not guess the temporary pickup entrance.
     const time=stamp(when);
     if(/baltimore city college/i.test(source.name||'')&&source.lat>39.32&&time>=Date.parse('2025-08-01T00:00:00Z')&&time<Date.parse('2029-08-01T00:00:00Z'))return 0;
-    const active=hour>=7&&hour<9?6:hour>=14&&hour<14.75?6+(hour-14)*8/3:hour>=14.75&&hour<16.5?8*(16.5-hour)/1.75:0;
+    const start=clockHour(source.schoolStart||source.tags?.schoolStart||source.tags?.['school:start'])??8;
+    const end=clockHour(source.schoolEnd||source.tags?.schoolEnd||source.tags?.['school:end'])??14.5;
+    const active=hour>=start-1&&hour<start?8*(hour-(start-1)):hour>=end&&hour<end+2?8*(1-(hour-end)/2):0;
     // Generic windows are modeled family activity, not bell schedules or rides
     // for unaccompanied minors. High schools receive a smaller prior.
     return active*(stage==='primary'||stage==='middle'?1:stage==='high'?.45:.65);
   }
+  function clockHour(value){
+    if(typeof value==='number')return Number.isFinite(value)&&value>=0&&value<24?value:null;
+    const m=/^(\d{1,2}):(\d{2})$/.exec(String(value||''));
+    return m&&+m[1]<24&&+m[2]<60?+m[1]+(+m[2])/60:null;
+  }
+  function warehouse(source){
+    const t=source.tags||{};
+    return source.cat==='warehouse'||t.industrial==='warehouse'||t.building==='warehouse'||/amazon/i.test(t.operator||'')&&t.shop!=='supermarket'||/amazon.*(warehouse|fulfil|fulfill|distribution|sortation|delivery station)/i.test(source.name||'');
+  }
+  const days=['Su','Mo','Tu','We','Th','Fr','Sa'];
+  function dayMatches(spec,day){
+    if(!spec)return true;
+    return spec.split(',').some(part=>{const [a,b]=part.split('-'),start=days.indexOf(a),end=days.indexOf(b||a);return start>=0&&end>=0&&(start<=end?day>=start&&day<=end:day>=start||day<=end);});
+  }
+  function mallClosingHours(source,day){
+    const t=source.tags||{},explicit=clockHour(source.mallClosingHour??t.mallClosingHour);
+    if(explicit!==null)return [explicit];
+    const raw=String(t.opening_hours||'').trim();if(!raw||raw==='24/7')return [];
+    // Interpret only simple public weekly schedules; complex/holiday rules
+    // stay unconfirmed rather than silently guessing a closing time.
+    if(/PH|SH|\"|\+|sunrise|sunset/i.test(raw))return [];
+    let result=[];
+    for(const rule of raw.split(';')){
+      const m=/^\s*(?:((?:Su|Mo|Tu|We|Th|Fr|Sa)(?:-(?:Su|Mo|Tu|We|Th|Fr|Sa))?(?:,(?:Su|Mo|Tu|We|Th|Fr|Sa)(?:-(?:Su|Mo|Tu|We|Th|Fr|Sa))?)*)\s+)?(off|closed|(?:\d{1,2}:\d{2}-\d{1,2}:\d{2})(?:,\s*\d{1,2}:\d{2}-\d{1,2}:\d{2})*)\s*$/.exec(rule);
+      if(!m)return [];
+      if(!dayMatches(m[1],day))continue;
+      if(/off|closed/.test(m[2])){result=[];continue;}
+      result=m[2].split(',').map(range=>{const [open,close]=range.trim().split('-').map(clockHour);return open!==null&&close!==null?close+(close<=open?24:0):null;}).filter(v=>v!==null);
+    }
+    return result;
+  }
+  function workerWeight(source,parts){
+    const hour=parts.hour;
+    if(warehouse(source))return Math.max(...[15,23].map(shift=>8*Math.max(0,1-Math.min(Math.abs(hour-shift),24-Math.abs(hour-shift)))),0);
+    if(source.cat!=='shopping'||!(source.tags?.shop==='mall'||/\bmall\b|shopping cent(er|re)/i.test(source.name||'')||source.mallClosingHour!=null||source.tags?.mallClosingHour!=null))return 0;
+    const closes=[...mallClosingHours(source,parts.day),...mallClosingHours(source,(parts.day+6)%7).filter(h=>h>=24).map(h=>h-24)];
+    return Math.max(...closes.map(close=>8*Math.max(0,1-Math.abs(hour-close))),0);
+  }
   function fallbackEligible(source,parts,when){
     if(source.tags?.deliveryRelevant||source.tags?.providerSignal||source.cat==='university'||source.cat==='event'||source.eventStart)return false;
+    if(warehouse(source))return workerWeight(source,parts)>0;
     if(source.cat==='school'||source.cat==='k12')return schoolWeight(source,parts,when)>0&&!/pickup cluster/i.test(source.name||'');
     return ['neighborhood','nightlife','transit','hotel','medical','shopping','attraction','restaurant_district'].includes(source.cat);
   }
@@ -65,5 +106,5 @@
     // Six modeled points is the route hot-spot floor, not a live-demand claim.
     return ranked.filter(source=>source.routeBasis==='general_area'&&Number(source.routeDemand??source.score)>=6);
   }
-  return {eventPhase,liveSignal,schoolStage,schoolWeight,fallbackEligible,candidatesForHour,selectRanked};
+  return {eventPhase,liveSignal,schoolStage,schoolWeight,warehouse,workerWeight,mallClosingHours,fallbackEligible,candidatesForHour,selectRanked};
 });

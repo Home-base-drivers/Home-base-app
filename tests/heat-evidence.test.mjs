@@ -68,3 +68,10 @@ test('history follows the named Morgan venue even if its assigned neighborhood h
  assert.ok(heat.historicalPriorForSource(source,new Date('2026-10-14T23:00:00-04:00'),history)>0);
  assert.equal(heat.historicalPriorForSource({...source,lat:51.51,lon:-.13},new Date('2026-10-14T23:00:00-04:00'),history),0);
 });
+
+test('event heat switches off between arrival and departure and at the one-hour cutoff',()=>{
+ const event={eventStart:'2026-10-08T08:00:00-04:00',eventEnd:'2026-10-08T22:00:00-04:00',tags:{publicCalendar:true}};
+ for(const hour of ['07:00','07:59','22:00','22:59'])assert.equal(heat.currentEvidence(event,new Date('2026-10-08T'+hour+':00-04:00'),now),'event');
+ for(const hour of ['06:59','12:00','23:00'])assert.equal(heat.currentEvidence(event,new Date('2026-10-08T'+hour+':00-04:00'),now),'modeled');
+ assert.equal(heat.sourceStrength(event,new Date('2026-10-08T12:00:00-04:00'),()=>20),0);
+});

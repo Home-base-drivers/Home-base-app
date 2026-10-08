@@ -26,7 +26,7 @@
   const RADII_KM = {
     school: 1.45, k12: 1.45, university: 1.8, transit: 2.1, event: 1.7, nightlife: 1.2,
     restaurant: 1.15, hotel: 1.5, attraction: 1.6,
-    medical: 1.55, neighborhood: 1.65, shopping: 1.8
+    medical: 1.55, neighborhood: 1.65, shopping: 1.8, warehouse: 1.3
   };
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
   const HEAT_OPACITY_GAIN = 1.2;
@@ -76,11 +76,10 @@
     const fetchedActivity=Date.parse(tags.sourceFetchedAt||''),flightHour=Date.parse(tags.flightHour||'');
     if(tags.airportActivity&&Number.isFinite(fetchedActivity)&&now>=fetchedActivity&&now-fetchedActivity<=25*60000&&time>=flightHour&&time<flightHour+3600000&&Number(tags.arrivals)>0)return 'activity';
     const start=+new Date(source.eventStart||NaN),end=+new Date(source.eventEnd||NaN);
-    if((tags.providerEvent||tags.liveEvent||tags.publicCalendar||source.verifiedEvent===true)&&Number.isFinite(start)&&!source.allDay&&!source.virtual&&!source.private&&!/cancel|postpon/i.test(source.status||'')){
+    if((tags.providerEvent||tags.liveEvent||tags.publicCalendar||source.verifiedEvent===true)&&Number.isFinite(start)&&!source.allDay&&!source.virtual&&!source.private&&!tags.allDay&&!tags.virtual&&!tags.private&&!/cancel|postpon|completed|post$/i.test(source.eventState||source.status||'')){
       const fetched=Date.parse(source.fetchedAt||tags.sourceFetchedAt||tags.fetchedAt||'');
       if(Number.isFinite(fetched)&&(now-fetched>24*3600000||fetched>now+5*60000))return 'modeled';
-      if(source.eventState==='Live'&&Number.isFinite(fetched)&&now-fetched<=5*60000&&Math.abs(time-now)<=30*60000)return 'event';
-      if(time>=start-90*60000&&time<=(Number.isFinite(end)&&end>start&&!source.eventEndEstimated?end+90*60000:start+30*60000))return 'event';
+      if(time>=start-60*60000&&time<=start||Number.isFinite(end)&&end>start&&!source.eventEndEstimated&&time>=end&&time<end+60*60000)return 'event';
     }
     return 'modeled';
   }
@@ -106,7 +105,7 @@
     if (!Number.isFinite(weight) || weight <= 0) return 0;
     let strength = weight / 10;
     const tags = source.tags || {};
-    if(tags.providerSignal&&currentEvidence(source,when)==='modeled')return 0;
+    if((tags.providerSignal||source.eventStart)&&currentEvidence(source,when)==='modeled')return 0;
     // Public points describe activity density, not verified ride requests. They
     // become useful when several nearby places overlap, without turning every
     // restaurant or school into a red hotspot by itself.
