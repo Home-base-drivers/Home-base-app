@@ -7,7 +7,7 @@ import {normalizeCampusEvents} from '../scripts/public-records.mjs';
 const now=Date.parse('2026-10-08T00:26:00-04:00');
 test('dense modeled context stays faint and cannot wash out a changing live peak',()=>{
  const background=heat.composeFields(0,0,1000,700,{});
- assert.ok(background.opacity<=.18);assert.ok(background.level<=.45);
+ assert.ok(background.opacity<=.34);assert.ok(background.level<=.45);
  const live={current:1,surge:.95};
  assert.deepEqual(heat.composeFields(.8,.7,1000,700,live),heat.composeFields(.8,.7,0,0,live));
  assert.ok(heat.composeFields(.8,.7,1000,700,live).opacity>background.opacity);
@@ -78,7 +78,7 @@ test('event heat switches off between arrival and departure and at the one-hour 
 test('modeled neighborhoods retain distinct green-to-yellow intensity instead of one clipped yellow',()=>{
  const quiet=heat.composeFields(0,0,.05,.015,{}),busy=heat.composeFields(0,0,.8,.48,{});
  assert.ok(busy.level>quiet.level);assert.ok(busy.opacity>quiet.opacity);
- assert.ok(quiet.level<.27);assert.ok(busy.level<.42);assert.ok(busy.opacity<=.16);
+ assert.ok(quiet.level<.27);assert.ok(busy.level<.42);assert.ok(busy.opacity<=.34);
  assert.equal(heat.composeFields(0,0,0,0,{}).opacity,0);
 });
 test('routine school background has an immediate-area footprint and hard geographic limit',()=>{
@@ -88,4 +88,13 @@ test('routine school background has an immediate-area footprint and hard geograp
   assert.equal(heat.sourceInfluenceLimitKm(source),.4);
  }
  assert.equal(heat.sourceInfluenceLimitKm({cat:'event',eventStart:'2026-10-08T19:00:00-04:00'}),Infinity);
+});
+
+test('ordinary populated neighborhood context remains visible over the dark map without becoming surge',()=>{
+ const pixel=heat.composeFields(0,0,.19,.08,{});
+ assert.ok(pixel.opacity>=.15&&pixel.opacity<=.34,'ordinary context should be legible');
+ assert.ok(pixel.level>=.12&&pixel.level<.42,'background remains green/yellow');
+ const edge=heat.composeFields(0,0,.005,.002,{});
+ assert.ok(edge.opacity<pixel.opacity/5,'fading edges must remain faint');
+ assert.equal(heat.composeFields(0,0,.19,.08,{current:1}).opacity,0);
 });

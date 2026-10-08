@@ -137,8 +137,8 @@
       if(evidence.current>.12)return {level:0,opacity:0};
       // Retain local differences instead of clipping every busy POI to the
       // same yellow. Background context runs from faint green to soft yellow.
-      const activity=1-Math.exp(-prior*.85),shade=prior>0?clamp(backgroundShade/prior,0,1):0;
-      return {level:.12+.25*activity+.04*shade,opacity:Math.min(.16,activity*.16+clamp(history,0,.08))};
+      const activity=prior/(prior+.18),shade=prior>0?clamp(backgroundShade/prior,0,1):0;
+      return {level:.14+.28*activity+.02*shade,opacity:Math.min(.34,activity*.34+clamp(history,0,.08))};
     }
     const capped=Math.min(prior,.1),ratio=prior>0?capped/prior:0;
     const pixel=composePixel(signal+capped,signalShade+backgroundShade*ratio,evidence,history);
