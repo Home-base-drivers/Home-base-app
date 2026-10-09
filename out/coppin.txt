@@ -1,0 +1,1480 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" prefix="content: http://purl.org/rss/1.0/modules/content/  dc: http://purl.org/dc/terms/  foaf: http://xmlns.com/foaf/0.1/  og: http://ogp.me/ns#  rdfs: http://www.w3.org/2000/01/rdf-schema#  schema: http://schema.org/  sioc: http://rdfs.org/sioc/ns#  sioct: http://rdfs.org/sioc/types#  skos: http://www.w3.org/2004/02/skos/core#  xsd: http://www.w3.org/2001/XMLSchema# ">
+  <head>
+    <meta charset="utf-8" />
+<link rel="canonical" href="https://www.coppin.edu/events" />
+<meta property="og:site_name" content="Coppin State University" />
+<meta property="og:title" content="Events | Coppin State University" />
+<meta property="og:image" content="https://www.coppin.edu/sites/default/files/2026-05/coppin_state_university_shield_logo-white-background.png" />
+<meta name="msvalidate.01" content="B828DD4C03496F353F97F82385CC2679" />
+<meta name="Generator" content="Drupal 11 (https://www.drupal.org)" />
+<meta name="MobileOptimized" content="width" />
+<meta name="HandheldFriendly" content="true" />
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+<script src="https://cookie-cdn.cookiepro.com/scripttemplates/otSDKStub.js" data-document-language="true" type="text/javascript" charset="UTF-8" data-domain-script="f49e2357-5a14-47da-bd60-948257963337"></script>
+<script type="text/javascript">
+function OptanonWrapper() { }
+</script>
+<meta http-equiv="Content-Security-Policy" content="frame-src &#039;self&#039; https://*.coppin.edu https://coppin.edu https://fliphtml5.com/ https://*.ddev.site https://*.pantheonsite.io https://*.docksal.site https://www.googletagmanager.com https://*.doubleclick.net https://*.google.com https://static.addtoany.com https://www.youtube.com https://www.youtube-nocookie.com https://ww2.matchinggifts.com https://w2.countingdownto.com https://online.fliphtml5.com; object-src &#039;none&#039;; base-uri &#039;self&#039;; script-src &#039;self&#039; &#039;unsafe-inline&#039; &#039;unsafe-eval&#039; https://*.siteimprove.com https://siteimproveanalytics.com https://*.siteimproveanalytics.com https://*.siteimprove.net https://*.siteimproveanalytics.io https://*.juicer.io https://*.coppin.edu https://www.googletagmanager.com https://static.addtoany.com https://cookie-cdn.cookiepro.com https://*.google.com https://*.googleapis.com https://snap.licdn.com https://bat.bing.com https://*.facebook.net https://*.facebook.com https://adp.eab.com https://*.simpli.fi https://*.clarity.ms https://my.coppin-state.org https://*.technolutions.net https://*.cloudfront.net https://*.coppin.edu https://cdn.jsdelivr.net https://www.gstatic.com https://unpkg.com; style-src &#039;self&#039; &#039;unsafe-inline&#039; https://cloud.typography.com https://unpkg.com https://*.juicer.io https://fonts.googleapis.com https://*.google.com https://*.coppin.edu https://*.technolutions.net https://slate-technolutions-net.cdn.technolutions.net https://cdn.jsdelivr.net; worker-src &#039;self&#039; blob:; font-src &#039;self&#039; data: https://cloud.typography.com https://fonts.gstatic.com https://*.google.com https://themes.googleusercontent.com https://*.juicer.io https://*.technolutions.net; connect-src &#039;self&#039; https://*.siteimprove.com https://*.siteimproveanalytics.com https://*.siteimprove.net https://*.siteimproveanalytics.io https://directline.botframework.com https://*.botframework.com https://geolocation.onetrust.com https://cookie-cdn.cookiepro.com https://www.google.com https://*.doubleclick.net https://*.google.com https://*.googleapis.com https://snap.licdn.com https://px.ads.linkedin.com https://bat.bing.com https://*.facebook.net https://*.facebook.com https://adp.eab.com https://*.simpli.fi https://*.clarity.ms https://my.coppin-state.org https://*.cloudfront.net https://*.juicer.io https://*.technolutions.net https://slate-technolutions-net.cdn.technolutions.net https://apply.coppin-edu.cdn.technolutions.net https://*.coppin.edu/ https://unpkg.com https://*.amazonaws.com wss://*.botframework.com wss://*.amazonaws.com;" />
+<meta name="referrer" content="strict-origin-when-cross-origin" />
+<meta http-equiv="x-ua-compatible" content="ie=edge" />
+<link rel="icon" href="/themes/custom/coppin_theme/favicon.ico" type="image/vnd.microsoft.icon" />
+<script>window.a2a_config=window.a2a_config||{};a2a_config.callbacks=[];a2a_config.overlays=[];a2a_config.templates={};</script>
+<script async="async" src="https://apply.coppin.edu/ping">/**/</script>
+
+    <link rel="apple-touch-icon" sizes="180x180" href="/themes/custom/coppin_theme/favicon/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/themes/custom/coppin_theme/favicon/favicon-16x16.png" sizes="16x16">
+    <link rel="icon" type="image/png" sizes="32x32" href="/themes/custom/coppin_theme/favicon/favicon-32x32.png" sizes="32x32">
+    <link rel="manifest" href="/themes/custom/coppin_theme/favicon/site.webmanifest">
+    <link rel="mask-icon" href="/themes/custom/coppin_theme/favicon/safari-pinned-tab.svg" color="#003056">
+    <meta name="msapplication-TileColor" content="#003056">
+    <meta name="theme-color" content="#003056" />
+    <title>Events | Coppin State University</title>
+    <link rel="stylesheet" media="all" href="/sites/default/files/css/css_Mla3M6t23OHgldHVYsI1npMatnB9LoDecl67UHnUGB8.css?delta=0&amp;language=en&amp;theme=coppin_theme&amp;include=eJyNUEFuxDAI_JATP8nCMUloMXYBb5q-frOrSlu1l17QwKCZASjFG8gZ4RvMqzbxkNEdNeFnb4YlrcRXa3FDQQUOmeHrjItZyK25uUJPGVSpxYpmsKGlYyfHv7wxFUwCt7C03kmS71gxbtwy8GR-Msl2cYpxabU3QXGbf8tMU0UZ_1xLS-NRxcI6mBdglAKaboRHZMoKSmjzT256ZgpvHwP1TINSAcdOyztqfMHQQWG7zHaLRUcHnl-TeUgfmcl2LMGuTxyPsy999UhCHuw0xxozGIZHFIvPOtdWBuMdNh6haQ" />
+<link rel="stylesheet" media="all" href="https://unpkg.com/@fullcalendar/core@4.4.2/main.min.css" />
+<link rel="stylesheet" media="all" href="https://unpkg.com/@fullcalendar/daygrid@4.4.2/main.min.css" />
+<link rel="stylesheet" media="all" href="https://unpkg.com/@fullcalendar/timegrid@4.4.2/main.min.css" />
+<link rel="stylesheet" media="all" href="https://unpkg.com/@fullcalendar/list@4.4.2/main.min.css" />
+<link rel="stylesheet" media="all" href="/sites/default/files/css/css_YYDZwCqIAvkNpy7d7eFLaRdzHUJSgWEZ7gEe5POPQfI.css?delta=5&amp;language=en&amp;theme=coppin_theme&amp;include=eJyNUEFuxDAI_JATP8nCMUloMXYBb5q-frOrSlu1l17QwKCZASjFG8gZ4RvMqzbxkNEdNeFnb4YlrcRXa3FDQQUOmeHrjItZyK25uUJPGVSpxYpmsKGlYyfHv7wxFUwCt7C03kmS71gxbtwy8GR-Msl2cYpxabU3QXGbf8tMU0UZ_1xLS-NRxcI6mBdglAKaboRHZMoKSmjzT256ZgpvHwP1TINSAcdOyztqfMHQQWG7zHaLRUcHnl-TeUgfmcl2LMGuTxyPsy999UhCHuw0xxozGIZHFIvPOtdWBuMdNh6haQ" />
+<link rel="stylesheet" media="all" href="/sites/default/files/css/css_PuFRFWtPfdj99m102CT1NkZj5y01ZZP04PRH73-6qMU.css?delta=6&amp;language=en&amp;theme=coppin_theme&amp;include=eJyNUEFuxDAI_JATP8nCMUloMXYBb5q-frOrSlu1l17QwKCZASjFG8gZ4RvMqzbxkNEdNeFnb4YlrcRXa3FDQQUOmeHrjItZyK25uUJPGVSpxYpmsKGlYyfHv7wxFUwCt7C03kmS71gxbtwy8GR-Msl2cYpxabU3QXGbf8tMU0UZ_1xLS-NRxcI6mBdglAKaboRHZMoKSmjzT256ZgpvHwP1TINSAcdOyztqfMHQQWG7zHaLRUcHnl-TeUgfmcl2LMGuTxyPsy999UhCHuw0xxozGIZHFIvPOtdWBuMdNh6haQ" />
+<link rel="stylesheet" media="print" href="https://cloud.typography.com/7178156/7080832/css/fonts.css" onload="this.media=&#039;all&#039;" />
+<link rel="stylesheet" media="all" href="https://unpkg.com/aos@2.3.1/dist/aos.css" />
+<link rel="stylesheet" media="all" href="/sites/default/files/css/css_LN2tQbm4A2y10DYKC_uSjymE2GaI9dag7CIcXjSN0pE.css?delta=9&amp;language=en&amp;theme=coppin_theme&amp;include=eJyNUEFuxDAI_JATP8nCMUloMXYBb5q-frOrSlu1l17QwKCZASjFG8gZ4RvMqzbxkNEdNeFnb4YlrcRXa3FDQQUOmeHrjItZyK25uUJPGVSpxYpmsKGlYyfHv7wxFUwCt7C03kmS71gxbtwy8GR-Msl2cYpxabU3QXGbf8tMU0UZ_1xLS-NRxcI6mBdglAKaboRHZMoKSmjzT256ZgpvHwP1TINSAcdOyztqfMHQQWG7zHaLRUcHnl-TeUgfmcl2LMGuTxyPsy999UhCHuw0xxozGIZHFIvPOtdWBuMdNh6haQ" />
+
+    <script type="application/json" data-drupal-selector="drupal-settings-json">{"path":{"baseUrl":"\/","pathPrefix":"","currentPath":"node\/2183","currentPathIsAdmin":false,"isFront":false,"currentLanguage":"en"},"pluralDelimiter":"\u0003","suppressDeprecationErrors":true,"ajaxPageState":{"libraries":"eJyNkmGO4yAMhS-UhCMhAw5hZGyEoW329EPajmaTaqX9Q-DzQ89-AUJoArwbeG-WtQq3yWFrWC0-iigGuyYaRzURGSvQv8qKhL5ZILIsjJMj-LMbl2SBL3hMTqRpq1Csg1qTmFVq_qSRxAHN2nZKHD_rGVUhotr7lhp-1hluKUJLwp81pRTQDsXkpZTEtm2Y0QAD7S15veKWbKny2M_cVYTga8_ucgFvyO3CNqxyJhW1CGu6oYspx3NRu_djwPk95eyBPdJZc0d3RDdDbzL3QgLhR3BLeFeTeE08wrHqq9Bxu6Lxkoft0eByzWUedtz_U2a9UM-sL3movQAtgxEUxWntRB4IOUB9dmP-JlMUiYS2QTRxLNfz66GcYJ4KVIiji01_3H7J0rl0R0k3DJOOke_HDx5utZkjgkl3bZiNg9HbK5znumQJnd7IHq52S9qk7ub9_QZQLjpj","theme":"coppin_theme","theme_token":null},"ajaxTrustedUrl":{"\/events":true,"\/events\/rss.xml\/all":true},"gtag":{"tagId":"","consentMode":false,"otherIds":[],"events":[],"additionalConfigInfo":[]},"gtm":{"tagId":null,"settings":{"data_layer":"dataLayer","include_classes":false,"allowlist_classes":"","blocklist_classes":"","include_environment":false,"environment_id":"","environment_token":""},"tagIds":["GTM-5J8TCFC"]},"sitewideAlert":{"refreshInterval":15000,"automaticRefresh":true,"showCount":false,"serverSideRender":false},"views":{"ajax_path":"\/views\/ajax","ajaxViews":{"views_dom_id:245ff8a220c92817477f75be931493ce53c8d7e0ca13f8a5aeb9acc46da92ed8":{"view_name":"events_calendar","view_display_id":"desktop","view_args":"","view_path":"\/node\/2183","view_base_path":null,"view_dom_id":"245ff8a220c92817477f75be931493ce53c8d7e0ca13f8a5aeb9acc46da92ed8","pager_element":0},"views_dom_id:cd657f553f1be6be381d5cf65e3739d734bf686f553e622b87d96d8436d4dba2":{"view_name":"events_calendar","view_display_id":"mobile","view_args":"","view_path":"\/node\/2183","view_base_path":null,"view_dom_id":"cd657f553f1be6be381d5cf65e3739d734bf686f553e622b87d96d8436d4dba2","pager_element":0},"views_dom_id:67a5ffdfc1fc82323b140b39cf22a3eec839dd34d8c8419d11fcceb457e78c9c":{"view_name":"events","view_display_id":"all","view_args":"all","view_path":"\/node\/2183","view_base_path":"events\/rss.xml","view_dom_id":"67a5ffdfc1fc82323b140b39cf22a3eec839dd34d8c8419d11fcceb457e78c9c","pager_element":0}}},"fullCalendarView":[{"languageSelector":0,"updateConfirm":0,"dialogWindow":0,"dialogModal":false,"dialogCanvas":false,"eventBundleType":"","startField":"field_date","endField":"","dblClickToCreate":false,"entityType":"node","addForm":"node\/add\/","token":"","openEntityInNewTab":0,"calendar_options":"{\u0022plugins\u0022:[\u0022moment\u0022,\u0022interaction\u0022,\u0022dayGrid\u0022,\u0022timeGrid\u0022,\u0022list\u0022,\u0022rrule\u0022],\u0022timeZone\u0022:\u0022America\\\/New_York\u0022,\u0022defaultView\u0022:\u0022dayGridMonth\u0022,\u0022defaultMobileView\u0022:\u0022listYear\u0022,\u0022mobileWidth\u0022:768,\u0022defaultDate\u0022:\u00222026-10-09\u0022,\u0022header\u0022:{\u0022left\u0022:\u0022prev,next\u0022,\u0022center\u0022:\u0022title\u0022,\u0022right\u0022:\u0022dayGridMonth\u0022},\u0022eventTimeFormat\u0022:\u0022hh:mm a\u0022,\u0022firstDay\u0022:0,\u0022minTime\u0022:\u002200:00:00\u0022,\u0022maxTime\u0022:\u002223:59:59\u0022,\u0022locale\u0022:\u0022en\u0022,\u0022events\u0022:[{\u0022title\u0022:\u0022University Convocation\u0022,\u0022id\u0022:\u00220-0\u0022,\u0022eid\u0022:\u00223116-D-0\u0022,\u0022url\u0022:\u0022\\\/event\\\/university-convocation-0\u0022,\u0022des\u0022:\u0022\\n\u003Cdiv class=\\\u0022search-index \\\u0022\u003E\\n  \u003Cdiv class=\\\u0022container mt-2 mb-3\\\u0022\u003E\\n    \u003Cdiv class=\\\u0022row\\\u0022\u003E\\n                                          \u003Cdiv class=\\\u0022search-index--content\\\u0022\u003E\\n          \u003Ch3\u003E\u003Ca href=\\\u0022\\\/event\\\/university-convocation-0\\\u0022\u003E\u003Cspan class=\\\u0022field field--name-title field--type-string field--label-hidden\\\u0022\u003EUniversity Convocation\u003C\\\/span\u003E\\n\u003C\\\/a\u003E\u003C\\\/h3\u003E\\n          \\n            \u003Cdiv class=\\\u0022field field--name-field-date field--type-smartdate field--label-hidden field__item\\\u0022\u003E\u003Ctime datetime=\\\u00222026-09-03T09:30:00-04:00\\\u0022 class=\\\u0022datetime\\\u0022\u003ESep 3, 2026\u003C\\\/time\u003E\\n\u003C\\\/div\u003E\\n      \\n                  \u003C\\\/div\u003E\\n          \u003C\\\/div\u003E\\n  \u003C\\\/div\u003E\\n\u003C\\\/div\u003E\\n\u0022,\u0022editable\u0022:false,\u0022start\u0022:\u00222026-09-03T09:30:00\u0022,\u0022allDay\u0022:false,\u0022durationEditable\u0022:false,\u0022backgroundColor\u0022:\u0022#3a87ad\u0022,\u0022borderColor\u0022:\u0022#3a87ad\u0022,\u0022end\u0022:\u00222026-09-03T09:30:00\u0022},{\u0022title\u0022:\u0022University Convocation\u0022,\u0022id\u0022:\u00221-0\u0022,\u0022eid\u0022:\u00223116\u0022,\u0022url\u0022:\u0022\\\/event\\\/university-convocation-0\u0022,\u0022des\u0022:\u0022\\n\u003Cdiv class=\\\u0022search-index \\\u0022\u003E\\n  \u003Cdiv class=\\\u0022container mt-2 mb-3\\\u0022\u003E\\n    \u003Cdiv class=\\\u0022row\\\u0022\u003E\\n                                          \u003Cdiv class=\\\u0022search-index--content\\\u0022\u003E\\n          \u003Ch3\u003E\u003Ca href=\\\u0022\\\/event\\\/university-convocation-0\\\u0022\u003E\u003Cspan class=\\\u0022field field--name-title field--type-string field--label-hidden\\\u0022\u003EUniversity Convocation\u003C\\\/span\u003E\\n\u003C\\\/a\u003E\u003C\\\/h3\u003E\\n          \\n            \u003Cdiv class=\\\u0022field field--name-field-date field--type-smartdate field--label-hidden field__item\\\u0022\u003E\u003Ctime datetime=\\\u00222026-09-03T09:30:00-04:00\\\u0022 class=\\\u0022datetime\\\u0022\u003ESep 3, 2026\u003C\\\/time\u003E\\n\u003C\\\/div\u003E\\n      \\n                  \u003C\\\/div\u003E\\n          \u003C\\\/div\u003E\\n  \u003C\\\/div\u003E\\n\u003C\\\/div\u003E\\n\u0022,\u0022editable\u0022:false,\u0022start\u0022:\u00221788442200\u0022,\u0022allDay\u0022:true,\u0022durationEditable\u0022:false,\u0022backgroundColor\u0022:\u0022#3a87ad\u0022,\u0022borderColor\u0022:\u0022#3a87ad\u0022},{\u0022title\u0022:\u0022Career Fair\u0022,\u0022id\u0022:\u00222-0\u0022,\u0022eid\u0022:\u00223252-D-0\u0022,\u0022url\u0022:\u0022\\\/event\\\/career-fair\u0022,\u0022des\u0022:\u0022\\n\u003Cdiv class=\\\u0022search-index \\\u0022\u003E\\n  \u003Cdiv class=\\\u0022container mt-2 mb-3\\\u0022\u003E\\n    \u003Cdiv class=\\\u0022row\\\u0022\u003E\\n                                          \u003Cdiv class=\\\u0022search-index--content\\\u0022\u003E\\n          \u003Ch3\u003E\u003Ca href=\\\u0022\\\/event\\\/career-fair\\\u0022\u003E\u003Cspan class=\\\u0022field field--name-title field--type-string field--label-hidden\\\u0022\u003ECareer Fair\u003C\\\/span\u003E\\n\u003C\\\/a\u003E\u003C\\\/h3\u003E\\n          \\n            \u003Cdiv class=\\\u0022field field--name-field-date field--type-smartdate field--label-hidden field__item\\\u0022\u003E\u003Ctime datetime=\\\u00222026-09-23T13:00:00-04:00\\\u0022 class=\\\u0022datetime\\\u0022\u003ESep 23, 2026\u003C\\\/time\u003E\\n\u003C\\\/div\u003E\\n      \\n                  \u003C\\\/div\u003E\\n          \u003C\\\/div\u003E\\n  \u003C\\\/div\u003E\\n\u003C\\\/div\u003E\\n\u0022,\u0022editable\u0022:false,\u0022start\u0022:\u00222026-09-23T13:00:00\u0022,\u0022allDay\u0022:false,\u0022durationEditable\u0022:false,\u0022backgroundColor\u0022:\u0022#3a87ad\u0022,\u0022borderColor\u0022:\u0022#3a87ad\u0022,\u0022end\u0022:\u00222026-09-23T16:00:00\u0022},{\u0022title\u0022:\u0022Coppin State Men\u0026#039;s Basketball Preseason Turn-Up Concert Featuring Raheem DeVaughn\u0022,\u0022id\u0022:\u00223-0\u0022,\u0022eid\u0022:\u00223966-D-0\u0022,\u0022url\u0022:\u0022\\\/event\\\/coppin-state-mens-basketball-preseason-turn-concert-featuring-raheem-devaughn\u0022,\u0022des\u0022:\u0022\\n\u003Cdiv class=\\\u0022search-index search-index--has-image\\\u0022\u003E\\n  \u003Cdiv class=\\\u0022container mt-2 mb-3\\\u0022\u003E\\n    \u003Cdiv class=\\\u0022row\\\u0022\u003E\\n                      \u003Cdiv class=\\\u0022search-index--image--wrapper\\\u0022\u003E\\n          \\n          \u003Cdiv class=\\\u0022search-index--image\\\u0022\u003E\\n            \\n            \u003Cdiv class=\\\u0022field field--name-field-image field--type-entity-reference field--label-hidden field__item\\\u0022\u003E\u003Cdiv\u003E\\n  \\n  \\n            \u003Cdiv class=\\\u0022field field--name-field-media-image field--type-image field--label-hidden field__item\\\u0022\u003E    \u003Cimg loading=\\\u0022eager\\\u0022 srcset=\\\u0022\\\/sites\\\/default\\\/files\\\/styles\\\/max_width_320\\\/public\\\/2026-09\\\/deva2-%20video%20board%20-%20final.jpg?itok=Iu7dLJ7w 320w, \\\/sites\\\/default\\\/files\\\/styles\\\/max_width_640\\\/public\\\/2026-09\\\/deva2-%20video%20board%20-%20final.jpg?itok=nDXMw-ym 640w, \\\/sites\\\/default\\\/files\\\/styles\\\/max_width_960\\\/public\\\/2026-09\\\/deva2-%20video%20board%20-%20final.jpg?itok=orjYZmRh 960w, \\\/sites\\\/default\\\/files\\\/styles\\\/max_width_1200\\\/public\\\/2026-09\\\/deva2-%20video%20board%20-%20final.jpg?itok=K9gQ-gHz 1200w, \\\/sites\\\/default\\\/files\\\/styles\\\/max_width_1600\\\/public\\\/2026-09\\\/deva2-%20video%20board%20-%20final.jpg?itok=Cj7GDB4I 1600w, \\\/sites\\\/default\\\/files\\\/styles\\\/max_width_2000\\\/public\\\/2026-09\\\/deva2-%20video%20board%20-%20final.jpg?itok=XvTz7Jdw 1920w\\\u0022 sizes=\\\u0022(min-width: 1440px) 1440px, 100vw\\\u0022 width=\\\u0022320\\\u0022 height=\\\u0022180\\\u0022 src=\\\u0022\\\/sites\\\/default\\\/files\\\/styles\\\/max_width_320\\\/public\\\/2026-09\\\/deva2-%20video%20board%20-%20final.jpg?itok=Iu7dLJ7w\\\u0022 alt=\\\u0022Coppin State Men\u0026#039;s Basketball Preseason Turn-Up Concert Featuring Raheem DeVaughn\\\u0022 typeof=\\\u0022foaf:Image\\\u0022 \\\/\u003E\\n\\n\\n\u003C\\\/div\u003E\\n      \\n\u003C\\\/div\u003E\\n\u003C\\\/div\u003E\\n      \\n          \u003C\\\/div\u003E\\n        \u003C\\\/div\u003E\\n                                    \u003Cdiv class=\\\u0022search-index--content\\\u0022\u003E\\n          \u003Ch3\u003E\u003Ca href=\\\u0022\\\/event\\\/coppin-state-mens-basketball-preseason-turn-concert-featuring-raheem-devaughn\\\u0022\u003E\u003Cspan class=\\\u0022field field--name-title field--type-string field--label-hidden\\\u0022\u003ECoppin State Men\u0026#039;s Basketball Preseason Turn-Up Concert Featuring Raheem DeVaughn\u003C\\\/span\u003E\\n\u003C\\\/a\u003E\u003C\\\/h3\u003E\\n          \\n            \u003Cdiv class=\\\u0022field field--name-field-date field--type-smartdate field--label-hidden field__item\\\u0022\u003E\u003Ctime datetime=\\\u00222026-10-01T20:00:00-04:00\\\u0022 class=\\\u0022datetime\\\u0022\u003EOct 1, 2026\u003C\\\/time\u003E\\n\u003C\\\/div\u003E\\n      \\n                  \u003C\\\/div\u003E\\n          \u003C\\\/div\u003E\\n  \u003C\\\/div\u003E\\n\u003C\\\/div\u003E\\n\u0022,\u0022editable\u0022:false,\u0022start\u0022:\u00222026-10-01T20:00:00\u0022,\u0022allDay\u0022:false,\u0022durationEditable\u0022:false,\u0022backgroundColor\u0022:\u0022#3a87ad\u0022,\u0022borderColor\u0022:\u0022#3a87ad\u0022,\u0022end\u0022:\u00222026-10-01T20:00:00\u0022},{\u0022title\u0022:\u00225th Annual First Lady\u0026#039;s Wellness Walk\u0022,\u0022id\u0022:\u00224-0\u0022,\u0022eid\u0022:\u00223991-D-0\u0022,\u0022url\u0022:\u0022\\\/event\\\/5th-annual-first-ladys-wellness-walk\u0022,\u0022des\u0022:\u0022\\n\u003Cdiv class=\\\u0022search-index search-index--has-image\\\u0022\u003E\\n  \u003Cdiv class=\\\u0022container mt-2 mb-3\\\u0022\u003E\\n    \u003Cdiv class=\\\u0022row\\\u0022\u003E\\n                      \u003Cdiv class=\\\u0022search-index--image--wrapper\\\u0022\u003E\\n          \\n          \u003Cdiv class=\\\u0022search-index--image\\\u0022\u003E\\n            \\n            \u003Cdiv class=\\\u0022field field--name-field-image field--type-entity-reference field--label-hidden field__item\\\u0022\u003E\u003Cdiv\u003E\\n  \\n  \\n            \u003Cdiv class=\\\u0022field field--name-field-media-image field--type-image field--label-hidden field__item\\\u0022\u003E    \u003Cimg loading=\\\u0022eager\\\u0022 srcset=\\\u0022\\\/sites\\\/default\\\/files\\\/styles\\\/max_width_320\\\/public\\\/2026-09\\\/Coppin_First_Lady_Wellness_2026.jpg?itok=IIsoXuHa 320w, \\\/sites\\\/default\\\/files\\\/styles\\\/max_width_640\\\/public\\\/2026-09\\\/Coppin_First_Lady_Wellness_2026.jpg?itok=dmubBWMU 640w, \\\/sites\\\/default\\\/files\\\/styles\\\/max_width_1200\\\/public\\\/2026-09\\\/Coppin_First_Lady_Wellness_2026.jpg?itok=FegbGl_o 900w\\\u0022 sizes=\\\u0022(min-width: 1440px) 1440px, 100vw\\\u0022 width=\\\u0022320\\\u0022 height=\\\u0022427\\\u0022 src=\\\u0022\\\/sites\\\/default\\\/files\\\/styles\\\/max_width_320\\\/public\\\/2026-09\\\/Coppin_First_Lady_Wellness_2026.jpg?itok=IIsoXuHa\\\u0022 alt=\\\u0022Coppin State\\u2019s First Lady presents the 5th Annual First Lady\u0026#039;s Wellness Walk , \\u201cBoots on the Ground: Walking Together, Stepping for a Cure\\u201d.  Date: Tuesday, October 13, 2026. 5:30 to 8:30 p.m. Location: PEC Concourse\\\u0022 typeof=\\\u0022foaf:Image\\\u0022 \\\/\u003E\\n\\n\\n\u003C\\\/div\u003E\\n      \\n\u003C\\\/div\u003E\\n\u003C\\\/div\u003E\\n      \\n          \u003C\\\/div\u003E\\n        \u003C\\\/div\u003E\\n                                    \u003Cdiv class=\\\u0022search-index--content\\\u0022\u003E\\n          \u003Ch3\u003E\u003Ca href=\\\u0022\\\/event\\\/5th-annual-first-ladys-wellness-walk\\\u0022\u003E\u003Cspan class=\\\u0022field field--name-title field--type-string field--label-hidden\\\u0022\u003E5th Annual First Lady\u0026#039;s Wellness Walk\u003C\\\/span\u003E\\n\u003C\\\/a\u003E\u003C\\\/h3\u003E\\n          \\n            \u003Cdiv class=\\\u0022field field--name-field-date field--type-smartdate field--label-hidden field__item\\\u0022\u003E\u003Ctime datetime=\\\u00222026-10-13T17:30:00-04:00\\\u0022 class=\\\u0022datetime\\\u0022\u003EOct 13, 2026\u003C\\\/time\u003E\\n\u003C\\\/div\u003E\\n      \\n                  \u003C\\\/div\u003E\\n          \u003C\\\/div\u003E\\n  \u003C\\\/div\u003E\\n\u003C\\\/div\u003E\\n\u0022,\u0022editable\u0022:false,\u0022start\u0022:\u00222026-10-13T17:30:00\u0022,\u0022allDay\u0022:false,\u0022durationEditable\u0022:false,\u0022backgroundColor\u0022:\u0022#3a87ad\u0022,\u0022borderColor\u0022:\u0022#3a87ad\u0022,\u0022end\u0022:\u00222026-10-13T20:30:00\u0022}],\u0022navLinks\u0022:false,\u0022editable\u0022:false,\u0022eventLimit\u0022:3,\u0022eventOverlap\u0022:true,\u0022slotDuration\u0022:\u002200:30:00\u0022}","dialog_options":"{\u0022left\u0022:0,\u0022top\u0022:0,\u0022width\u0022:640,\u0022height\u0022:480,\u0022movable\u0022:true,\u0022resizable\u0022:true,\u0022style\u0022:{\u0022backgroundColor\u0022:\u0022rgba(255,255,255,0.9)\u0022,\u0022font-size\u0022:\u00221rem\u0022}}","dialog_modal_options":"{\u0022width\u0022:\u0022800\u0022}"}],"viewsAjaxHistory":{"renderPageItem":0,"initialExposedInput":{"views_dom_id:67a5ffdfc1fc82323b140b39cf22a3eec839dd34d8c8419d11fcceb457e78c9c":null}},"views_dom_id":"67a5ffdfc1fc82323b140b39cf22a3eec839dd34d8c8419d11fcceb457e78c9c","views_items_per_page":6,"user":{"uid":0,"permissionsHash":"c99c20eae8867d18f22b9e8a68dc1c1e2cc86e6ef57d7c3cc40174c2cc21a194"}}</script>
+<script src="/sites/default/files/js/js_rqVZrNKv5SKe7w6qqHbdbNZ8-ZAkcF5NiQm3Blw5Q8U.js?scope=header&amp;delta=0&amp;language=en&amp;theme=coppin_theme&amp;include=eJx1kGtuxCAMhC9EliMhAxOWysHIJrubnr7ZR6UmUv_48XlGtkw5D6G2efoUl1mlDRcxBjTg0cWQw1x5b80XNCjxf2MDI41AzKFJg4tM35uPVS70RQ-XpPfawrhigadGvI2a7IxHDV3lsR15VFBOui7xZMANbZzYFSpHorAuzeoNsdSlHIe2pgSzadkDFUyJWgIfNXfEWXSZaB0yrZ2F8q_gVnE3X9tcWx0IllT46Vb4rGsnvqQdUDe4eWVOxGiZ9OXzf4krIoURBhVf9nDu3188wMXZvvNeM_avQ4d_3uBeF4WnOlyrDdHNf_IPXOnDqA"></script>
+<script src="/modules/contrib/google_tag/js/gtag.js?tmndg9"></script>
+<script src="/modules/contrib/google_tag/js/gtm.js?tmndg9"></script>
+
+  </head>
+  <body class="layout-no-sidebars page-node-2183 path-node node--type-general-content">
+    <a href="#main-content" class="visually-hidden focusable skip-link">
+      Skip to main content
+    </a>
+    <div id="coppin-chatbot"></div><noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5J8TCFC"
+                  height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<div data-sitewide-alert aria-live="polite"></div>
+
+      <div class="dialog-off-canvas-main-canvas" data-off-canvas-main-canvas>
+    <!-- Sidebar Tray -->
+<div class="navbar-wrapper">
+  <div class="collapse navbar-collapse" id="CollapsingNavbar">
+    <div class="navbar-controls">
+      <button class="navbar-toggler navbar-wrapper-toggler navbar-wrapper-toggler-close" type="button" data-toggle="collapse"
+              data-target="#CollapsingNavbar" aria-controls="CollapsingNavbar" aria-expanded="false"
+              aria-label="Close navigation"><span class="icon-close"></span></button>
+      <button class="navbar-toggler navbar-wrapper-toggler navbar-wrapper-toggler-search" type="button" data-toggle="collapse"
+              data-target="#SearchTab" aria-controls="SearchTab" aria-expanded="false"
+              aria-label="Toggle search"><span class="icon-search"></span></button>
+              <div class="navbar-form navbar-wrapper-toggler form-inline">
+                      <section class="row region region-header-form">
+    <div id="block-gtranslate" class="block block-gtranslate block-gtranslate-block">
+  
+    
+      <div class="content">
+      
+<div class="gtranslate_wrapper"></div><script>window.gtranslateSettings = {"switcher_horizontal_position":"inline","switcher_vertical_position":"inline","horizontal_position":"inline","vertical_position":"inline","float_switcher_open_direction":"left","switcher_open_direction":"bottom","default_language":"en","native_language_names":0,"detect_browser_language":0,"add_new_line":0,"select_language_label":"","flag_size":16,"flag_style":"2d","globe_size":20,"alt_flags":[],"wrapper_selector":".gtranslate_wrapper","url_structure":"none","custom_domains":null,"languages":["en","fr","de","es"],"custom_css":""}</script><script>(function(){var js = document.createElement('script');js.setAttribute('src', '/modules/contrib/gtranslate/js/dropdown.js');js.setAttribute('data-gt-orig-url', '/events');js.setAttribute('data-gt-orig-domain', 'www.coppin.edu');document.body.appendChild(js);})();</script>
+    </div>
+  </div>
+
+  </section>
+
+        </div>
+          </div>
+    <div class="navbar-content">
+        <nav role="navigation" aria-labelledby="block-mainnavigation-menu" id="block-mainnavigation" class="block block-menu navigation menu--main">
+            
+  <div class="visually-hidden" id="block-mainnavigation-menu">Main navigation</div>
+  
+
+        
+              <ul id="block-mainnavigation" class="clearfix nav navbar-nav nav-main-menu">
+    
+                <li class="nav-item menu-item--expanded dropdown nav-item--large">
+                          <a href="/" class="nav-link--large nav-link dropdown-toggle" title="Academics" data-toggle="dropdown" aria-expanded="false" aria-haspopup="true" data-drupal-link-system-path="&lt;front&gt;">Academics</a>
+                        <ul id="block-mainnavigation" class="clearfix nav navbar-nav nav-main-menu dropdown-menu collapse">
+    
+                <li class="dropdown-item nav-item--label">
+                                      <span class="nav-link--label" title="Find A Program">Find A Program</span>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/all-academic-programs" title="All Academic Programs" data-drupal-link-system-path="node/2146">All Academic Programs</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/academics/majors-minors-and-concentrations" title="Majors, Minors, and Concentrations" data-drupal-link-system-path="node/2260">Majors, Minors, and Concentrations</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/academics/masters-and-doctoral-programs" title="Masters" data-drupal-link-system-path="node/2264">Masters</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/academics/masters-and-doctoral-programs" title="Doctoral" data-drupal-link-system-path="node/2264">Doctoral</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/academics/online-programs" title="Online" data-drupal-link-system-path="node/2419">Online</a>
+                        </li>
+                <li class="dropdown-item menu-item--collapsed">
+                                      <a href="/academics/certificate-programs" title="Certificate" data-drupal-link-system-path="node/2267">Certificate</a>
+                        </li>
+                <li class="dropdown-item nav-item--section nav-item--label">
+                                      <span class="nav-link--label nav-link--section" title="Academic Affairs">Academic Affairs</span>
+                        </li>
+                <li class="dropdown-item menu-item--collapsed">
+                                      <a href="/academics/division-academic-affairs" title="Division of Academic Affairs" data-drupal-link-system-path="node/2199">Division of Academic Affairs</a>
+                        </li>
+                <li class="dropdown-item menu-item--collapsed">
+                                      <a href="/academics/colleges" title="Colleges and Schools" data-drupal-link-system-path="node/2375">Colleges and Schools</a>
+                        </li>
+                <li class="dropdown-item menu-item--collapsed">
+                                      <a href="/office-records-and-registration" title="Records and Registration" data-drupal-link-system-path="node/119">Records and Registration</a>
+                        </li>
+                <li class="dropdown-item nav-item--section nav-item--label">
+                                      <span class="nav-link--label nav-link--section" title="Resources">Resources</span>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/academics/general-education-requirements" title="General Education Requirements" data-drupal-link-system-path="node/2201">General Education Requirements</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/academics/academic-calendar" title="Academic Calendar" data-drupal-link-system-path="node/2310">Academic Calendar</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="https://eaglemobile.coppin.edu/app/catalog/classSearch" target="_blank" title="Class Search">Class Search</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/academics/academic-policies" title="Academic Policies" data-drupal-link-system-path="node/2200">Academic Policies</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="https://catalog.coppin.edu/index.php" title="University Catalogs">University Catalogs</a>
+                        </li>
+    
+    
+      </ul>
+  
+              </li>
+                <li class="nav-item menu-item--expanded dropdown nav-item--large">
+                          <a href="/office-admissions" class="nav-link--large nav-link dropdown-toggle" title="Admissions" data-toggle="dropdown" aria-expanded="false" aria-haspopup="true" data-drupal-link-system-path="node/187">Admissions</a>
+                        <ul id="block-mainnavigation" class="clearfix nav navbar-nav nav-main-menu dropdown-menu collapse">
+    
+                <li class="dropdown-item">
+                                      <a href="/apply" class="nav-link--admissions-copy" title="Apply to Coppin" data-drupal-link-system-path="node/201">Apply to Coppin</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="https://apply.coppin.edu/register/moreinfo" title="Request Information">Request Information</a>
+                        </li>
+                <li class="dropdown-item nav-item--section">
+                                      <a href="/office-admissions" class="nav-link--section" title="Admissions Overview" data-drupal-link-system-path="node/187">Admissions Overview</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/admissions/office-admissions-staff" title="Office of Admissions Staff" data-drupal-link-system-path="node/154">Office of Admissions Staff</a>
+                        </li>
+                <li class="dropdown-item nav-item--section nav-item--label">
+                                      <span class="nav-link--label nav-link--section" title="Become a Student">Become a Student</span>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/admissions/undergraduate-admissions" title="Undergraduate Student" data-drupal-link-system-path="node/127">Undergraduate Student</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/admissions/transfer-admissions" title="Transfer Student" data-drupal-link-system-path="node/155">Transfer Student</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/admissions/graduate-admissions" title="Graduate Student" data-drupal-link-system-path="node/134">Graduate Student</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/international-admissions" title="International Student" data-drupal-link-system-path="node/136">International Student</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/admissions/non-degree-students-admissions" title="Non-degree Student" data-drupal-link-system-path="node/151">Non-degree Student</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/admissions/adult-learners" data-drupal-link-system-path="node/150">Adult Learners</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/admissions/military-service-members-and-veterans-admissions" title="Military Service Members and Veterans" data-drupal-link-system-path="node/152">Military Service Members and Veterans</a>
+                        </li>
+                <li class="dropdown-item nav-item--section nav-item--label">
+                                      <span class="nav-link--label nav-link--section" title="Accelerate Your Journey">Accelerate Your Journey</span>
+                        </li>
+                <li class="dropdown-item menu-item--collapsed">
+                                      <a href="/admissions/honors-program" data-drupal-link-system-path="node/2035">Honors Program</a>
+                        </li>
+                <li class="dropdown-item nav-item--section nav-item--label">
+                                      <span class="nav-link--label nav-link--section" title="New Admitted Students">New Admitted Students</span>
+                        </li>
+                <li class="dropdown-item nav-item--small nav-item--no-mobile">
+                                      <a href="/sasa" class="nav-link--small nav-link--no-mobile" data-drupal-link-system-path="node/2420">Summer Academic Success Academy (SASA)</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/student-life/new-student-orientation" title="New Student Orientation" data-drupal-link-system-path="node/125">New Student Orientation</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/student-life/first-year-experience" title="First Year Experience" data-drupal-link-system-path="node/175">First Year Experience</a>
+                        </li>
+    
+    
+          <li class="nav-item--admissions-copy">
+        <!--<p>Apply by 3/1 for Fall start</p>
+
+<p>Apply by 12/1 for Spring start</p>-->
+      </li>
+      </ul>
+  
+              </li>
+                <li class="nav-item menu-item--expanded dropdown nav-item--large">
+                          <a href="/" class="nav-link--large nav-link dropdown-toggle" title="Student Life" data-toggle="dropdown" aria-expanded="false" aria-haspopup="true" data-drupal-link-system-path="&lt;front&gt;">Student Life</a>
+                        <ul id="block-mainnavigation" class="clearfix nav navbar-nav nav-main-menu dropdown-menu collapse">
+    
+                <li class="dropdown-item nav-item--label">
+                                      <span class="nav-link--label nav-link--story-card" title="Eagle Nation">Eagle Nation</span>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/student-life/student-affairs" data-drupal-link-system-path="node/142">Student Affairs</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/student-life" title="Your Campus Experience" data-drupal-link-system-path="node/1957">Your Campus Experience</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/student-life/student-support" title="Student Support" data-drupal-link-system-path="node/1858">Student Support</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/student-life/campus-life" title="Campus Life" data-drupal-link-system-path="node/1859">Campus Life</a>
+                        </li>
+                <li class="dropdown-item nav-item--section nav-item--label">
+                                      <span class="nav-link--label nav-link--section" title="New Students">New Students</span>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/student-life/new-student-orientation" title="New Student Orientation" data-drupal-link-system-path="node/125">New Student Orientation</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/student-life/first-year-experience" title="First Year Experience" data-drupal-link-system-path="node/175">First Year Experience</a>
+                        </li>
+                <li class="dropdown-item nav-item--section nav-item--label">
+                                      <span class="nav-link--label nav-link--section" title="Graduating Students">Graduating Students</span>
+                        </li>
+                <li class="dropdown-item menu-item--collapsed">
+                                      <a href="/student-life/commencement" title="Commencement" data-drupal-link-system-path="node/2490">Commencement</a>
+                        </li>
+                <li class="dropdown-item nav-item--section nav-item--label">
+                                      <span class="nav-link--label nav-link--section" title="Campus Resources">Campus Resources</span>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/student-life/eagle-card-parking-and-transit-services" title="Eagle Card, Parking, and Transit Services" data-drupal-link-system-path="node/2033">Eagle Card, Parking, and Transit Services</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/student-life/housing-and-dining" title="Housing and Dining" data-drupal-link-system-path="node/2071">Housing and Dining</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/student-life/technology-mail-and-print-services" title="Technology, Mail, and Print Services" data-drupal-link-system-path="node/2005">Technology, Mail, and Print Services</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/student-life/campus-safety-and-security" title="Campus Safety and Security" data-drupal-link-system-path="node/1925">Campus Safety and Security</a>
+                        </li>
+    
+    
+          <li class="nav-item--story-card">
+        <div class="nav-item--story-card__inner">
+          <img class="nav-item--story-card__image" src="/sites/default/files/styles/4_3_crop_width_480/public/2021-09/NJones.jpg?h=a7e6d17b&amp;itok=25xDIr9V" alt="Nikki Jones" />
+          <div class="nav-item--story-card__quote">
+            &quot;Being part of the Eagle Nation helped me become the woman that I am today&quot;
+          </div>
+          <a class="nav-item--story-card__link" href="/nikki-jones-96">
+                          Read Nikki's story
+                      </a>
+        </div>
+      </li>
+      </ul>
+  
+              </li>
+                <li class="nav-item menu-item--expanded dropdown nav-item--large">
+                          <a href="/tuition-and-aid" class="nav-link--large nav-link dropdown-toggle" title="Tuition and Aid" data-toggle="dropdown" aria-expanded="false" aria-haspopup="true" data-drupal-link-system-path="node/105">Tuition and Aid</a>
+                        <ul id="block-mainnavigation" class="clearfix nav navbar-nav nav-main-menu dropdown-menu collapse">
+    
+                <li class="dropdown-item nav-item--label">
+                                      <span class="nav-link--label" title="Tuition">Tuition</span>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/tuition-and-aid" title="Tuition and Aid Overview" data-drupal-link-system-path="node/105">Tuition and Aid Overview</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/tuition-and-aid/tuition-and-fees" title="Tuition and Fees" data-drupal-link-system-path="node/1866">Tuition and Fees</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/tuition-and-aid/cost-attendance" title="Cost to Attend" data-drupal-link-system-path="node/126">Cost to Attend</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/tuition-and-aid/how-residency-decides-tuition" title="How Residency Decides Tuition" data-drupal-link-system-path="node/121">How Residency Decides Tuition</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/tuition-and-aid/bursar-and-student-accounts" title="Bursar and Student Accounts" data-drupal-link-system-path="node/1878">Bursar and Student Accounts</a>
+                        </li>
+                <li class="dropdown-item nav-item--section nav-item--label">
+                                      <span class="nav-link--label nav-link--section" title="Financial Aid">Financial Aid</span>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/tuition-and-aid/office-financial-aid" title="Office of Financial Aid" data-drupal-link-system-path="node/118">Office of Financial Aid</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/tuition-and-aid/meet-your-financial-aid-team" title="Meet Your Financial Aid Team" data-drupal-link-system-path="node/1854">Meet Your Financial Aid Team</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/tuition-and-aid/types-financial-aid" title="Types of Financial Aid" data-drupal-link-system-path="node/106">Types of Financial Aid</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/tuition-and-aid/how-apply-federal-financial-aid" title="How to Apply for Financial Aid" data-drupal-link-system-path="node/109">How to Apply for Financial Aid</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/tuition-and-aid/scholarships-and-scholars-programs" title="Scholarships and Scholars Programs" data-drupal-link-system-path="node/138">Scholarships and Scholars Programs</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/tuition-and-aid/graduate-tuition-and-aid" title="Graduate Tuition and Aid" data-drupal-link-system-path="node/135">Graduate Tuition and Aid</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/tuition-and-aid/what-verification" title="What is Verification?" data-drupal-link-system-path="node/107">What is Verification?</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/tuition-and-aid/how-coppin-awards-financial-aid" title="How Coppin Awards Financial Aid" data-drupal-link-system-path="node/108">How Coppin Awards Financial Aid</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/tuition-and-aid/how-keep-your-student-loans-good-standing" title="How to Keep Your Student Loans in Good Standing" data-drupal-link-system-path="node/116">How to Keep Your Student Loans in Good Standing</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/tuition-and-aid/withdrawal-and-dismissal-refund-policy" title="Withdrawal and Dismissal Refund Policy" data-drupal-link-system-path="node/117">Withdrawal and Dismissal Refund Policy</a>
+                        </li>
+    
+    
+      </ul>
+  
+              </li>
+                <li class="nav-item menu-item--expanded dropdown nav-item--large">
+                          <a href="/" class="nav-link--large nav-link dropdown-toggle" title="Research" data-toggle="dropdown" aria-expanded="false" aria-haspopup="true" data-drupal-link-system-path="&lt;front&gt;">Research</a>
+                        <ul id="block-mainnavigation" class="clearfix nav navbar-nav nav-main-menu dropdown-menu collapse">
+    
+                <li class="dropdown-item">
+                                      <a href="/research" title="Research at Coppin" data-drupal-link-system-path="node/2368">Research at Coppin</a>
+                        </li>
+                <li class="dropdown-item nav-item--section nav-item--label">
+                                      <span class="nav-link--label nav-link--section" title="Centers">Centers</span>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/bishoprobinsonjusticeinstitute" title="Bishop L. Robinson Sr. Justice Institute" data-drupal-link-system-path="node/2370">Bishop L. Robinson Sr. Justice Institute</a>
+                        </li>
+                <li class="dropdown-item menu-item--collapsed">
+                                      <a href="/research/center-nanotechnology" title="Center for Nanotechnology" data-drupal-link-system-path="node/2277">Center for Nanotechnology</a>
+                        </li>
+                <li class="dropdown-item menu-item--collapsed">
+                                      <a href="/organicsynthesis" title="Center for Organic Synthesis" data-drupal-link-system-path="node/2312">Center for Organic Synthesis</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/research/center-strategic-entrepreneurship-cse" title="Center for Strategic Entrepreneurship (CSE)" data-drupal-link-system-path="node/2047">Center for Strategic Entrepreneurship (CSE)</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/research/laboratory-environmental-contaminants" title="Laboratory for Environmental Contaminants" data-drupal-link-system-path="node/2383">Laboratory for Environmental Contaminants</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/research/nasa-science-activation-program" title="NASA Science Activation Program" data-drupal-link-system-path="node/2435">NASA Science Activation Program</a>
+                        </li>
+                <li class="dropdown-item menu-item--collapsed">
+                                      <a href="/research/center-vision-research" title="Ophthalmic Research Laboratory" data-drupal-link-system-path="node/2320">Ophthalmic Research Laboratory</a>
+                        </li>
+                <li class="dropdown-item nav-item--section nav-item--label">
+                                      <span class="nav-link--label nav-link--section" title="Services">Services</span>
+                        </li>
+                <li class="dropdown-item menu-item--collapsed">
+                                      <a href="/research/institutional-review-board" title="Institutional Review Board" data-drupal-link-system-path="node/2345">Institutional Review Board</a>
+                        </li>
+                <li class="dropdown-item menu-item--collapsed">
+                                      <a href="/research/office-sponsored-programs-and-research" title="Office of Sponsored Programs and Research" data-drupal-link-system-path="node/2337">Office of Sponsored Programs and Research</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/parlett-l-moore-library" title="Parlett L. Moore Library" data-drupal-link-system-path="node/2418">Parlett L. Moore Library</a>
+                        </li>
+    
+    
+      </ul>
+  
+              </li>
+                <li class="nav-item menu-item--expanded dropdown nav-item--large">
+                          <a href="/" class="nav-link--large nav-link dropdown-toggle" title="About" data-toggle="dropdown" aria-expanded="false" aria-haspopup="true" data-drupal-link-system-path="&lt;front&gt;">About</a>
+                        <ul id="block-mainnavigation" class="clearfix nav navbar-nav nav-main-menu dropdown-menu collapse">
+    
+                <li class="dropdown-item nav-item--label">
+                                      <span class="nav-link--label" title="About Us">About Us</span>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/about/about-coppin-state-university" title="About Coppin State University" data-drupal-link-system-path="node/2280">About Coppin State University</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/about/vision-mission-and-goals" title="Vision, Mission, and Goals" data-drupal-link-system-path="node/2331">Vision, Mission, and Goals</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/strategicplan" data-drupal-link-system-path="node/2841">Strategic Plan</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="https://www.coppin.edu/directory/facilities" title="Campus Buildings">Campus Buildings</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/campus-tours-visits" title="Campus Tours &amp; Visits" data-drupal-link-system-path="node/199">Campus Tours &amp; Visits</a>
+                        </li>
+                <li class="dropdown-item nav-item--section nav-item--label">
+                                      <span class="nav-link--label nav-link--section" title="Our Heritage">Our Heritage</span>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/about/coppin-pride" title="Coppin Pride" data-drupal-link-system-path="node/2369">Coppin Pride</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/about/fanny-jackson-coppin" title="Fanny Jackson Coppin" data-drupal-link-system-path="node/2372">Fanny Jackson Coppin</a>
+                        </li>
+                <li class="dropdown-item nav-item--section nav-item--label">
+                                      <span class="nav-link--label nav-link--section" title="Administration">Administration</span>
+                        </li>
+                <li class="dropdown-item menu-item--collapsed">
+                                      <a href="/about/office-president" title="Office of the President" data-drupal-link-system-path="node/2144">Office of the President</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/academics/colleges" title="Colleges" data-drupal-link-system-path="node/2375">Colleges</a>
+                        </li>
+                <li class="dropdown-item menu-item--collapsed">
+                                      <a href="/about/divisions" title="Divisions" data-drupal-link-system-path="node/2388">Divisions</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="https://www.coppin.edu/directory/departments" title="Offices and Departments">Offices and Departments</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/about/university-leadership" title="University Leadership" data-drupal-link-system-path="node/2377">University Leadership</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/about/shared-governance-council" data-drupal-link-system-path="node/3363">Shared Governance</a>
+                        </li>
+    
+    
+      </ul>
+  
+              </li>
+                <li class="nav-item menu-item--expanded dropdown nav-item--large nav-item--no-desktop">
+                          <a href="" class="nav-link--large nav-link--no-desktop nav-link dropdown-toggle" title="More" data-toggle="dropdown" aria-expanded="false" aria-haspopup="true">More</a>
+                        <ul id="block-mainnavigation" class="clearfix nav navbar-nav nav-main-menu dropdown-menu collapse">
+    
+                <li class="dropdown-item">
+                                      <a href="https://eaglelinks.coppin.edu" title="EagleLINKS">EagleLINKS</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="https://workday.coppin.edu/" target="_blank">Eagle Workday</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/studentportal" title="Student Portal" data-drupal-link-system-path="node/2365">Student Portal</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/faculty-and-staff-portal" title="Faculty and Staff" data-drupal-link-system-path="node/2014">Faculty and Staff Portal</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/alumni" title="Alumni" data-drupal-link-system-path="node/2215">Alumni</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/athletics" title="Athletics" data-drupal-link-system-path="node/1979">Athletics</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/directory/people" title="People Finder" data-drupal-link-system-path="directory/people">People Finder</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/directory/departments" title="Offices and Departments" data-drupal-link-system-path="directory/departments">Offices and Departments</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/directory/facilities" title="Facilities Finder" data-drupal-link-system-path="directory/facilities">Facilities Finder</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/events" title="Events and Calendar" data-drupal-link-system-path="node/2183" class="is-active" aria-current="page">Events and Calendar</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/news" title="News" data-drupal-link-system-path="news">News</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="/parlett-l-moore-library" title="Library" data-drupal-link-system-path="node/2418">Library</a>
+                        </li>
+                <li class="dropdown-item">
+                                      <a href="https://apply.coppin.edu/register/moreinfo" title="Request Info">Request Info</a>
+                        </li>
+    
+    
+      </ul>
+  
+              </li>
+                <li class="nav-item nav-item--section nav-item--section--first nav-item--small nav-item--no-mobile">
+                                      <a href="http://eaglelinks.coppin.edu/" target="_blank" class="nav-link--small nav-link--section nav-link--section--first nav-link--no-mobile nav-link" title="EagleLINKS">EagleLINKS</a>
+                        </li>
+                <li class="nav-item nav-item--small nav-item--no-mobile">
+                                      <a href="https://workday.coppin.edu/" target="_blank" class="nav-link--small nav-link--no-mobile nav-link" title="Eagle Workday">Eagle Workday</a>
+                        </li>
+                <li class="nav-item nav-item--section nav-item--small nav-item--no-mobile">
+                                      <a href="/studentportal" class="nav-link--small nav-link--no-mobile nav-link--section nav-link" title="Student Portal" data-drupal-link-system-path="node/2365">Student Portal</a>
+                        </li>
+                <li class="nav-item nav-item--small nav-item--no-mobile">
+                                      <a href="/faculty-and-staff-portal" class="nav-link--small nav-link--no-mobile nav-link" title="Faculty and Staff" data-drupal-link-system-path="node/2014">Faculty and Staff Portal</a>
+                        </li>
+                <li class="nav-item menu-item--expanded dropdown nav-item--small nav-item--no-mobile">
+                          <a href="/alumni" class="nav-link--small nav-link--no-mobile nav-link dropdown-toggle" title="Alumni" data-toggle="dropdown" aria-expanded="false" aria-haspopup="true" data-drupal-link-system-path="node/2215">Alumni</a>
+                        <ul id="block-mainnavigation" class="clearfix nav navbar-nav nav-main-menu dropdown-menu collapse">
+    
+                <li class="dropdown-item">
+                                      <a href="/alumni/alumni-association" data-drupal-link-system-path="node/2208">Alumni Association</a>
+                        </li>
+    
+    
+      </ul>
+  
+              </li>
+                <li class="nav-item nav-item--small nav-item--no-mobile">
+                                      <a href="/athletics" class="nav-link--small nav-link--no-mobile nav-link" title="Athletics" data-drupal-link-system-path="node/1979">Athletics</a>
+                        </li>
+                <li class="nav-item nav-item--section nav-item--section--first nav-item--small nav-item--no-mobile">
+                                      <a href="/directory/people" class="nav-link--small nav-link--section nav-link--section--first nav-link--no-mobile nav-link" title="People Finder" data-drupal-link-system-path="directory/people">People Finder</a>
+                        </li>
+                <li class="nav-item nav-item--small nav-item--no-mobile">
+                                      <a href="/directory/departments" class="nav-link--small nav-link--no-mobile nav-link" title="Offices and Departments" data-drupal-link-system-path="directory/departments">Offices and Departments</a>
+                        </li>
+                <li class="nav-item nav-item--small nav-item--no-mobile">
+                                      <a href="/directory/facilities" class="nav-link--small nav-link--no-mobile nav-link" title="Facilities Finder" data-drupal-link-system-path="directory/facilities">Facilities Finder</a>
+                        </li>
+                <li class="nav-item active nav-item--small nav-item--no-mobile">
+                                      <a href="/events" class="nav-link--small nav-link--no-mobile nav-link active is-active" title="Events and Calendar" data-drupal-link-system-path="node/2183" aria-current="page">Events and Calendar</a>
+                        </li>
+                <li class="nav-item nav-item--small nav-item--no-mobile">
+                                      <a href="/news" class="nav-link--small nav-link--no-mobile nav-link" title="News" data-drupal-link-system-path="news">News</a>
+                        </li>
+                <li class="nav-item nav-item--small nav-item--no-mobile">
+                                      <a href="/parlett-l-moore-library" class="nav-link--small nav-link--no-mobile nav-link" title="Library" data-drupal-link-system-path="node/2418">Library</a>
+                        </li>
+                <li class="nav-item nav-item--small nav-item--no-mobile">
+                                      <a href="https://apply.coppin.edu/register/moreinfo" class="nav-link--small nav-link--no-mobile nav-link" title="Request Info">Request Info</a>
+                        </li>
+                <li class="nav-item nav-item--section nav-item--social nav-item--no-mobile">
+                                      <a href="https://www.facebook.com/coppinstateuniversity/" target="_blank" class="icon icon-facebook nav-link--social nav-link--section nav-link--no-mobile nav-link" title="Facebook"></a>
+                        </li>
+                <li class="nav-item nav-item--social nav-item--no-mobile">
+                                      <a href="https://twitter.com/CoppinStateUniv" class="icon icon-twitter nav-link--social nav-link--no-mobile nav-link" title="Twitter"></a>
+                        </li>
+                <li class="nav-item nav-item--social nav-item--no-mobile">
+                                      <a href="https://www.instagram.com/coppinstateuniversity" target="_blank" class="icon icon-instagram nav-link--social nav-link--no-mobile nav-link" title="Instagram"></a>
+                        </li>
+                <li class="nav-item nav-item--social nav-item--social--last nav-item--no-mobile">
+                                      <a href="https://www.youtube.com/user/CoppinStateTube" class="icon icon-youtube nav-link--social nav-link--social--last nav-link--no-mobile nav-link" title="YouTube"></a>
+                        </li>
+                <li class="nav-item">
+                                      <a href="/presidential-communications" class="nav-link" data-drupal-link-system-path="node/2657">Presidential Communications</a>
+                        </li>
+    
+    
+      </ul>
+  
+
+
+  </nav>
+
+
+
+            <div class="secondary-navigation__wrapper">
+        <nav class="navbar secondary-navigation" id="navbar-top">
+            <section class="row region region-secondary-menu">
+    <nav role="navigation" aria-labelledby="block-secondarymenu-menu" id="block-secondarymenu" class="block block-menu navigation menu--secondary-menu">
+            
+  <div class="visually-hidden" id="block-secondarymenu-menu">Secondary Menu</div>
+  
+
+        
+              <ul id="block-secondarymenu" class="clearfix nav">
+                    <li class="nav-item">
+                                          <a href="/apply" class="nav-link" data-drupal-link-system-path="node/201">Apply</a>
+              </li>
+                <li class="nav-item">
+                                          <a href="/campus-tours-visits" class="nav-link" data-drupal-link-system-path="node/199">Tour</a>
+              </li>
+                <li class="nav-item nav-item--no-mobile">
+                                          <a href="/give" class="nav-link--no-mobile nav-link" data-drupal-link-system-path="node/2147">Give</a>
+              </li>
+      </ul>
+  
+
+
+  </nav>
+
+  </section>
+
+        </nav>
+
+                  <div id="google-translate-clone" class="navbar-form navbar-wrapper-toggler form-inline">
+            <section class="row region region-header-form"></section>
+          </div>
+              </div>
+          </div>
+  </div>
+
+  <div class="collapse navbar-collapse" id="SearchTab">
+    <div class="navbar-controls">
+      <button class="navbar-toggler navbar-wrapper-toggler navbar-wrapper-toggler-close" type="button" data-toggle="collapse"
+              data-target="#SearchTab" aria-controls="SearchTab" aria-expanded="false"
+              aria-label="Close Search"><span class="icon-close"></span></button>
+    </div>
+    <div class="navbar-content">
+      <form action="/search" class="views-keyword-form">
+        
+                <input class="form-control form-control-lg form-autocomplete ui-autocomplete-input"
+               data-search-api-autocomplete-search="search"
+               data-autocomplete-path="/search_api_autocomplete/search?display=page_1"
+               type="text"
+               name="fulltext"
+               placeholder="Enter Search"
+               autocomplete="off"
+               aria-label="Enter Search">
+                <button class="icon-search" type="submit" aria-label="Search"></button>
+        <button class="navbar-clear-search" type="button">Clear search</button>
+      </form>
+
+      <div class="navbar-search-details">
+                  <div class="navbar-search-details__frequent">
+            <div><h2>Frequent Searches</h2></div>
+            <div><p><a href="https://www.coppin.edu/search?fulltext=academic+programs">Academic Programs</a></p>
+
+<p><a href="https://www.coppin.edu/search?fulltext=library">Library</a></p>
+
+<p><a href="https://www.coppin.edu/search?fulltext=academic+calendar">Academic Calendar</a></p>
+
+<p><a href="https://www.coppin.edu/search?fulltext=housing">Housing</a></p>
+
+<p><a href="https://www.coppin.edu/search?fulltext=bookstore">Bookstore</a></p>
+</div>
+          </div>
+                <div class="navbar-search-details__directory">
+          <h2>Search Directory</h2>
+          <div><p>Find contact details for people, departments and facilities information.</p>
+</div>
+          <a class="navbar-search-details__directory-link" href="/search">Search Directory</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="collapse navbar-collapse" id="ApplyTab">
+    <div class="navbar-content">
+      <div id="block-navigationapplytab" class="block-content-navigation_apply_tab block block-block-content block-block-content506f3ff6-422d-416c-8cff-ecf05996e48e">
+      <div class="content">
+      
+            <div class="field field--name-field-heading field--type-string field--label-hidden field__item">Here&#039;s What You&#039;ll Need to Apply:</div>
+      
+            <div class="clearfix text-formatted field field--name-body field--type-text-with-summary field--label-hidden field__item"><p><strong>$50.00 USD application fee</strong> (grad only)</p>
+
+<p><strong>Official high school or college transcript from all previous schools</strong></p>
+
+<p><strong>Test Scores</strong> (may be optional) AP or IB results</p>
+
+<p><strong>3 letters of recommendation</strong> (grad only)</p>
+</div>
+      
+            <div class="field field--name-field-button field--type-link field--label-hidden field__item"><a href="/apply" class="btn btn-primary">Apply</a></div>
+      
+    </div>
+  
+  <div class="admissions-copy">
+    <div class="admissions-copy__inner">
+      <!--<p>Apply by 3/1 for Fall start</p>
+
+<p>Apply by 12/1 for Spring start</p>-->
+    </div>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+
+<div id="page-wrapper">
+  <div id="page">
+    <header id="header" class="header header--scroll" role="banner" aria-label="Site header">
+                    <div class="top-navigation">
+          <div class="top-navigation--head">
+            <div class="navigation-wrapper container">
+                              <div class="top-navigation--page-header--mobile">
+                      <a href="/" title="Coppin State University Home" rel="home" class="navbar-brand">
+          <img src="/themes/custom/coppin_theme/logo.svg" alt="Coppin State University Home" class="img-fluid d-inline-block align-top" />
+      </a>
+
+
+                </div>
+              
+                              <nav class="navbar primary-navigation" id="navbar-main">
+                  <div class="menu-controls">
+                    <a class="logo-sticky" href="/">Coppin State University</a>
+                    <button class="navbar-toggler navbar-toggler-menu" type="button" data-toggle="collapse"
+                            data-target="#CollapsingNavbar" aria-controls="CollapsingNavbar" aria-expanded="false"
+                            aria-label="Toggle navigation"><span class="icon-menu"></span><span
+                        class="icon-close"></span><span
+                        class="menu-label">Menu</span></button>
+                    <button class="navbar-toggler navbar-toggler-search" type="button" data-toggle="collapse"
+                            data-target="#SearchTab" aria-controls="SearchTab" aria-expanded="false"
+                            aria-label="Toggle search"><span class="icon-search"></span><span
+                        class="icon-close"></span><span
+                        class="search-label">Search</span></button>
+                    <button class="navbar-toggler navbar-toggler-apply" type="button" data-toggle="collapse"
+                            data-target="#ApplyTab" aria-controls="ApplyTab" aria-expanded="false"
+                            aria-label="Toggle Apply"><span class="icon-arrow-circle"></span><span
+                        class="icon-close"></span><span
+                        class="apply-label">Apply</span></button>
+                  </div>
+
+                </nav>
+              
+                              <div class="top-navigation--page-header--desktop">
+                      <a href="/" title="Coppin State University Home" rel="home" class="navbar-brand">
+          <img src="/themes/custom/coppin_theme/logo.svg" alt="Coppin State University Home" class="img-fluid d-inline-block align-top" />
+      </a>
+
+
+                </div>
+              
+                              <nav class="navbar secondary-navigation" id="navbar-top">
+                    <section class="row region region-secondary-menu">
+    <nav role="navigation" aria-labelledby="block-secondarymenu-menu" id="block-secondarymenu" class="block block-menu navigation menu--secondary-menu">
+            
+  <div class="visually-hidden" id="block-secondarymenu-menu">Secondary Menu</div>
+  
+
+        
+              <ul id="block-secondarymenu" class="clearfix nav">
+                    <li class="nav-item">
+                                          <a href="/apply" class="nav-link" data-drupal-link-system-path="node/201">Apply</a>
+              </li>
+                <li class="nav-item">
+                                          <a href="/campus-tours-visits" class="nav-link" data-drupal-link-system-path="node/199">Tour</a>
+              </li>
+                <li class="nav-item nav-item--no-mobile">
+                                          <a href="/give" class="nav-link--no-mobile nav-link" data-drupal-link-system-path="node/2147">Give</a>
+              </li>
+      </ul>
+  
+
+
+  </nav>
+
+  </section>
+
+                </nav>
+                          </div>
+          </div>
+
+          <div class="top-navigation--foot  ">
+            <div class="navigation-wrapper container">
+                              <div class="breadcrumb-navigation">
+                    <div id="block-coppinbreadcrumbs" class="block block-coppin-breadcrumbs">
+  
+    
+      <div class="content">
+      
+<div class="breadcrumb-navigation__inner">
+  <ul class="breadcrumb-navigation__items">
+    
+    
+        <li class="breadcrumb breadcrumb--active   " data-breadcrumb-id="menu_link_content:b959c08f-337d-4d7f-a458-0649e29e311a" data-breadcrumb-depth="1">
+              <a href="/events">Events and Calendar</a>
+                </li>
+    </ul>
+</div>
+
+    </div>
+  </div>
+
+
+                </div>
+                          </div>
+          </div>
+
+        </div>
+          </header>
+          <div class="highlighted">
+        <aside class="container-fluid section clearfix" role="complementary">
+            <div data-drupal-messages-fallback class="hidden"></div>
+
+
+        </aside>
+      </div>
+            <div id="main-wrapper" class="layout-main-wrapper clearfix">
+              <div id="main" class="container-fluid">
+          <div class="row row-offcanvas row-offcanvas-left clearfix">
+            <main class="main-content col" id="content" role="main">
+              <section class="section ">
+                <a id="main-content" tabindex="-1"></a>
+                  <div id="block-coppin-theme-content" class="block block-system block-system-main-block">
+  
+    
+      <div class="content">
+      <article about="/events" class="node node--1col--paragraphs node--type-general-content node--view-mode-full clearfix container-reset">
+      
+  
+<div class="hero hero--with-media">
+      <div class="hero-background background-coppin-gold">
+      <div class="hero-overlay background-overlay-feather-1"></div>
+      <div class="container">
+                  <h1 class="h1">Events and Important Dates from across the Coppin Community</h1>
+          <h2 class="page-title">Events</h2>
+                
+      </div>
+    </div>
+          <div class="hero-media" data-responsive-bgimg>
+        
+        
+            <div class="field field--name-field-media field--type-entity-reference field--label-hidden field__item"><div>
+  
+  
+            <div class="field field--name-field-media-image field--type-image field--label-hidden field__item">    <img loading="eager" srcset="/sites/default/files/styles/max_width_320/public/2021-08/IMG_6643.JPG?itok=86FAB8Wt 320w, /sites/default/files/styles/max_width_640/public/2021-08/IMG_6643.JPG?itok=sdJ5zZtj 640w, /sites/default/files/styles/max_width_960/public/2021-08/IMG_6643.JPG?itok=cfA1e0QB 960w, /sites/default/files/styles/max_width_1200/public/2021-08/IMG_6643.JPG?itok=DwtAy4py 1200w, /sites/default/files/styles/max_width_1600/public/2021-08/IMG_6643.JPG?itok=IHliCpdT 1600w, /sites/default/files/styles/max_width_2000/public/2021-08/IMG_6643.JPG?itok=S8VKbGnz 2000w" sizes="(min-width: 1440px) 1440px, 100vw" width="320" height="213" src="/sites/default/files/styles/max_width_320/public/2021-08/IMG_6643.JPG?itok=86FAB8Wt" alt="Fraternity members perform a step show in the campus quad" typeof="foaf:Image" />
+
+
+</div>
+      
+</div>
+</div>
+      
+      </div>
+      </div>
+
+  
+</article>
+
+    </div>
+  </div>
+<div id="block-views-block-events-all" class="block block-views block-views-blockevents-all">
+  
+    
+      <div class="content">
+      <div class="views-element-container"><div class="view view-2column view-events view-id-events view-display-id-all js-view-dom-id-67a5ffdfc1fc82323b140b39cf22a3eec839dd34d8c8419d11fcceb457e78c9c">
+  
+    
+
+  
+<div class="events-view-navigation tabs mb-4_5 mb-md-6 mt-4 mt-md-6">
+  <ul class="nav primary nav-tabs flex-nowrap">
+    <li class="active nav-item"><a href="#all" class="nav-link active">All</a></li>
+    <li class="nav-item"><a href="#today" class="nav-link">Today</a></li>
+    <li class="nav-item"><a href="#this-week" class="nav-link">This Week</a></li>
+    <li class="nav-item"><a href="#next-week" class="nav-link">Next Week</a></li>
+    <li class="nav-item mr-4"><a href="#this-month" class="nav-link">This Month</a></li>
+    <li class="ml-auto d-none d-md-inline">
+      <form id="events-keywords-form" class="views-quick-search-form">
+        <input class="form-control form-control-sm" type="text" placeholder="Search keyword">
+        <button class="icon-search" type="submit" aria-label="Search"></button>
+      </form>
+    </li>
+  </ul>
+</div>
+
+  <div class="container">
+
+    
+    
+    <div class="row view-main">
+      <div class="col-12 col-md-auto view-2column--sidebar">
+                                        <div class="view-filters view-filters--vertical">
+          <div class="view-filters-wrap px-md-2 py-md-4">
+            <h6 class="pl-md-2 pr-1 mb-3">
+              <span class="d-none d-md-inline" tabindex="0" aria-label="Filter Results">Filter</span>
+              <a href="#filters" class="view-filters--toggle text-small d-md-none" data-toggle="collapse" role="button" aria-expanded="false" aria-controls="filters">Filter Results</a>
+            </h6>
+            <div class="collapse view-filters--collapse" id="filters">
+              <div class="view-filters--collapse-content">
+                
+<form class="views-exposed-form bef-exposed-form" data-drupal-selector="views-exposed-form-events-all" action="/events/rss.xml/all" method="get" id="views-exposed-form-events-all" accept-charset="UTF-8">
+  <div class="d-flex flex-wrap">
+  
+
+
+
+  <fieldset class="js-form-item js-form-type-textfield form-type-textfield js-form-item-keyword form-item-keyword form-group">
+          <label for="edit-keyword">Search Keyword</label>
+                          <input data-drupal-selector="edit-keyword" type="text" id="edit-keyword" name="keyword" value="" size="30" maxlength="128" class="form-control" />
+
+                          </fieldset>
+<details class="form-item js-form-wrapper form-wrapper" data-drupal-selector="edit-department-collapsible" id="edit-department-collapsible"><summary aria-label="Filter Offices and Departments" role="button" aria-controls="edit-department-collapsible" aria-expanded="false">Offices and Departments</summary><div class="details-wrapper">
+    <div id="edit-department" class="checkbox"><div class="form-checkboxes bef-checkboxes">
+                  
+
+                
+
+  <div class="js-form-item js-form-type-checkbox checkbox custom-control custom-checkbox js-form-item-department-350 form-item-department-350">
+                <input data-drupal-selector="edit-department-350" type="checkbox" id="edit-department-350" name="department[350]" value="350" class="form-checkbox custom-control-input">
+          <label  class="custom-control-label" for="edit-department-350">
+        President's Office
+      </label>
+                  </div>
+
+      </div>
+</div>
+</div>
+</details>
+<details class="form-item js-form-wrapper form-wrapper" data-drupal-selector="edit-interests-collapsible" id="edit-interests-collapsible"><summary aria-label="Filter Interests" role="button" aria-controls="edit-interests-collapsible" aria-expanded="false">Interests</summary><div class="details-wrapper">
+    <div id="edit-interests" class="checkbox"><div class="form-checkboxes bef-checkboxes">
+    </div>
+</div>
+</div>
+</details>
+<details class="form-item js-form-wrapper form-wrapper" data-drupal-selector="edit-program-collapsible" id="edit-program-collapsible"><summary aria-label="Filter Academic Programs" role="button" aria-controls="edit-program-collapsible" aria-expanded="false">Academic Programs</summary><div class="details-wrapper">
+    <div id="edit-program" class="checkbox"><div class="form-checkboxes bef-checkboxes">
+    </div>
+</div>
+</div>
+</details>
+
+
+
+
+  <fieldset class="js-form-item js-form-type-textfield form-type-textfield js-form-item-date form-item-date form-group">
+          <label for="edit-date">Date</label>
+                          <input data-drupal-selector="edit-date" type="text" id="edit-date" name="date" value="" size="30" maxlength="128" class="form-control" />
+
+                          </fieldset>
+
+
+
+
+  <fieldset class="js-form-item js-form-type-textfield form-type-textfield js-form-item-date-end form-item-date-end form-group">
+          <label for="edit-date-end">Date » End timestamp value</label>
+                          <input data-drupal-selector="edit-date-end" type="text" id="edit-date-end" name="date_end" value="" size="30" maxlength="128" class="form-control" />
+
+                          </fieldset>
+
+
+
+
+  <fieldset class="js-form-item js-form-type-textfield form-type-textfield js-form-item-date-range form-item-date-range form-group">
+          <label for="edit-date-range">Date Range End</label>
+                          <input data-drupal-selector="edit-date-range" type="text" id="edit-date-range" name="date_range" value="" size="30" maxlength="128" class="form-control" />
+
+                          </fieldset>
+
+
+
+
+  <fieldset class="js-form-item js-form-type-textfield form-type-textfield js-form-item-date-range-end form-item-date-range-end form-group">
+          <label for="edit-date-range-end">Date » End timestamp value</label>
+                          <input data-drupal-selector="edit-date-range-end" type="text" id="edit-date-range-end" name="date_range_end" value="" size="30" maxlength="128" class="form-control" />
+
+                          </fieldset>
+<div data-drupal-selector="edit-actions" class="form-actions js-form-wrapper form-wrapper mb-3" id="edit-actions"><button data-drupal-selector="edit-submit-events" type="submit" id="edit-submit-events" value="Filter" class="button js-form-submit form-submit btn btn-secondary btn-submit">Filter</button>
+</div>
+
+</div>
+
+</form>
+
+              </div>
+            </div>
+          </div>
+        </div>
+                            <div class="view-header mb-4_5 d-md-none">
+      <h2>1 upcoming event</h2>
+
+    <hr class="dark-grey">
+  </div>
+  
+  <div class="d-none d-md-block mt-5 mb-4">
+    <div class="text-xs">
+      <a href="/events/rss.xml" class="link-subscribe">Subscribe to Calendar</a>
+    </div>
+    <div class="text-small view-events-footer mt-4_5">
+    <div id="block-eventsfootertext" class="block-content-text_block block block-block-content block-block-content267e58fc-0519-4577-a27f-28143c01758c">
+  
+    
+      <div class="content">
+      
+    </div>
+  </div>
+
+    </div>
+  </div>
+      </div>
+      <div class="col view-2column--main">
+        
+        
+                            <div class="view-content row">
+            <div data-drupal-views-infinite-scroll-content-wrapper class="views-infinite-scroll-content-wrapper clearfix">    <div class="col-12 col-md-6 col-lg-4 mb-gw">
+    
+<div about="/event/5th-annual-first-ladys-wellness-walk" class="node node--type-event node--view-mode-teaser event-card" >
+  <a href="/event/5th-annual-first-ladys-wellness-walk" aria-label="5th Annual First Lady&#039;s Wellness Walk" class="rounded"></a>
+  <div class="event-card--content event-card--content--teaser">
+    <div class="event-card--date mb-2">
+      
+            <div class="field field--name-field-date field--type-smartdate field--label-hidden field__item"><time datetime="2026-10-13T17:30:00-04:00" class="datetime"><span>Tuesday</span>Oct 13th</time>
+</div>
+      
+    </div>
+    <h3><span class="field field--name-title field--type-string field--label-hidden">5th Annual First Lady&#039;s Wellness Walk</span>
+</h3>
+
+    <div class="related_content__card--meta text-small mt-4">
+      <div class="d-flex mb-3">
+        <span class="icon-price icon-md mr-3"></span>
+        <strong>FREE</strong>
+      </div>
+
+      <div class="d-flex">
+        <span class="icon-location icon-md mr-3 align-items-start"></span>
+        
+            <div class="field field--name-field-location field--type-address field--label-hidden field__item"><p class="address" translate="no"><span class="address-line1">PEC Concourse, 2500 W. North Ave., </span><br>
+<span class="locality">Baltimore</span>, <span class="administrative-area">MD</span> <span class="postal-code">21216</span><br>
+<span class="country">United States</span></p></div>
+      
+      </div>
+    </div>
+
+      </div>
+</div>
+
+  </div>
+</div>
+
+          </div>
+                  
+                  
+
+              </div>
+    </div>
+
+                  <div class="view-footer">
+          <div class=" mt-6 mb-4">
+    <div id="block-eventsfootercomponents" class="block-content-custom_components block block-block-content block-block-contentf45a6923-2c9d-4c93-8075-ea78ac983fb0">
+  
+    
+      <div class="content">
+      
+      <div class="field field--name-field-components field--type-entity-reference-revisions field--label-hidden field__items">
+              <div class="field__item">
+<div class="snippet snippet--calendar">
+  <div class="container pad-2-column-layout mt-5 mt-md-8 mb-5 mb-md-8">
+    <div class="background-light-grey rounded snippet-inner">
+      <div class="snippet--icon icon-date-solid"></div>
+      <div class="snippet--text">
+        <h2>Academic Calendar</h2>
+                  <div class="snippet--desc">
+            
+            <div class="field field--name-field-description-long field--type-string-long field--label-hidden field__item">Coppin&#039;s academic calendar shows the dates classes are in session and deadlines to add and drop classes for undergraduate and graduate students.</div>
+      
+          </div>
+                          <span class="snippet--link">
+          <a href="/about/office-records-and-registration/academic-calendar">View the Academic Calendar</a>
+        </span>
+              </div>
+    </div>
+  </div>
+</div>
+
+</div>
+          </div>
+  
+    </div>
+  </div>
+
+  </div>
+
+      </div>
+          </div>
+</div>
+</div>
+
+    </div>
+  </div>
+<div id="block-views-block-events-calendar-desktop" class="block block-views block-views-blockevents-calendar-desktop">
+  
+    
+      <div class="content">
+      <div class="views-element-container"><div class="view view-events-calendar view-id-events_calendar view-display-id-desktop js-view-dom-id-245ff8a220c92817477f75be931493ce53c8d7e0ca13f8a5aeb9acc46da92ed8">
+  
+    
+
+    
+  <div class="container">
+
+    
+    
+    <div class="view-filters view-filters--horizontal row">
+      <h6 class="col-12 col-md-auto">
+        <span class="d-none d-md-inline">Filter</span>
+        <a href="#filters" class="view-filters--toggle text-small d-md-none mb-3 mt-2" data-toggle="collapse" role="button" aria-expanded="false" aria-controls="filters">Filter Results</a>
+      </h6>
+      <div class="col-12 col-md collapse view-filters--collapse" id="filters">
+        <div class="view-filters--collapse-content">
+          
+<form class="views-exposed-form bef-exposed-form" data-drupal-selector="views-exposed-form-events-calendar-desktop" action="/events" method="get" id="views-exposed-form-events-calendar-desktop" accept-charset="UTF-8">
+  <div class="d-flex flex-wrap">
+  
+
+
+
+  <fieldset class="js-form-item js-form-type-textfield form-type-textfield js-form-item-keyword form-item-keyword form-group">
+          <label for="edit-keyword">Search Keywords</label>
+                          <input title="Search keywords" data-drupal-selector="edit-keyword" type="text" id="edit-keyword" name="keyword" value="" size="15" maxlength="128" class="form-control" />
+
+                          </fieldset>
+<details class="form-item js-form-wrapper form-wrapper" data-drupal-selector="edit-department-collapsible" id="edit-department-collapsible"><summary aria-label="Filter Departments" role="button" aria-controls="edit-department-collapsible" aria-expanded="false">Departments</summary><div class="details-wrapper">
+    <div id="edit-department" class="checkbox"><div class="form-checkboxes bef-checkboxes">
+                  
+
+                
+
+  <div class="js-form-item js-form-type-checkbox checkbox custom-control custom-checkbox js-form-item-department-350 form-item-department-350">
+                <input data-drupal-selector="edit-department-350" type="checkbox" id="edit-department-350" name="department[350]" value="350" class="form-checkbox custom-control-input">
+          <label  class="custom-control-label" for="edit-department-350">
+        President's Office
+      </label>
+                  </div>
+
+      </div>
+</div>
+</div>
+</details>
+<details class="form-item js-form-wrapper form-wrapper" data-drupal-selector="edit-interests-collapsible" id="edit-interests-collapsible"><summary aria-label="Filter Interests" role="button" aria-controls="edit-interests-collapsible" aria-expanded="false">Interests</summary><div class="details-wrapper">
+    <div id="edit-interests" class="checkbox"><div class="form-checkboxes bef-checkboxes">
+    </div>
+</div>
+</div>
+</details>
+<details class="form-item js-form-wrapper form-wrapper" data-drupal-selector="edit-program-collapsible" id="edit-program-collapsible"><summary aria-label="Filter Programs" role="button" aria-controls="edit-program-collapsible" aria-expanded="false">Programs</summary><div class="details-wrapper">
+    <div id="edit-program" class="checkbox"><div class="form-checkboxes bef-checkboxes">
+    </div>
+</div>
+</div>
+</details>
+<div data-drupal-selector="edit-calendar-range-wrapper" id="edit-calendar-range-wrapper" class="js-form-wrapper form-wrapper mb-3"><fieldset data-drupal-selector="edit-calendar-range-wrapper" id="edit-calendar-range-wrapper--2" class="js-form-item form-item js-form-wrapper form-group">
+      <legend>
+    <span class="fieldset-legend">Date - Start</span>
+  </legend>
+  <div class="fieldset-wrapper">
+        
+
+
+
+  <fieldset class="js-form-item js-form-type-textfield form-type-textfield js-form-item-calendar-range-min form-item-calendar-range-min form-group">
+          <label for="edit-calendar-range-min">Min</label>
+                          <input data-drupal-selector="edit-calendar-range-min" type="text" id="edit-calendar-range-min" name="calendar_range[min]" value="2026-10-01" size="30" maxlength="128" class="form-control" />
+
+                          </fieldset>
+
+
+
+
+  <fieldset class="js-form-item js-form-type-textfield form-type-textfield js-form-item-calendar-range-max form-item-calendar-range-max form-group">
+          <label for="edit-calendar-range-max">Max</label>
+                          <input data-drupal-selector="edit-calendar-range-max" type="text" id="edit-calendar-range-max" name="calendar_range[max]" value="" size="30" maxlength="128" class="form-control" />
+
+                          </fieldset>
+
+              </div>
+</fieldset>
+</div>
+<div data-drupal-selector="edit-actions" class="form-actions js-form-wrapper form-wrapper mb-3" id="edit-actions"><button data-drupal-selector="edit-submit-events-calendar" type="submit" id="edit-submit-events-calendar" value="Filter" class="button js-form-submit form-submit btn btn-secondary btn-submit">Filter</button>
+</div>
+
+</div>
+
+</form>
+
+        </div>
+      </div>
+    </div>
+
+          <div class="view-content row d-none d-md-block">
+                <div>
+  <div class="js-drupal-fullcalendar" data-calendar-view-index="0" data-calendar-view-name="events_calendar" data-calendar-display="desktop"></div>
+  <div class="bottom-buttons fc-button-group">
+          </div>
+</div>
+
+      </div>
+    
+    
+    <div class="row d-none d-md-flex mt-4 mb-4">
+      <div class="col-4 text-xs">
+        <a href="/events/rss.xml" class="link-subscribe">Subscribe to Calendar</a>
+      </div>
+
+      <div class="col-8 text-small view-events-footer">
+        <div id="block-eventsfootertext" class="block-content-text_block block block-block-content block-block-content267e58fc-0519-4577-a27f-28143c01758c">
+  
+    
+      <div class="content">
+      
+    </div>
+  </div>
+
+      </div>
+    </div>
+  </div>
+
+
+
+      <div class="attachment attachment-after d-md-none">
+      <div class="views-element-container"><div class="view view-events-calendar view-id-events_calendar view-display-id-mobile js-view-dom-id-cd657f553f1be6be381d5cf65e3739d734bf686f553e622b87d96d8436d4dba2">
+  
+    
+
+      <div class="view-header mb-4_5">
+      <h2>October</h2>
+      <hr class="dark-grey">
+    </div>
+  
+  
+      <div class="view-content">
+            <div class="row mb-4 events-calendar-mobile">
+  <div class="col-auto events-calendar-mobile--day">
+          <h3>1</h3>
+      </div>
+  <div class="col events-calendar-mobile--items text-small">
+                <div class="views-row mb-2">
+        <div class="views-field views-field-title"><span class="field-content"><a href="/event/coppin-state-mens-basketball-preseason-turn-concert-featuring-raheem-devaughn" hreflang="en">Coppin State Men&#039;s Basketball Preseason Turn-Up Concert Featuring Raheem DeVaughn</a></span></div>
+      </div>
+      </div>
+</div>
+<div class="row mb-4 events-calendar-mobile">
+  <div class="col-auto events-calendar-mobile--day">
+          <h3>13</h3>
+      </div>
+  <div class="col events-calendar-mobile--items text-small">
+                <div class="views-row mb-2">
+        <div class="views-field views-field-title"><span class="field-content"><a href="/event/5th-annual-first-ladys-wellness-walk" hreflang="en">5th Annual First Lady&#039;s Wellness Walk</a></span></div>
+      </div>
+      </div>
+</div>
+
+    </div>
+  
+  
+        </div>
+</div>
+
+    </div>
+      <div class="view-footer">
+    <div class=" mt-6 mb-4">
+      <div id="block-eventsfootercomponents" class="block-content-custom_components block block-block-content block-block-contentf45a6923-2c9d-4c93-8075-ea78ac983fb0">
+  
+    
+      <div class="content">
+      
+      <div class="field field--name-field-components field--type-entity-reference-revisions field--label-hidden field__items">
+              <div class="field__item">
+<div class="snippet snippet--calendar">
+  <div class="container pad-2-column-layout mt-5 mt-md-8 mb-5 mb-md-8">
+    <div class="background-light-grey rounded snippet-inner">
+      <div class="snippet--icon icon-date-solid"></div>
+      <div class="snippet--text">
+        <h2>Academic Calendar</h2>
+                  <div class="snippet--desc">
+            
+            <div class="field field--name-field-description-long field--type-string-long field--label-hidden field__item">Coppin&#039;s academic calendar shows the dates classes are in session and deadlines to add and drop classes for undergraduate and graduate students.</div>
+      
+          </div>
+                          <span class="snippet--link">
+          <a href="/about/office-records-and-registration/academic-calendar">View the Academic Calendar</a>
+        </span>
+              </div>
+    </div>
+  </div>
+</div>
+
+</div>
+          </div>
+  
+    </div>
+  </div>
+
+    </div>
+  </div>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+
+              </section>
+            </main>
+                                  </div>
+        </div>
+          </div>
+        <!-- Footer -->
+    <footer class="footer" id="footer">
+      <div class="container">
+        <div class="footer__inner">
+          <div class="footer__group">
+            <a tabindex="-1"  class="back__button link-box-back-to-top disabled">Back to Top</a>
+            <div class="footer__logo">
+              <a class="footer__logo__link" href="https://www.coppin.edu/">
+                <span class="footer__logo__link__label sr-only">Coppin University</span>
+              </a>
+              <p class="footer__logo__label">A University System of Maryland (USM) Member Institution</p>
+            </div>
+          </div>
+          <div class="footer__content">
+            <!-- Address -->
+            <div class="address">
+              <div class="address__details" itemprop="address" itemscope itemtype="http://schema.org/PostalAddress">
+                <span class="address__detail">
+                  <a class="address__detail__label" href="tel:410-951-3000" itemprop="telephone">410.951.3000</a>
+                </span>
+                <span class="address__group">
+                  <span class="address__street" itemprop="streetAddress">2500 West North Avenue</span>
+                  <br>
+                  <span class="address__city" itemprop="addressLocality">Baltimore,</span>
+                  <span class="address__state" itemprop="addressRegion">MD</span>
+                  <span class="address__zip" itemprop="postalCode">21216-3698</span>
+                </span>
+              </div>
+            </div>
+            <!-- End Address -->
+
+              <section class="row region region-footer">
+    <nav role="navigation" aria-labelledby="block-footer-menu" id="block-footer" class="block block-menu navigation menu--footer">
+            
+  <div class="visually-hidden" id="block-footer-menu">Footer</div>
+  
+
+        
+              <ul class="clearfix nav flex-row" data-component-id="bootstrap_barrio:menu_columns">
+                    <li class="nav-item">
+                <a href="https://marylandconnect.wd1.myworkdayjobs.com/CSU_Careers" class="nav-link nav-link-https--marylandconnectwd1myworkdayjobscom-csu-careers">Careers</a>
+              </li>
+                <li class="nav-item">
+                <a href="/webforms" class="nav-link nav-link--webforms" data-drupal-link-system-path="webforms">Find a Form</a>
+              </li>
+                <li class="nav-item">
+                <a href="/it-service-desk" class="nav-link nav-link--it-service-desk" data-drupal-link-system-path="node/2007">IT Service Desk</a>
+              </li>
+        </ul>
+  
+
+
+
+  </nav>
+<nav role="navigation" aria-labelledby="block-footerdetail-menu" id="block-footerdetail" class="block block-menu navigation menu--footer-detail">
+            
+  <div class="visually-hidden" id="block-footerdetail-menu">Footer Detail</div>
+  
+
+        
+                  <ul class="clearfix nav" data-component-id="bootstrap_barrio:menu">
+                    <li class="nav-item">
+                <a href="/campus-police" class="nav-link nav-link--campus-police" data-drupal-link-system-path="node/1913">Campus Police</a>
+              </li>
+                <li class="nav-item">
+                <a href="tel:410-951-3900" class="nav-link nav-link-tel410-951-3900">410.951.3900</a>
+              </li>
+        </ul>
+  
+
+
+
+  </nav>
+
+  </section>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="footer__bottom">
+       <div class="container">
+         <div class="footer__bottom__inner">
+            <!-- Copyright -->
+            <p class="copyright">
+              <span class="copyright__icon">&copy;</span>
+              <span class="copyright__holder" itemprop="copyrightHolder" itemscope itemtype="http://schema.org/Organization">
+              <span class="copyright__year" itemprop="copyrightYear">2026</span>
+                <a href="https://www.coppin.edu/" class="copyright__holder__name" itemprop="name">Coppin State University. All Rights Reserved.</a>
+              </span>
+            </p>
+            <div class="footer__utility">
+                <section class="row region region-footer-copyright">
+    <nav role="navigation" aria-labelledby="block-footerutility-menu" id="block-footerutility" class="block block-menu navigation menu--footer-utility">
+            
+  <div class="visually-hidden" id="block-footerutility-menu">Footer Utility</div>
+  
+
+        
+                  <ul class="clearfix nav" data-component-id="bootstrap_barrio:menu">
+                    <li class="nav-item">
+                <a href="https://www.coppin.edu/accessibility" class="nav-link nav-link-https--wwwcoppinedu-accessibility">Accessibility</a>
+              </li>
+                <li class="nav-item">
+                <a href="/university-policies" title="University Policies" class="nav-link nav-link--university-policies" data-drupal-link-system-path="node/2443">Policies</a>
+              </li>
+                <li class="nav-item">
+                <a href="https://www.coppin.edu/privacy-notice" class="nav-link nav-link-https--wwwcoppinedu-privacy-notice">Privacy</a>
+              </li>
+                <li class="nav-item">
+                <a href="/title9" class="nav-link nav-link--title9" data-drupal-link-system-path="node/1946">Title IX Nondiscrimination</a>
+              </li>
+        </ul>
+  
+
+
+
+  </nav>
+
+  </section>
+
+            </div>
+            <!-- End Copyright -->
+
+            <!-- Social Nav -->
+            <div class="footer__socials">
+              <h2 class="footer__socials__header sr-only" id="footer__socials__header">Contact Us</h2>
+              <ul class="footer__socials__nav" aria-labelledby="footer__socials__header">
+                <li class="footer__social__item">
+                  <a class="footer__social__link footer__social--facebook" href="https://www.facebook.com/coppinstateuniversity">
+                    <span class="footer__social__label sr-only">Facebook</span>
+                  </a>
+                </li>
+                <li class="footer__social__item">
+                  <a class="footer__social__link footer__social--twitter" href="https://x.com/coppinstateuniv">
+                    <span class="footer__social__label sr-only">X</span>
+                  </a>
+                </li>
+                <li class="footer__social__item">
+                  <a class="footer__social__link footer__social--instagram" href="https://www.instagram.com/coppinstateuniversity/">
+                    <span class="footer__social__label sr-only">Instagram</span>
+                  </a>
+                </li>
+                <li class="footer__social__item">
+                  <a class="footer__social__link footer__social--youtube" href="https://www.youtube.com/user/CoppinStateTube">
+                    <span class="footer__social__label sr-only">YouTube</span>
+                  </a>
+                </li>
+              </ul>
+            </div>
+            <!-- End Social Nav -->
+         </div>
+        </div>
+      </div>
+    </footer>
+    <!-- End Footer -->
+  </div>
+</div>
+
+  </div>
+
+    
+    <script src="/core/assets/vendor/jquery/jquery.min.js?v=4.0.0"></script>
+<script src="/sites/default/files/js/js_xM2uX0fUpbiZzX3qaTY9wbQs65Vx_vZuU-v5M8VKR50.js?scope=footer&amp;delta=1&amp;language=en&amp;theme=coppin_theme&amp;include=eJx1kGtuxCAMhC9EliMhAxOWysHIJrubnr7ZR6UmUv_48XlGtkw5D6G2efoUl1mlDRcxBjTg0cWQw1x5b80XNCjxf2MDI41AzKFJg4tM35uPVS70RQ-XpPfawrhigadGvI2a7IxHDV3lsR15VFBOui7xZMANbZzYFSpHorAuzeoNsdSlHIe2pgSzadkDFUyJWgIfNXfEWXSZaB0yrZ2F8q_gVnE3X9tcWx0IllT46Vb4rGsnvqQdUDe4eWVOxGiZ9OXzf4krIoURBhVf9nDu3188wMXZvvNeM_avQ4d_3uBeF4WnOlyrDdHNf_IPXOnDqA"></script>
+<script src="https://static.addtoany.com/menu/page.js" defer></script>
+<script src="/sites/default/files/js/js_FN9uUzmlLdmMOOYhNmSgaLBb6EeaArMKzbIyPmSVzNI.js?scope=footer&amp;delta=3&amp;language=en&amp;theme=coppin_theme&amp;include=eJx1kGtuxCAMhC9EliMhAxOWysHIJrubnr7ZR6UmUv_48XlGtkw5D6G2efoUl1mlDRcxBjTg0cWQw1x5b80XNCjxf2MDI41AzKFJg4tM35uPVS70RQ-XpPfawrhigadGvI2a7IxHDV3lsR15VFBOui7xZMANbZzYFSpHorAuzeoNsdSlHIe2pgSzadkDFUyJWgIfNXfEWXSZaB0yrZ2F8q_gVnE3X9tcWx0IllT46Vb4rGsnvqQdUDe4eWVOxGiZ9OXzf4krIoURBhVf9nDu3188wMXZvvNeM_avQ4d_3uBeF4WnOlyrDdHNf_IPXOnDqA"></script>
+<script src="https://siteimproveanalytics.com/js/siteanalyze_28694.js" async></script>
+<script src="/modules/custom/coppin_chatbot/app/dist/assets/js/index.js?tmndg9"></script>
+<script src="/sites/default/files/js/js_YG4FtqPyBw8LEJ6aIwOCRCLHHA6XkR-rKfnqcysDA1c.js?scope=footer&amp;delta=6&amp;language=en&amp;theme=coppin_theme&amp;include=eJx1kGtuxCAMhC9EliMhAxOWysHIJrubnr7ZR6UmUv_48XlGtkw5D6G2efoUl1mlDRcxBjTg0cWQw1x5b80XNCjxf2MDI41AzKFJg4tM35uPVS70RQ-XpPfawrhigadGvI2a7IxHDV3lsR15VFBOui7xZMANbZzYFSpHorAuzeoNsdSlHIe2pgSzadkDFUyJWgIfNXfEWXSZaB0yrZ2F8q_gVnE3X9tcWx0IllT46Vb4rGsnvqQdUDe4eWVOxGiZ9OXzf4krIoURBhVf9nDu3188wMXZvvNeM_avQ4d_3uBeF4WnOlyrDdHNf_IPXOnDqA"></script>
+<script src="/themes/custom/coppin_theme/js/vendor/jquery-3.7.1.min.js?tmndg9" type="text/javascript"></script>
+<script src="/sites/default/files/js/js_YuSl4vTnQ0e3IX5VuruUMNvMqIuYwaBJy41NKC0EGPw.js?scope=footer&amp;delta=8&amp;language=en&amp;theme=coppin_theme&amp;include=eJx1kGtuxCAMhC9EliMhAxOWysHIJrubnr7ZR6UmUv_48XlGtkw5D6G2efoUl1mlDRcxBjTg0cWQw1x5b80XNCjxf2MDI41AzKFJg4tM35uPVS70RQ-XpPfawrhigadGvI2a7IxHDV3lsR15VFBOui7xZMANbZzYFSpHorAuzeoNsdSlHIe2pgSzadkDFUyJWgIfNXfEWXSZaB0yrZ2F8q_gVnE3X9tcWx0IllT46Vb4rGsnvqQdUDe4eWVOxGiZ9OXzf4krIoURBhVf9nDu3188wMXZvvNeM_avQ4d_3uBeF4WnOlyrDdHNf_IPXOnDqA"></script>
+<script src="https://unpkg.com/moment@2.29.4/min/moment.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/rrule@2.6.8/dist/es5/rrule.min.js"></script>
+<script src="https://unpkg.com/@fullcalendar/core@4.4.2/main.min.js"></script>
+<script src="https://unpkg.com/@fullcalendar/core@4.4.2/locales-all.min.js"></script>
+<script src="https://unpkg.com/@fullcalendar/moment@4.4.2/main.min.js"></script>
+<script src="https://unpkg.com/@fullcalendar/daygrid@4.4.2/main.min.js"></script>
+<script src="https://unpkg.com/@fullcalendar/interaction@4.4.2/main.min.js"></script>
+<script src="https://unpkg.com/@fullcalendar/timegrid@4.4.2/main.min.js"></script>
+<script src="https://unpkg.com/@fullcalendar/list@4.4.2/main.min.js"></script>
+<script src="https://unpkg.com/@fullcalendar/rrule@4.4.2/main.min.js"></script>
+<script src="/sites/default/files/js/js_7ASnCi6NnTSWMtkbaygyTd_XLVU8WuhAn6y8SvVIEQM.js?scope=footer&amp;delta=19&amp;language=en&amp;theme=coppin_theme&amp;include=eJx1kGtuxCAMhC9EliMhAxOWysHIJrubnr7ZR6UmUv_48XlGtkw5D6G2efoUl1mlDRcxBjTg0cWQw1x5b80XNCjxf2MDI41AzKFJg4tM35uPVS70RQ-XpPfawrhigadGvI2a7IxHDV3lsR15VFBOui7xZMANbZzYFSpHorAuzeoNsdSlHIe2pgSzadkDFUyJWgIfNXfEWXSZaB0yrZ2F8q_gVnE3X9tcWx0IllT46Vb4rGsnvqQdUDe4eWVOxGiZ9OXzf4krIoURBhVf9nDu3188wMXZvvNeM_avQ4d_3uBeF4WnOlyrDdHNf_IPXOnDqA"></script>
+
+  </body>
+</html>
