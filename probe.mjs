@@ -15,7 +15,9 @@ await Promise.all(Array.from({ length: 6 }, async () => {
       const ev = (body.match(/"@type"\s*:\s*"[A-Za-z]*Event"/g) || []).length;
       const title = (body.match(/<title[^>]*>([^<]{0,90})/i) || [])[1] || '';
       rows.push([label, r.status, (r.headers.get('content-type') || '').slice(0, 30), body.length, 'ld=' + ld, 'events=' + ev, r.url !== url ? 'redirect=' + r.url.slice(0, 80) : '', title.trim(), (Date.now() - t) + 'ms'].join(' | '));
-      if (save) fs.writeFileSync('out/' + label.replace(/[^a-z0-9]+/gi, '_') + '.txt', body.slice(0, 600000));
+      if (save === 'bell') { const bits = [...body.matchAll(/bell/gi)].map(m => body.slice(Math.max(0, m.index - 600), m.index + 400)); fs.writeFileSync('out/' + label.replace(/[^a-z0-9]+/gi, '_') + '.txt', bits.join('\n=====\n')); }
+      else if (save === 'links') { const links = [...body.matchAll(/<a\b[^>]*href=["']([^"']*\/page\/\d+[^"']*)["'][^>]*>([\s\S]{0,300}?)<\/a>/gi)].map(m => m[1] + ' :: ' + m[2].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()); fs.writeFileSync('out/' + label.replace(/[^a-z0-9]+/gi, '_') + '.txt', links.join('\n')); }
+      else if (save) fs.writeFileSync('out/' + label.replace(/[^a-z0-9]+/gi, '_') + '.txt', body.slice(0, 600000));
     } catch (e) { rows.push([label, 'ERR', e.name + ': ' + (e.cause?.code || e.message)].join(' | ')); }
   }
 }));
