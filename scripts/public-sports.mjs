@@ -67,5 +67,5 @@ export async function publicSportsProvider(market, previous, now = Date.now(), r
   const events = sports.trackAll(loaded ? placed : [], priorRows, now).map(row => ({
     ...row, eventType: 'SPORTS', classification: 'sports ' + row.league
   }));
-  return { status, fetchedAt: clock.toISOString(), source: 'ESPN public scoreboards + MLB Stats API', scoreboards: loaded, failedScoreboards: failed, events };
+  return { status, fetchedAt: clock.toISOString(), source: 'ESPN public scoreboards + MLB Stats API', scoreboards: loaded, failedScoreboards: failed, gamesSeen: games.filter(Boolean).length, gamesPlaced: placed.length, events };
 }
