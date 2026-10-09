@@ -18,7 +18,7 @@ export async function discoverVenueCalendars(market,request=fetch){
  return{sources:[],status:'unavailable'};
 }
 export async function readVenueCalendar(source,market,now=Date.now(),request=fetch,lookup){
- const queue=[source.url],visited=new Set(),events=[],context=[];let pages=0,parsed=false,failed=false,limited=false;
+ const queue=[source.url],visited=new Set(),feeds=new Set(),events=[],context=[];let pages=0,parsed=false,failed=false,limited=false;
  for(let n=0;queue.length&&n<4;n++){
   const url=queue.shift(),key=url.toLowerCase();if(visited.has(key)){n--;continue;}visited.add(key);
   try{const result=await schoolPage(url,request,lookup);pages++;
@@ -27,13 +27,13 @@ export async function readVenueCalendar(source,market,now=Date.now(),request=fet
    for(const row of records){const event=normalizePublicEvent(row,market,source,now);if(event)events.push({...event,demandEligible:true,timePrecision:'minute',locationPrecision:row.location?.geo?'venue':source.venues?.find(v=>v.name.toLowerCase()===String(event.venue).toLowerCase())?.locationPrecision||'venue'});
     else if(/^\d{4}-\d{2}-\d{2}$/.test(row.startDate||'')&&Date.parse(row.startDate+'T12:00:00Z')>=now-86400000&&Date.parse(row.startDate+'T12:00:00Z')<=now+7*86400000)context.push({name:row.name,eventDate:row.startDate,id:source.url+':'+row.name+':'+row.startDate,demandEligible:false});
    }
-   if(source.followEvents){const origin=new URL(result.url).origin;queue.push(...schoolCalendarLinks(result.body,result.url).filter(u=>new URL(u).origin===origin&&/(?:\/events?\/[^/?]+|\.ics(?:\?|$)|[?&]ical)/i.test(u)&&!visited.has(u.toLowerCase())&&!queue.includes(u)));}
+   if(source.followEvents){const origin=new URL(result.url).origin,links=schoolCalendarLinks(result.body,result.url).filter(u=>new URL(u).origin===origin);links.filter(u=>/\.ics(?:\?|$)|[?&]ical/i.test(u)).forEach(u=>feeds.add(u));queue.push(...links.filter(u=>/(?:\/events?\/[^/?]+|\.ics(?:\?|$)|[?&]ical)/i.test(u)&&!visited.has(u.toLowerCase())&&!queue.includes(u)));}
   }catch{failed=true;}
  }
  limited ||= queue.length>0;
- return{source:{name:source.name,url:source.url,status:!parsed?'unavailable':failed||limited?'partial':'active',pages,eventCount:events.length,truncated:limited,fetchedAt:parsed?new Date(now).toISOString():null},events:[...new Map(events.map(e=>[publicData.eventIdentity(e),e])).values()],context};
+ return{source:{name:source.name,url:source.url,status:!parsed?'unavailable':failed||limited?'partial':'active',pages,eventCount:events.length,truncated:limited,fetchedAt:parsed?new Date(now).toISOString():null},discoveredSources:[...feeds].filter(url=>url!==source.url).map(url=>({...source,url})),events:[...new Map(events.map(e=>[publicData.eventIdentity(e),e])).values()],context};
 }
 export async function venueCalendars(market,sources,now=Date.now(),request=fetch,lookup){
  const results=[];let next=0;await Promise.all(Array.from({length:Math.min(6,sources.length)},async()=>{while(next<sources.length)results.push(await readVenueCalendar(sources[next++],market,now,request,lookup));}));
- return{status:results.length&&results.every(r=>r.source.status==='active')?'active':results.some(r=>r.source.status!=='unavailable')?'partial':'unavailable',fetchedAt:new Date(now).toISOString(),sources:results.map(r=>r.source),events:[...new Map(results.flatMap(r=>r.events).map(e=>[publicData.eventIdentity(e),e])).values()],context:results.flatMap(r=>r.context)};
+ return{status:results.length&&results.every(r=>r.source.status==='active')?'active':results.some(r=>r.source.status!=='unavailable')?'partial':'unavailable',fetchedAt:new Date(now).toISOString(),sources:results.map(r=>r.source),discoveredSources:results.flatMap(r=>r.discoveredSources||[]),events:[...new Map(results.flatMap(r=>r.events).map(e=>[publicData.eventIdentity(e),e])).values()],context:results.flatMap(r=>r.context)};
 }

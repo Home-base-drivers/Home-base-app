@@ -526,7 +526,7 @@ async function readSchoolCalendar(school, market, now = Date.now(), request = fe
   limited ||= queue.some((u) => !visited.has(u));
   const unique = (rows) => [...new Map(rows.map((e) => [token(e.name) + ":" + e.lat.toFixed(3) + ":" + e.lon.toFixed(3) + ":" + (e.eventStart || e.eventDate), e])).values()];
   const result = unique(events), dates = unique(context);
-  return { source: { name: school.name, url: school.url, status: !parsed ? "unavailable" : failed || limited ? "partial" : "active", pages: loaded, eventCount: result.length, dateOnlyCount: dates.length, truncated: limited, fetchedAt: parsed ? new Date(now).toISOString() : null }, events: result, context: dates };
+  return { source: { name: school.name, url: school.url, status: !parsed ? "unavailable" : failed || limited ? "partial" : "active", pages: loaded, eventCount: result.length, dateOnlyCount: dates.length, truncated: limited, fetchedAt: parsed ? new Date(now).toISOString() : null }, discoveredSources: [...visited, ...queue].filter((u) => u !== school.url && /calendar|\.ics|ical|\/api\/2\/events/i.test(u)).map((url) => ({ ...school, url })), events: result, context: dates };
 }
 async function schoolCalendars(market, schools, now = Date.now(), request = fetch, lookup) {
   let next = 0;
@@ -537,7 +537,7 @@ async function schoolCalendars(market, schools, now = Date.now(), request = fetc
       results.push(await readSchoolCalendar(school, market, now, request, lookup));
     }
   }));
-  return { status: results.some((r) => ["active", "partial"].includes(r.source.status)) ? "partial" : "unavailable", fetchedAt: new Date(now).toISOString(), sources: results.map((r) => r.source), events: results.flatMap((r) => r.events), context: results.flatMap((r) => r.context) };
+  return { status: results.some((r) => ["active", "partial"].includes(r.source.status)) ? "partial" : "unavailable", fetchedAt: new Date(now).toISOString(), sources: results.map((r) => r.source), discoveredSources: results.flatMap((r) => r.discoveredSources || []), events: results.flatMap((r) => r.events), context: results.flatMap((r) => r.context) };
 }
 
 // config/provider-markets.json
@@ -1082,7 +1082,7 @@ async function discoverVenueCalendars(market, request = fetch) {
   return { sources: [], status: "unavailable" };
 }
 async function readVenueCalendar(source, market, now = Date.now(), request = fetch, lookup) {
-  const queue = [source.url], visited = /* @__PURE__ */ new Set(), events = [], context = [];
+  const queue = [source.url], visited = /* @__PURE__ */ new Set(), feeds = /* @__PURE__ */ new Set(), events = [], context = [];
   let pages = 0, parsed = false, failed = false, limited = false;
   for (let n = 0; queue.length && n < 4; n++) {
     const url = queue.shift(), key = url.toLowerCase();
@@ -1104,15 +1104,16 @@ async function readVenueCalendar(source, market, now = Date.now(), request = fet
         else if (/^\d{4}-\d{2}-\d{2}$/.test(row.startDate || "") && Date.parse(row.startDate + "T12:00:00Z") >= now - 864e5 && Date.parse(row.startDate + "T12:00:00Z") <= now + 7 * 864e5) context.push({ name: row.name, eventDate: row.startDate, id: source.url + ":" + row.name + ":" + row.startDate, demandEligible: false });
       }
       if (source.followEvents) {
-        const origin = new URL(result.url).origin;
-        queue.push(...schoolCalendarLinks(result.body, result.url).filter((u) => new URL(u).origin === origin && /(?:\/events?\/[^/?]+|\.ics(?:\?|$)|[?&]ical)/i.test(u) && !visited.has(u.toLowerCase()) && !queue.includes(u)));
+        const origin = new URL(result.url).origin, links = schoolCalendarLinks(result.body, result.url).filter((u) => new URL(u).origin === origin);
+        links.filter((u) => /\.ics(?:\?|$)|[?&]ical/i.test(u)).forEach((u) => feeds.add(u));
+        queue.push(...links.filter((u) => /(?:\/events?\/[^/?]+|\.ics(?:\?|$)|[?&]ical)/i.test(u) && !visited.has(u.toLowerCase()) && !queue.includes(u)));
       }
     } catch {
       failed = true;
     }
   }
   limited ||= queue.length > 0;
-  return { source: { name: source.name, url: source.url, status: !parsed ? "unavailable" : failed || limited ? "partial" : "active", pages, eventCount: events.length, truncated: limited, fetchedAt: parsed ? new Date(now).toISOString() : null }, events: [...new Map(events.map((e) => [import_homebase_public_data2.default.eventIdentity(e), e])).values()], context };
+  return { source: { name: source.name, url: source.url, status: !parsed ? "unavailable" : failed || limited ? "partial" : "active", pages, eventCount: events.length, truncated: limited, fetchedAt: parsed ? new Date(now).toISOString() : null }, discoveredSources: [...feeds].filter((url) => url !== source.url).map((url) => ({ ...source, url })), events: [...new Map(events.map((e) => [import_homebase_public_data2.default.eventIdentity(e), e])).values()], context };
 }
 async function venueCalendars(market, sources, now = Date.now(), request = fetch, lookup) {
   const results = [];
@@ -1120,7 +1121,56 @@ async function venueCalendars(market, sources, now = Date.now(), request = fetch
   await Promise.all(Array.from({ length: Math.min(6, sources.length) }, async () => {
     while (next < sources.length) results.push(await readVenueCalendar(sources[next++], market, now, request, lookup));
   }));
-  return { status: results.length && results.every((r) => r.source.status === "active") ? "active" : results.some((r) => r.source.status !== "unavailable") ? "partial" : "unavailable", fetchedAt: new Date(now).toISOString(), sources: results.map((r) => r.source), events: [...new Map(results.flatMap((r) => r.events).map((e) => [import_homebase_public_data2.default.eventIdentity(e), e])).values()], context: results.flatMap((r) => r.context) };
+  return { status: results.length && results.every((r) => r.source.status === "active") ? "active" : results.some((r) => r.source.status !== "unavailable") ? "partial" : "unavailable", fetchedAt: new Date(now).toISOString(), sources: results.map((r) => r.source), discoveredSources: results.flatMap((r) => r.discoveredSources || []), events: [...new Map(results.flatMap((r) => r.events).map((e) => [import_homebase_public_data2.default.eventIdentity(e), e])).values()], context: results.flatMap((r) => r.context) };
+}
+
+// scripts/calendar-registry.mjs
+var DISCOVERY_TTL = 24 * 36e5;
+function calendarArea(market) {
+  return { lat: Math.round(market.center.lat * 4) / 4, lon: Math.round(market.center.lon * 4) / 4 };
+}
+function localCalendarSources(rows, market) {
+  return (rows || []).filter((s) => s && typeof s.name === "string" && s.name.length <= 300 && publicSchoolUrl(s.url) && JSON.stringify(s).length <= 2e4).filter((s) => {
+    const points = Number.isFinite(s.lat) && Number.isFinite(s.lon) ? [s] : s.venues?.filter((v) => Number.isFinite(v.lat) && Number.isFinite(v.lon)) || [];
+    return points.length ? points.some((p) => distanceKm(market.center, p) <= market.radiusKm) : Number.isFinite(s.registryCenter?.lat) && Number.isFinite(s.registryCenter?.lon) && distanceKm(market.center, s.registryCenter) <= market.radiusKm;
+  });
+}
+function mergeCalendarSources(...lists) {
+  return [...new Map(lists.flat().filter((s) => s.url).map((s) => [s.url, s])).values()];
+}
+function cloudCalendarRegistry({ url, key, authorization, userId, request = fetch }) {
+  const headers = { apikey: key, Authorization: authorization, "Content-Type": "application/json" };
+  async function rest(path, options = {}) {
+    const r = await request(url + "/rest/v1/" + path, { ...options, headers: { ...headers, ...options.headers }, signal: AbortSignal.timeout(1e4) });
+    if (!r.ok) throw Error("Private calendar registry unavailable");
+    if (options.method === "POST" || r.status === 204) {
+      await r.body?.cancel();
+      return null;
+    }
+    return r.json();
+  }
+  return {
+    async load(market) {
+      const area = calendarArea(market), latRange = market.radiusKm / 110 + 0.15, lonRange = Math.min(180, latRange / Math.max(0.01, Math.cos(market.center.lat * Math.PI / 180)));
+      const sources = [];
+      for (let offset = 0; ; offset += 500) {
+        const query = new URLSearchParams({ select: "definition", user_id: "eq." + userId, and: `(lat.gte.${market.center.lat - latRange},lat.lte.${market.center.lat + latRange},lon.gte.${market.center.lon - lonRange},lon.lte.${market.center.lon + lonRange})`, order: "url", limit: "500", offset: String(offset) });
+        const rows = await rest("user_calendar_sources?" + query);
+        sources.push(...rows.map((r) => r.definition));
+        if (rows.length < 500) break;
+      }
+      const areas = await rest("user_calendar_areas?" + new URLSearchParams({ select: "discovered_at,status", user_id: "eq." + userId, lat: "eq." + area.lat, lon: "eq." + area.lon, radius_km: "eq." + market.radiusKm }));
+      return { sources: localCalendarSources(sources, market), discoveredAt: Date.parse(areas[0]?.discovered_at) || 0, discoveryStatus: areas[0]?.status || "unavailable" };
+    },
+    async save(market, sources, discoveredAt, status) {
+      const area = calendarArea(market), rows = localCalendarSources(sources, market).map((s) => {
+        const p = Number.isFinite(s.lat) ? s : s.venues?.filter((v) => Number.isFinite(v.lat) && Number.isFinite(v.lon)).sort((a, b) => distanceKm(market.center, a) - distanceKm(market.center, b))[0] || s.registryCenter;
+        return { user_id: userId, url: s.url, lat: Math.round(p.lat * 4) / 4, lon: Math.round(p.lon * 4) / 4, definition: s };
+      });
+      for (let i = 0; i < rows.length; i += 100) await rest("user_calendar_sources?on_conflict=user_id,url", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify(rows.slice(i, i + 100)) });
+      if (discoveredAt) await rest("user_calendar_areas?on_conflict=user_id,lat,lon,radius_km", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ user_id: userId, ...area, radius_km: market.radiusKm, discovered_at: new Date(discoveredAt).toISOString(), status }) });
+    }
+  };
 }
 
 // scripts/school-service.mjs
@@ -1152,36 +1202,65 @@ async function scheduledSchoolCalendars(market, now = Date.now(), request = fetc
 }
 function makeSchoolSearch({ request = fetch, lookup, now = () => Date.now() } = {}) {
   const cache = /* @__PURE__ */ new Map(), pages = /* @__PURE__ */ new Map();
-  return async (input) => {
-    const market = schoolSearchMarket(input), key = JSON.stringify(market), stamp = now();
-    if (input.refresh === true && Number(input.cursor || 0) === 0) {
-      cache.delete(key);
+  return async (input, session = {}) => {
+    const market = schoolSearchMarket(input), key = (session.userId || "device:" + String(input.sessionKey || "")) + JSON.stringify(market), stamp = now(), first = Number(input.cursor || 0) === 0;
+    if (input.refresh === true && first) {
       for (const k of pages.keys()) if (k.startsWith(key + ":")) pages.delete(k);
     }
     if (cache.size > 100) cache.delete(cache.keys().next().value);
     if (pages.size > 500) pages.delete(pages.keys().next().value);
     let entry = cache.get(key);
-    if (!entry || stamp - entry.stamp > 30 * 6e4) {
-      const task = Promise.all([discoverSchools(market, request), discoverVenueCalendars(market, request)]).then(([d, v]) => {
-        const venues = [...new Map([...registeredVenueCalendars(market), ...v.sources].map((s) => [s.url, s])).values()];
-        return { schools: [...venues, ...mergeSchoolRegistry(market, d.schools)], discoveryStatus: d.status === "active" && v.status === "active" ? "active" : "partial" };
-      });
+    let registryStatus = session.registry ? "synced" : "device";
+    if (first || !entry) {
+      let saved = { sources: localCalendarSources(input.savedSources, market), discoveredAt: Number(input.discoveredAt) || 0, discoveryStatus: "partial" };
+      if (session.registry) try {
+        saved = await session.registry.load(market);
+      } catch {
+        registryStatus = "unavailable";
+        saved = { sources: [], discoveredAt: 0 };
+      }
+      const previous = entry ? await entry.task : null;
+      const task = (async () => {
+        const recent = Math.min(stamp, Math.max(previous?.discoveredAt || 0, saved.discoveredAt || 0)), discover = !recent || stamp - recent > DISCOVERY_TTL;
+        const [d, v] = discover ? await Promise.all([discoverSchools(market, request), discoverVenueCalendars(market, request)]) : [{ schools: [], status: saved.discoveryStatus || previous?.discoveryStatus }, { sources: [], status: saved.discoveryStatus || previous?.discoveryStatus }];
+        const center = calendarArea(market), seeds = [...registeredVenueCalendars(market), ...mergeSchoolRegistry(market, d.schools)], schools = mergeCalendarSources(saved.sources, localCalendarSources(previous?.schools, market), seeds, v.sources).map((s) => ({ ...s, registryCenter: s.registryCenter || center }));
+        schools.push(...seeds.filter((s) => !s.url));
+        const discoveryStatus = d.status === "active" && v.status === "active" ? "active" : "partial", discoveredAt = discover ? stamp : recent;
+        if (session.registry) try {
+          await session.registry.save(market, schools, discoveredAt, discoveryStatus);
+        } catch {
+          registryStatus = "unavailable";
+        }
+        return { schools, discoveryStatus, discoveredAt, registryStatus };
+      })();
       entry = { stamp, task };
       cache.set(key, entry);
     }
     const discovery = await entry.task, cursor = Number(input.cursor) || 0;
+    registryStatus = discovery.registryStatus;
     if (!Number.isInteger(cursor) || cursor < 0 || cursor > discovery.schools.length) throw Error("Invalid school page");
     const selected = discovery.schools.slice(cursor, cursor + 12), pageKey = key + ":" + cursor;
     let page = pages.get(pageKey);
     if (!page || stamp - page.stamp > 30 * 6e4) {
-      page = { stamp, task: Promise.all([schoolCalendars(market, [...selected.filter((s) => s.kind !== "venue"), ...cursor === 0 ? districtSchoolCalendars(market, discovery.schools.filter((s) => s.kind !== "venue")) : []], stamp, request, lookup), venueCalendars(market, selected.filter((s) => s.kind === "venue"), stamp, request, lookup)]).then((results) => ({ status: results.some((r) => r.status !== "unavailable") ? "partial" : "unavailable", sources: results.flatMap((r) => r.sources), events: results.flatMap((r) => r.events), context: results.flatMap((r) => r.context), fetchedAt: new Date(stamp).toISOString() })) };
+      page = { stamp, task: Promise.all([schoolCalendars(market, [...selected.filter((s) => s.kind !== "venue"), ...cursor === 0 ? districtSchoolCalendars(market, discovery.schools.filter((s) => s.kind !== "venue")) : []], stamp, request, lookup), venueCalendars(market, selected.filter((s) => s.kind === "venue"), stamp, request, lookup)]).then((results) => ({ status: results.some((r) => r.status !== "unavailable") ? "partial" : "unavailable", sources: results.flatMap((r) => r.sources), discoveredSources: results.flatMap((r) => r.discoveredSources || []), events: results.flatMap((r) => r.events), context: results.flatMap((r) => r.context), fetchedAt: new Date(stamp).toISOString() })) };
       pages.set(pageKey, page);
     }
-    const result = await page.task, nextCursor = cursor + selected.length < discovery.schools.length ? cursor + selected.length : null;
-    return { ...result, discoveryStatus: discovery.discoveryStatus, schoolCount: discovery.schools.length, checkedCount: cursor + selected.length, nextCursor, center: market.center, radiusKm: market.radiusKm, exhaustive: false };
+    const result = await page.task, newSources = localCalendarSources(result.discoveredSources.map((s) => ({ ...s, registryCenter: s.registryCenter || calendarArea(market) })), market);
+    if (newSources.length) {
+      const known = new Set(discovery.schools.map((s) => s.url));
+      discovery.schools.push(...mergeCalendarSources(newSources).filter((s) => !known.has(s.url)));
+      if (session.registry) try {
+        await session.registry.save(market, newSources, 0, discovery.discoveryStatus);
+      } catch {
+        registryStatus = "unavailable";
+      }
+    }
+    const nextCursor = cursor + selected.length < discovery.schools.length ? cursor + selected.length : null;
+    return { ...result, discoveredSources: void 0, registryStatus, registrySources: first ? localCalendarSources(discovery.schools, market) : newSources, discoveredAt: discovery.discoveredAt, discoveryStatus: discovery.discoveryStatus, schoolCount: discovery.schools.length, checkedCount: cursor + selected.length, nextCursor, center: market.center, radiusKm: market.radiusKm, exhaustive: false };
   };
 }
 export {
+  cloudCalendarRegistry,
   districtSchoolCalendars,
   makeSchoolSearch,
   mergeSchoolRegistry,

@@ -138,9 +138,9 @@ export async function readSchoolCalendar(school,market,now=Date.now(),request=fe
  limited||=queue.some(u=>!visited.has(u));
  const unique=rows=>[...new Map(rows.map(e=>[token(e.name)+':'+e.lat.toFixed(3)+':'+e.lon.toFixed(3)+':'+(e.eventStart||e.eventDate),e])).values()];
  const result=unique(events),dates=unique(context);
- return{source:{name:school.name,url:school.url,status:!parsed?'unavailable':failed||limited?'partial':'active',pages:loaded,eventCount:result.length,dateOnlyCount:dates.length,truncated:limited,fetchedAt:parsed?new Date(now).toISOString():null},events:result,context:dates};
+ return{source:{name:school.name,url:school.url,status:!parsed?'unavailable':failed||limited?'partial':'active',pages:loaded,eventCount:result.length,dateOnlyCount:dates.length,truncated:limited,fetchedAt:parsed?new Date(now).toISOString():null},discoveredSources:[...visited,...queue].filter(u=>u!==school.url&&/calendar|\.ics|ical|\/api\/2\/events/i.test(u)).map(url=>({...school,url})),events:result,context:dates};
 }
 export async function schoolCalendars(market,schools,now=Date.now(),request=fetch,lookup){
  let next=0;const results=[];await Promise.all(Array.from({length:Math.min(6,schools.length)},async()=>{while(next<schools.length){const school=schools[next++];results.push(await readSchoolCalendar(school,market,now,request,lookup));}}));
- return{status:results.some(r=>['active','partial'].includes(r.source.status))?'partial':'unavailable',fetchedAt:new Date(now).toISOString(),sources:results.map(r=>r.source),events:results.flatMap(r=>r.events),context:results.flatMap(r=>r.context)};
+ return{status:results.some(r=>['active','partial'].includes(r.source.status))?'partial':'unavailable',fetchedAt:new Date(now).toISOString(),sources:results.map(r=>r.source),discoveredSources:results.flatMap(r=>r.discoveredSources||[]),events:results.flatMap(r=>r.events),context:results.flatMap(r=>r.context)};
 }

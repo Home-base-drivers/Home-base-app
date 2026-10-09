@@ -172,6 +172,7 @@
       try{await collectLearning();}catch(error){fail(error);}
     }
     backend.onAuthChange((event)=>{if(event==='PASSWORD_RECOVERY')recovery=true;
+      if(['INITIAL_SESSION','SIGNED_IN','SIGNED_OUT'].includes(event))setTimeout(()=>window.dispatchEvent(new Event('homebase-calendar-identity')),0);
       if(['SIGNED_IN','SIGNED_OUT','PASSWORD_RECOVERY'].includes(event))setTimeout(()=>refreshIdentity().catch(fail),0);});
     fetch('baltimore-demand-areas.geojson').then(r=>r.json()).then(data=>{areas=data.features||[];}).catch(()=>{});
     backend.sponsors().then(rows=>{sponsors=rows;}).catch(()=>{});

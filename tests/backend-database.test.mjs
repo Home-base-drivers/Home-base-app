@@ -28,6 +28,23 @@ before(async () => {
 });
 after(async () => { await db?.close(); });
 
+test('calendar history is private, ownership cannot change, and clear removes the registry',async()=>{
+ const url='https://venue.example.org/events';
+ await as('authenticated',alice,async()=>{
+  await db.query('insert into public.user_calendar_sources(user_id,url,lat,lon,definition) values ($1,$2,39.25,-76.5,$3)',[alice,url,{name:'Venue',url}]);
+  await db.query("insert into public.user_calendar_areas values ($1,39.25,-76.5,35,now(),'active')",[alice]);
+  assert.equal((await db.query('select * from public.user_calendar_sources')).rows.length,1);
+  await assert.rejects(db.query('update public.user_calendar_sources set user_id=$1',[bob]),{code:'42501'});
+ });
+ await as('authenticated',bob,async()=>{
+  assert.equal((await db.query('select * from public.user_calendar_sources')).rows.length,0);
+  assert.equal((await db.query('delete from public.user_calendar_sources returning *')).rows.length,0);
+  await assert.rejects(db.query('insert into public.user_calendar_sources values ($1,$2,39.25,-76.5,$3)',[alice,url,{}]),{code:'42501'});
+ });
+ await as('anon',null,async()=>{await assert.rejects(db.query('select * from public.user_calendar_sources'),{code:'42501'});});
+ await as('authenticated',alice,async()=>{await db.query('select public.delete_my_home_base_data()');assert.equal((await db.query('select * from public.user_calendar_sources')).rows.length,0);assert.equal((await db.query('select * from public.user_calendar_areas')).rows.length,0);});
+});
+
 test('demand context remains consent-gated, bounded and private',async()=>{
   await as('authenticated',alice,async()=>{
     await db.query('select public.set_home_base_privacy(false,true,false)');

@@ -1,4 +1,4 @@
-import {makeSchoolSearch} from './calendar.mjs';
+import {makeSchoolSearch,cloudCalendarRegistry} from './calendar.mjs';
 const headers={'Content-Type':'application/json','Access-Control-Allow-Origin':'https://home-base-drivers.github.io','Access-Control-Allow-Headers':'authorization,apikey,content-type,x-client-info','Access-Control-Allow-Methods':'POST,OPTIONS','Cache-Control':'no-store'};
 const answer=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers});
 const keys=new Map<string,number>();
@@ -16,5 +16,9 @@ Deno.serve(async(req:Request)=>{
  if(!keys.has(key)||Date.now()-keys.get(key)!>3600000){
   try{const r=await fetch(Deno.env.get('SUPABASE_URL')+'/auth/v1/settings',{headers:{apikey:key},signal:AbortSignal.timeout(5000)});if(!r.ok)return answer({error:'Invalid client key'},401);await r.body?.cancel();if(keys.size>8)keys.clear();keys.set(key,Date.now());}catch{return answer({error:'Calendar service unavailable'},503);}
  }
- try{const raw=await req.text();if(raw.length>2048)return answer({error:'Request too large'},413);return answer(await search(JSON.parse(raw)));}catch{return answer({error:'Public school calendar search unavailable'},400);}
+ let session={};const authorization=req.headers.get('authorization');
+ if(authorization){
+  try{const r=await fetch(Deno.env.get('SUPABASE_URL')+'/auth/v1/user',{headers:{apikey:key,Authorization:authorization},signal:AbortSignal.timeout(5000)});if(!r.ok)return answer({error:'Sign in again to access your calendar registry'},401);const user=await r.json();if(!user.id||user.is_anonymous)return answer({error:'Permanent account required'},401);session={userId:user.id,registry:cloudCalendarRegistry({url:Deno.env.get('SUPABASE_URL')!,key,authorization,userId:user.id})};}catch{return answer({error:'Account validation unavailable'},503);}
+ }
+ try{const raw=await req.text();if(raw.length>1000000)return answer({error:'Request too large'},413);const input=JSON.parse(raw);if(input.savedSources&&(!Array.isArray(input.savedSources)||input.savedSources.length>2000))return answer({error:'Too many saved calendars'},413);return answer(await search(input,session));}catch{return answer({error:'Public school calendar search unavailable'},400);}
 });

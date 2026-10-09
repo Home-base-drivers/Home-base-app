@@ -86,6 +86,12 @@ export function createHomeBaseBackend(client) {
     return data.user;
   }
   return Object.freeze({
+    async calendarSession() {
+      const {data,error}=await client.auth.getSession();
+      if(error)throw error;
+      const session=data?.session;
+      return session?.user?.id&&!session.user.is_anonymous?{owner:session.user.id,authorization:'Bearer '+session.access_token}:{owner:'device'};
+    },
     onAuthChange(callback) {
       return client.auth.onAuthStateChange((event, session) => callback(event, session?.user || null));
     },
@@ -234,9 +240,9 @@ export function createHomeBaseBackend(client) {
     async dataInventory() {
       const me = await user();
       const output = {};
-      for (const table of ['privacy_preferences','consent_receipts','usage_events','model_predictions','shift_observations','subscriptions','driver_dispatch_state','dispatch_recommendations','trip_rows']) {
+      for (const table of ['privacy_preferences','consent_receipts','usage_events','model_predictions','shift_observations','subscriptions','driver_dispatch_state','dispatch_recommendations','trip_rows','user_calendar_sources','user_calendar_areas']) {
         const rows = [];
-        const order = {consent_receipts:'receipt_id',usage_events:'event_id',model_predictions:'prediction_id',shift_observations:'observation_id',dispatch_recommendations:'recommendation_id',trip_rows:'id'}[table] || 'user_id';
+        const order = {consent_receipts:'receipt_id',usage_events:'event_id',model_predictions:'prediction_id',shift_observations:'observation_id',dispatch_recommendations:'recommendation_id',trip_rows:'id',user_calendar_sources:'url',user_calendar_areas:'lat'}[table] || 'user_id';
         for (let offset = 0; ; offset += 500) {
           const page = result(await client.from(table).select('*').eq('user_id', me.id).order(order).range(offset, offset + 499));
           rows.push(...page);
