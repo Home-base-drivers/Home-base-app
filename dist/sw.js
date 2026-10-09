@@ -1,4 +1,4 @@
-const CACHE='home-base-v229';
+const CACHE='home-base-v230';
 const ASSETS=['homebase-school-events.js?v=4','homebase-public-data.js?v=4','homebase-sports.js?v=1','homebase-weather.js?v=1','data-attributions.txt','homebase-global-heat.js?v=3','./','index.html','manifest.webmanifest','favicon.svg','icon-192.png','icon-512.png','homebase-languages.js?v=2','homebase-voice.js?v=4','homebase-dispatch.js?v=2','homebase-agent-client.js?v=4','homebase-copilot.js?v=44','homebase-live-assistant.js?v=4','homebase-copilot.css?v=49','homebase-logo.png','baltimore-map.jpg','provider-signals.json','homebase-live.js?v=38','homebase-earnings.js?v=110','homebase-earnings.css?v=110','homebase-route-policy.js?v=7','homebase-planner.js?v=127','homebase-config.js?v=111','homebase-backend.js?v=125','homebase-growth.js?v=125','homebase-growth.css?v=111','homebase-demand-history.js?v=128','baltimore-market.js?v=72','homebase-heat.js?v=108','baltimore-demand-areas.geojson'];
 self.addEventListener('install',event=>event.waitUntil((async()=>{
  const cache=await caches.open(CACHE);
