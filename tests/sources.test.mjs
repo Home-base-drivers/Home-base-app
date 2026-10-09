@@ -88,3 +88,11 @@ test('watch areas list nearby published dismissals and events but never become d
   assert.equal(all.referenceOnly, true); assert.ok(all.areas.length >= 8);
   assert.ok(all.areas.every(a => !('lat' in a) && !('score' in a)), 'checks carry no map coordinates or scores');
 });
+
+test('JSON event APIs pass the public calendar reader used by non-Baltimore markets', async () => {
+  const { publicEventCalendars } = await import('../scripts/public-events.mjs');
+  const body = JSON.stringify({ events: [{ title: 'D.C. United vs. Orlando City', status: 'publish', utc_start_date: '2026-10-14 23:30:00', venue: { venue: 'Audi Field', geo_lat: '38.868411', geo_lng: '-77.012869' } }] });
+  const market = { center: { lat: 38.9072, lon: -77.0369 }, radiusKm: 40, timeZone: 'America/New_York', publicCalendars: [{ name: 'Audi Field events', url: 'https://audifield.com/wp-json/tribe/events/v1/events?per_page=50', adapter: 'tribe', classification: 'stadium soccer' }] };
+  const result = await publicEventCalendars(market, Date.parse('2026-10-14T18:00:00Z'), async () => ({ ok: true, text: async () => body }));
+  assert.equal(result.status, 'active'); assert.equal(result.events.length, 1);
+});

@@ -151,7 +151,7 @@ async function publicPage(url, request) {
     const response = await request(url, { signal: AbortSignal.timeout(15_000), headers: { Accept: 'text/html', 'User-Agent': USER_AGENT } });
     if (!response.ok) throw Error('Public calendar unavailable');
     const html = await response.text();
-    if (!/<html|application\/ld\+json/i.test(html)) throw Error('Invalid public calendar');
+    if (!/<html|application\/ld\+json/i.test(html) && !/^\s*[\[{]/.test(html)) throw Error('Invalid public calendar');
     return html;
   })();
   if (key) cache.set(key, task);
