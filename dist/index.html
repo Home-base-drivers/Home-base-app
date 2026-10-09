@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Home Base">
-  <meta name="homebase-build" content="v231">
+  <meta name="homebase-build" content="v232">
   <meta name="description" content="Home Base connects local driver platforms, earnings forecasts, events and a GPS-based 12-hour route in one app.">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icon-192.png">
@@ -191,7 +191,7 @@
       <div class="header-actions"><button class="header-action menu-action" id="panelsBtn" aria-pressed="false" aria-label="Hide information panels"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1"/><path d="M9 9h6v6H9z"/></svg></button><button class="header-action timeline-toggle" id="timelineQuickBtn" type="button" aria-label="Open 12-hour timeline" aria-controls="timeRow" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"/><path d="M12 8v4l3 2"/><path d="M9 2h6M9 22h6"/></svg><small>12 HR</small></button><button class="header-action layer-toggle" id="layerBtn" type="button" aria-hidden="false" aria-label="Toggle demand heat map" aria-pressed="true"><svg viewBox="0 0 24 24"><path d="M4 17c3-7 5 2 8-6s5 3 8-4"/><circle cx="7" cy="11" r="2"/><circle cx="13" cy="8" r="2"/><circle cx="18" cy="13" r="2"/></svg><small>HEAT</small></button><button class="header-action bonus-toggle" id="bonusToggle" type="button" aria-pressed="false" aria-label="Show confirmed live driver bonuses"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="6" width="17" height="12" rx="3"/><path d="M8 12h5M10.5 9.5v5M16.5 9.5v5M14 12h5"/></svg></button><button class="header-action" id="refreshBtn" aria-label="Refresh GPS"><svg class="refresh-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></button><button class="header-action" id="installBtn" aria-label="Add Home Base to Home Screen"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><small>ADD</small></button></div>
     </div>
     <div class="conditions"><div class="weather-symbol"><svg viewBox="0 0 24 24"><path d="M7 16h10a4 4 0 0 0 0-8 6 6 0 0 0-11-1 4.5 4.5 0 0 0 1 9Z"/><path d="m8 19-1 2M12 19l-1 2M16 19l-1 2"/></svg></div><div class="weather-temp" id="weatherTemp">--</div><div class="condition-copy"><b id="weatherTitle">LOCAL CONDITIONS</b><span id="weatherText">RIDE DEMAND + EVENTS + BEST AREAS</span></div><div class="live-tag cooling" id="climateBadge" role="status" aria-live="polite" title="Automatic market advisory based on time, weather and current events">↘ COOLING</div></div>
-    <div class="map-style-controls" aria-label="Map display options"><button class="map-style-control" id="heatToggle" type="button" aria-pressed="true" aria-label="Hide demand heat map">HEAT · ON</button><button class="map-style-control" id="paletteToggle" type="button" aria-label="Change heat map colors">COLORS · CLASSIC</button></div>
+    <div class="map-style-controls" aria-label="Map display options"><button class="map-style-control" id="heatToggle" type="button" aria-pressed="true" aria-label="Hide demand heat map">HEAT · ON</button><button class="map-style-control" id="paletteToggle" type="button" aria-label="Change heat map colors">COLORS · CLASSIC</button><button class="map-style-control" id="logSurgeBtn" type="button" aria-label="Log a surge bonus you see at your location">LOG SURGE</button></div>
   </header>
   <main id="mainContent">
     <div class="compare-source-row" id="compareSourceRow" aria-label="Choose driver apps to compare"></div>
@@ -216,13 +216,13 @@
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="baltimore-market.js?v=73"></script>
-<script src="homebase-heat.js?v=108"></script>
+<script src="homebase-heat.js?v=109"></script>
 <script src="homebase-global-heat.js?v=3"></script>
 <link rel="stylesheet" href="homebase-earnings.css?v=110">
 <link rel="stylesheet" href="homebase-growth.css?v=111">
 <script src="homebase-earnings.js?v=110"></script>
-<script src="homebase-demand-history.js?v=128"></script>
-<script src="homebase-route-policy.js?v=8"></script>
+<script src="homebase-demand-history.js?v=129"></script>
+<script src="homebase-route-policy.js?v=9"></script>
 <script src="homebase-public-data.js?v=5"></script>
 <script src="homebase-sports.js?v=1"></script>
 <script src="homebase-weather.js?v=1"></script>
@@ -294,7 +294,7 @@ let gpsMarker=null,gpsCircle=null,gpsRequestInFlight=false,lastAutoGpsRefresh=0;
 let routeLayers=[],routeStrokeLayers=[],eventMapLayers=[],priceMapLayers=[],destinationMarkers=[],hourlyDestinations=[],highwayLayers=[],heatLayer=null,heatAreaLayer=null,demandAreas=[],demandAreaSources=[],demandAreaSourceRef=null,highwayRequestSerial=0,routeRequestSerial=0,destinationRouteSerial=0;
 let surgeTrend='cooling';
 let activeStops=[],activeDemandSources=[];
-let schoolBellTimes=[],currentRainChance=0,currentEventCount=0,hourlyRainForecast=[],activeWeatherAlerts=[],weatherAlertsFetchedAt=0,weatherLoadedAt=0,baseWeatherText='';
+let employerSites=[],schoolBellTimes=[],currentRainChance=0,currentEventCount=0,hourlyRainForecast=[],activeWeatherAlerts=[],weatherAlertsFetchedAt=0,weatherLoadedAt=0,baseWeatherText='';
 let eventsExpanded=false,routeStopsExpanded=false;
 let providerUberPoints=[],providerPricePoints=[],providerFlightPoints=[],providerBookingNote='',currentEventData=[],currentMarketName='Baltimore';
 let weatherFeedAt=null;
@@ -753,6 +753,7 @@ function setHeatPalette(name){const index=heatPaletteNames.indexOf(name);if(inde
 function setHeatCustomColors(colors){const saved=HomeBaseHeat.setCustomColors(colors);if(!saved)return null;try{localStorage.setItem('homeBaseHeatCustomColors',JSON.stringify(saved))}catch{}setHeatPalette('custom');return saved}
 updatePaletteButton();
 window.HomeBaseHeatControls={setPalette:setHeatPalette,setCustomColors:setHeatCustomColors,getCustomColors:()=>HomeBaseHeat.getCustomColors(),getPalette:()=>HomeBaseHeat.getPalette(),isVisible:()=>!app.classList.contains('heat-hidden'),toggleVisible:()=>{$('#heatToggle').click();return !app.classList.contains('heat-hidden')}};
+$('#logSurgeBtn')?.addEventListener('click',logSurgeHere);
 $('#paletteToggle').addEventListener('click',()=>setHeatPalette(heatPaletteNames[(heatPaletteIndex+1)%heatPaletteNames.length]));
 $('#legendToggle').addEventListener('click',()=>{const legend=$('#legend'),collapsed=!legend.classList.contains('collapsed');legend.classList.toggle('collapsed',collapsed);$('#legendToggle').textContent=collapsed?'KEY':'KEY ×';$('#legendToggle').setAttribute('aria-expanded',String(!collapsed))});
 $('#routeToggle').addEventListener('click',()=>{const route=$('#routePlan'),collapsed=!route.classList.contains('collapsed');route.classList.toggle('collapsed',collapsed);$('#routeToggle').textContent=collapsed?'›':'−';$('#routeToggle').setAttribute('aria-expanded',String(!collapsed))});
@@ -791,13 +792,13 @@ function demandEvidence(source,when=new Date()){
   }else if(Number.isFinite(Number(tags.uberSurgeMultiplier))){
     parts.push('Provider price proxy: '+Number(tags.uberSurgeMultiplier).toFixed(2)+'× sampled '+(tags.providerSampledAt?marketTime(new Date(tags.providerSampledAt)):'at an unknown time')+'; it is not a trip/request count.');
   }else if(source&&(HomeBaseRoutePolicy.warehouse(source)||HomeBaseRoutePolicy.workerWeight(source,{day:marketParts(when).day,hour:h+when.getMinutes()/60})>0)){
-    parts.push('Worker pickup signal: '+name+'; '+(HomeBaseRoutePolicy.warehouse(source)?'modeled shift changes near 3 PM and 11 PM; site shifts unconfirmed':'modeled pickup within one hour of its mapped closing time; opening-hours exceptions unconfirmed')+'. Not live ride requests.');
+    parts.push('Worker pickup signal: '+name+'; '+(HomeBaseRoutePolicy.warehouse(source)?'modeled shift changes near 3 PM and 11 PM (observed Sparrows Point bonuses peaked 3:13–3:16 PM on Oct 9); site shift times are not published':'modeled pickup within one hour of its mapped closing time; opening-hours exceptions unconfirmed')+'. Not live ride requests.');
   }else if(source&&['nightlife'].includes(source.cat)){
     parts.push('Nightlife signal: '+name+'; Home Base applies the '+(h>=21||h<3?'late-night':'evening buildup')+' time window to this mapped venue.');
   }else if(source&&['transit'].includes(source.cat)){
     parts.push('Transit signal: '+name+'; modeled '+(h<10?'morning departures':h>=15.5?'commute/transfer':'arrival and transfer')+' window.');
   }else if(source&&['school','k12'].includes(source.cat)){
-    parts.push('School signal: '+name+'; modeled weekday family arrival/dismissal window, favoring younger children; one-hour pre-opening window and two-hour dismissal fade; '+(source.schoolEnd?'published bell times '+source.schoolStart+'–'+source.schoolEnd+' ('+(source.tags?.bellSchool||'district profile')+').':'no published bell time found, so 8 AM / 2:30 PM defaults are used.')+' Closures and ride requests may be unconfirmed.');
+    parts.push('School signal: '+name+'; modeled weekday family arrival/dismissal window, favoring younger children; one-hour pre-opening window; dismissal window from 25 minutes before to 75 minutes after the closing bell, fitted to observed Baltimore surge timing; '+(source.schoolEnd?'published bell times '+source.schoolStart+'–'+source.schoolEnd+' ('+(source.tags?.bellSchool||'district profile')+').':'no published bell time found, so 8 AM / 2:30 PM defaults are used.')+' Closures and ride requests may be unconfirmed.');
   }else if(source&&source.cat==='restaurant_district'){
     parts.push('District signal: '+name+'; aggregated dinner-hour activity pattern only—no individual restaurant is treated as a ride-demand event.');
   }else if(source&&source.cat==='university'){
@@ -1010,7 +1011,7 @@ async function loadProviderSignals(lat,lon,market){
     }
     const uber=match.uber;
     if(uber&&['active','stale'].includes(uber.status)&&Date.now()-Date.parse(uber.fetchedAt||0)<=25*60000){
-      if(isGreaterBaltimoreLocation(lat,lon)&&window.HomeBaseDemandHistory)for(const sample of uber.samples||[])HomeBaseDemandHistory.rememberSignal(sample,'Uber');
+      if(window.HomeBaseDemandHistory)for(const sample of uber.samples||[])HomeBaseDemandHistory.rememberSignal({...sample,market:match.name},'Uber');
       providerUberPoints=(uber.samples||[]).filter(item=>Number.isFinite(Number(item.surgeMultiplier))).map(item=>({name:'Uber pricing · '+item.name,cat:'neighborhood',lat:Number(item.lat),lon:Number(item.lon),heatOnly:true,tags:{providerSignal:true,uberSurgeMultiplier:Number(item.surgeMultiplier),providerSampledAt:item.sampledAt,source:'Uber price estimate proxy'}})).filter(item=>Number.isFinite(item.lat)&&Number.isFinite(item.lon));
       providerPricePoints.push(...(uber.samples||[]).map(item=>providerPriceSample('Uber',item)).filter(Boolean));
     }
@@ -1024,6 +1025,7 @@ async function loadProviderSignals(lat,lon,market){
     const booking=match.booking;if(booking&&['active','stale'].includes(booking.status)&&Date.now()-Date.parse(booking.fetchedAt||'')<=25*60000&&Array.isArray(booking.areas)){const zones=booking.areas.filter(area=>Number(area.returnedListings)>0).length;providerBookingNote=`${zones} metro areas had lodging listings returned for ${booking.checkin||'the next-night sample'}`;}
     const records=match.publicRecords;
     schoolBellTimes=HomeBasePublicData.bellTimesForLocation(payload,lat,lon);
+    employerSites=matches.flatMap(m=>m.employerSites?.sites||[]).filter(s=>Number.isFinite(s.lat)&&Number.isFinite(s.lon));
     if(Date.now()-weatherAlertsFetchedAt>30*60000){const hostedAlerts=HomeBasePublicData.alertsForLocation(payload,lat,lon);if(hostedAlerts.length||activeWeatherAlerts.length){activeWeatherAlerts=hostedAlerts;renderWeatherAlert()}}
     if(records?.schoolCoverage&&!schoolCoverage.checkedCount){schoolCoverage={...records.schoolCoverage,status:schoolCoverage.status==='loading'?'loading':'partial'};schoolDateContext=records.schoolContext||[];}
     providerStatuses.public_calendar=records&&records.calendarStatus||'unavailable';providerStatuses.public_weather=records&&records.weatherStatus||'unavailable';
@@ -1096,6 +1098,26 @@ function renderRouteStopsPanel(stops=activeStops){
   $('#routePlanTitle').textContent=`${stops.length} HOT SPOTS · ${Math.abs(selectedForecastTime.getTime()-Date.now())<1800000?'NOW':marketTime(selectedForecastTime)}`;
   box.innerHTML=visible.map(s=>`<div class="route-stop compact-route-stop"><div class="stop-num" style="--stop:${s.color}">${categoryIcon(s.cat)}</div><div><b><time>${marketDateTime(s.when)}</time><em>·</em> ${safeText(s.name)}</b><span>${safeText(routeLabel(s))}</span></div></div>`).join('')+(stops.length>4?`<button type="button" class="route-more list-expand" data-expand="routes" aria-expanded="${routeStopsExpanded}">${routeStopsExpanded?'Show less':`+${stops.length-4} more locations`}</button>`:'');
 }
+// Driver-logged bonuses build the same recurring-pattern memory as screenshots,
+// in any city: once a spot repeats on 2+ days at the same local time it shows
+// as predicted heat at that time.
+function logSurgeHere(){
+  if(!currentLocation){show(['📍','Location needed','Turn on GPS so the bonus is logged where you are.','LOG SURGE']);return}
+  const raw=prompt('Bonus shown on your platform map here (e.g. 5.25). Enter 0 if there is no bonus.','');if(raw===null)return;
+  const usd=Number(String(raw).replace(/[^0-9.]/g,''));if(!Number.isFinite(usd)||String(raw).trim()===''){show(['⚠️','Not logged','Enter the dollar amount shown, or 0 for no bonus.','LOG SURGE']);return}
+  const answer=prompt('Platform: Uber, Lyft or Empower','Uber')||'',platform=/lyft/i.test(answer)?'Lyft':/empower/i.test(answer)?'Empower':'Uber';
+  const ok=window.HomeBaseDemandHistory?.recordObservation?.({lat:currentLocation[0],lon:currentLocation[1],usd,platform,at:new Date().toISOString(),market:currentMarketName,area:currentMarketName+' driver log'});
+  show(ok?['✅','Surge logged',`Saved $${usd.toFixed(2)} at ${marketTime(new Date())}. Repeats on other days at this time become predicted heat.`,'LOG SURGE']:['⚠️','Not logged','That entry could not be saved on this device.','LOG SURGE']);
+  if(ok)renderDemandGrid(activeDemandSources,0,selectedForecastTime);
+}
+// Verified shift sites: closed sites switch off mapped warehouses nearby; an
+// open fulfillment center with no mapped warehouse within 1 km is added.
+function applySiteStatus(sources){
+  if(!employerSites.length||!Array.isArray(sources))return sources;
+  const closed=employerSites.filter(s=>s.status==='closed'),out=sources.map(source=>source&&HomeBaseRoutePolicy.warehouse(source)&&closed.some(c=>distanceKm([source.lat,source.lon],[c.lat,c.lon])<=.4)?{...source,tags:{...(source.tags||{}),siteClosed:true,closedSite:closed.find(c=>distanceKm([source.lat,source.lon],[c.lat,c.lon])<=.4).name}}:source);
+  for(const site of employerSites.filter(s=>s.status==='open'&&s.kind==='fulfillment_center'))if(!out.some(v=>v&&HomeBaseRoutePolicy.warehouse(v)&&distanceKm([v.lat,v.lon],[site.lat,site.lon])<=1))out.push({name:site.name,cat:'warehouse',lat:site.lat,lon:site.lon,tags:{industrial:'warehouse',operator:'Amazon',employerSite:true,source:'Verified site list',sourceUrl:site.sourceUrl}});
+  return out;
+}
 // Published bell times replace the 8 AM / 2:30 PM defaults for mapped schools
 // that match a district profile by location and name.
 function applyBellTimes(sources){
@@ -1108,7 +1130,7 @@ function applyBellTimes(sources){
   });
 }
 function buildRoute(venues,lat,lon,market,publicHeatSources=venues){
-  venues=applyBellTimes(venues);publicHeatSources=applyBellTimes(publicHeatSources);
+  venues=applySiteStatus(applyBellTimes(venues));publicHeatSources=applySiteStatus(applyBellTimes(publicHeatSources));
   hourlyDestinations=[];
   routeLayers.forEach(x=>liveMap.removeLayer(x));routeLayers=[];routeStrokeLayers=[];if(heatAreaLayer)liveMap.removeLayer(heatAreaLayer);heatAreaLayer=L.layerGroup().addTo(liveMap);demandAreaSourceRef=null;if(!heatLayer)heatLayer=HomeBaseHeat.createLayer(L).addTo(liveMap);
   const routeRequest=++routeRequestSerial,start=forecastStartTime=new Date(),stops=[],inRegion=v=>!isGreaterBaltimoreLocation(lat,lon)||isGreaterBaltimoreLocation(v.lat,v.lon)||HomeBaseRoutePolicy.eventSize(v).major,regionalVenues=venues.filter(inRegion),publicRegional=(publicHeatSources||[]).filter(inRegion),localPublic=regionalVenues.filter(v=>Number.isFinite(v.lat)&&Number.isFinite(v.lon)&&distanceKm([lat,lon],[v.lat,v.lon])<=(HomeBaseRoutePolicy.eventSize(v).major?110:65)),pool=[...localPublic,...publicRegional,...fallbackVenues(lat,lon,market)].filter(v=>Number.isFinite(v.lat)&&Number.isFinite(v.lon));
@@ -1251,7 +1273,7 @@ setInterval(()=>{updateClimateAdvisory();const selected=$('[data-hour][aria-pres
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){schoolSearchAt=0;if(currentLocation)refreshSchoolEvents(...currentLocation);if(Date.now()-lastAutoGpsRefresh>300000){if(demoLocale)refreshLiveDemandLayer();else autoRefreshGps()}}});
 window.addEventListener('homebase-calendar-identity',()=>{schoolSearchAt=0;schoolSearchKey='';schoolEventRows=[];if(currentLocation)refreshSchoolEvents(...currentLocation);});
 window.addEventListener('load',()=>{schoolSearchAt=0;if(currentLocation)refreshSchoolEvents(...currentLocation);},{once:true});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=231',{updateViaCache:'none'}).then(r=>{r.update();navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!sessionStorage.getItem('hb-release-reload-v231')){sessionStorage.setItem('hb-release-reload-v231','1');location.reload()}})}).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';}));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=232',{updateViaCache:'none'}).then(r=>{r.update();navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!sessionStorage.getItem('hb-release-reload-v232')){sessionStorage.setItem('hb-release-reload-v232','1');location.reload()}})}).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';}));
 </script>
 <script src="homebase-live.js?v=38"></script>
 </body>

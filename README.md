@@ -71,6 +71,23 @@ Free public sources refreshed for every market, with no key required:
   them under `watchAreas` in the snapshot. They are reference only and never
   add heat or destinations.
 
+**Recurring surge patterns.** Driver captures (Uber map screenshots, Empower
+alerts, the in-app LOG SURGE button) and live provider samples are stored with
+the local time and, when available, coordinates. A spot seen on one day stays a
+faint reference. When it repeats on 2+ independent days at the same local time
+(same weekday counts fully, other weekdays 70%), it becomes predicted heat at
+that time, growing to full strength after about five days and fading over 60
+days without repeats. Calm captures lower the pattern. Coordinate patterns work
+in any city; older name-only Baltimore captures match Baltimore neighborhoods.
+
+**School dismissal timing** is fitted to observed Baltimore surge circulation
+(Oct 8-9, 2026): build-up from 25 minutes before the published closing bell,
+peak from 10 minutes before to 15 minutes after, mostly gone by +75 minutes.
+`scripts/surge-circulation.mjs` recomputes onset, peak and fade per area against
+nearby bells and shift sites on every refresh (`surgeCirculation` in the
+snapshot, reference only). Verified shift sites live in
+`config/employer-sites.json`; closed sites switch off mapped warehouses nearby.
+
 Route ranking uses estimated drive minutes (street, arterial and interstate
 speeds), prefers options within 30 minutes, adds a size bonus for large events
 (published attendance, professional leagues, stadiums and arenas), allows

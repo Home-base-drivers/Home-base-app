@@ -6,9 +6,12 @@ import { publicSportsProvider } from './public-sports.mjs';
 import { publicAlertsProvider } from './public-alerts.mjs';
 import { bcpssBellRegistry } from './school-bells.mjs';
 import { watchAreaChecks } from './watch-areas.mjs';
+import { circulation } from './surge-circulation.mjs';
+import demandHistory from '../dist/homebase-demand-history.js';
 import publicData from '../dist/homebase-public-data.js';
 
 const ROOT = new URL('../', import.meta.url);
+const EMPLOYER_SITES = JSON.parse(await readFile(new URL('config/employer-sites.json', ROOT), 'utf8')).sites;
 const CONFIG_URL = new URL('config/provider-markets.json', ROOT);
 const OUTPUT_URL = new URL('dist/provider-signals.json', ROOT);
 const NOW = new Date();
@@ -325,11 +328,16 @@ async function main() {
       publicPlaces: places,
       publicSports: sportsFeed,
       weatherAlerts: retainRecent(old, alerts, 'weatherAlerts', 30 * 60_000),
-      ...(schoolBells ? { schoolBells } : {})
+      ...(schoolBells ? { schoolBells } : {}),
+      employerSites: { source: 'config/employer-sites.json', sites: EMPLOYER_SITES.filter(site => haversineKm(market.center, site) <= market.radiusKm) }
     };
   }));
   // Reference-only checks of areas drivers reported as busy. They never feed heat.
   const watchAreas = await watchAreaChecks(markets, NOW.getTime()).catch(() => null);
+  // Reference analysis of observed surge timing vs. published bells and shift sites.
+  const baltimore = markets.find(m => m.id === 'baltimore');
+  let surgeCirculation = null;
+  try { surgeCirculation = { referenceOnly: true, episodes: circulation(demandHistory.observationRows(), { schools: baltimore?.schoolBells?.schools || [], sites: baltimore?.employerSites?.sites || [] }).filter(e => NOW.getTime() - Date.parse(e.date + 'T12:00:00Z') <= 120 * 86_400_000) }; } catch { /* analysis is optional */ }
   const output = {
     schemaVersion: 4,
     generatedAt: NOW.toISOString(),
@@ -337,7 +345,8 @@ async function main() {
     calendarMaxAgeSeconds: 86400,
     expiresAt: new Date(NOW.getTime() + 25 * 60_000).toISOString(),
     markets,
-    ...(watchAreas ? { watchAreas } : {})
+    ...(watchAreas ? { watchAreas } : {}),
+    ...(surgeCirculation ? { surgeCirculation } : {})
   };
   await writeFile(OUTPUT_URL, `${JSON.stringify(output)}\n`);
   for (const market of markets) {

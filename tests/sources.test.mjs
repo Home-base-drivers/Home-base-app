@@ -43,7 +43,8 @@ test('app matches a mapped school to its published bells by location and name', 
   // The route policy then uses the published closing bell instead of 2:30 PM.
   const school = { cat: 'k12', name: 'Mergenthaler High School', schoolStart: '07:45', schoolEnd: '14:35', tags: { 'school:level': '3' } };
   assert.ok(policy.schoolWeight(school, { day: 5, hour: 14.75 }, new Date()) > 0);
-  assert.equal(policy.schoolWeight(school, { day: 5, hour: 14.4 }, new Date()), 0, 'no dismissal weight before the published bell');
+  assert.equal(policy.schoolWeight(school, { day: 5, hour: 14.0 }, new Date()), 0, 'nothing 35 minutes before the published bell');
+  assert.ok(policy.schoolWeight(school, { day: 5, hour: 14.45 }, new Date()) > 0, 'build-up starts within 25 minutes of the bell');
 });
 
 test('WordPress events API: UTC times, venue coordinates, unpublished and all-day rows skipped', () => {

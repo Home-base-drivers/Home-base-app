@@ -72,11 +72,11 @@ test('event arrival and exit are each limited to one hour with no all-day pickup
  assert.equal(P.eventPhase(long,at('15:00')),null);
  assert.equal(plan([event,area],at('12:30'))[0].routeBasis,'general_area');
 });
-test('local school bell times define one-hour arrival and two-hour dismissal fade',()=>{
+test('local school bell times define one-hour arrival and an observed dismissal window (-25 to +75 min)',()=>{
  const school={cat:'k12',name:'Elementary',tags:{schoolStart:'09:15',schoolEnd:'15:15'}};
  const weight=hour=>P.schoolWeight(school,{day:4,hour},at('15:00'));
  assert.equal(weight(8),0);assert.ok(weight(8.75)>0);assert.equal(weight(9.25),0);
- assert.equal(weight(14.75),0);assert.ok(weight(15.25)>weight(16.25));assert.ok(weight(17)>0);assert.equal(weight(17.25),0);
+ assert.equal(weight(14.75),0);assert.ok(weight(15)>0,'surge builds before the bell');assert.ok(weight(15.25)>weight(16.25));assert.ok(weight(16.25)>0);assert.equal(weight(16.5),0);
 });
 test('warehouse shifts are local modeled windows near 3 PM and 11 PM, never all-day events',()=>{
  const source={cat:'warehouse',name:'Amazon warehouse'};

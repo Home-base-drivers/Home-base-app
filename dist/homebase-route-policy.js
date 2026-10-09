@@ -43,7 +43,13 @@
     if(/baltimore city college/i.test(source.name||'')&&source.lat>39.32&&time>=Date.parse('2025-08-01T00:00:00Z')&&time<Date.parse('2029-08-01T00:00:00Z'))return 0;
     const start=clockHour(source.schoolStart||source.tags?.schoolStart||source.tags?.['school:start'])??8;
     const end=clockHour(source.schoolEnd||source.tags?.schoolEnd||source.tags?.['school:end'])??14.5;
-    const active=hour>=start-1&&hour<start?8*(hour-(start-1)):hour>=end&&hour<end+2?8*(1-(hour-end)/2):0;
+    // Dismissal timing is fitted to observed Baltimore surge circulation (Oct 8-9,
+    // 2026): bonuses near city schools rose up to 25 minutes before the
+    // published closing bell, peaked from 10 minutes before to 15 minutes after
+    // it, and were mostly gone 45-75 minutes later.
+    const m=(hour-end)*60;
+    const dismissal=m< -25||m>75?0:m< -10?6*(m+25)/15:m<=15?8:m<=45?8-5*(m-15)/30:3*(1-(m-45)/30);
+    const active=hour>=start-1&&hour<start?8*(hour-(start-1)):dismissal;
     // Generic windows are modeled family activity, not bell schedules or rides
     // for unaccompanied minors. High schools receive a smaller prior.
     return active*(stage==='primary'||stage==='middle'?1:stage==='high'?.45:.65);
@@ -81,6 +87,8 @@
   }
   function workerWeight(source,parts){
     const hour=parts.hour;
+    // A verified closure (e.g. a shut delivery station) ends modeled shift demand.
+    if(source.tags?.siteClosed)return 0;
     if(warehouse(source))return Math.max(...[15,23].map(shift=>8*Math.max(0,1-Math.min(Math.abs(hour-shift),24-Math.abs(hour-shift)))),0);
     if(source.cat!=='shopping'||!(source.tags?.shop==='mall'||/\bmall\b|shopping cent(er|re)/i.test(source.name||'')||source.mallClosingHour!=null||source.tags?.mallClosingHour!=null))return 0;
     const closes=[...mallClosingHours(source,parts.day),...mallClosingHours(source,(parts.day+6)%7).filter(h=>h>=24).map(h=>h-24)];

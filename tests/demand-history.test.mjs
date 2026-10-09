@@ -16,7 +16,9 @@ test('historical recurrence fades continuously within one hour of its neighborho
  assert.equal(H.forecastFor('Towson',future('16:26'),true).strength,0);
  assert.equal(H.forecastFor('Towson',future('14:26'),true).strength,0);
  assert.equal(H.forecastFor('Unrelated neighborhood',future('15:26'),true).strength,0);
- assert.equal(H.forecastFor('Towson',new Date('2026-10-16T15:26:00-04:00'),true).strength,0);
+ // Weekday patterns carry across weekdays (Oct 8 Thu + Oct 9 Fri), never into the weekend.
+ assert.ok(H.forecastFor('Towson',new Date('2026-10-16T15:16:00-04:00'),true).distinctDates>=2);
+ assert.equal(H.forecastFor('Towson',new Date('2026-10-17T15:26:00-04:00'),true).strength,0);
 });
 test('historical windows fade correctly across local midnight, retaining one independent night',()=>{
  const sample={name:'Unique midnight area',surgeMultiplier:1.8,sampledAt:'2026-10-08T23:50:00-04:00'};

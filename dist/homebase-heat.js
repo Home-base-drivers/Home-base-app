@@ -64,9 +64,12 @@
   }
 
   function historicalPriorForSource(source,when,historyApi){
-    // Baltimore references must never paint another city's similarly named areas.
-    if(!historyApi||source.lat<38.8||source.lat>39.75||source.lon< -77.3||source.lon> -75.9)return 0;
-    return Math.max(...[source.heatAreaName,source.name].filter(Boolean).map(name=>historyApi.forecastFor(name,when,true).strength),0);
+    if(!historyApi)return 0;
+    // Name matches are Baltimore-only (older captures carry names, not coordinates);
+    // coordinate captures apply wherever they were observed.
+    if(source.lat<38.8||source.lat>39.75||source.lon< -77.3||source.lon> -75.9)return historyApi.forecastAt?historyApi.forecastAt(Number(source.lat),Number(source.lon),when).strength:0;
+    const named=Math.max(...[source.heatAreaName,source.name].filter(Boolean).map(name=>historyApi.forecastFor(name,when,true).strength),0);
+    return Math.max(named,historyApi.forecastAt?historyApi.forecastAt(Number(source.lat),Number(source.lon),when).strength:0);
   }
   function currentEvidence(source, when, now = Date.now()) {
     const tags=source.tags||{},time=+new Date(when);
@@ -93,15 +96,18 @@
     const ceiling=evidence.surge>0?.8:evidence.event>0?.35+.45*clamp(Number(evidence.event)||0,0,1):.38;
     return Math.min(compositeOpacity(value),ceiling);
   }
+  // History up to 0.08 is a faint reference. Above that a neighborhood has a
+  // repeated, dated pattern (2+ independent days at this local time) and is
+  // drawn as predicted heat: orange/red, never the purple of live surge.
+  function historyBoost(prior){return prior<=.08?{level:prior>0?.04:0,opacity:prior>0?.035:0}:{level:.04+(prior-.08)*.75,opacity:.035+(prior-.08)*.8};}
   function composePixel(value,weightedShade,evidence={},history=0){
-    // Fresh evidence wins even when it reports no surge. Background history is
-    // a small separate prior and cannot increase current event/provider heat.
-    const prior=evidence.current>.12?0:clamp(Number(history)||0,0,.08);
-    if(value<.018)return {level:.32,opacity:prior>.006?Math.min(.14,compositeOpacity(prior)):0};
-    return {level:Math.min(evidenceLevel(value,weightedShade,evidence)+(prior>0?.04:0),evidence.surge>0?1:evidence.event>0?.78:.57),opacity:Math.min(evidenceOpacity(value,evidence)+(prior>0?.035:0),evidence.current>.12?.8:.38)};
+    // Fresh evidence wins even when it reports no surge.
+    const prior=evidence.current>.12?0:clamp(Number(history)||0,0,.45),boost=historyBoost(prior),pattern=prior>.08;
+    if(value<.018)return pattern?{level:.32+(prior-.08)*1.0,opacity:Math.min(.5,.14+(prior-.08)*1.0)}:{level:.32,opacity:prior>.006?Math.min(.14,compositeOpacity(prior)):0};
+    return {level:Math.min(evidenceLevel(value,weightedShade,evidence)+boost.level,evidence.surge>0?1:evidence.event>0?.78:pattern?.7:.57),opacity:Math.min(evidenceOpacity(value,evidence)+boost.opacity,evidence.current>.12?.8:pattern?.6:.38)};
   }
   function sourceStrength(source, when, scoreSource) {
-    if(source.tags?.historicalPrior)return clamp(Number(source.tags.historicalPrior),0,.08);
+    if(source.tags?.historicalPrior)return clamp(Number(source.tags.historicalPrior),0,.45);
     const weight = Number(scoreSource(source, when));
     if (!Number.isFinite(weight) || weight <= 0) return 0;
     let strength = weight / 10;
@@ -140,11 +146,12 @@
       // Retain local differences instead of clipping every busy POI to the
       // same yellow. Background context runs from faint green to soft yellow.
       const activity=prior/(prior+.18),shade=prior>0?clamp(backgroundShade/prior,0,1):0;
+      if(history>.08)return composePixel(0,0,evidence,history);
       return {level:.14+.28*activity+.02*shade,opacity:Math.min(.34,activity*.34+clamp(history,0,.08))};
     }
     const capped=Math.min(prior,.1),ratio=prior>0?capped/prior:0;
     const pixel=composePixel(signal+capped,signalShade+backgroundShade*ratio,evidence,history);
-    if(!(evidence.event>0||evidence.surge>0)){pixel.opacity=Math.min(pixel.opacity,.18);pixel.level=Math.min(pixel.level,.45);}
+    if(!(evidence.event>0||evidence.surge>0)){const pattern=evidence.current>.12?0:Math.max(0,history-.08);pixel.opacity=Math.min(pixel.opacity,.18+pattern*1.0);pixel.level=Math.min(pixel.level,.45+pattern*.7);}
     return pixel;
   }
 
@@ -394,6 +401,8 @@
         const zoomFactor = 1;
         const historyApi=globalThis.HomeBaseDemandHistory;
         const history=historyApi?sourceData.filter(s=>!(s.tags&&(s.tags.providerSignal||s.tags.providerEvent||s.tags.liveEvent))).map(s=>{const strength=historicalPriorForSource(s,this._when,historyApi);return strength>0?{...s,eventStart:null,eventEnd:null,tags:{historicalPrior:strength}}:null;}).filter(Boolean):[];
+        // Coordinate patterns render even where no mapped place sits under them.
+        if(historyApi?.patternSources)history.push(...historyApi.patternSources(this._when));
         const sources = [...sourceData,...history].map((source, index) => {
           // Label/county anchors exist only to name areas. Neighborhood
           // coverage anchors remain fixed geographic sources at every zoom.
