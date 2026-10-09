@@ -89,6 +89,10 @@
     const hour=parts.hour;
     // A verified closure (e.g. a shut delivery station) ends modeled shift demand.
     if(source.tags?.siteClosed)return 0;
+    // Large-employer sites with a shift-end window (e.g. hospital 12-hour handoffs):
+    // departures peak just after the handoff and fade over about 45 minutes.
+    const ends=source.tags?.shiftEnds;
+    if(Array.isArray(ends)&&ends.length){const w=Number(source.tags.shiftWeight)||4;return Math.max(...ends.map(e=>{const d=Math.min(Math.abs(hour-e),24-Math.abs(hour-e));return w*Math.max(0,1-d/.75);}),0);}
     if(warehouse(source))return Math.max(...[15,23].map(shift=>8*Math.max(0,1-Math.min(Math.abs(hour-shift),24-Math.abs(hour-shift)))),0);
     if(source.cat!=='shopping'||!(source.tags?.shop==='mall'||/\bmall\b|shopping cent(er|re)/i.test(source.name||'')||source.mallClosingHour!=null||source.tags?.mallClosingHour!=null))return 0;
     const closes=[...mallClosingHours(source,parts.day),...mallClosingHours(source,(parts.day+6)%7).filter(h=>h>=24).map(h=>h-24)];

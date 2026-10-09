@@ -110,3 +110,27 @@ test('Oct 9 second wave and 4 PM corridor are on record as references', () => {
   // Towson now repeats on Oct 8 and Oct 9 in the 3:30–4:00 window too.
   assert.ok(history.forecastFor('Towson', new Date('2026-10-15T15:45:00-04:00'), true).distinctDates >= 2);
 });
+
+test('hospitals get an approximate 12-hour handoff window, not afternoon heat', () => {
+  const sites = JSON.parse(fs.readFileSync(new URL('../config/employer-sites.json', import.meta.url), 'utf8')).sites;
+  const jhh = sites.find(s => s.id === 'hospital-jhh');
+  const src = { name: jhh.name, cat: 'medical', lat: jhh.lat, lon: jhh.lon, tags: { shiftEnds: jhh.shiftEnds, shiftWeight: jhh.shiftWeight } };
+  assert.ok(policy.workerWeight(src, { day: 3, hour: 19.5 }) === 4 && policy.workerWeight(src, { day: 3, hour: 7.25 }) > 0);
+  assert.equal(policy.workerWeight(src, { day: 3, hour: 16 }), 0);
+  assert.equal(policy.workerWeight({ ...src, tags: {} }, { day: 3, hour: 19.5 }), 0, 'untagged clinics are unchanged');
+  assert.ok(sites.filter(s => s.kind === 'office_campus').every(s => !s.shiftEnds), 'office campuses are observation-only');
+});
+
+test('site status tags a mapped hospital or adds the verified one', () => {
+  const html = fs.readFileSync(new URL('../dist/index.html', import.meta.url), 'utf8');
+  const start = html.indexOf('function applySiteStatus('), body = html.indexOf('{', start); let depth = 0, end = body;
+  for (; end < html.length; end++) { if (html[end] === '{') depth++; else if (html[end] === '}' && !--depth) break; }
+  const ctx = { HomeBaseRoutePolicy: policy, distanceKm: (a, b) => { const r = Math.PI / 180, x = (b[1] - a[1]) * r * Math.cos((a[0] + b[0]) * r / 2), y = (b[0] - a[0]) * r; return Math.sqrt(x * x + y * y) * 6371; },
+    employerSites: JSON.parse(fs.readFileSync(new URL('../config/employer-sites.json', import.meta.url), 'utf8')).sites };
+  vm.createContext(ctx); vm.runInContext(html.slice(start, end + 1), ctx);
+  const mapped = { name: 'GBMC', cat: 'medical', lat: 39.3899, lon: -76.6281, tags: {} };
+  const out = ctx.applySiteStatus([mapped]);
+  assert.deepEqual([...out[0].tags.shiftEnds], [7.5, 19.5]);
+  assert.equal(out.filter(s => /Greater Baltimore/.test(s.name)).length, 0, 'no duplicate when mapped');
+  assert.ok(out.some(s => s.name === 'Johns Hopkins Hospital' && s.tags.shiftEnds));
+});

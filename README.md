@@ -87,6 +87,12 @@ peak from 10 minutes before to 15 minutes after, mostly gone by +75 minutes.
 nearby bells and shift sites on every refresh (`surgeCirculation` in the
 snapshot, reference only). Verified shift sites live in
 `config/employer-sites.json`; closed sites switch off mapped warehouses nearby.
+Hospitals carry an approximate 12-hour handoff window (staff departures
+6:45-8:15 AM and PM; Johns Hopkins postings list 7am-7pm / 7pm-7am shifts,
+site-specific times are not published). Large office campuses (SSA/CMS
+Woodlawn, Owings Mills, Hunt Valley) are observation-only; their timing is
+learned from repeated surges. Each wave is analysed separately: a calm capture
+or a 40-minute gap ends a wave.
 
 Route ranking uses estimated drive minutes (street, arterial and interstate
 speeds), prefers options within 30 minutes, adds a size bonus for large events

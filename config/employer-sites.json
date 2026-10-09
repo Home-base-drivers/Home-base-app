@@ -1,12 +1,338 @@
 {
-  "purpose": "Verified large shift-change sites. Open fulfillment centers use the modeled warehouse windows (about 3 PM and 11 PM; site shift times are not published). Delivery stations and malls are recorded for observation analysis only; malls keep their mapped closing-hour model. Closed sites switch off any mapped warehouse within 400 m.",
-  "sites": [
-    {"id": "amazon-tradepoint-atlantic", "name": "Amazon fulfillment center (Tradepoint Atlantic)", "kind": "fulfillment_center", "status": "open", "address": "6001 Bethlehem Blvd, Sparrows Point, MD 21219", "lat": 39.218639, "lon": -76.490111, "locationPrecision": "Tradepoint Atlantic site centroid (Wikipedia); the building is within the site", "sourceUrl": "https://hiring.amazon.com/jobDetail/en-US/Fulfillment-Center-Warehouse-Associate/Sparrows-Point/a0R4U00000E0Vo2UAF", "coordinateSource": "https://en.wikipedia.org/wiki/Tradepoint_Atlantic"},
-    {"id": "amazon-van-deman", "name": "Amazon delivery station (Van Deman St)", "kind": "delivery_station", "status": "open", "address": "2100 Van Deman St, Baltimore, MD 21224", "lat": 39.2675420503, "lon": -76.535802985232, "sourceUrl": "https://press.aboutamazon.com/news-releases/news-release-details/amazon-opens-two-new-central-maryland-delivery-stations", "coordinateSource": "U.S. Census Bureau geocoder"},
-    {"id": "amazon-preston-gateway", "name": "Amazon delivery station (Preston Gateway, Hanover)", "kind": "delivery_station", "status": "open", "address": "7226 Preston Gateway Dr, Hanover, MD 21076", "lat": 39.18301241912, "lon": -76.713398552231, "sourceUrl": "https://press.aboutamazon.com/news-releases/news-release-details/amazon-opens-two-new-central-maryland-delivery-stations", "coordinateSource": "U.S. Census Bureau geocoder"},
-    {"id": "amazon-kelso-closed", "name": "Former Amazon delivery station (Kelso Dr, Essex)", "kind": "delivery_station", "status": "closed", "closedOn": "2022-10-25", "address": "8411 Kelso Dr, Essex, MD 21221", "lat": 39.326385655988, "lon": -76.487148512864, "sourceUrl": "https://www.bisnow.com/news/baltimore/industrial/amazon-to-lay-off-353-workers-shutter-2-baltimore-facilities-114607", "coordinateSource": "U.S. Census Bureau geocoder"},
-    {"id": "mondawmin-mall", "name": "Mondawmin Mall", "kind": "mall", "status": "open", "address": "2401 Liberty Heights Ave, Baltimore, MD 21215", "lat": 39.318816812193, "lon": -76.654514728609, "sourceUrl": "https://en.wikipedia.org/wiki/Mondawmin_Mall", "coordinateSource": "U.S. Census Bureau geocoder"},
-    {"id": "towson-town-center", "name": "Towson Town Center", "kind": "mall", "status": "open", "address": "825 Dulaney Valley Rd, Towson, MD 21204", "lat": 39.40389, "lon": -76.59944, "sourceUrl": "https://en.wikipedia.org/wiki/Towson_Town_Center", "coordinateSource": "https://en.wikipedia.org/wiki/Towson_Town_Center"},
-    {"id": "white-marsh-mall", "name": "White Marsh Mall", "kind": "mall", "status": "open", "lat": 39.375, "lon": -76.4675, "sourceUrl": "https://en.wikipedia.org/wiki/White_Marsh_Mall", "coordinateSource": "https://en.wikipedia.org/wiki/White_Marsh_Mall"}
-  ]
+ "purpose": "Verified large shift-change sites. Open fulfillment centers use the modeled warehouse windows (about 3 PM and 11 PM; site shift times are not published). Hospitals use an approximate 12-hour handoff window (7 AM / 7 PM; departures modeled 6:45-8:15) taken from Johns Hopkins Hospital job postings; site-specific times are not published. Office campuses, delivery stations and malls are recorded for observation analysis only; their surge timing is learned from repeated observations. Closed sites switch off any mapped warehouse within 400 m.",
+ "sites": [
+  {
+   "id": "amazon-tradepoint-atlantic",
+   "name": "Amazon fulfillment center (Tradepoint Atlantic)",
+   "kind": "fulfillment_center",
+   "status": "open",
+   "address": "6001 Bethlehem Blvd, Sparrows Point, MD 21219",
+   "lat": 39.218639,
+   "lon": -76.490111,
+   "locationPrecision": "Tradepoint Atlantic site centroid (Wikipedia); the building is within the site",
+   "sourceUrl": "https://hiring.amazon.com/jobDetail/en-US/Fulfillment-Center-Warehouse-Associate/Sparrows-Point/a0R4U00000E0Vo2UAF",
+   "coordinateSource": "https://en.wikipedia.org/wiki/Tradepoint_Atlantic"
+  },
+  {
+   "id": "amazon-van-deman",
+   "name": "Amazon delivery station (Van Deman St)",
+   "kind": "delivery_station",
+   "status": "open",
+   "address": "2100 Van Deman St, Baltimore, MD 21224",
+   "lat": 39.2675420503,
+   "lon": -76.535802985232,
+   "sourceUrl": "https://press.aboutamazon.com/news-releases/news-release-details/amazon-opens-two-new-central-maryland-delivery-stations",
+   "coordinateSource": "U.S. Census Bureau geocoder"
+  },
+  {
+   "id": "amazon-preston-gateway",
+   "name": "Amazon delivery station (Preston Gateway, Hanover)",
+   "kind": "delivery_station",
+   "status": "open",
+   "address": "7226 Preston Gateway Dr, Hanover, MD 21076",
+   "lat": 39.18301241912,
+   "lon": -76.713398552231,
+   "sourceUrl": "https://press.aboutamazon.com/news-releases/news-release-details/amazon-opens-two-new-central-maryland-delivery-stations",
+   "coordinateSource": "U.S. Census Bureau geocoder"
+  },
+  {
+   "id": "amazon-kelso-closed",
+   "name": "Former Amazon delivery station (Kelso Dr, Essex)",
+   "kind": "delivery_station",
+   "status": "closed",
+   "closedOn": "2022-10-25",
+   "address": "8411 Kelso Dr, Essex, MD 21221",
+   "lat": 39.326385655988,
+   "lon": -76.487148512864,
+   "sourceUrl": "https://www.bisnow.com/news/baltimore/industrial/amazon-to-lay-off-353-workers-shutter-2-baltimore-facilities-114607",
+   "coordinateSource": "U.S. Census Bureau geocoder"
+  },
+  {
+   "id": "mondawmin-mall",
+   "name": "Mondawmin Mall",
+   "kind": "mall",
+   "status": "open",
+   "address": "2401 Liberty Heights Ave, Baltimore, MD 21215",
+   "lat": 39.318816812193,
+   "lon": -76.654514728609,
+   "sourceUrl": "https://en.wikipedia.org/wiki/Mondawmin_Mall",
+   "coordinateSource": "U.S. Census Bureau geocoder"
+  },
+  {
+   "id": "towson-town-center",
+   "name": "Towson Town Center",
+   "kind": "mall",
+   "status": "open",
+   "address": "825 Dulaney Valley Rd, Towson, MD 21204",
+   "lat": 39.40389,
+   "lon": -76.59944,
+   "sourceUrl": "https://en.wikipedia.org/wiki/Towson_Town_Center",
+   "coordinateSource": "https://en.wikipedia.org/wiki/Towson_Town_Center"
+  },
+  {
+   "id": "white-marsh-mall",
+   "name": "White Marsh Mall",
+   "kind": "mall",
+   "status": "open",
+   "lat": 39.375,
+   "lon": -76.4675,
+   "sourceUrl": "https://en.wikipedia.org/wiki/White_Marsh_Mall",
+   "coordinateSource": "https://en.wikipedia.org/wiki/White_Marsh_Mall"
+  },
+  {
+   "id": "hospital-jhh",
+   "name": "Johns Hopkins Hospital",
+   "kind": "hospital",
+   "status": "open",
+   "address": "1800 Orleans St, Baltimore, MD 21287",
+   "lat": 39.295337768106,
+   "lon": -76.593899075532,
+   "coordinateSource": "U.S. Census Bureau geocoder",
+   "shiftEnds": [
+    7.5,
+    19.5
+   ],
+   "shiftWeight": 4,
+   "shiftSource": "https://jobs.hopkinsmedicine.org/job/99365/patient-care-tech-i-nelson-7-nursing-rot-36-nursing-support-patient-care-us-md-baltimore-johns-hopkins-hospital/",
+   "shiftNote": "Approximate: 12-hour 7am-7pm / 7pm-7am shifts listed in Johns Hopkins Hospital postings; not published for this site."
+  },
+  {
+   "id": "hospital-ummc",
+   "name": "University of Maryland Medical Center",
+   "kind": "hospital",
+   "status": "open",
+   "address": "22 S Greene St, Baltimore, MD 21201",
+   "lat": 39.288488999595,
+   "lon": -76.623726256749,
+   "coordinateSource": "U.S. Census Bureau geocoder",
+   "shiftEnds": [
+    7.5,
+    19.5
+   ],
+   "shiftWeight": 4,
+   "shiftSource": "https://jobs.hopkinsmedicine.org/job/99365/patient-care-tech-i-nelson-7-nursing-rot-36-nursing-support-patient-care-us-md-baltimore-johns-hopkins-hospital/",
+   "shiftNote": "Approximate: 12-hour 7am-7pm / 7pm-7am shifts listed in Johns Hopkins Hospital postings; not published for this site."
+  },
+  {
+   "id": "hospital-union-memorial",
+   "name": "MedStar Union Memorial Hospital",
+   "kind": "hospital",
+   "status": "open",
+   "address": "201 E University Pkwy, Baltimore, MD 21218",
+   "lat": 39.330307594484,
+   "lon": -76.614385066627,
+   "coordinateSource": "U.S. Census Bureau geocoder",
+   "shiftEnds": [
+    7.5,
+    19.5
+   ],
+   "shiftWeight": 4,
+   "shiftSource": "https://jobs.hopkinsmedicine.org/job/99365/patient-care-tech-i-nelson-7-nursing-rot-36-nursing-support-patient-care-us-md-baltimore-johns-hopkins-hospital/",
+   "shiftNote": "Approximate: 12-hour 7am-7pm / 7pm-7am shifts listed in Johns Hopkins Hospital postings; not published for this site."
+  },
+  {
+   "id": "hospital-mercy",
+   "name": "Mercy Medical Center",
+   "kind": "hospital",
+   "status": "open",
+   "address": "345 St Paul Pl, Baltimore, MD 21202",
+   "lat": 39.292944604766,
+   "lon": -76.613504599135,
+   "coordinateSource": "U.S. Census Bureau geocoder",
+   "shiftEnds": [
+    7.5,
+    19.5
+   ],
+   "shiftWeight": 4,
+   "shiftSource": "https://jobs.hopkinsmedicine.org/job/99365/patient-care-tech-i-nelson-7-nursing-rot-36-nursing-support-patient-care-us-md-baltimore-johns-hopkins-hospital/",
+   "shiftNote": "Approximate: 12-hour 7am-7pm / 7pm-7am shifts listed in Johns Hopkins Hospital postings; not published for this site."
+  },
+  {
+   "id": "hospital-sinai",
+   "name": "Sinai Hospital",
+   "kind": "hospital",
+   "status": "open",
+   "address": "2401 W Belvedere Ave, Baltimore, MD 21215",
+   "lat": 39.354859003476,
+   "lon": -76.662197488129,
+   "coordinateSource": "U.S. Census Bureau geocoder",
+   "shiftEnds": [
+    7.5,
+    19.5
+   ],
+   "shiftWeight": 4,
+   "shiftSource": "https://jobs.hopkinsmedicine.org/job/99365/patient-care-tech-i-nelson-7-nursing-rot-36-nursing-support-patient-care-us-md-baltimore-johns-hopkins-hospital/",
+   "shiftNote": "Approximate: 12-hour 7am-7pm / 7pm-7am shifts listed in Johns Hopkins Hospital postings; not published for this site."
+  },
+  {
+   "id": "hospital-gbmc",
+   "name": "Greater Baltimore Medical Center",
+   "kind": "hospital",
+   "status": "open",
+   "address": "6701 N Charles St, Towson, MD 21204",
+   "lat": 39.38991821321,
+   "lon": -76.627995976354,
+   "coordinateSource": "U.S. Census Bureau geocoder",
+   "shiftEnds": [
+    7.5,
+    19.5
+   ],
+   "shiftWeight": 4,
+   "shiftSource": "https://jobs.hopkinsmedicine.org/job/99365/patient-care-tech-i-nelson-7-nursing-rot-36-nursing-support-patient-care-us-md-baltimore-johns-hopkins-hospital/",
+   "shiftNote": "Approximate: 12-hour 7am-7pm / 7pm-7am shifts listed in Johns Hopkins Hospital postings; not published for this site."
+  },
+  {
+   "id": "hospital-st-joseph",
+   "name": "University of Maryland St. Joseph Medical Center",
+   "kind": "hospital",
+   "status": "open",
+   "address": "7601 Osler Dr, Towson, MD 21204",
+   "lat": 39.387966119278,
+   "lon": -76.613167593351,
+   "coordinateSource": "U.S. Census Bureau geocoder",
+   "shiftEnds": [
+    7.5,
+    19.5
+   ],
+   "shiftWeight": 4,
+   "shiftSource": "https://jobs.hopkinsmedicine.org/job/99365/patient-care-tech-i-nelson-7-nursing-rot-36-nursing-support-patient-care-us-md-baltimore-johns-hopkins-hospital/",
+   "shiftNote": "Approximate: 12-hour 7am-7pm / 7pm-7am shifts listed in Johns Hopkins Hospital postings; not published for this site."
+  },
+  {
+   "id": "hospital-franklin-square",
+   "name": "MedStar Franklin Square Medical Center",
+   "kind": "hospital",
+   "status": "open",
+   "address": "9000 Franklin Square Dr, Baltimore, MD 21237",
+   "lat": 39.350634636034,
+   "lon": -76.481887403848,
+   "coordinateSource": "U.S. Census Bureau geocoder",
+   "shiftEnds": [
+    7.5,
+    19.5
+   ],
+   "shiftWeight": 4,
+   "shiftSource": "https://jobs.hopkinsmedicine.org/job/99365/patient-care-tech-i-nelson-7-nursing-rot-36-nursing-support-patient-care-us-md-baltimore-johns-hopkins-hospital/",
+   "shiftNote": "Approximate: 12-hour 7am-7pm / 7pm-7am shifts listed in Johns Hopkins Hospital postings; not published for this site."
+  },
+  {
+   "id": "hospital-bayview",
+   "name": "Johns Hopkins Bayview Medical Center",
+   "kind": "hospital",
+   "status": "open",
+   "address": "4940 Eastern Ave, Baltimore, MD 21224",
+   "lat": 39.287199902802,
+   "lon": -76.554695929357,
+   "coordinateSource": "U.S. Census Bureau geocoder",
+   "shiftEnds": [
+    7.5,
+    19.5
+   ],
+   "shiftWeight": 4,
+   "shiftSource": "https://jobs.hopkinsmedicine.org/job/99365/patient-care-tech-i-nelson-7-nursing-rot-36-nursing-support-patient-care-us-md-baltimore-johns-hopkins-hospital/",
+   "shiftNote": "Approximate: 12-hour 7am-7pm / 7pm-7am shifts listed in Johns Hopkins Hospital postings; not published for this site."
+  },
+  {
+   "id": "hospital-good-samaritan",
+   "name": "MedStar Good Samaritan Hospital",
+   "kind": "hospital",
+   "status": "open",
+   "address": "5601 Loch Raven Blvd, Baltimore, MD 21239",
+   "lat": 39.358689903587,
+   "lon": -76.588945822371,
+   "coordinateSource": "U.S. Census Bureau geocoder",
+   "shiftEnds": [
+    7.5,
+    19.5
+   ],
+   "shiftWeight": 4,
+   "shiftSource": "https://jobs.hopkinsmedicine.org/job/99365/patient-care-tech-i-nelson-7-nursing-rot-36-nursing-support-patient-care-us-md-baltimore-johns-hopkins-hospital/",
+   "shiftNote": "Approximate: 12-hour 7am-7pm / 7pm-7am shifts listed in Johns Hopkins Hospital postings; not published for this site."
+  },
+  {
+   "id": "hospital-aamc",
+   "name": "Anne Arundel Medical Center (Luminis Health)",
+   "kind": "hospital",
+   "status": "open",
+   "address": "2001 Medical Pkwy, Annapolis, MD 21401",
+   "lat": 38.990332219561,
+   "lon": -76.534787210116,
+   "coordinateSource": "U.S. Census Bureau geocoder",
+   "shiftEnds": [
+    7.5,
+    19.5
+   ],
+   "shiftWeight": 4,
+   "shiftSource": "https://jobs.hopkinsmedicine.org/job/99365/patient-care-tech-i-nelson-7-nursing-rot-36-nursing-support-patient-care-us-md-baltimore-johns-hopkins-hospital/",
+   "shiftNote": "Approximate: 12-hour 7am-7pm / 7pm-7am shifts listed in Johns Hopkins Hospital postings; not published for this site."
+  },
+  {
+   "id": "hospital-bwmc",
+   "name": "UM Baltimore Washington Medical Center",
+   "kind": "hospital",
+   "status": "open",
+   "address": "301 Hospital Dr, Glen Burnie, MD 21061",
+   "lat": 39.13880998238,
+   "lon": -76.622413251271,
+   "coordinateSource": "U.S. Census Bureau geocoder",
+   "shiftEnds": [
+    7.5,
+    19.5
+   ],
+   "shiftWeight": 4,
+   "shiftSource": "https://jobs.hopkinsmedicine.org/job/99365/patient-care-tech-i-nelson-7-nursing-rot-36-nursing-support-patient-care-us-md-baltimore-johns-hopkins-hospital/",
+   "shiftNote": "Approximate: 12-hour 7am-7pm / 7pm-7am shifts listed in Johns Hopkins Hospital postings; not published for this site."
+  },
+  {
+   "id": "hospital-northwest",
+   "name": "Northwest Hospital",
+   "kind": "hospital",
+   "status": "open",
+   "address": "5401 Old Court Rd, Randallstown, MD 21133",
+   "lat": 39.359678314991,
+   "lon": -76.78172439024,
+   "coordinateSource": "U.S. Census Bureau geocoder",
+   "shiftEnds": [
+    7.5,
+    19.5
+   ],
+   "shiftWeight": 4,
+   "shiftSource": "https://jobs.hopkinsmedicine.org/job/99365/patient-care-tech-i-nelson-7-nursing-rot-36-nursing-support-patient-care-us-md-baltimore-johns-hopkins-hospital/",
+   "shiftNote": "Approximate: 12-hour 7am-7pm / 7pm-7am shifts listed in Johns Hopkins Hospital postings; not published for this site."
+  },
+  {
+   "id": "ssa-cms-woodlawn",
+   "name": "Social Security Administration HQ and CMS (Woodlawn)",
+   "kind": "office_campus",
+   "status": "open",
+   "address": "6401 / 7500 Security Blvd, Woodlawn, MD",
+   "lat": 39.3229,
+   "lon": -76.728,
+   "locationPrecision": "approximate (Woodlawn place centroid); the Census geocoder did not match these addresses",
+   "employees": 15415,
+   "employeesSource": "https://technical.ly/baltimore/2020/09/29/20-largest-employers-baltimore-county-ed-meds-feds/ (2019 county data)"
+  },
+  {
+   "id": "carefirst-owings-mills",
+   "name": "CareFirst BlueCross BlueShield (Owings Mills)",
+   "kind": "office_campus",
+   "status": "open",
+   "address": "10455 Mill Run Cir, Owings Mills, MD 21117",
+   "lat": 39.406844608522,
+   "lon": -76.79390792707,
+   "coordinateSource": "U.S. Census Bureau geocoder",
+   "employeesSource": "https://technical.ly/baltimore/2020/09/29/20-largest-employers-baltimore-county-ed-meds-feds/"
+  },
+  {
+   "id": "hunt-valley-employers",
+   "name": "Hunt Valley employers (McCormick, Textron, Coty)",
+   "kind": "office_campus",
+   "status": "open",
+   "address": "Hunt Valley, MD",
+   "lat": 39.4998,
+   "lon": -76.6411,
+   "locationPrecision": "approximate (Hunt Valley place centroid); address lookup was rate-limited",
+   "employeesSource": "https://commerce.maryland.gov/documents/researchdocument/baltcountybef.pdf"
+  }
+ ]
 }
