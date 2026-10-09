@@ -118,5 +118,18 @@
     // Six modeled points is the route hot-spot floor, not a live-demand claim.
     return ranked.filter(source=>source.routeBasis==='general_area'&&Number(source.routeDemand??source.score)>=6);
   }
-  return {eventImpact,eventPhase,liveSignal,schoolStage,schoolWeight,warehouse,workerWeight,mallClosingHours,fallbackEligible,candidatesForHour,selectRanked};
+  // Large events justify a longer drive. Size comes from published attendance,
+  // a professional league scoreboard, or a stadium/arena venue.
+  const PRO=/^(NFL|MLB|NBA|NHL|MLS|WNBA|NWSL)$/;
+  const MAJOR_VENUE=/m\s*&?\s*t bank stadium|camden yards|oriole park|cfg bank arena|capital one arena|nationals park|northwest stadium|fedex ?field|audi field|secu stadium|xfinity center|navy[- ]marine corps|hughes memorial stadium|johnny unitas stadium|merriweather post|jiffy lube live|eaglebank arena|baltimore convention center|pier six pavilion/i;
+  function eventSize(source){
+    if(!source||!(source.eventStart||source.cat==='event'))return{major:false,bonus:0};
+    const impact=eventImpact(source),league=source.tags?.league||source.league||'',venue=String(source.venue||'')+' '+String(source.name||'');
+    if(impact.attendance!=null)return{major:impact.attendance>=10000,bonus:Math.min(14,5*Math.log10(1+impact.attendance/1000))};
+    if(PRO.test(league))return{major:true,bonus:8};
+    if(MAJOR_VENUE.test(venue))return{major:true,bonus:6};
+    if(/^(College football|NCAA)/.test(league))return{major:false,bonus:4};
+    return{major:false,bonus:0};
+  }
+  return {eventSize,eventImpact,eventPhase,liveSignal,schoolStage,schoolWeight,warehouse,workerWeight,mallClosingHours,fallbackEligible,candidatesForHour,selectRanked};
 });

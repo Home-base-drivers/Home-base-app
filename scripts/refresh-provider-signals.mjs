@@ -4,6 +4,8 @@ import { publicRecords } from './public-records.mjs';
 import { publicPlaces } from './public-places.mjs';
 import { publicSportsProvider } from './public-sports.mjs';
 import { publicAlertsProvider } from './public-alerts.mjs';
+import { bcpssBellRegistry } from './school-bells.mjs';
+import { watchAreaChecks } from './watch-areas.mjs';
 import publicData from '../dist/homebase-public-data.js';
 
 const ROOT = new URL('../', import.meta.url);
@@ -307,9 +309,10 @@ async function main() {
     const [uber, ticketmaster, booking, flightaware, records, places] = await Promise.all([
       uberProvider(market), ticketmasterProvider(market), bookingProvider(market), flightAwareProvider(market), publicRecords(market, NOW.getTime()), publicPlaces(market, NOW.getTime(), old?.publicPlaces)
     ]);
-    const [sportsFeed, alerts] = await Promise.all([
+    const [sportsFeed, alerts, schoolBells] = await Promise.all([
       publicSportsProvider(market, old?.publicSports, NOW.getTime(), fetch, places.places || []),
-      publicAlertsProvider(market, NOW.getTime())
+      publicAlertsProvider(market, NOW.getTime()),
+      market.bellTimes === 'bcpss' ? bcpssBellRegistry(old?.schoolBells, NOW.getTime()).catch(() => old?.schoolBells || { status: 'unavailable', schools: [] }) : Promise.resolve(undefined)
     ]);
     const calendar = retainRecent(old, { ...records, status: records.calendarStatus }, 'publicRecords', 24 * 60 * 60_000);
     return {
@@ -321,16 +324,20 @@ async function main() {
       ,publicRecords: calendar.status === 'stale' ? { ...calendar, calendarStatus: 'stale', weather: records.weather, weatherStatus: records.weatherStatus } : records,
       publicPlaces: places,
       publicSports: sportsFeed,
-      weatherAlerts: retainRecent(old, alerts, 'weatherAlerts', 30 * 60_000)
+      weatherAlerts: retainRecent(old, alerts, 'weatherAlerts', 30 * 60_000),
+      ...(schoolBells ? { schoolBells } : {})
     };
   }));
+  // Reference-only checks of areas drivers reported as busy. They never feed heat.
+  const watchAreas = await watchAreaChecks(markets, NOW.getTime()).catch(() => null);
   const output = {
     schemaVersion: 4,
     generatedAt: NOW.toISOString(),
     refreshTargetSeconds: 600,
     calendarMaxAgeSeconds: 86400,
     expiresAt: new Date(NOW.getTime() + 25 * 60_000).toISOString(),
-    markets
+    markets,
+    ...(watchAreas ? { watchAreas } : {})
   };
   await writeFile(OUTPUT_URL, `${JSON.stringify(output)}\n`);
   for (const market of markets) {

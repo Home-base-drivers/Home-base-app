@@ -11,3 +11,5 @@ School discovery: OpenStreetMap (ODbL) through public Overpass mirrors; Wikidata
 Game state: ESPN public scoreboards and the MLB Stats API (statsapi.mlb.com). Only game status, period, start time and venue are used; scores, logos and play data are not republished. Venue coordinates for ESPN games come from the market configuration (sourced from Wikipedia coordinates) or exact OpenStreetMap names. MLB data © MLB Advanced Media; terms at http://gdx.mlb.com/components/copyright.txt. ESPN scoreboards are an unofficial public endpoint. Review both terms before commercial launch.
 
 Weather alerts and forecasts: National Weather Service (api.weather.gov), U.S. government public domain. Device forecasts: Open-Meteo (https://open-meteo.com/), CC BY 4.0.
+
+School bell times: Baltimore City Public Schools school profile pages (baltimorecityschools.org), read weekly; coordinates from the U.S. Census Bureau Geocoder (public domain). Event listings: Baltimore Peninsula, Audi Field and Capital One Arena published calendars. DC venue coordinates from Wikipedia. Watch-area centroids: GeoNames (CC BY 4.0).

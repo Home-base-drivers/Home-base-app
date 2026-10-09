@@ -16,7 +16,7 @@ function storage() { const m = new Map(); return { getItem: k => m.has(k) ? m.ge
 test('app scoreboard loader places nearby games, tracks endings and re-polls only active leagues', async () => {
   let nflState = 'in', calls = [];
   const espn = state => ({ events: [{ id: '401', date: new Date(Date.now() - 3 * 3600_000).toISOString().slice(0, 16) + 'Z', shortName: 'CIN @ BAL', status: { period: 4, displayClock: '2:00', type: { state, completed: state === 'post', name: state === 'post' ? 'STATUS_FINAL' : 'STATUS_IN_PROGRESS', shortDetail: '4Q 2:00' } }, competitions: [{ venue: { fullName: 'M&T Bank Stadium', address: { city: 'Baltimore' } } }] }] });
-  const ctx = { Date, Number, Math, JSON, Set, Map, Promise, Error, HomeBaseSports: sports, localStorage: storage(), marketTimeZone: 'America/New_York', currentEventData: [],
+  const ctx = { Date, Number, Math, JSON, Set, Map, Promise, Error, HomeBaseSports: sports, HomeBaseRoutePolicy: policy, localStorage: storage(), marketTimeZone: 'America/New_York', currentEventData: [],
     fetchJSON: async url => { calls.push(url); if (url.includes('/football/nfl/')) return espn(nflState); if (url.includes('statsapi')) return { dates: [] }; return { events: [] }; },
     eventToken: v => String(v || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(), findEventVenue: () => null,
     knownBaltimoreVenue: name => /m.t bank stadium/i.test(name) ? { lat: 39.278, lon: -76.6227, name: 'M&T Bank Stadium' } : null,

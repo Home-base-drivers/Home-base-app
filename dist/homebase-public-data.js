@@ -28,14 +28,17 @@
   function calendarFresh(feed,generatedAt,now){const fetched=Date.parse(feed?.fetchedAt||generatedAt||'');return Number.isFinite(fetched)&&now-fetched<=24*HOUR&&now-fetched>=-5*60000;}
   function eventsForLocation(payload,lat,lon,now=Date.now()){
     const rows=[],seen=new Set();
-    for(const market of matchingMarkets(payload,lat,lon))for(const feed of [market.ticketmaster,market.publicRecords,market.publicSports]){
+    // Neighboring markets contribute events too (Baltimore drivers also work DC and
+    // Northern Virginia); the route ranks distant ones by drive time and size.
+    const nearby=(payload?.markets||[]).filter(m=>point(m.center)&&distance([lat,lon],[Number(m.center.lat),Number(m.center.lon)])<=Number(m.radiusKm||0)+70);
+    for(const market of nearby)for(const feed of [market.ticketmaster,market.publicRecords,market.publicSports]){
       if(!feed||!['active','partial','stale'].includes(feed.calendarStatus||feed.status)||!calendarFresh(feed,payload.generatedAt,now))continue;
       // Scoreboard state is only current for a short time; observed ends persist in the rows themselves.
       const scoreboard=feed===market.publicSports;
       if(scoreboard&&now-Date.parse(feed.fetchedAt||'')>45*60000)continue;
       for(const e of feed.events||[]){
         const start=Date.parse(e.eventStart),end=Date.parse(e.eventEnd||'');
-        if(isTicketAddon(e.name)||!point(e)||!Number.isFinite(start)||!/^\d{4}-\d\d-\d\dT\d\d:\d\d/.test(e.eventStart)||start>now+12*HOUR||(Number.isFinite(end)&&end>start?end<now-90*60000:start<now-6*HOUR)||distance([lat,lon],[Number(e.lat),Number(e.lon)])>65)continue;
+        if(isTicketAddon(e.name)||!point(e)||!Number.isFinite(start)||!/^\d{4}-\d\d-\d\dT\d\d:\d\d/.test(e.eventStart)||start>now+12*HOUR||(Number.isFinite(end)&&end>start?end<now-90*60000:start<now-6*HOUR)||distance([lat,lon],[Number(e.lat),Number(e.lon)])>(market===nearby.find(m=>distance([lat,lon],[Number(m.center.lat),Number(m.center.lon)])<=Number(m.radiusKm||0))?65:110))continue;
         const key=eventIdentity(e);
         if(seen.has(key))continue;seen.add(key);
         rows.push({...e,lat:Number(e.lat),lon:Number(e.lon),eventStart:new Date(start),eventEnd:Number.isFinite(end)&&end>start?new Date(end):null});
@@ -67,5 +70,18 @@
     for(const market of matchingMarkets(payload,lat,lon)){const feed=market.weatherAlerts;if(!feed||!['active','partial','stale'].includes(feed.status)||now-Date.parse(feed.fetchedAt||'')>45*60000)continue;for(const a of feed.alerts||[])if(a&&a.id&&Date.parse(a.ends)>now)rows.set(a.id,a);}
     return [...rows.values()];
   }
-  return{LIVE_SIGNALS_URL,newestSnapshot,loadSnapshot,alertsForLocation,matchingMarkets,eventsForLocation,placesForLocation,calendarCoverage,isTicketAddon,eventIdentity};
+  // Published bell times (school profile pages) for schools in the driver's market.
+  function bellTimesForLocation(payload,lat,lon){
+    const rows=[];for(const market of matchingMarkets(payload,lat,lon))for(const s of market.schoolBells?.schools||[])if(point(s)&&s.levels)rows.push(s);
+    return rows;
+  }
+  const nameTokens=name=>String(name||'').toLowerCase().replace(/&/g,' and ').replace(/[^a-z0-9]+/g,' ').split(' ').filter(t=>t.length>2&&!/^(school|schools|elementary|middle|high|the|and|academy|public|baltimore|city|of|for)$/.test(t));
+  // Match a mapped school to a published bell record: within 400 m and sharing a
+  // distinctive name word (a nearby school with a different name is not enough).
+  function bellMatch(source,schools){
+    if(!point(source))return null;const tokens=new Set(nameTokens(source.name));let best=null,bestKm=Infinity;
+    for(const s of schools||[]){const km=distance([Number(source.lat),Number(source.lon)],[Number(s.lat),Number(s.lon)]);if(km>.4||km>=bestKm)continue;if(!nameTokens(s.name).some(t=>tokens.has(t)))continue;best=s;bestKm=km;}
+    return best;
+  }
+  return{LIVE_SIGNALS_URL,newestSnapshot,loadSnapshot,alertsForLocation,bellTimesForLocation,bellMatch,matchingMarkets,eventsForLocation,placesForLocation,calendarCoverage,isTicketAddon,eventIdentity};
 });

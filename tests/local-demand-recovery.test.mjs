@@ -21,7 +21,7 @@ function routeFixture(){
   renderDestinationPoints:options=>calls.markers.push(options),renderDemandGrid:sources=>calls.heat.push(sources),renderDemandCoach(){},
   renderTimeButtons:(stops,options,start,selected)=>calls.hours={stops,options,start,selected},renderRouteStopsPanel:stops=>calls.stops=stops,
   applyTimeForecast(){},show(){},marketTime:when=>when.toISOString(),setTimeout(){},$,publicSignalsRefreshedAt:null,selectedForecastTime:new Date(),forecastStartTime:new Date(),routeStopsExpanded:false};
- vm.createContext(context);vm.runInContext(extract('mergeDemandSources')+'\n'+extract('buildRoute'),context);return{context,calls,nodes};
+ context.schoolBellTimes=[];vm.createContext(context);vm.runInContext(extract('mergeDemandSources')+'\n'+extract('applyBellTimes')+'\n'+extract('buildRoute'),context);return{context,calls,nodes};
 }
 test('the events panel merges one game across sports and ticket feeds and preserves two distinct evening shows',async()=>{
  const start=new Date(Date.now()+3600000),game={name:'Away at Home',cat:'event',venue:'Public Stadium',eventType:'SPORTS',lat:41,lon:-74,eventStart:start,tags:{source:'public sports feed'}},concert={name:'Named artist',cat:'event',venue:'Public Arena',eventType:'MusicEvent',lat:41.01,lon:-74,eventStart:start};

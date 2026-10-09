@@ -58,6 +58,25 @@ Free public sources refreshed for every market, with no key required:
 - Published venue, campus and school calendars, OpenStreetMap places and the
   NWS hourly forecast, as before.
 
+- **Published school bell times.** Each Baltimore City public school's opening
+  and closing bell is read weekly from its district profile page
+  (`baltimorecityschools.org/page/<school number>`) and placed with the U.S.
+  Census Bureau geocoder. Mapped schools that match by location and name use
+  their real dismissal time instead of the 8 AM / 2:30 PM default.
+- **Washington, DC market** (Capital One Arena, Audi Field, Nationals Park,
+  Northwest Stadium). Baltimore drivers see these large events; the route ranks
+  them by drive time and keeps Baltimore City/County first.
+- **Watch areas** (`config/watch-areas.json`): neighborhoods drivers reported as
+  busy. Each refresh records the published dismissals, events and alerts near
+  them under `watchAreas` in the snapshot. They are reference only and never
+  add heat or destinations.
+
+Route ranking uses estimated drive minutes (street, arterial and interstate
+speeds), prefers options within 30 minutes, adds a size bonus for large events
+(published attendance, professional leagues, stadiums and arenas), allows
+large events up to 90 minutes away, and ranks destinations outside Baltimore
+City/County lower.
+
 On the device, the app also reads Open-Meteo hourly precipitation amount,
 snowfall and temperature plus NWS alerts for the driver's exact location, and
 re-polls only the scoreboards with a nearby game that is live or starting

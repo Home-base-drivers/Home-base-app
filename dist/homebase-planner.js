@@ -81,9 +81,22 @@
     return {rate:gross/totalHours,hours:totalHours,days:new Set(selected.map(r=>r.date)).size,scope:selected===block?'similar time blocks':'platform history'};
   }
   function distance(a,b){const rad=Math.PI/180,dlat=(b[0]-a[0])*rad,dlon=(b[1]-a[1])*rad,v=Math.sin(dlat/2)**2+Math.cos(a[0]*rad)*Math.cos(b[0]*rad)*Math.sin(dlon/2)**2;return 6371*2*Math.atan2(Math.sqrt(v),Math.sqrt(1-v));}
+  // Road miles to drive minutes: neighborhood streets first, then arterials,
+  // then interstate. A flat 22 mph made a 25-mile trip look like 85 minutes.
+  function driveMinutes(roadMiles){const m=Math.max(0,Number(roadMiles)||0);return Math.min(m,3)/15*60+Math.min(Math.max(m-3,0),7)/30*60+Math.max(m-10,0)/50*60;}
+  /* Ranking keeps the best options inside a preferred drive (30 minutes by
+     default). Beyond it each extra minute costs far more. Large events may be
+     up to majorMaxMinutes (90 by default) away, e.g. Baltimore to DC or Northern Virginia; everything
+     else must also fit the driver's working radius. Destinations outside the
+     driver's home region (options.isHome) are allowed but ranked lower. */
   function rankCandidates(candidates,options={}){
     const origin=options.origin,radius=Number(options.radiusMiles)||25,rate=Math.max(0,Number(options.hourlyRate)||0),cost=Math.max(0,Number(options.costPerMile)||0);
-    return candidates.filter(r=>Number.isFinite(r.lat)&&Number.isFinite(r.lon)&&r.score>0).map(r=>{const miles=origin?distance(origin,[r.lat,r.lon])*.621371*1.25:0,minutes=miles/22*60,travelCost=miles*cost,timeCost=minutes/60*rate;return{...r,estimatedMiles:miles,estimatedMinutes:minutes,relocationCost:travelCost+timeCost,planningScore:r.score-minutes*.25-(travelCost+timeCost)*.4};}).filter(r=>r.estimatedMiles<=radius).sort((a,b)=>b.planningScore-a.planningScore||a.estimatedMinutes-b.estimatedMinutes);
+    const preferred=Number(options.preferredMinutes)||30,majorMax=Number(options.majorMaxMinutes)||90,isHome=typeof options.isHome==='function'?options.isHome:null;
+    return candidates.filter(r=>Number.isFinite(r.lat)&&Number.isFinite(r.lon)&&r.score>0).map(r=>{
+      const miles=origin?distance(origin,[r.lat,r.lon])*.621371*1.25:0,minutes=driveMinutes(miles),travelCost=miles*cost,timeCost=minutes/60*rate;
+      const travelPenalty=Math.min(minutes,preferred)*.12+Math.max(0,minutes-preferred)*.6,outsideHome=!!(isHome&&!isHome(r.lat,r.lon));
+      return{...r,estimatedMiles:miles,estimatedMinutes:minutes,outsideHomeRegion:outsideHome,relocationCost:travelCost+timeCost,planningScore:r.score-travelPenalty-(travelCost+timeCost)*.25-(outsideHome?(r.majorEvent?3:6):0)};
+    }).filter(r=>r.majorEvent?r.estimatedMinutes<=majorMax:r.estimatedMiles<=radius).sort((a,b)=>b.planningScore-a.planningScore||a.estimatedMinutes-b.estimatedMinutes);
   }
   function evaluateForecasts(records,snapshots){
     const matches=[];for(const r of records){if(!r.timePrecision||r.hoursType!=='online'||r.payType!=='gross'||!(r.hours>0))continue;const start=Date.parse(r.startedAt),end=start+r.hours*3600000;if(end>Date.now())continue;
@@ -228,5 +241,5 @@
     // Correct older readiness copy that overstated the manual mileage tracker.
     document.getElementById('navSupport')?.addEventListener('click',()=>setTimeout(()=>{document.querySelectorAll('#readinessAudit .integration-row').forEach(row=>{const title=row.querySelector('b');if(title?.textContent==='Automatic mileage + shift tracking'){title.textContent='Mileage + shift tracking';row.querySelector('em').textContent='MANUAL FALLBACK';}});},10));
   }
-  return {csv,num,hours,dateValue,parseImport,mergeRecords,summarize,learnedRate,rankCandidates,evaluateForecasts,boot};
+  return {csv,num,hours,dateValue,parseImport,mergeRecords,summarize,learnedRate,driveMinutes,rankCandidates,evaluateForecasts,boot};
 });

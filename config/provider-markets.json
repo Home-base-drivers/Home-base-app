@@ -413,7 +413,15 @@
           "name": "Baltimore Peninsula calendar",
           "url": "https://baltimorepeninsula.com/whats-happening/",
           "followEvents": true,
-          "venues": []
+          "venues": [],
+          "adapter": "peninsula",
+          "venue": {
+            "name": "Baltimore Peninsula",
+            "lat": 39.25941361,
+            "lon": -76.60656778,
+            "locationPrecision": "district",
+            "coordinateSource": "https://en.wikipedia.org/wiki/Port_Covington"
+          }
         },
         {
           "name": "Visit Baltimore community and venue calendar",
@@ -484,7 +492,8 @@
           "lon": -76.94139,
           "sourceUrl": "https://en.wikipedia.org/wiki/Xfinity_Center_(College_Park,_Maryland)"
         }
-      ]
+      ],
+      "bellTimes": "bcpss"
     },
     {
       "id": "north-jersey",
@@ -570,6 +579,71 @@
         {
           "name": "Sinatra published performances",
           "url": "https://www.ticketmaster.co.uk/sinatra-the-musical-tickets/artist/5674208"
+        }
+      ]
+    },
+    {
+      "id": "washington-dc",
+      "name": "Washington, DC",
+      "center": {
+        "lat": 38.9072,
+        "lon": -77.0369
+      },
+      "radiusKm": 40,
+      "placeRadiusKm": 20,
+      "countryCode": "US",
+      "timeZone": "America/New_York",
+      "sportsVenues": [
+        {
+          "name": "Capital One Arena",
+          "match": "capital one arena",
+          "city": "Washington",
+          "lat": 38.89806,
+          "lon": -77.02083,
+          "sourceUrl": "https://en.wikipedia.org/wiki/Capital_One_Arena"
+        },
+        {
+          "name": "Audi Field",
+          "match": "audi field",
+          "city": "Washington",
+          "lat": 38.868411,
+          "lon": -77.012869,
+          "sourceUrl": "https://en.wikipedia.org/wiki/Audi_Field"
+        },
+        {
+          "name": "Northwest Stadium",
+          "match": "northwest stadium",
+          "city": "Landover",
+          "lat": 38.90778,
+          "lon": -76.86444,
+          "sourceUrl": "https://en.wikipedia.org/wiki/Northwest_Stadium"
+        }
+      ],
+      "publicCalendars": [
+        {
+          "name": "Audi Field events",
+          "url": "https://audifield.com/wp-json/tribe/events/v1/events?per_page=50",
+          "adapter": "tribe",
+          "classification": "stadium soccer",
+          "venues": [
+            {
+              "name": "Audi Field",
+              "lat": 38.868411,
+              "lon": -77.012869
+            }
+          ]
+        },
+        {
+          "name": "Capital One Arena events",
+          "url": "https://www.capitalonearena.com/events",
+          "classification": "arena",
+          "venues": [
+            {
+              "name": "Capital One Arena",
+              "lat": 38.89806,
+              "lon": -77.02083
+            }
+          ]
         }
       ]
     }

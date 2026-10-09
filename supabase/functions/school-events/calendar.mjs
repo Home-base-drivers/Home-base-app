@@ -84,13 +84,14 @@ var require_homebase_public_data = __commonJS({
       }
       function eventsForLocation(payload, lat, lon, now = Date.now()) {
         const rows = [], seen = /* @__PURE__ */ new Set();
-        for (const market of matchingMarkets(payload, lat, lon)) for (const feed of [market.ticketmaster, market.publicRecords, market.publicSports]) {
+        const nearby = (payload?.markets || []).filter((m) => point(m.center) && distance([lat, lon], [Number(m.center.lat), Number(m.center.lon)]) <= Number(m.radiusKm || 0) + 70);
+        for (const market of nearby) for (const feed of [market.ticketmaster, market.publicRecords, market.publicSports]) {
           if (!feed || !["active", "partial", "stale"].includes(feed.calendarStatus || feed.status) || !calendarFresh(feed, payload.generatedAt, now)) continue;
           const scoreboard = feed === market.publicSports;
           if (scoreboard && now - Date.parse(feed.fetchedAt || "") > 45 * 6e4) continue;
           for (const e of feed.events || []) {
             const start = Date.parse(e.eventStart), end = Date.parse(e.eventEnd || "");
-            if (isTicketAddon(e.name) || !point(e) || !Number.isFinite(start) || !/^\d{4}-\d\d-\d\dT\d\d:\d\d/.test(e.eventStart) || start > now + 12 * HOUR2 || (Number.isFinite(end) && end > start ? end < now - 90 * 6e4 : start < now - 6 * HOUR2) || distance([lat, lon], [Number(e.lat), Number(e.lon)]) > 65) continue;
+            if (isTicketAddon(e.name) || !point(e) || !Number.isFinite(start) || !/^\d{4}-\d\d-\d\dT\d\d:\d\d/.test(e.eventStart) || start > now + 12 * HOUR2 || (Number.isFinite(end) && end > start ? end < now - 90 * 6e4 : start < now - 6 * HOUR2) || distance([lat, lon], [Number(e.lat), Number(e.lon)]) > (market === nearby.find((m) => distance([lat, lon], [Number(m.center.lat), Number(m.center.lon)]) <= Number(m.radiusKm || 0)) ? 65 : 110)) continue;
             const key = eventIdentity(e);
             if (seen.has(key)) continue;
             seen.add(key);
@@ -132,7 +133,26 @@ var require_homebase_public_data = __commonJS({
         }
         return [...rows.values()];
       }
-      return { LIVE_SIGNALS_URL, newestSnapshot, loadSnapshot, alertsForLocation, matchingMarkets, eventsForLocation, placesForLocation, calendarCoverage, isTicketAddon, eventIdentity };
+      function bellTimesForLocation(payload, lat, lon) {
+        const rows = [];
+        for (const market of matchingMarkets(payload, lat, lon)) for (const s of market.schoolBells?.schools || []) if (point(s) && s.levels) rows.push(s);
+        return rows;
+      }
+      const nameTokens = (name) => String(name || "").toLowerCase().replace(/&/g, " and ").replace(/[^a-z0-9]+/g, " ").split(" ").filter((t) => t.length > 2 && !/^(school|schools|elementary|middle|high|the|and|academy|public|baltimore|city|of|for)$/.test(t));
+      function bellMatch(source, schools) {
+        if (!point(source)) return null;
+        const tokens = new Set(nameTokens(source.name));
+        let best = null, bestKm = Infinity;
+        for (const s of schools || []) {
+          const km = distance([Number(source.lat), Number(source.lon)], [Number(s.lat), Number(s.lon)]);
+          if (km > 0.4 || km >= bestKm) continue;
+          if (!nameTokens(s.name).some((t) => tokens.has(t))) continue;
+          best = s;
+          bestKm = km;
+        }
+        return best;
+      }
+      return { LIVE_SIGNALS_URL, newestSnapshot, loadSnapshot, alertsForLocation, bellTimesForLocation, bellMatch, matchingMarkets, eventsForLocation, placesForLocation, calendarCoverage, isTicketAddon, eventIdentity };
     });
   }
 });
@@ -274,7 +294,45 @@ function structuredEvents(html) {
   }
   return events;
 }
+function tribeEvents(body, source) {
+  let data;
+  try {
+    data = JSON.parse(body);
+  } catch {
+    return [];
+  }
+  const text2 = (value) => String(value || "").replace(/<[^>]*>/g, " ").replace(/&#0?38;|&amp;/g, "&").replace(/&#8217;|&#0?39;/g, "'").replace(/&#8211;/g, "-").replace(/&quot;/g, '"').replace(/\s+/g, " ").trim();
+  const utc = (value) => /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value || "") ? value.replace(" ", "T") + "Z" : null;
+  return (Array.isArray(data?.events) ? data.events : []).map((e) => {
+    const venue = Array.isArray(e.venue) ? null : e.venue, lat = Number(venue?.geo_lat), lon = Number(venue?.geo_lng), start = utc(e.utc_start_date);
+    if (!start || e.status && e.status !== "publish" || e.hide_from_listings) return null;
+    const geo = venue?.geo_lat != null && Number.isFinite(lat) && Number.isFinite(lon) ? { latitude: lat, longitude: lon } : null;
+    return { "@type": "Event", name: text2(e.title), startDate: start, endDate: utc(e.utc_end_date), url: e.url, allDay: !!e.all_day, location: { name: text2(venue?.venue) || source.venue?.name || "", ...geo ? { geo } : {} } };
+  }).filter(Boolean);
+}
+function peninsulaCards(html, source) {
+  if (!source?.venue || !Number.isFinite(source.venue.lat) || !Number.isFinite(source.venue.lon)) return [];
+  const text2 = (value) => String(value).replace(/<!--.*?-->/g, "").replace(/<[^>]*>/g, " ").replace(/&#x27;|&#0?39;/g, "'").replace(/&amp;/g, "&").replace(/\s+/g, " ").trim();
+  const months = { january: 1, february: 2, march: 3, april: 4, may: 5, june: 6, july: 7, august: 8, september: 9, october: 10, november: 11, december: 12 };
+  return [...String(html).matchAll(/<a\b[^>]*EventCardWrapper[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)].map((m) => {
+    const block = m[2], title = text2(block.match(/<p\b[^>]*>([\s\S]*?)<\/p>/i)?.[1] || ""), items = [...block.matchAll(/<span\b[^>]*EventCardInformationItem[^>]*>([\s\S]*?)<\/span>/gi)].map((x) => text2(x[1]));
+    const date = /([A-Za-z]+)\s+(\d{1,2}),\s*(\d{4})/.exec(items[0] || ""), time = /(\d{1,2}):(\d{2})\s*([AP])M/i.exec(items[1] || "");
+    if (!title || !date || !time || !months[date[1].toLowerCase()]) return null;
+    let hour = Number(time[1]) % 12;
+    if (/p/i.test(time[3])) hour += 12;
+    const pad = (n) => String(n).padStart(2, "0");
+    let url;
+    try {
+      url = new URL(m[1], source.url).href;
+    } catch {
+      url = source.url;
+    }
+    return { "@type": "Event", name: title, startDate: `${date[3]}-${pad(months[date[1].toLowerCase()])}-${pad(date[2])}T${pad(hour)}:${time[2]}`, url, address: items[2] || "", location: { name: source.venue.name, geo: { latitude: source.venue.lat, longitude: source.venue.lon } } };
+  }).filter(Boolean);
+}
 function publishedVenueEvents(html, source) {
+  if (source.adapter === "tribe") return tribeEvents(html, source);
+  if (source.adapter === "peninsula") return peninsulaCards(html, source);
   if (source.adapter !== "soundstage") return [];
   const text2 = (value) => String(value).replace(/<[^>]*>/g, " ").replace(/&#(?:0?38|x26);/gi, "&").replace(/&amp;/g, "&").replace(/&#(?:0?39|x27);/gi, "'").replace(/&quot;/g, '"').replace(/\s+/g, " ").trim();
   return [...String(html).matchAll(/<article\b[^>]*data-start=["'](\d{4}-\d{2}-\d{2} \d{2}:\d{2})["'][^>]*>([\s\S]*?)<\/article>/gi)].map((match) => {
@@ -307,7 +365,7 @@ function normalizePublicEvent(event, market, source, now = Date.now()) {
   const lat = geo?.latitude == null ? known?.lat : Number(geo.latitude), lon = geo?.longitude == null ? known?.lon : Number(geo.longitude);
   if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180 || distanceKm(market.center, { lat, lon }) > market.radiusKm) return null;
   const name = String(event.name || "").trim(), eventType = [event["@type"]].flat().join(" ");
-  const context = [name, venue?.name, eventType, event.description].join(" ");
+  const context = [name, venue?.name, eventType, event.description, source.classification].join(" ");
   if (!name || import_homebase_public_data.default.isTicketAddon(name) || /webinar|virtual|online.only|exhibition|gallery|workshop|seminar|campus.tour|all.day.entry|standard.entry|standard.admission|standard.experience/i.test(context)) return null;
   const performers = [event.performer].flat().filter(Boolean);
   const classification = performers.map((p) => p["@type"]).flat().join(" ");
@@ -989,7 +1047,15 @@ var provider_markets_default = {
           name: "Baltimore Peninsula calendar",
           url: "https://baltimorepeninsula.com/whats-happening/",
           followEvents: true,
-          venues: []
+          venues: [],
+          adapter: "peninsula",
+          venue: {
+            name: "Baltimore Peninsula",
+            lat: 39.25941361,
+            lon: -76.60656778,
+            locationPrecision: "district",
+            coordinateSource: "https://en.wikipedia.org/wiki/Port_Covington"
+          }
         },
         {
           name: "Visit Baltimore community and venue calendar",
@@ -1060,7 +1126,8 @@ var provider_markets_default = {
           lon: -76.94139,
           sourceUrl: "https://en.wikipedia.org/wiki/Xfinity_Center_(College_Park,_Maryland)"
         }
-      ]
+      ],
+      bellTimes: "bcpss"
     },
     {
       id: "north-jersey",
@@ -1146,6 +1213,71 @@ var provider_markets_default = {
         {
           name: "Sinatra published performances",
           url: "https://www.ticketmaster.co.uk/sinatra-the-musical-tickets/artist/5674208"
+        }
+      ]
+    },
+    {
+      id: "washington-dc",
+      name: "Washington, DC",
+      center: {
+        lat: 38.9072,
+        lon: -77.0369
+      },
+      radiusKm: 40,
+      placeRadiusKm: 20,
+      countryCode: "US",
+      timeZone: "America/New_York",
+      sportsVenues: [
+        {
+          name: "Capital One Arena",
+          match: "capital one arena",
+          city: "Washington",
+          lat: 38.89806,
+          lon: -77.02083,
+          sourceUrl: "https://en.wikipedia.org/wiki/Capital_One_Arena"
+        },
+        {
+          name: "Audi Field",
+          match: "audi field",
+          city: "Washington",
+          lat: 38.868411,
+          lon: -77.012869,
+          sourceUrl: "https://en.wikipedia.org/wiki/Audi_Field"
+        },
+        {
+          name: "Northwest Stadium",
+          match: "northwest stadium",
+          city: "Landover",
+          lat: 38.90778,
+          lon: -76.86444,
+          sourceUrl: "https://en.wikipedia.org/wiki/Northwest_Stadium"
+        }
+      ],
+      publicCalendars: [
+        {
+          name: "Audi Field events",
+          url: "https://audifield.com/wp-json/tribe/events/v1/events?per_page=50",
+          adapter: "tribe",
+          classification: "stadium soccer",
+          venues: [
+            {
+              name: "Audi Field",
+              lat: 38.868411,
+              lon: -77.012869
+            }
+          ]
+        },
+        {
+          name: "Capital One Arena events",
+          url: "https://www.capitalonearena.com/events",
+          classification: "arena",
+          venues: [
+            {
+              name: "Capital One Arena",
+              lat: 38.89806,
+              lon: -77.02083
+            }
+          ]
         }
       ]
     }

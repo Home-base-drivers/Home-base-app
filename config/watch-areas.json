@@ -1,0 +1,26 @@
+{
+  "purpose": "Reference-only areas a driver reported as busy (screenshots of the Uber driver app). Each refresh checks live public sources around them. They never add heat, create destinations, or change the demand model.",
+  "coordinateSource": "GeoNames neighborhood centroids from config/public-place-baseline.json; screenshot pins are approximate.",
+  "areas": [
+    {"id": "better-waverly", "name": "Better Waverly / Waverly / Clifton Park", "geonamesId": 11979937, "lat": 39.32439, "lon": -76.60517, "radiusKm": 2,
+     "observations": [{"date": "2026-10-09", "localTime": "14:19", "platform": "Uber", "shown": "+$10 surge bonus"}, {"date": "2026-10-09", "localTime": "13:54", "platform": "Uber", "shown": "+$7.50 surge bonus (Charles Village side)"}]},
+    {"id": "charles-village-remington", "name": "Charles Village / Remington / Station North", "geonamesId": 11979907, "lat": 39.32015, "lon": -76.62283, "radiusKm": 2,
+     "observations": [{"date": "2026-10-09", "localTime": "14:19", "platform": "Uber", "shown": "+$10 surge bonus"}]},
+    {"id": "hampden-roland-park", "name": "Hampden / Roland Park / Cold Spring Lane", "geonamesId": 4357268, "lat": 39.33094, "lon": -76.63497, "radiusKm": 2.5,
+     "observations": [{"date": "2026-10-09", "localTime": "14:19", "platform": "Uber", "shown": "+$3.75 surge bonus"}]},
+    {"id": "downtown-mount-vernon", "name": "Downtown / Mount Vernon / Midtown", "geonamesId": 4828616, "lat": 39.29761, "lon": -76.6158, "radiusKm": 2,
+     "observations": [{"date": "2026-10-09", "localTime": "13:54", "platform": "Uber", "shown": "+$2.25 surge bonus"}, {"date": "2026-10-09", "localTime": "14:19", "platform": "Uber", "shown": "+$3.25 surge bonus"}]},
+    {"id": "inner-harbor-federal-hill", "name": "Inner Harbor / Federal Hill / Harbor East", "geonamesId": 11979899, "lat": 39.28356, "lon": -76.6063, "radiusKm": 2,
+     "observations": [{"date": "2026-10-09", "localTime": "13:54", "platform": "Uber", "shown": "+$2.25 surge bonus"}, {"date": "2026-10-09", "localTime": "14:19", "platform": "Uber", "shown": "+$1.75 surge bonus"}]},
+    {"id": "locust-point-port-covington", "name": "Locust Point / Port Covington (Baltimore Peninsula)", "geonamesId": 11980001, "lat": 39.26945, "lon": -76.59204, "radiusKm": 2.5,
+     "observations": [{"date": "2026-10-09", "localTime": "14:09", "platform": "Uber", "shown": "+$1 surge bonus"}, {"date": "2026-10-09", "localTime": "14:11", "platform": "Uber", "shown": "+$2.25 surge bonus"}]},
+    {"id": "middle-river-martin-state", "name": "Middle River / Martin State Airport", "geonamesId": 4362344, "lat": 39.33427, "lon": -76.43941, "radiusKm": 3,
+     "observations": [{"date": "2026-10-09", "localTime": "13:54", "platform": "Uber", "shown": "+$3 surge bonus"}, {"date": "2026-10-09", "localTime": "14:11", "platform": "Uber", "shown": "+$7.75 surge bonus"}]},
+    {"id": "bowleys-quarters", "name": "Bowleys Quarters", "geonamesId": 4349175, "lat": 39.33539, "lon": -76.39024, "radiusKm": 3,
+     "observations": [{"date": "2026-10-09", "localTime": "14:05", "platform": "Uber", "shown": "+$7.50 and +$5 surge bonuses"}]},
+    {"id": "dundalk-edgemere", "name": "Dundalk / Edgemere / Sparrows Point", "geonamesId": 4354060, "lat": 39.24205, "lon": -76.44802, "radiusKm": 4,
+     "observations": [{"date": "2026-10-09", "localTime": "13:54", "platform": "Uber", "shown": "+$1.75 surge bonus"}]},
+    {"id": "parkville-hampton", "name": "Parkville / Hampton", "geonamesId": 4364946, "lat": 39.37733, "lon": -76.53969, "radiusKm": 3,
+     "observations": [{"date": "2026-10-09", "localTime": "14:19", "platform": "Uber", "shown": "+$1.50 surge bonus"}]}
+  ]
+}

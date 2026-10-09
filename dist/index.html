@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Home Base">
-  <meta name="homebase-build" content="v230">
+  <meta name="homebase-build" content="v231">
   <meta name="description" content="Home Base connects local driver platforms, earnings forecasts, events and a GPS-based 12-hour route in one app.">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icon-192.png">
@@ -215,19 +215,19 @@
   <section class="panel" id="installPanel" role="dialog" aria-modal="true" aria-labelledby="installTitle"><div class="panel-head"><h2 id="installTitle">Home Base</h2><button type="button" class="panel-hide" id="hidePanel" aria-label="Hide this panel">Hide</button></div><div id="installCopy"></div><button class="close" id="closePanel">Done</button></section>
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-<script src="baltimore-market.js?v=72"></script>
+<script src="baltimore-market.js?v=73"></script>
 <script src="homebase-heat.js?v=108"></script>
 <script src="homebase-global-heat.js?v=3"></script>
 <link rel="stylesheet" href="homebase-earnings.css?v=110">
 <link rel="stylesheet" href="homebase-growth.css?v=111">
 <script src="homebase-earnings.js?v=110"></script>
 <script src="homebase-demand-history.js?v=128"></script>
-<script src="homebase-route-policy.js?v=7"></script>
-<script src="homebase-public-data.js?v=4"></script>
+<script src="homebase-route-policy.js?v=8"></script>
+<script src="homebase-public-data.js?v=5"></script>
 <script src="homebase-sports.js?v=1"></script>
 <script src="homebase-weather.js?v=1"></script>
 <script src="homebase-school-events.js?v=4"></script>
-<script src="homebase-planner.js?v=127"></script>
+<script src="homebase-planner.js?v=128"></script>
 <script src="homebase-config.js?v=111"></script>
 <script src="homebase-backend.js?v=125"></script>
 <script src="homebase-growth.js?v=125"></script>
@@ -294,7 +294,7 @@ let gpsMarker=null,gpsCircle=null,gpsRequestInFlight=false,lastAutoGpsRefresh=0;
 let routeLayers=[],routeStrokeLayers=[],eventMapLayers=[],priceMapLayers=[],destinationMarkers=[],hourlyDestinations=[],highwayLayers=[],heatLayer=null,heatAreaLayer=null,demandAreas=[],demandAreaSources=[],demandAreaSourceRef=null,highwayRequestSerial=0,routeRequestSerial=0,destinationRouteSerial=0;
 let surgeTrend='cooling';
 let activeStops=[],activeDemandSources=[];
-let currentRainChance=0,currentEventCount=0,hourlyRainForecast=[],activeWeatherAlerts=[],weatherAlertsFetchedAt=0,weatherLoadedAt=0,baseWeatherText='';
+let schoolBellTimes=[],currentRainChance=0,currentEventCount=0,hourlyRainForecast=[],activeWeatherAlerts=[],weatherAlertsFetchedAt=0,weatherLoadedAt=0,baseWeatherText='';
 let eventsExpanded=false,routeStopsExpanded=false;
 let providerUberPoints=[],providerPricePoints=[],providerFlightPoints=[],providerBookingNote='',currentEventData=[],currentMarketName='Baltimore';
 let weatherFeedAt=null;
@@ -797,7 +797,7 @@ function demandEvidence(source,when=new Date()){
   }else if(source&&['transit'].includes(source.cat)){
     parts.push('Transit signal: '+name+'; modeled '+(h<10?'morning departures':h>=15.5?'commute/transfer':'arrival and transfer')+' window.');
   }else if(source&&['school','k12'].includes(source.cat)){
-    parts.push('School signal: '+name+'; modeled weekday family arrival/dismissal window, favoring younger children; one-hour pre-opening window and two-hour dismissal fade; published bell times are used when supplied, otherwise 8 AM / 2:30 PM defaults. Closures and ride requests may be unconfirmed.');
+    parts.push('School signal: '+name+'; modeled weekday family arrival/dismissal window, favoring younger children; one-hour pre-opening window and two-hour dismissal fade; '+(source.schoolEnd?'published bell times '+source.schoolStart+'–'+source.schoolEnd+' ('+(source.tags?.bellSchool||'district profile')+').':'no published bell time found, so 8 AM / 2:30 PM defaults are used.')+' Closures and ride requests may be unconfirmed.');
   }else if(source&&source.cat==='restaurant_district'){
     parts.push('District signal: '+name+'; aggregated dinner-hour activity pattern only—no individual restaurant is treated as a ride-demand event.');
   }else if(source&&source.cat==='university'){
@@ -814,7 +814,7 @@ function demandEvidence(source,when=new Date()){
 }
 function hourWeight(cat,h,when=new Date()){const night=h>=21||h<3,day=marketParts(when).day,weekday=day>=1&&day<=5,cooling=surgeTrend==='cooling';if(cat==='school'||cat==='k12')return HomeBaseRoutePolicy.schoolWeight({cat},{day,hour:h},when);if(cat==='university')return h>=7&&h<22?(h>=16?6:4):1;if(cat==='nightlife')return(night?12:h>=18?7:1)-(cooling?1:0);if(cat==='event')return 0;if(cat==='restaurant')return((h>=11&&h<14)||(h>=17&&h<22)?9:2)+(cooling?1:0);if(cat==='transit')return((h>=5&&h<10)||(h>=15.5&&h<20)||h>=22?10:4)+(cooling?1:0);if(cat==='hotel')return(h<9||h>=20)?7:3;if(cat==='attraction')return h>=10&&h<18?7:1;if(cat==='shopping')return h>=10&&h<21?6:1;if(cat==='medical')return(h>=6&&h<9)||(h>=14&&h<17)||(h>=22)?7:3;if(cat==='neighborhood'){/* Sunday morning prior; dated events add their own arrival/exit peaks. */if(day===0)return h>=6&&h<12?7:h>=12&&h<17?4:h>=17&&h<21?5:3;return weekday&&h>=13&&h<19?7:(h>=6&&h<9)||(h>=16&&h<20)?5:3;}return 2}
 function eventTimeWeight(v,when){const phase=HomeBaseRoutePolicy.eventPhase(v,when);return ({arrival:12,start:11,underway:0,exit:16,live:11,closing:14})[phase]||0}
-function eventScale(v){if(v.tags?.schoolEvent&&v.classification==='high_school')return /homecoming|prom|graduation|commencement|football/i.test(v.name)? .85:.55;if(v.tags&&v.tags.publicCalendar&&v.eventType==='campus'&&!/concert|perform|festival|gala|homecoming|football/i.test(v.name+' '+v.classification))return .2;const name=eventToken(`${v.venue||''} ${v.name||''}`);if(/m t bank stadium|camden yards/.test(name))return 1.35;if(/cfg bank arena/.test(name))return 1.2;if(/convention center|pier six|rams head/.test(name))return 1.05;return 1}
+function eventScale(v){if(v.tags?.schoolEvent&&v.classification==='high_school')return /homecoming|prom|graduation|commencement|football/i.test(v.name)? .85:.55;if(v.tags&&v.tags.publicCalendar&&v.eventType==='campus'&&!/concert|perform|festival|gala|homecoming|football/i.test(v.name+' '+v.classification))return .2;const name=eventToken(`${v.venue||''} ${v.name||''}`);if(/m t bank stadium|camden yards/.test(name))return 1.35;if(/cfg bank arena|capital one arena/.test(name))return 1.2;if(/nationals park|northwest stadium/.test(name))return 1.35;if(/audi field/.test(name))return 1.1;if(/convention center|pier six|rams head/.test(name))return 1.05;return 1}
 function weatherInputs(source,when=new Date()){const t=when instanceof Date?when.getTime():Date.parse(when);return HomeBaseWeather.demandBoost((source||{}).cat,HomeBaseWeather.nearest(hourlyRainForecast,t),HomeBaseWeather.activeAlerts(activeWeatherAlerts,t),currentRainChance)}
 function rainDemandBoost(source,when=new Date()){const boost=weatherInputs(source,when).boost;return source&&source.eventStart?boost*1.35:boost}
 function distanceKm(a,b){const x=(a[1]-b[1])*Math.cos((a[0]+b[0])*.00872665),y=a[0]-b[0];return Math.sqrt(x*x+y*y)*111}
@@ -962,7 +962,8 @@ async function loadScoreboardEvents(lat,lon,market,venues=[],keys){
     if(!place){const match=findEventVenue(row.venue,venues),city=eventToken(row.city);if(!match&&!(city&&marketName&&(city.includes(marketName)||marketName.includes(city))))continue;place=knownBaltimoreVenue(row.venue)||match}
     if(!place)continue;
     const event=scoreboardEvent(row,place);
-    if(isGreaterBaltimoreLocation(lat,lon)?isGreaterBaltimoreLocation(event.lat,event.lon):distanceKm([lat,lon],[event.lat,event.lon])<=90)out.push(event);
+    const km=distanceKm([lat,lon],[event.lat,event.lon]),major=HomeBaseRoutePolicy.eventSize(event).major;
+    if(major?km<=110:isGreaterBaltimoreLocation(lat,lon)?isGreaterBaltimoreLocation(event.lat,event.lon):km<=90)out.push(event);
   }
   return out;
 }
@@ -1022,6 +1023,7 @@ async function loadProviderSignals(lat,lon,market){
     renderProviderPriceBadges(providerPricePoints);
     const booking=match.booking;if(booking&&['active','stale'].includes(booking.status)&&Date.now()-Date.parse(booking.fetchedAt||'')<=25*60000&&Array.isArray(booking.areas)){const zones=booking.areas.filter(area=>Number(area.returnedListings)>0).length;providerBookingNote=`${zones} metro areas had lodging listings returned for ${booking.checkin||'the next-night sample'}`;}
     const records=match.publicRecords;
+    schoolBellTimes=HomeBasePublicData.bellTimesForLocation(payload,lat,lon);
     if(Date.now()-weatherAlertsFetchedAt>30*60000){const hostedAlerts=HomeBasePublicData.alertsForLocation(payload,lat,lon);if(hostedAlerts.length||activeWeatherAlerts.length){activeWeatherAlerts=hostedAlerts;renderWeatherAlert()}}
     if(records?.schoolCoverage&&!schoolCoverage.checkedCount){schoolCoverage={...records.schoolCoverage,status:schoolCoverage.status==='loading'?'loading':'partial'};schoolDateContext=records.schoolContext||[];}
     providerStatuses.public_calendar=records&&records.calendarStatus||'unavailable';providerStatuses.public_weather=records&&records.weatherStatus||'unavailable';
@@ -1032,7 +1034,7 @@ async function loadProviderSignals(lat,lon,market){
     const events=HomeBasePublicData.eventsForLocation(payload,lat,lon).map(item=>{
       const start=item.eventStart,end=item.eventEnd,live=!!end&&start.getTime()<=Date.now()&&end.getTime()>Date.now(),departure=!!end&&end.getTime()<=Date.now();
       return{name:`${item.name}${item.venue?` · ${item.venue}`:''} · ${marketTime(start)}`,cat:'event',lat:item.lat,lon:item.lon,venue:item.venue||'',eventType:item.eventType||'',classification:item.classification||'',genre:item.genre||'',expectedAttendance:item.expectedAttendance,attendanceBasis:item.attendanceBasis,attendanceSourceUrl:item.attendanceSourceUrl,attendanceConfidence:item.attendanceConfidence,url:item.url||item.sourceUrl||null,eventStart:start,eventEnd:end,eventState:item.league?(item.state==='live'?'Live':item.state==='final'?'Departure':'Preview'):live?'Live':departure?'Departure':start.getTime()<Date.now()?'Scheduled · end unverified':'Preview',tags:{providerEvent:true,...(item.league?{liveEvent:true,league:item.league,scoreboardKey:scoreboardKey(item.id),gameState:item.state,gameClosing:!!item.closing,gameDetail:item.gameDetail,observedAt:item.observedAt,endObservedAfter:item.endObservedAfter,endObservedBy:item.endObservedBy}:{}),schoolEvent:String(item.eventType||'').includes('school_event'),publicCalendar:item.source!=='Ticketmaster Discovery API',source:item.source||'Published event calendar',sourceUrl:item.sourceUrl||item.url,sourceFetchedAt:item.fetchedAt||records?.fetchedAt}}
-    }).filter(item=>!isGreaterBaltimoreLocation(lat,lon)||isGreaterBaltimoreLocation(item.lat,item.lon));
+    }).filter(item=>!isGreaterBaltimoreLocation(lat,lon)||isGreaterBaltimoreLocation(item.lat,item.lon)||HomeBaseRoutePolicy.eventSize(item).major);
     renderFeedSignal();renderDemandCoach();return{events}
   }catch{publicCalendarCoverage={status:'unavailable',sourceCount:0};renderFeedSignal();renderDemandCoach();return null}
 }
@@ -1090,16 +1092,28 @@ function drawRoutePath(path){routeStrokeLayers.forEach(layer=>liveMap.removeLaye
 function restaurantDistrictCandidates(lat,lon,when){if(!isGreaterBaltimoreLocation(lat,lon))return[];const parts=marketParts(when),hour=parts.hour+when.getMinutes()/60,weekend=parts.day===0||parts.day===6,busy=hour>=11&&hour<14||hour>=17&&hour<22||weekend&&hour>=14&&hour<23;if(!busy)return[];const districts=[['Inner Harbor dining district',39.2851,-76.6132],['Harbor East dining district',39.2831,-76.6022],['Fells Point dining district',39.2825,-76.5934],['Canton dining district',39.2803,-76.5754],['Towson dining district',39.4015,-76.6019],['Catonsville dining district',39.2721,-76.7319],['Columbia dining district',39.2037,-76.8610],['Glen Burnie dining district',39.1626,-76.6247]];return districts.map(([name,pointLat,pointLon])=>({name,cat:'restaurant_district',lat:pointLat,lon:pointLon,tags:{aggregateDistrict:true,modelEstimate:true}})).map(point=>({...point,distance:distanceKm([lat,lon],[point.lat,point.lon])})).filter(point=>point.distance<=8).sort((a,b)=>a.distance-b.distance).slice(0,3)}
 function renderRouteStopsPanel(stops=activeStops){
   const box=$('#routeStops');if(!box)return;
-  const routeLabel=s=>s.routeBasis==='verified_event'?`Verified event · ${s.routeEventPhase==='exit'?'departure window':s.routeEventPhase==='closing'?'game ending now · '+(s.tags?.gameDetail||'final period'):s.routeEventPhase==='arrival'?'arrival window':'scheduled activity'} · starts ${marketTime(new Date(s.eventStart))} · ${s.tags?.source||'public event feed'}`:s.routeBasis==='live_signal'?`${s.routeSignalType==='airport_activity'?'Published airport activity':'Fresh provider price proxy'} · ${s.tags?.source||'provider feed'} · ride demand unconfirmed`:(s.cat==='school'||s.cat==='k12')?`Modeled family ${marketParts(s.when).hour<10?'drop-off':'pickup'} window · ${HomeBaseRoutePolicy.schoolStage(s)==='high'?'high school':HomeBaseRoutePolicy.schoolStage(s)==='primary'?'younger children':HomeBaseRoutePolicy.schoolStage(s)==='middle'?'middle school':'K–12'} · bell time unverified`:`Historical fallback hot spot · ${{nightlife:'nightlife',transit:'transit',restaurant_district:'dining district',hotel:'hotels',medical:'medical',shopping:'shopping',warehouse:'warehouse shift changes',attraction:'visitors',neighborhood:'neighborhood'}[s.cat]||'local activity'}`,visible=routeStopsExpanded?stops:stops.slice(0,4);
+  const routeLabel=s=>s.routeBasis==='verified_event'?`Verified event · ${s.routeEventPhase==='exit'?'departure window':s.routeEventPhase==='closing'?'game ending now · '+(s.tags?.gameDetail||'final period'):s.routeEventPhase==='arrival'?'arrival window':'scheduled activity'} · starts ${marketTime(new Date(s.eventStart))} · ${s.tags?.source||'public event feed'}`:s.routeBasis==='live_signal'?`${s.routeSignalType==='airport_activity'?'Published airport activity':'Fresh provider price proxy'} · ${s.tags?.source||'provider feed'} · ride demand unconfirmed`:(s.cat==='school'||s.cat==='k12')?`Modeled family ${marketParts(s.when).hour<10?'drop-off':'pickup'} window · ${HomeBaseRoutePolicy.schoolStage(s)==='high'?'high school':HomeBaseRoutePolicy.schoolStage(s)==='primary'?'younger children':HomeBaseRoutePolicy.schoolStage(s)==='middle'?'middle school':'K–12'} · ${s.schoolEnd?'published bell '+s.schoolEnd:'bell time unverified'}`:`Historical fallback hot spot · ${{nightlife:'nightlife',transit:'transit',restaurant_district:'dining district',hotel:'hotels',medical:'medical',shopping:'shopping',warehouse:'warehouse shift changes',attraction:'visitors',neighborhood:'neighborhood'}[s.cat]||'local activity'}`,visible=routeStopsExpanded?stops:stops.slice(0,4);
   $('#routePlanTitle').textContent=`${stops.length} HOT SPOTS · ${Math.abs(selectedForecastTime.getTime()-Date.now())<1800000?'NOW':marketTime(selectedForecastTime)}`;
   box.innerHTML=visible.map(s=>`<div class="route-stop compact-route-stop"><div class="stop-num" style="--stop:${s.color}">${categoryIcon(s.cat)}</div><div><b><time>${marketDateTime(s.when)}</time><em>·</em> ${safeText(s.name)}</b><span>${safeText(routeLabel(s))}</span></div></div>`).join('')+(stops.length>4?`<button type="button" class="route-more list-expand" data-expand="routes" aria-expanded="${routeStopsExpanded}">${routeStopsExpanded?'Show less':`+${stops.length-4} more locations`}</button>`:'');
 }
+// Published bell times replace the 8 AM / 2:30 PM defaults for mapped schools
+// that match a district profile by location and name.
+function applyBellTimes(sources){
+  if(!schoolBellTimes.length||!Array.isArray(sources))return sources;
+  return sources.map(source=>{
+    if(!source||!(source.cat==='school'||source.cat==='k12')||source.schoolStart||source.tags?.schoolStart)return source;
+    const match=HomeBasePublicData.bellMatch(source,schoolBellTimes);if(!match)return source;
+    const stage=HomeBaseRoutePolicy.schoolStage(source),levels=match.levels||{},w=levels[stage==='primary'?'elementary':stage]||levels.all||levels.elementary||levels.middle||levels.high;
+    return w?{...source,schoolStart:w.open,schoolEnd:w.close,tags:{...(source.tags||{}),bellSource:match.url,bellSchool:match.name}}:source;
+  });
+}
 function buildRoute(venues,lat,lon,market,publicHeatSources=venues){
+  venues=applyBellTimes(venues);publicHeatSources=applyBellTimes(publicHeatSources);
   hourlyDestinations=[];
   routeLayers.forEach(x=>liveMap.removeLayer(x));routeLayers=[];routeStrokeLayers=[];if(heatAreaLayer)liveMap.removeLayer(heatAreaLayer);heatAreaLayer=L.layerGroup().addTo(liveMap);demandAreaSourceRef=null;if(!heatLayer)heatLayer=HomeBaseHeat.createLayer(L).addTo(liveMap);
-  const routeRequest=++routeRequestSerial,start=forecastStartTime=new Date(),stops=[],regionalVenues=isGreaterBaltimoreLocation(lat,lon)?venues.filter(v=>isGreaterBaltimoreLocation(v.lat,v.lon)):venues,publicRegional=isGreaterBaltimoreLocation(lat,lon)?(publicHeatSources||[]).filter(v=>isGreaterBaltimoreLocation(v.lat,v.lon)):(publicHeatSources||[]),localPublic=regionalVenues.filter(v=>Number.isFinite(v.lat)&&Number.isFinite(v.lon)&&distanceKm([lat,lon],[v.lat,v.lon])<=65),pool=[...localPublic,...publicRegional,...fallbackVenues(lat,lon,market)].filter(v=>Number.isFinite(v.lat)&&Number.isFinite(v.lon));
+  const routeRequest=++routeRequestSerial,start=forecastStartTime=new Date(),stops=[],inRegion=v=>!isGreaterBaltimoreLocation(lat,lon)||isGreaterBaltimoreLocation(v.lat,v.lon)||HomeBaseRoutePolicy.eventSize(v).major,regionalVenues=venues.filter(inRegion),publicRegional=(publicHeatSources||[]).filter(inRegion),localPublic=regionalVenues.filter(v=>Number.isFinite(v.lat)&&Number.isFinite(v.lon)&&distanceKm([lat,lon],[v.lat,v.lon])<=(HomeBaseRoutePolicy.eventSize(v).major?110:65)),pool=[...localPublic,...publicRegional,...fallbackVenues(lat,lon,market)].filter(v=>Number.isFinite(v.lat)&&Number.isFinite(v.lon));
   for(let i=0;i<12;i++){
-    const when=new Date(start.getTime()+i*3600000),parts=marketParts(when),eligible=HomeBaseRoutePolicy.candidatesForHour([...pool,...restaurantDistrictCandidates(lat,lon,when)],when,{day:parts.day,hour:parts.hour+when.getMinutes()/60},start),eventCandidates=eligible.events.map(v=>({...v,routeDemand:demandWeight(v,when),score:demandWeight(v,when)+28})),liveCandidates=eligible.live.map(v=>({...v,routeDemand:demandWeight(v,when),score:demandWeight(v,when)+18})),generalCandidates=eligible.general.map(v=>({...v,routeDemand:v.tags?.aggregateDistrict?8:demandWeight(v,when),score:v.tags?.aggregateDistrict?8:demandWeight(v,when)})),destinations=[...eventCandidates,...liveCandidates,...generalCandidates],candidates=HomeBaseRoutePolicy.selectRanked(HomeBasePlanner.rankCandidates(destinations,{origin:[lat,lon],radiusMiles:Number(readProfile().radius)||25,hourlyRate:currentApps[0]?.base||23,costPerMile:Number(readCostPrefs().reserveRate)||.2})),seen=new Set(),options=[];
+    const when=new Date(start.getTime()+i*3600000),parts=marketParts(when),eligible=HomeBaseRoutePolicy.candidatesForHour([...pool,...restaurantDistrictCandidates(lat,lon,when)],when,{day:parts.day,hour:parts.hour+when.getMinutes()/60},start),eventCandidates=eligible.events.map(v=>{const size=HomeBaseRoutePolicy.eventSize(v),demand=demandWeight(v,when);return{...v,majorEvent:size.major,routeDemand:demand,score:demand+28+size.bonus}}),liveCandidates=eligible.live.map(v=>({...v,routeDemand:demandWeight(v,when),score:demandWeight(v,when)+18})),generalCandidates=eligible.general.map(v=>({...v,routeDemand:v.tags?.aggregateDistrict?8:demandWeight(v,when),score:v.tags?.aggregateDistrict?8:demandWeight(v,when)})),destinations=[...eventCandidates,...liveCandidates,...generalCandidates],candidates=HomeBaseRoutePolicy.selectRanked(HomeBasePlanner.rankCandidates(destinations,{origin:[lat,lon],radiusMiles:Number(readProfile().radius)||25,hourlyRate:currentApps[0]?.base||23,costPerMile:Number(readCostPrefs().reserveRate)||.2,preferredMinutes:30,majorMaxMinutes:90,isHome:isGreaterBaltimoreLocation(lat,lon)&&window.HomeBaseMarket?.isHomeRegionPoint?HomeBaseMarket.isHomeRegionPoint:null})),seen=new Set(),options=[];
     for(const candidate of candidates){const key=`${candidate.lat.toFixed(5)}|${candidate.lon.toFixed(5)}`;if(seen.has(key))continue;seen.add(key);candidate.when=when;candidate.color=categoryColor(candidate.cat);options.push(candidate);if(options.length===12)break}
     hourlyDestinations.push(options);if(options.length)stops.push(options[0]);
   }
@@ -1237,7 +1251,7 @@ setInterval(()=>{updateClimateAdvisory();const selected=$('[data-hour][aria-pres
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){schoolSearchAt=0;if(currentLocation)refreshSchoolEvents(...currentLocation);if(Date.now()-lastAutoGpsRefresh>300000){if(demoLocale)refreshLiveDemandLayer();else autoRefreshGps()}}});
 window.addEventListener('homebase-calendar-identity',()=>{schoolSearchAt=0;schoolSearchKey='';schoolEventRows=[];if(currentLocation)refreshSchoolEvents(...currentLocation);});
 window.addEventListener('load',()=>{schoolSearchAt=0;if(currentLocation)refreshSchoolEvents(...currentLocation);},{once:true});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=230',{updateViaCache:'none'}).then(r=>{r.update();navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!sessionStorage.getItem('hb-release-reload-v230')){sessionStorage.setItem('hb-release-reload-v230','1');location.reload()}})}).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';}));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=231',{updateViaCache:'none'}).then(r=>{r.update();navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!sessionStorage.getItem('hb-release-reload-v231')){sessionStorage.setItem('hb-release-reload-v231','1');location.reload()}})}).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';}));
 </script>
 <script src="homebase-live.js?v=38"></script>
 </body>

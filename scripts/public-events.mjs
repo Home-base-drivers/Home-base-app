@@ -59,7 +59,38 @@ export function structuredEvents(html) {
 
 // Soundstage publishes explicit local show times in data-start attributes.
 // Coordinates come from Visit Baltimore's venue listing, not guessed venues.
+// The Events Calendar (WordPress) REST API: /wp-json/tribe/events/v1/events.
+// UTC start/end times and the venue's own published coordinates are used.
+export function tribeEvents(body,source){
+  let data;try{data=JSON.parse(body);}catch{return [];}
+  const text=value=>String(value||'').replace(/<[^>]*>/g,' ').replace(/&#0?38;|&amp;/g,'&').replace(/&#8217;|&#0?39;/g,"'").replace(/&#8211;/g,'-').replace(/&quot;/g,'"').replace(/\s+/g,' ').trim();
+  const utc=value=>/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value||'')?value.replace(' ','T')+'Z':null;
+  return (Array.isArray(data?.events)?data.events:[]).map(e=>{
+    const venue=Array.isArray(e.venue)?null:e.venue,lat=Number(venue?.geo_lat),lon=Number(venue?.geo_lng),start=utc(e.utc_start_date);
+    if(!start||e.status&&e.status!=='publish'||e.hide_from_listings)return null;
+    const geo=venue?.geo_lat!=null&&Number.isFinite(lat)&&Number.isFinite(lon)?{latitude:lat,longitude:lon}:null;
+    return{'@type':'Event',name:text(e.title),startDate:start,endDate:utc(e.utc_end_date),url:e.url,allDay:!!e.all_day,location:{name:text(venue?.venue)||source.venue?.name||'',...(geo?{geo}:{})}};
+  }).filter(Boolean);
+}
+// Baltimore Peninsula publishes event cards (title, weekday+date, time,
+// street address) without schema.org data. Times are local wall time.
+export function peninsulaCards(html,source){
+  if(!source?.venue||!Number.isFinite(source.venue.lat)||!Number.isFinite(source.venue.lon))return [];
+  const text=value=>String(value).replace(/<!--.*?-->/g,'').replace(/<[^>]*>/g,' ').replace(/&#x27;|&#0?39;/g,"'").replace(/&amp;/g,'&').replace(/\s+/g,' ').trim();
+  const months={january:1,february:2,march:3,april:4,may:5,june:6,july:7,august:8,september:9,october:10,november:11,december:12};
+  return [...String(html).matchAll(/<a\b[^>]*EventCardWrapper[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)].map(m=>{
+    const block=m[2],title=text(block.match(/<p\b[^>]*>([\s\S]*?)<\/p>/i)?.[1]||''),items=[...block.matchAll(/<span\b[^>]*EventCardInformationItem[^>]*>([\s\S]*?)<\/span>/gi)].map(x=>text(x[1]));
+    const date=/([A-Za-z]+)\s+(\d{1,2}),\s*(\d{4})/.exec(items[0]||''),time=/(\d{1,2}):(\d{2})\s*([AP])M/i.exec(items[1]||'');
+    if(!title||!date||!time||!months[date[1].toLowerCase()])return null;
+    let hour=Number(time[1])%12;if(/p/i.test(time[3]))hour+=12;
+    const pad=n=>String(n).padStart(2,'0');
+    let url;try{url=new URL(m[1],source.url).href;}catch{url=source.url;}
+    return{'@type':'Event',name:title,startDate:`${date[3]}-${pad(months[date[1].toLowerCase()])}-${pad(date[2])}T${pad(hour)}:${time[2]}`,url,address:items[2]||'',location:{name:source.venue.name,geo:{latitude:source.venue.lat,longitude:source.venue.lon}}};
+  }).filter(Boolean);
+}
 export function publishedVenueEvents(html,source){
+  if(source.adapter==='tribe')return tribeEvents(html,source);
+  if(source.adapter==='peninsula')return peninsulaCards(html,source);
   if(source.adapter!=='soundstage')return [];
   const text=value=>String(value).replace(/<[^>]*>/g,' ').replace(/&#(?:0?38|x26);/gi,'&').replace(/&amp;/g,'&').replace(/&#(?:0?39|x27);/gi,"'").replace(/&quot;/g,'"').replace(/\s+/g,' ').trim();
   return [...String(html).matchAll(/<article\b[^>]*data-start=["'](\d{4}-\d{2}-\d{2} \d{2}:\d{2})["'][^>]*>([\s\S]*?)<\/article>/gi)].map(match=>{
@@ -93,7 +124,9 @@ export function normalizePublicEvent(event, market, source, now = Date.now()) {
   const lat = geo?.latitude == null ? known?.lat : Number(geo.latitude), lon = geo?.longitude == null ? known?.lon : Number(geo.longitude);
   if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180 || distanceKm(market.center, { lat, lon }) > market.radiusKm) return null;
   const name = String(event.name || '').trim(), eventType = [event['@type']].flat().join(' ');
-  const context = [name, venue?.name, eventType, event.description].join(' ');
+  // A sports or arena source may describe its listings only as "A vs. B";
+  // its configured classification supplies the missing category.
+  const context = [name, venue?.name, eventType, event.description, source.classification].join(' ');
   if (!name || publicData.isTicketAddon(name) || /webinar|virtual|online.only|exhibition|gallery|workshop|seminar|campus.tour|all.day.entry|standard.entry|standard.admission|standard.experience/i.test(context)) return null;
   const performers = [event.performer].flat().filter(Boolean);
   const classification = performers.map(p => p['@type']).flat().join(' ');
