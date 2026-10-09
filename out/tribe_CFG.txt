@@ -1,0 +1,1 @@
+<html><head><link rel="icon" href="data:;"><meta http-equiv="refresh" content="0;/.well-known/sgcaptcha/?r=%2Fwp-json%2Ftribe%2Fevents%2Fv1%2Fevents%3Fper_page%3D3&y=ipr:20.55.117.34:1791570655.117"></meta></head></html>
