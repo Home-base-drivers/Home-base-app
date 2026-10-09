@@ -11,9 +11,10 @@ test('source failures stay unavailable and do not produce invented events',async
 test('historical recurrence fades continuously within one hour of its neighborhood observation',()=>{
  const captured='2026-10-08T15:26:00-04:00',future=time=>new Date(`2026-10-15T${time}:00-04:00`);
  const peak=H.forecastFor('Towson',future('15:26'),true).strength;
- const half=H.forecastFor('Towson',future('15:56'),true).strength;
- assert.ok(peak>half&&half>0);
- assert.equal(H.forecastFor('Towson',future('16:26'),true).strength,0);
+ // Oct 9 extends the window to ~4:04 PM; 4:26 is past the 2-day pattern and only a faint 1-day reference.
+ const half=H.forecastFor('Towson',future('16:26'),true).strength;
+ assert.ok(peak>half&&half>0&&half<=.01);
+ assert.equal(H.forecastFor('Towson',future('16:50'),true).strength,0);
  assert.equal(H.forecastFor('Towson',future('14:26'),true).strength,0);
  assert.equal(H.forecastFor('Unrelated neighborhood',future('15:26'),true).strength,0);
  // Weekday patterns carry across weekdays (Oct 8 Thu + Oct 9 Fri), never into the weekend.

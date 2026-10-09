@@ -94,3 +94,19 @@ test('circulation analysis lines up observed peaks with nearby closing bells', (
   const [episode] = circulation(rows, { schools });
   assert.equal(episode.peak, '2:19 PM'); assert.equal(episode.fadedBy, '3:22 PM'); assert.equal(episode.nearestBells[0].offset, -16);
 });
+
+test('a calm capture between surges splits one day into separate waves', () => {
+  const at = (t, band, usd) => ({ record_type: 'uber_reference', captured_at: `2026-10-09T${t}:00-04:00`, area_observations: [{ area: 'Towson', band, shown_usd: usd, lat: 39.4015, lon: -76.60191 }] });
+  const waves = circulation([at('15:07', 'high', 5.25), at('15:13', 'high', 5.75), at('15:22', 'calm'), at('15:32', 'very_high', 6.5), at('15:57', 'elevated', 2.75)], {});
+  assert.equal(waves.length, 2);
+  assert.equal(waves[0].peak, '3:13 PM'); assert.equal(waves[0].fadedBy, '3:22 PM');
+  assert.equal(waves[1].peak, '3:32 PM'); assert.equal(waves[1].peakUsd, 6.5);
+});
+
+test('Oct 9 second wave and 4 PM corridor are on record as references', () => {
+  const rows = history.observationRows();
+  assert.ok(rows.some(r => r.id === 'uber-baltimore-20261009-1532'));
+  assert.ok(rows.some(r => r.id === 'uber-baltimore-20261009-1604' && r.area_observations.some(a => a.shown_usd === 14)));
+  // Towson now repeats on Oct 8 and Oct 9 in the 3:30–4:00 window too.
+  assert.ok(history.forecastFor('Towson', new Date('2026-10-15T15:45:00-04:00'), true).distinctDates >= 2);
+});

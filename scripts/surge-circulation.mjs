@@ -37,20 +37,29 @@ export function circulation(rows, context = {}) {
   }
   const episodes = [];
   for (const g of groups.values()) {
-    const hot = g.points.filter(p => p.value > 0);
-    if (!hot.length) continue;
-    const peak = hot.reduce((a, b) => (b.usd ?? b.value) > (a.usd ?? a.value) ? b : a);
-    const onset = hot[0], lastHot = hot.at(-1), fade = g.points.find(p => p.value === 0 && p.t > lastHot.t) || null;
-    const peakMinute = localMinutes(peak.t);
-    const bells = (context.schools || []).filter(s => Number.isFinite(s.lat) && km(g, s) <= 2.5)
-      .flatMap(s => Object.values(s.levels || {}).map(w => ({ name: s.name, close: w.close, offset: peakMinute - hhmm(w.close) })))
-      .filter(b => b.offset != null && b.offset >= -45 && b.offset <= 90).sort((a, b) => Math.abs(a.offset) - Math.abs(b.offset));
-    const sites = (context.sites || []).filter(s => s.status !== 'closed' && Number.isFinite(s.lat) && km(g, s) <= (s.kind === 'fulfillment_center' ? 5 : 3)).map(s => s.name);
-    episodes.push({
-      area: g.area, date: g.date, onset: localClock(onset.t), peak: localClock(peak.t), peakUsd: peak.usd, lastSeen: localClock(lastHot.t),
-      fadedBy: fade ? localClock(fade.t) : null, minutesOnsetToPeak: Math.round((peak.t - onset.t) / MIN), minutesPeakToFade: fade ? Math.round((fade.t - peak.t) / MIN) : null,
-      nearestBells: [...new Map(bells.map(b => [b.name, b])).values()].slice(0, 4), nearbySites: sites
-    });
+    // Split a day into separate waves: a calm capture or a gap over 40 minutes ends a wave.
+    const waves = []; let wave = null, last = null;
+    for (const p of g.points) {
+      if (p.value > 0) {
+        if (!wave || (last && p.t - last.t > 40 * MIN)) { wave = { points: [], fade: null }; waves.push(wave); }
+        wave.points.push(p); last = p;
+      } else if (wave) { if (!wave.fade) wave.fade = p; wave = null; }
+    }
+    for (const w of waves) {
+      const hot = w.points;
+      const peak = hot.reduce((a, b) => (b.usd ?? b.value) > (a.usd ?? a.value) ? b : a);
+      const onset = hot[0], lastHot = hot.at(-1), fade = w.fade;
+      const peakMinute = localMinutes(peak.t);
+      const bells = (context.schools || []).filter(s => Number.isFinite(s.lat) && km(g, s) <= 2.5)
+        .flatMap(s => Object.values(s.levels || {}).map(x => ({ name: s.name, close: x.close, offset: peakMinute - hhmm(x.close) })))
+        .filter(b => b.offset != null && b.offset >= -45 && b.offset <= 90).sort((a, b) => Math.abs(a.offset) - Math.abs(b.offset));
+      const sites = [...new Set((context.sites || []).filter(s => s.status !== 'closed' && Number.isFinite(s.lat) && km(g, s) <= (s.kind === 'fulfillment_center' ? 5 : 3)).map(s => s.name))];
+      episodes.push({
+        area: g.area, date: g.date, onset: localClock(onset.t), peak: localClock(peak.t), peakUsd: peak.usd, lastSeen: localClock(lastHot.t),
+        fadedBy: fade ? localClock(fade.t) : null, minutesOnsetToPeak: Math.round((peak.t - onset.t) / MIN), minutesPeakToFade: fade ? Math.round((fade.t - peak.t) / MIN) : null,
+        nearestBells: [...new Map(bells.map(b => [b.name, b])).values()].slice(0, 4), nearbySites: sites
+      });
+    }
   }
   return episodes.sort((a, b) => a.date.localeCompare(b.date) || hhmm24(a.peak) - hhmm24(b.peak));
 }
