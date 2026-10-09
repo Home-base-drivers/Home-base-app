@@ -1,0 +1,50 @@
+bcps kenwood | 200 | text/html; charset=utf-8 | 167442 | ld=0 | events=0 |  | Home - Kenwood High | 1154ms
+bcps schools list | 200 | text/html; charset=utf-8 | 252068 | ld=0 | events=0 |  | Schools - Baltimore County Public Schools | 2328ms
+bcps senecaes | 200 | text/html; charset=utf-8 | 149540 | ld=0 | events=0 |  | Home - Seneca Elementary School | 193ms
+bcpss 233 | 200 | text/html;charset=utf-8 | 1611998 | ld=0 | events=0 |  | Roland Park Elementary&#x2F;Middle School | Baltimore City Public Schools | 337ms
+bcpss 403 | 200 | text/html;charset=utf-8 | 1612660 | ld=0 | events=0 |  | Baltimore Polytechnic Institute | Baltimore City Public Schools | 288ms
+bcpss 410 | 200 | text/html;charset=utf-8 | 1613668 | ld=0 | events=0 |  | Mergenthaler Vocational-Technical High School | Baltimore City Public Schools | 218ms
+bcpss 51 | 200 | text/html;charset=utf-8 | 1612283 | ld=0 | events=0 |  | Waverly Elementary&#x2F;Middle School | Baltimore City Public Schools | 476ms
+bcpss directory | 404 | text/html;charset=utf-8 | 1538569 | ld=0 | events=0 |  | Page Not Found | Baltimore City Public Schools | 296ms
+bcpss find | 404 | text/html;charset=utf-8 | 1538566 | ld=0 | events=0 |  | Page Not Found | Baltimore City Public Schools | 419ms
+bcpss root | 200 | text/html;charset=utf-8 | 1558748 | ld=0 | events=0 |  | Home | Baltimore City Public Schools | 176ms
+bcpss schools | 200 | text/html;charset=utf-8 | 1650165 | ld=0 | events=0 | redirect=https://www.baltimorecityschools.org/page/schools | Schools | Baltimore City Public Schools | 394ms
+dc anthem | 200 | text/html; charset=UTF-8 | 251963 | ld=1 | events=0 |  | Calendar - The Anthem | 412ms
+dc audi field | 200 | text/html; charset=UTF-8 | 118801 | ld=2 | events=6 | redirect=https://audifield.com/events/ | Events from October 14 &#8211; November 21 &#8211; Audi Field | 366ms
+dc capital one arena | 200 | text/html; charset=UTF-8 | 272412 | ld=2 | events=4 |  | Events | Capital One Arena | 302ms
+dc ent cal | 200 | text/html; charset=utf-8 | 160390 | ld=1 | events=0 | redirect=https://washington.org/find-dc-listings/events | Washington, DC Events | Washington DC | DC Events Calendar | 159ms
+dc nationals park | 200 | text/html; charset=utf-8 | 746438 | ld=0 | events=0 |  | Nationals Park Events | Washington Nationals | 23ms
+dc northwest stadium | 404 | text/html | 297447 | ld=0 | events=0 |  | Official Site of the Washington Commanders | 237ms
+martin state | ERR | TypeError: UNABLE_TO_VERIFY_LEAF_SIGNATURE
+overpass coffee | 500 | text/html; charset=iso-8859-1 | 646 | ld=0 | events=0 |  | 500 Internal Server Error | 1157ms
+overpass de | 200 | application/json | 1236 | ld=0 | events=0 |  |  | 5550ms
+overpass kumi | 200 | application/json | 1236 | ld=0 | events=0 |  |  | 1501ms
+s Coppin | 200 | text/html; charset=utf-8 | 106445 | ld=0 | events=0 |  | Events | Coppin State University | 261ms
+s Dulaney | 200 | text/html; charset=utf-8 | 131222 | ld=0 | events=0 |  | Calendar - Dulaney High | 805ms
+s JHU hub events | 403 | text/html; charset=UTF-8 | 5484 | ld=0 | events=0 |  | Attention Required! | Cloudflare | 286ms
+s JHU localist api | 404 | text/html; charset=UTF-8 | 21666 | ld=0 | events=0 |  | Page not found | Johns Hopkins Events | 420ms
+s Loyola | 200 | text/html; charset=UTF-8 | 33324 | ld=0 | events=0 |  | Events Calendar | Loyola University Maryland | 263ms
+s MICA | 200 | text/html;charset=UTF-8 | 67812 | ld=0 | events=0 | redirect=https://www.mica.edu/events-and-exhibitions/ | Events at MICA | MICA | 548ms
+s NDMU | 200 | text/html; charset=UTF-8 | 357908 | ld=1 | events=0 | redirect=https://ndm.edu/events/ | Events from May 27 &#8211; August 6 &#8211; Notre Dame of Maryland University | 882ms
+s Towson HS | 200 | text/html; charset=utf-8 | 275806 | ld=0 | events=0 |  | Calendar - Towson High | 847ms
+s UBalt | 404 |  | 0 | ld=0 | events=0 |  |  | 292ms
+s UMBC | 200 | text/html; charset=utf-8 | 162570 | ld=0 | events=0 | redirect=https://my.umbc.edu/events | Events - myUMBC | 1802ms
+seatgeek bmore | 403 | text/html;charset=utf-8 | 780 | ld=0 | events=0 |  | seatgeek.com | 115ms
+tradepoint | 200 | text/html; charset=UTF-8 | 86960 | ld=1 | events=0 |  | Tradepoint Atlantic Industry in Motion East Coast Port and Logistics Center | 325ms
+v BCC | 200 | text/html; charset=utf-8 | 167381 | ld=0 | events=0 |  | Pages | 538ms
+v BCRP events | 200 | text/html; charset=UTF-8 | 175725 | ld=0 | events=0 |  | Events | Baltimore City | 265ms
+v BCRP sports | 200 | text/html;charset=utf-8 | 90129 | ld=0 | events=0 |  | \r\n    Game Schedules | Baltimore City Recreation &amp; Parks\r\n | 252ms
+v BaltCo rec | 200 | text/html; charset=UTF-8 | 51423 | ld=0 | events=0 |  | Catalog - Baltimore County, MD | 386ms
+v Baltimore Peninsula | 200 | text/html; charset=utf-8 | 100212 | ld=0 | events=0 |  | What&#x27;s Happening | 222ms
+v CFG | 200 | text/html; charset=UTF-8 | 485671 | ld=2 | events=9 |  | Events from October 15 &#8211; November 27 &#8211; CFG Bank Arena &#8211; Baltimore | 3805ms
+v Lake Roland | 200 | text/html; charset=UTF-8 | 192413 | ld=3 | events=12 |  | Events from October 21 &#8211; August 18, 2027 &#8211; Lake Roland Nature Council | 1441ms
+v MSA | 200 | text/html; charset=utf-8 | 59798 | ld=0 | events=0 |  | Events | Maryland Stadium Authority | 422ms
+v MandT | 200 | text/html; charset=UTF-8 | 56630 | ld=3 | events=6 |  | Events | M&T Bank Stadium | 278ms
+v Nevermore AXS | 403 | text/html; charset=UTF-8 | 152546 | ld=0 | events=0 |  | AXS Access Info | 134ms
+v Orioles | 200 | text/html; charset=utf-8 | 605008 | ld=0 | events=0 |  | Baltimore Orioles Schedule | Baltimore Orioles | 277ms
+v Ottobar AXS | 403 | text/html; charset=UTF-8 | 152525 | ld=0 | events=0 |  | AXS Access Info | 135ms
+v Pier Six | 200 | text/html; charset=UTF-8 | 89811 | ld=0 | events=0 |  | Events &#8211; Pier Six Pavilion | 336ms
+v Power Plant Live | 200 | text/html; charset=utf-8 | 378333 | ld=3 | events=0 |  | Events &amp; Weekly Specials | 313ms
+v State Fair | 200 | text/html; charset=UTF-8 | 206775 | ld=1 | events=0 |  | Events | Maryland State Fair | 238ms
+v Ticketmaster discover | 403 | text/html; charset=UTF-8 | 5980 | ld=0 | events=0 |  | Let's Get Your Identity Verified | 230ms
+v Visit Baltimore | 200 | text/html; charset=UTF-8 | 317133 | ld=5 | events=0 |  | Baltimore Events &amp; Things to Do | Visit Baltimore | 288ms
