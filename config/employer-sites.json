@@ -14,6 +14,18 @@
    "coordinateSource": "https://en.wikipedia.org/wiki/Tradepoint_Atlantic"
   },
   {
+   "id": "amazon-broening-hwy",
+   "name": "Amazon fulfillment center (Broening Hwy)",
+   "kind": "fulfillment_center",
+   "status": "open",
+   "address": "2010 Broening Hwy, Baltimore, MD 21224",
+   "lat": 39.268968303069,
+   "lon": -76.54321874842,
+   "coordinateSource": "U.S. Census Bureau geocoder",
+   "sourceUrl": "https://www.baltimoremagazine.com/2013/10/23/amazon-to-open-massive-fulfillment-center-in-baltimore",
+   "note": "Former GM site near Broening Hwy, about 1 million sq ft and 1,000+ jobs at opening; street address as commonly listed, current headcount not published."
+  },
+  {
    "id": "amazon-van-deman",
    "name": "Amazon delivery station (Van Deman St)",
    "kind": "delivery_station",
@@ -28,12 +40,14 @@
    "id": "amazon-preston-gateway",
    "name": "Amazon delivery station (Preston Gateway, Hanover)",
    "kind": "delivery_station",
-   "status": "open",
+   "status": "unverified",
    "address": "7226 Preston Gateway Dr, Hanover, MD 21076",
    "lat": 39.18301241912,
    "lon": -76.713398552231,
    "sourceUrl": "https://press.aboutamazon.com/news-releases/news-release-details/amazon-opens-two-new-central-maryland-delivery-stations",
-   "coordinateSource": "U.S. Census Bureau geocoder"
+   "coordinateSource": "U.S. Census Bureau geocoder",
+   "statusNote": "Bisnow (Aug 2022) reported an Amazon-owned Hanover delivery station closing Oct 25, 2022 without naming the address; this site may be that one.",
+   "statusSource": "https://www.bisnow.com/news/baltimore/industrial/amazon-to-lay-off-353-workers-shutter-2-baltimore-facilities-114607"
   },
   {
    "id": "amazon-kelso-closed",
