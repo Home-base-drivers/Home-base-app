@@ -5,6 +5,10 @@ const REPOSITORY = 'Home-base-drivers/Home-base-app';
 const ACTIVE = ['queued', 'in_progress', 'waiting', 'pending', 'requested'];
 const SHA = /^[a-f0-9]{40}$/;
 const ZERO = '0'.repeat(40);
+// The live data refresh only replaces the machine-owned `signals` branch. It
+// never changes main or Pages, so it cannot overwrite an owner's update.
+const DATA_ONLY = /(^|\/)\.github\/workflows\/live-signals\.yml(@.*)?$/;
+export const blockingRuns = runs => runs.filter(run => !DATA_ONLY.test(run?.path || ''));
 
 export async function checkUpdateReady(expectedHead, request = fetch) {
   if (!SHA.test(expectedHead || '') || expectedHead === ZERO) throw Error('Supply the fetched main SHA with --expected-head.');
@@ -24,8 +28,9 @@ export async function checkUpdateReady(expectedHead, request = fetch) {
     const responses = await Promise.all(ACTIVE.map(status => get(`actions/runs?status=${status}&per_page=100`)));
     for (const response of responses) {
       if (!Number.isInteger(response.total_count) || !Array.isArray(response.workflow_runs)) throw Error('Incomplete workflow status. Submission blocked.');
-      if (response.total_count || response.workflow_runs.length) {
-        const run = response.workflow_runs[0];
+      const blocking = blockingRuns(response.workflow_runs);
+      if (response.total_count > response.workflow_runs.length || blocking.length) {
+        const run = blocking[0] || response.workflow_runs[0];
         throw Error(`Update processing: ${run?.name || 'workflow'} (${run?.status || 'pending'})${run?.actor?.login ? ' by ' + run.actor.login : ''}. Wait; do not cancel it.${run?.html_url ? ' ' + run.html_url : ''}`);
       }
     }

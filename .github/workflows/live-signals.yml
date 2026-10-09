@@ -1,0 +1,75 @@
+name: Refresh live demand signals
+
+# Data-only refresh. It never changes main or the deployed app code: each run
+# rebuilds provider-signals.json from public sources and connected provider
+# feeds, then replaces the single commit on the machine-owned `signals` branch.
+# The app reads that file directly, so drivers see ~10-minute-old data instead
+# of waiting for the hourly Pages release.
+on:
+  schedule:
+    - cron: '4-59/10 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Never overlap two refreshes; a newer scheduled run waits for the current one.
+concurrency:
+  group: live-signals
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - name: Check out current main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install
+        run: npm ci --ignore-scripts
+      - name: Refresh public and provider signals
+        run: node scripts/refresh-provider-signals.mjs
+        env:
+          TICKETMASTER_API_KEY: ${{ secrets.TICKETMASTER_API_KEY }}
+          UBER_ACCESS_TOKEN: ${{ secrets.UBER_ACCESS_TOKEN }}
+          UBER_CLIENT_ID: ${{ secrets.UBER_CLIENT_ID }}
+          UBER_CLIENT_SECRET: ${{ secrets.UBER_CLIENT_SECRET }}
+          UBER_ESTIMATES_SCOPE: ${{ vars.UBER_ESTIMATES_SCOPE }}
+          BOOKING_API_KEY: ${{ secrets.BOOKING_API_KEY }}
+          BOOKING_AFFILIATE_ID: ${{ secrets.BOOKING_AFFILIATE_ID }}
+          FLIGHTAWARE_API_KEY: ${{ secrets.FLIGHTAWARE_API_KEY }}
+      - name: Validate snapshot before publishing
+        run: node scripts/validate-signals.mjs dist/provider-signals.json
+        env:
+          TICKETMASTER_API_KEY: ${{ secrets.TICKETMASTER_API_KEY }}
+          UBER_ACCESS_TOKEN: ${{ secrets.UBER_ACCESS_TOKEN }}
+          UBER_CLIENT_ID: ${{ secrets.UBER_CLIENT_ID }}
+          UBER_CLIENT_SECRET: ${{ secrets.UBER_CLIENT_SECRET }}
+          BOOKING_API_KEY: ${{ secrets.BOOKING_API_KEY }}
+          BOOKING_AFFILIATE_ID: ${{ secrets.BOOKING_AFFILIATE_ID }}
+          FLIGHTAWARE_API_KEY: ${{ secrets.FLIGHTAWARE_API_KEY }}
+      - name: Publish to the signals branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -eu
+          out="$RUNNER_TEMP/signals"
+          mkdir -p "$out"
+          cp dist/provider-signals.json "$out/"
+          printf '%s\n' 'Machine-owned live data branch. Written by .github/workflows/live-signals.yml; do not edit by hand.' > "$out/README.md"
+          cd "$out"
+          git init -q -b signals
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add provider-signals.json README.md
+          git commit -q -m "data: live demand signals $(date -u +%Y-%m-%dT%H:%MZ)"
+          # A single replaced commit keeps the data branch small; it never touches main.
+          git push -q --force "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/signals

@@ -1,6 +1,18 @@
 /* Public calendars age separately from short-lived pricing proxies. */
 (function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.HomeBasePublicData=api;})(typeof globalThis!=='undefined'?globalThis:this,function(){
   const HOUR=3600000;
+  // The data-only refresh workflow publishes here about every ten minutes;
+  // the copy bundled with each release remains the offline fallback.
+  const LIVE_SIGNALS_URL='https://raw.githubusercontent.com/Home-base-drivers/Home-base-app/signals/provider-signals.json';
+  function snapshotTime(payload,now=Date.now()){const t=Date.parse(payload&&payload.generatedAt||'');return payload&&Array.isArray(payload.markets)&&Number.isFinite(t)&&t<=now+10*60000?t:NaN;}
+  function newestSnapshot(payloads,now=Date.now()){let best=null,bestTime=-Infinity;for(const payload of payloads||[]){const t=snapshotTime(payload,now);if(Number.isFinite(t)&&t>bestTime){best=payload;bestTime=t;}}return best;}
+  async function loadSnapshot(fetchJson,now=Date.now()){
+    // One-minute buckets let the CDN absorb repeated loads without serving an old file for long.
+    const results=await Promise.allSettled([fetchJson(LIVE_SIGNALS_URL+'?t='+Math.floor(now/60000)),fetchJson('./provider-signals.json?ts='+now)]);
+    const best=newestSnapshot(results.filter(r=>r.status==='fulfilled').map(r=>r.value),now);
+    if(!best)throw Error('Demand snapshot unavailable');
+    return best;
+  }
   function isTicketAddon(name){return /\b(?:add[ -]?ons?|parking|premium seating|pinstripe pass|not a concert ticket|vip (?:upgrade|package)|meet\s*(?:&|and)\s*greet)\b/i.test(String(name||''));}
   function eventIdentity(event){
     const token=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]/g,''),start=new Date(event.eventStart).getTime(),name=String(event.name||'').split(' · ')[0];
@@ -16,8 +28,11 @@
   function calendarFresh(feed,generatedAt,now){const fetched=Date.parse(feed?.fetchedAt||generatedAt||'');return Number.isFinite(fetched)&&now-fetched<=24*HOUR&&now-fetched>=-5*60000;}
   function eventsForLocation(payload,lat,lon,now=Date.now()){
     const rows=[],seen=new Set();
-    for(const market of matchingMarkets(payload,lat,lon))for(const feed of [market.ticketmaster,market.publicRecords]){
+    for(const market of matchingMarkets(payload,lat,lon))for(const feed of [market.ticketmaster,market.publicRecords,market.publicSports]){
       if(!feed||!['active','partial','stale'].includes(feed.calendarStatus||feed.status)||!calendarFresh(feed,payload.generatedAt,now))continue;
+      // Scoreboard state is only current for a short time; observed ends persist in the rows themselves.
+      const scoreboard=feed===market.publicSports;
+      if(scoreboard&&now-Date.parse(feed.fetchedAt||'')>45*60000)continue;
       for(const e of feed.events||[]){
         const start=Date.parse(e.eventStart),end=Date.parse(e.eventEnd||'');
         if(isTicketAddon(e.name)||!point(e)||!Number.isFinite(start)||!/^\d{4}-\d\d-\d\dT\d\d:\d\d/.test(e.eventStart)||start>now+12*HOUR||(Number.isFinite(end)&&end>start?end<now-90*60000:start<now-6*HOUR)||distance([lat,lon],[Number(e.lat),Number(e.lon)])>65)continue;
@@ -47,5 +62,10 @@
     const dates=usable.map(f=>Date.parse(f.fetchedAt||payload.generatedAt)).filter(Number.isFinite);
     return{status:!markets.length?'unsupported':!usable.length?'unavailable':usable.some(f=>(f.calendarStatus||f.status)==='stale')?'stale':usable.some(f=>(f.calendarStatus||f.status)==='partial'||f.calendarTruncated||f.truncated)?'partial':'active',fetchedAt:dates.length?new Date(Math.min(...dates)).toISOString():null,sourceCount:sources.filter(s=>s.pages>0).length,failedSources:sources.filter(s=>s.status==='unavailable').length,ticketmasterConfigured:markets.some(m=>m.ticketmaster?.status&&!['not_configured','not_supported'].includes(m.ticketmaster.status))};
   }
-  return{matchingMarkets,eventsForLocation,placesForLocation,calendarCoverage,isTicketAddon,eventIdentity};
+  function alertsForLocation(payload,lat,lon,now=Date.now()){
+    const rows=new Map();
+    for(const market of matchingMarkets(payload,lat,lon)){const feed=market.weatherAlerts;if(!feed||!['active','partial','stale'].includes(feed.status)||now-Date.parse(feed.fetchedAt||'')>45*60000)continue;for(const a of feed.alerts||[])if(a&&a.id&&Date.parse(a.ends)>now)rows.set(a.id,a);}
+    return [...rows.values()];
+  }
+  return{LIVE_SIGNALS_URL,newestSnapshot,loadSnapshot,alertsForLocation,matchingMarkets,eventsForLocation,placesForLocation,calendarCoverage,isTicketAddon,eventIdentity};
 });

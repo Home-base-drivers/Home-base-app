@@ -2,6 +2,8 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { publicRecords } from './public-records.mjs';
 import { publicPlaces } from './public-places.mjs';
+import { publicSportsProvider } from './public-sports.mjs';
+import { publicAlertsProvider } from './public-alerts.mjs';
 import publicData from '../dist/homebase-public-data.js';
 
 const ROOT = new URL('../', import.meta.url);
@@ -9,6 +11,7 @@ const CONFIG_URL = new URL('config/provider-markets.json', ROOT);
 const OUTPUT_URL = new URL('dist/provider-signals.json', ROOT);
 const NOW = new Date();
 const TIMEOUT_MS = 12_000;
+export const LIVE_SIGNALS_URL = publicData.LIVE_SIGNALS_URL;
 
 function boundedFetch(url, options = {}) {
   const controller = new AbortController();
@@ -292,14 +295,21 @@ async function main() {
   try { previous = JSON.parse(await readFile(OUTPUT_URL, 'utf8')); } catch { /* first run */ }
   // Scheduled Pages builds must retain the last deployed snapshot, rather than
   // only the snapshot committed with the release, when a public source fails.
-  try {
-    const deployed = await readJson(await boundedFetch('https://home-base-drivers.github.io/Home-base-app/provider-signals.json', { headers: { Accept: 'application/json' } }));
-    if (Date.parse(deployed.generatedAt) > Date.parse(previous.generatedAt || '1970-01-01')) previous = deployed;
-  } catch { /* Local/committed verified data is still available offline. */ }
+  // The live data branch is usually newest; Pages holds the hourly release copy.
+  for (const url of [LIVE_SIGNALS_URL, 'https://home-base-drivers.github.io/Home-base-app/provider-signals.json']) {
+    try {
+      const deployed = await readJson(await boundedFetch(url, { headers: { Accept: 'application/json' } }));
+      if (Array.isArray(deployed?.markets) && Date.parse(deployed.generatedAt) > Date.parse(previous.generatedAt || '1970-01-01')) previous = deployed;
+    } catch { /* Local/committed verified data is still available offline. */ }
+  }
   const markets = await Promise.all(config.markets.map(async market => {
     const old = previous.markets?.find((entry) => entry.id === market.id);
     const [uber, ticketmaster, booking, flightaware, records, places] = await Promise.all([
       uberProvider(market), ticketmasterProvider(market), bookingProvider(market), flightAwareProvider(market), publicRecords(market, NOW.getTime()), publicPlaces(market, NOW.getTime(), old?.publicPlaces)
+    ]);
+    const [sportsFeed, alerts] = await Promise.all([
+      publicSportsProvider(market, old?.publicSports, NOW.getTime(), fetch, places.places || []),
+      publicAlertsProvider(market, NOW.getTime())
     ]);
     const calendar = retainRecent(old, { ...records, status: records.calendarStatus }, 'publicRecords', 24 * 60 * 60_000);
     return {
@@ -309,20 +319,22 @@ async function main() {
       booking: retainRecent(old, booking, 'booking'),
       flightaware: retainRecent(old, flightaware, 'flightaware')
       ,publicRecords: calendar.status === 'stale' ? { ...calendar, calendarStatus: 'stale', weather: records.weather, weatherStatus: records.weatherStatus } : records,
-      publicPlaces: places
+      publicPlaces: places,
+      publicSports: sportsFeed,
+      weatherAlerts: retainRecent(old, alerts, 'weatherAlerts', 30 * 60_000)
     };
   }));
   const output = {
     schemaVersion: 4,
     generatedAt: NOW.toISOString(),
-    refreshTargetSeconds: 1800,
+    refreshTargetSeconds: 600,
     calendarMaxAgeSeconds: 86400,
     expiresAt: new Date(NOW.getTime() + 25 * 60_000).toISOString(),
     markets
   };
   await writeFile(OUTPUT_URL, `${JSON.stringify(output)}\n`);
   for (const market of markets) {
-    console.log(`${market.name}: Uber ${market.uber.status}, Ticketmaster ${market.ticketmaster.status} (${market.ticketmaster.events.length}), public calendar ${market.publicRecords.calendarStatus} (${market.publicRecords.events.length}), places ${market.publicPlaces.status} (${market.publicPlaces.places.length}), Booking.com ${market.booking.status}, FlightAware ${market.flightaware.status}`);
+    console.log(`${market.name}: Uber ${market.uber.status}, Ticketmaster ${market.ticketmaster.status} (${market.ticketmaster.events.length}), public calendar ${market.publicRecords.calendarStatus} (${market.publicRecords.events.length}), places ${market.publicPlaces.status} (${market.publicPlaces.places.length}), sports ${market.publicSports.status} (${market.publicSports.events.length}), weather alerts ${market.weatherAlerts.status} (${market.weatherAlerts.alerts.length}), Booking.com ${market.booking.status}, FlightAware ${market.flightaware.status}`);
   }
 }
 

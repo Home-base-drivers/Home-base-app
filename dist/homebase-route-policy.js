@@ -18,6 +18,10 @@
     if(time>=start-60*60000&&time<start)return 'arrival';
     if(time===start)return 'start';
     if(Number.isFinite(end)&&end>start&&time>=end&&time<end+60*60000)return 'exit';
+    // A scoreboard observed in its final period is a live, not modeled, cue.
+    // It applies only near the observation; later hours cannot reuse it.
+    const observed=stamp(tags.observedAt);
+    if(tags.gameClosing&&!Number.isFinite(end)&&Number.isFinite(observed)&&time>=observed-5*60000&&time<=observed+20*60000)return 'closing';
     // Unknown/estimated ends cannot invent a departure window.
     return null;
   }

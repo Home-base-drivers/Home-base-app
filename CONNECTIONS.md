@@ -26,7 +26,7 @@ For a direct Uber integration, the [Driver API](https://developer.uber.com/docs/
 
 ## Heat-map provider feeds already wired in the repository
 
-These are separate from a driver's private earnings sync. The provider refresh runs inside [Deploy Home Base to GitHub Pages](.github/workflows/pages.yml), on pushes to `main`, a five-minute schedule target, and manual dispatch. GitHub scheduling can delay runs. Each deployment validates the app before fetching providers.
+These are separate from a driver's private earnings sync. The provider refresh runs in [Refresh live demand signals](.github/workflows/live-signals.yml) about every 10 minutes (published to the `signals` branch the app reads), and inside [Deploy Home Base to GitHub Pages](.github/workflows/pages.yml) on pushes to `main`, an hourly schedule, and manual dispatch. GitHub scheduling can delay runs. Each Pages deployment validates the app before fetching providers; each live refresh validates the snapshot and checks it for leaked credentials before publishing.
 
 | Purpose | Provider account | Existing GitHub setting |
 | --- | --- | --- |

@@ -47,6 +47,9 @@ jobs:
           node --check dist/homebase-growth.js
           node --check dist/homebase-planner.js
           node --check dist/homebase-public-data.js
+          node --check dist/homebase-sports.js
+          node --check dist/homebase-weather.js
+          node --check scripts/validate-signals.mjs
           node --check dist/homebase-route-policy.js
           node --check dist/homebase-earnings.js
           node --check dist/homebase-live.js

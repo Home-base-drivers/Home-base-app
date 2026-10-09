@@ -37,8 +37,31 @@ https://home-base-driver-live.chrisbrouard7.chatgpt.site
 
 ## Provider data feeds
 
-`.github/workflows/provider-signals.yml` targets a five-minute refresh for the
-Baltimore provider signals and deploys only sanitized public results.
+`.github/workflows/live-signals.yml` refreshes the demand snapshot about every
+10 minutes and publishes only sanitized results to the machine-owned `signals`
+branch. The app loads that file directly (falling back to the copy bundled with
+each release), so drivers are not limited by the hourly Pages release in
+`.github/workflows/pages.yml`. The live refresh never changes `main` or the
+deployed app, and the update guard does not wait on it.
+
+Free public sources refreshed for every market, with no key required:
+
+- **Public scoreboards** (ESPN for NFL, NBA, WNBA, NHL, MLS, NWSL and NCAA
+  football/basketball; MLB Stats API). A game's departure window opens only
+  after a scoreboard is observed live and then final; the end time is the
+  midpoint of those two observations and both bounds are stored. A game in its
+  final period is flagged as a closing-stretch cue for the current hour only.
+- **National Weather Service active alerts** for each US market. Winter, flood
+  and storm advisories raise the modeled weather score; life-safety warnings
+  (tornado, flash flood, blizzard, ice storm) are shown to drivers but never
+  boost a destination.
+- Published venue, campus and school calendars, OpenStreetMap places and the
+  NWS hourly forecast, as before.
+
+On the device, the app also reads Open-Meteo hourly precipitation amount,
+snowfall and temperature plus NWS alerts for the driver's exact location, and
+re-polls only the scoreboards with a nearby game that is live or starting
+within the hour on its five-minute cycle.
 Public sources and the Ticketmaster, Uber, and FlightAware connectors are core data inputs and stay enabled in the pipeline; provider feeds return unavailable status until their owner-authorized credentials are saved in GitHub Actions secrets.
 GitHub can delay scheduled workflows during high load, so the app displays the
 source timestamp, checks for a new deployed snapshot every two minutes, treats
@@ -54,7 +77,7 @@ feed the rideshare-demand score.
 
 The FlightAware workflow publishes only hourly aggregate arrival/departure counts
 and source freshness; it does not publish flight identifiers or tracks. Each
-five-minute provider refresh makes one scheduled-arrivals query and one
+provider refresh makes one scheduled-arrivals query and one
 scheduled-departures query for KBWI when the FlightAware secret is configured.
 The FlightAware score is an airport activity proxy, not passenger counts or
 confirmed rideshare requests.

@@ -37,6 +37,28 @@ var require_homebase_public_data = __commonJS({
       else root.HomeBasePublicData = api;
     })(typeof globalThis !== "undefined" ? globalThis : exports, function() {
       const HOUR2 = 36e5;
+      const LIVE_SIGNALS_URL = "https://raw.githubusercontent.com/Home-base-drivers/Home-base-app/signals/provider-signals.json";
+      function snapshotTime(payload, now = Date.now()) {
+        const t = Date.parse(payload && payload.generatedAt || "");
+        return payload && Array.isArray(payload.markets) && Number.isFinite(t) && t <= now + 10 * 6e4 ? t : NaN;
+      }
+      function newestSnapshot(payloads, now = Date.now()) {
+        let best = null, bestTime = -Infinity;
+        for (const payload of payloads || []) {
+          const t = snapshotTime(payload, now);
+          if (Number.isFinite(t) && t > bestTime) {
+            best = payload;
+            bestTime = t;
+          }
+        }
+        return best;
+      }
+      async function loadSnapshot(fetchJson, now = Date.now()) {
+        const results = await Promise.allSettled([fetchJson(LIVE_SIGNALS_URL + "?t=" + Math.floor(now / 6e4)), fetchJson("./provider-signals.json?ts=" + now)]);
+        const best = newestSnapshot(results.filter((r) => r.status === "fulfilled").map((r) => r.value), now);
+        if (!best) throw Error("Demand snapshot unavailable");
+        return best;
+      }
       function isTicketAddon(name) {
         return /\b(?:add[ -]?ons?|parking|premium seating|pinstripe pass|not a concert ticket|vip (?:upgrade|package)|meet\s*(?:&|and)\s*greet)\b/i.test(String(name || ""));
       }
@@ -62,8 +84,10 @@ var require_homebase_public_data = __commonJS({
       }
       function eventsForLocation(payload, lat, lon, now = Date.now()) {
         const rows = [], seen = /* @__PURE__ */ new Set();
-        for (const market of matchingMarkets(payload, lat, lon)) for (const feed of [market.ticketmaster, market.publicRecords]) {
+        for (const market of matchingMarkets(payload, lat, lon)) for (const feed of [market.ticketmaster, market.publicRecords, market.publicSports]) {
           if (!feed || !["active", "partial", "stale"].includes(feed.calendarStatus || feed.status) || !calendarFresh(feed, payload.generatedAt, now)) continue;
+          const scoreboard = feed === market.publicSports;
+          if (scoreboard && now - Date.parse(feed.fetchedAt || "") > 45 * 6e4) continue;
           for (const e of feed.events || []) {
             const start = Date.parse(e.eventStart), end = Date.parse(e.eventEnd || "");
             if (isTicketAddon(e.name) || !point(e) || !Number.isFinite(start) || !/^\d{4}-\d\d-\d\dT\d\d:\d\d/.test(e.eventStart) || start > now + 12 * HOUR2 || (Number.isFinite(end) && end > start ? end < now - 90 * 6e4 : start < now - 6 * HOUR2) || distance([lat, lon], [Number(e.lat), Number(e.lon)]) > 65) continue;
@@ -99,7 +123,16 @@ var require_homebase_public_data = __commonJS({
         const dates = usable.map((f) => Date.parse(f.fetchedAt || payload.generatedAt)).filter(Number.isFinite);
         return { status: !markets.length ? "unsupported" : !usable.length ? "unavailable" : usable.some((f) => (f.calendarStatus || f.status) === "stale") ? "stale" : usable.some((f) => (f.calendarStatus || f.status) === "partial" || f.calendarTruncated || f.truncated) ? "partial" : "active", fetchedAt: dates.length ? new Date(Math.min(...dates)).toISOString() : null, sourceCount: sources.filter((s) => s.pages > 0).length, failedSources: sources.filter((s) => s.status === "unavailable").length, ticketmasterConfigured: markets.some((m) => m.ticketmaster?.status && !["not_configured", "not_supported"].includes(m.ticketmaster.status)) };
       }
-      return { matchingMarkets, eventsForLocation, placesForLocation, calendarCoverage, isTicketAddon, eventIdentity };
+      function alertsForLocation(payload, lat, lon, now = Date.now()) {
+        const rows = /* @__PURE__ */ new Map();
+        for (const market of matchingMarkets(payload, lat, lon)) {
+          const feed = market.weatherAlerts;
+          if (!feed || !["active", "partial", "stale"].includes(feed.status) || now - Date.parse(feed.fetchedAt || "") > 45 * 6e4) continue;
+          for (const a of feed.alerts || []) if (a && a.id && Date.parse(a.ends) > now) rows.set(a.id, a);
+        }
+        return [...rows.values()];
+      }
+      return { LIVE_SIGNALS_URL, newestSnapshot, loadSnapshot, alertsForLocation, matchingMarkets, eventsForLocation, placesForLocation, calendarCoverage, isTicketAddon, eventIdentity };
     });
   }
 });
@@ -963,6 +996,69 @@ var provider_markets_default = {
           url: "https://baltimore.org/events/",
           followEvents: true,
           venues: []
+        }
+      ],
+      sportsVenues: [
+        {
+          name: "M&T Bank Stadium",
+          match: "m t bank stadium",
+          city: "Baltimore",
+          lat: 39.278,
+          lon: -76.6227
+        },
+        {
+          name: "CFG Bank Arena",
+          match: "cfg bank arena",
+          city: "Baltimore",
+          lat: 39.28861,
+          lon: -76.61889
+        },
+        {
+          name: "Oriole Park at Camden Yards",
+          match: "camden yards",
+          city: "Baltimore",
+          lat: 39.2838,
+          lon: -76.6217
+        },
+        {
+          name: "SECU Arena",
+          match: "secu arena",
+          city: "Towson",
+          lat: 39.387361,
+          lon: -76.617083,
+          sourceUrl: "https://en.wikipedia.org/wiki/SECU_Arena"
+        },
+        {
+          name: "Chesapeake Employers Insurance Arena",
+          match: "chesapeake employers insurance arena",
+          city: "Baltimore",
+          lat: 39.2523419,
+          lon: -76.707431,
+          sourceUrl: "https://en.wikipedia.org/wiki/Chesapeake_Employers_Insurance_Arena"
+        },
+        {
+          name: "Navy-Marine Corps Memorial Stadium",
+          match: "navy marine corps memorial stadium",
+          city: "Annapolis",
+          lat: 38.985,
+          lon: -76.507,
+          sourceUrl: "https://en.wikipedia.org/wiki/Navy%E2%80%93Marine_Corps_Memorial_Stadium"
+        },
+        {
+          name: "SECU Stadium",
+          match: "secu stadium",
+          city: "College Park",
+          lat: 38.99028,
+          lon: -76.94722,
+          sourceUrl: "https://en.wikipedia.org/wiki/SECU_Stadium"
+        },
+        {
+          name: "Xfinity Center",
+          match: "xfinity center",
+          city: "College Park",
+          lat: 38.99528,
+          lon: -76.94139,
+          sourceUrl: "https://en.wikipedia.org/wiki/Xfinity_Center_(College_Park,_Maryland)"
         }
       ]
     },

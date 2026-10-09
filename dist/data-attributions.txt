@@ -7,3 +7,7 @@ Event facts: published dated venue calendars and Ticketmaster public listings, w
 School event discovery: OpenStreetMap nearby institutions and their published calendar links; public Localist, iCalendar, JSON-LD and Blackbaud calendars. Baltimore City/County DigitalSports athletics calendars. Calendar coverage is partial; unknown times and unsupported recurrence are excluded from hourly demand. A dated event is context, not proof of platform surge. Mercy campus location: OpenStreetMap way 31119916.
 
 School discovery: OpenStreetMap (ODbL) through public Overpass mirrors; Wikidata (CC0) geographic institution index as a fallback. Index and calendar coverage are partial; only published public links are followed.
+
+Game state: ESPN public scoreboards and the MLB Stats API (statsapi.mlb.com). Only game status, period, start time and venue are used; scores, logos and play data are not republished. Venue coordinates for ESPN games come from the market configuration (sourced from Wikipedia coordinates) or exact OpenStreetMap names. MLB data © MLB Advanced Media; terms at http://gdx.mlb.com/components/copyright.txt. ESPN scoreboards are an unofficial public endpoint. Review both terms before commercial launch.
+
+Weather alerts and forecasts: National Weather Service (api.weather.gov), U.S. government public domain. Device forecasts: Open-Meteo (https://open-meteo.com/), CC BY 4.0.

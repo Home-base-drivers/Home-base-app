@@ -49,3 +49,12 @@ test('push validation rejects deletion and stale replacement while accepting new
   assert.doesNotThrow(() => validatePush([`HEAD ${newer} refs/heads/main ${sha}`], () => true));
   assert.doesNotThrow(() => validatePush([`HEAD ${newer} refs/heads/feature ${zero}`], () => false));
 });
+test('the data-only live signals refresh does not block owner updates, but any other run still does', async () => {
+  const dataRun = {name: 'Refresh live demand signals', path: '.github/workflows/live-signals.yml', status: 'in_progress'};
+  const idleWithData = fixture(url => url.searchParams.get('status') === 'in_progress' ? {total_count: 1, workflow_runs: [dataRun]} : null);
+  assert.equal((await checkUpdateReady(sha, idleWithData.request)).head, sha);
+  const busy = fixture(url => url.searchParams.get('status') === 'queued' ? {total_count: 2, workflow_runs: [dataRun, {name: 'Deploy Home Base to GitHub Pages', path: '.github/workflows/pages.yml', status: 'queued'}]} : null);
+  await assert.rejects(checkUpdateReady(sha, busy.request), /Deploy Home Base/);
+  const lookalike = fixture(url => url.searchParams.get('status') === 'queued' ? {total_count: 1, workflow_runs: [{name: 'x', path: '.github/workflows/live-signals.yml.bak', status: 'queued'}]} : null);
+  await assert.rejects(checkUpdateReady(sha, lookalike.request), /Update processing/);
+});

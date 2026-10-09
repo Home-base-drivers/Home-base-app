@@ -421,6 +421,69 @@
           "followEvents": true,
           "venues": []
         }
+      ],
+      "sportsVenues": [
+        {
+          "name": "M&T Bank Stadium",
+          "match": "m t bank stadium",
+          "city": "Baltimore",
+          "lat": 39.278,
+          "lon": -76.6227
+        },
+        {
+          "name": "CFG Bank Arena",
+          "match": "cfg bank arena",
+          "city": "Baltimore",
+          "lat": 39.28861,
+          "lon": -76.61889
+        },
+        {
+          "name": "Oriole Park at Camden Yards",
+          "match": "camden yards",
+          "city": "Baltimore",
+          "lat": 39.2838,
+          "lon": -76.6217
+        },
+        {
+          "name": "SECU Arena",
+          "match": "secu arena",
+          "city": "Towson",
+          "lat": 39.387361,
+          "lon": -76.617083,
+          "sourceUrl": "https://en.wikipedia.org/wiki/SECU_Arena"
+        },
+        {
+          "name": "Chesapeake Employers Insurance Arena",
+          "match": "chesapeake employers insurance arena",
+          "city": "Baltimore",
+          "lat": 39.2523419,
+          "lon": -76.707431,
+          "sourceUrl": "https://en.wikipedia.org/wiki/Chesapeake_Employers_Insurance_Arena"
+        },
+        {
+          "name": "Navy-Marine Corps Memorial Stadium",
+          "match": "navy marine corps memorial stadium",
+          "city": "Annapolis",
+          "lat": 38.985,
+          "lon": -76.507,
+          "sourceUrl": "https://en.wikipedia.org/wiki/Navy%E2%80%93Marine_Corps_Memorial_Stadium"
+        },
+        {
+          "name": "SECU Stadium",
+          "match": "secu stadium",
+          "city": "College Park",
+          "lat": 38.99028,
+          "lon": -76.94722,
+          "sourceUrl": "https://en.wikipedia.org/wiki/SECU_Stadium"
+        },
+        {
+          "name": "Xfinity Center",
+          "match": "xfinity center",
+          "city": "College Park",
+          "lat": 38.99528,
+          "lon": -76.94139,
+          "sourceUrl": "https://en.wikipedia.org/wiki/Xfinity_Center_(College_Park,_Maryland)"
+        }
       ]
     },
     {
