@@ -1,0 +1,17 @@
+name: Temporary source diagnostics
+on:
+  push:
+    branches: [claude/source-diagnostics]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: node probe.mjs
+      - uses: actions/upload-artifact@v4
+        with: { name: probe, path: out, retention-days: 1 }
