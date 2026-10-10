@@ -1,5 +1,5 @@
 {
- "purpose": "Verified large shift-change sites. Open fulfillment centers use the modeled warehouse windows (about 3 PM and 11 PM; site shift times are not published). Hospitals use an approximate 12-hour handoff window (7 AM / 7 PM; departures modeled 6:45-8:15) taken from Johns Hopkins Hospital job postings; site-specific times are not published. Office campuses, delivery stations and malls are recorded for observation analysis only; their surge timing is learned from repeated observations. Closed sites switch off any mapped warehouse within 400 m.",
+ "purpose": "Verified large shift-change sites. Open fulfillment centers use the modeled warehouse windows (about 3 PM and 11 PM; site shift times are not published). Hospitals use an approximate 12-hour handoff window (7 AM / 7 PM; departures modeled 6:45-8:15) taken from Johns Hopkins Hospital job postings; site-specific times are not published. Office campuses, industrial sites, delivery stations and malls are recorded for observation analysis only; their surge timing is learned from repeated observations. Closed sites switch off any mapped warehouse within 400 m.",
  "sites": [
   {
    "id": "amazon-tradepoint-atlantic",
@@ -347,6 +347,48 @@
    "lon": -76.6411,
    "locationPrecision": "approximate (Hunt Valley place centroid); address lookup was rate-limited",
    "employeesSource": "https://commerce.maryland.gov/documents/researchdocument/baltcountybef.pdf"
+  },
+  {
+   "id": "hospital-harbor",
+   "name": "MedStar Harbor Hospital",
+   "kind": "hospital",
+   "status": "open",
+   "address": "3001 S Hanover St, Baltimore, MD 21225",
+   "lat": 39.251884720936,
+   "lon": -76.615344771921,
+   "coordinateSource": "U.S. Census Bureau geocoder",
+   "shiftEnds": [
+    7.5,
+    19.5
+   ],
+   "shiftWeight": 4,
+   "shiftSource": "https://jobs.hopkinsmedicine.org/job/99365/patient-care-tech-i-nelson-7-nursing-rot-36-nursing-support-patient-care-us-md-baltimore-johns-hopkins-hospital/",
+   "shiftNote": "Approximate: 12-hour 7am-7pm / 7pm-7am shifts listed in Johns Hopkins Hospital postings; not published for this site."
+  },
+  {
+   "id": "uscg-yard-curtis-bay",
+   "name": "U.S. Coast Guard Yard (Curtis Bay)",
+   "kind": "industrial",
+   "status": "open",
+   "address": "2401 Hawkins Point Rd, Curtis Bay, MD",
+   "lat": 39.19972,
+   "lon": -76.56722,
+   "coordinateSource": "https://en.wikipedia.org/wiki/United_States_Coast_Guard_Yard",
+   "employees": 679,
+   "employeesSource": "https://seapowermagazine.org/retooling-the-workforce-u-s-coast-guards-oldest-command-invites-infusion-of-new-talent/",
+   "note": "Coast Guard shipbuilding and major repair yard; about 679 personnel (465 craftsmen). Shift hours are not published, so timing is learned from observations."
+  },
+  {
+   "id": "csx-curtis-bay-piers",
+   "name": "CSX Curtis Bay coal piers",
+   "kind": "industrial",
+   "status": "open",
+   "address": "Curtis Bay, Baltimore, MD",
+   "lat": 39.2229,
+   "lon": -76.588,
+   "locationPrecision": "approximate (Curtis Bay place centroid)",
+   "sourceUrl": "https://www.csx.com/index.cfm/customers/commodities/coal/terminals/curtis-bay-coal-piers-in-baltimore-md",
+   "note": "Workforce and shift hours not published; observation-only."
   }
  ]
 }
