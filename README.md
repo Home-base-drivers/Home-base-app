@@ -98,7 +98,12 @@ Route ranking uses estimated drive minutes (street, arterial and interstate
 speeds), prefers options within 30 minutes, adds a size bonus for large events
 (published attendance, professional leagues, stadiums and arenas), allows
 large events up to 90 minutes away, and ranks destinations outside Baltimore
-City/County lower.
+City/County lower. The 12-hour route chains one stop per hour, each ranked
+from the previous stop. Big events (stadium/arena scale or 10,000+ published
+attendance) carry much more weight, and the hours before one stage near its
+venue. Events outside the home region (Washington DC / Northern Virginia) join
+the route only for an NFL game or a published crowd of 30,000+, during the
+crowd's exit window, and never when a major home-region event is on that hour.
 
 On the device, the app also reads Open-Meteo hourly precipitation amount,
 snowfall and temperature plus NWS alerts for the driver's exact location, and

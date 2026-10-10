@@ -143,5 +143,29 @@
     if(/^(College football|NCAA)/.test(league))return{major:false,bonus:4};
     return{major:false,bonus:0};
   }
-  return {eventSize,eventImpact,eventPhase,liveSignal,schoolStage,schoolWeight,warehouse,workerWeight,mallClosingHours,fallbackEligible,candidatesForHour,selectRanked};
+  // Crowd tier for route planning. 'mega' = stadium-scale turnout.
+  const STADIUM=/m\s*&?\s*t bank stadium|camden yards|oriole park|nationals park|northwest stadium|fedex ?field|secu stadium|navy[- ]marine corps|capital one arena|cfg bank arena/i;
+  function crowdTier(source){
+    if(!source||!(source.eventStart||source.cat==='event'))return 'none';
+    const impact=eventImpact(source),league=source.tags?.league||source.league||'',venue=String(source.venue||'')+' '+String(source.name||'');
+    if(impact.attendance!=null)return impact.attendance>=15000?'mega':impact.attendance>=10000?'major':'local';
+    if(/^(NFL|MLB|NBA|NHL)$/.test(league)||STADIUM.test(venue))return 'mega';
+    return eventSize(source).major?'major':'local';
+  }
+  // Events outside the driver's home region (e.g. Washington DC / Northern
+  // Virginia from Baltimore) qualify only in rare, very large cases: an NFL
+  // game or a published crowd of 30,000+, during the crowd's exit window, and
+  // only when no major home-region event is available in the same hour.
+  function awayEligible(source){
+    const impact=eventImpact(source),league=source.tags?.league||source.league||'';
+    const huge=league==='NFL'||(impact.attendance!=null&&impact.attendance>=30000);
+    return huge&&['exit','closing'].includes(source.routeEventPhase);
+  }
+  function routeEvents(events,isHome){
+    if(typeof isHome!=='function')return events||[];
+    const home=(events||[]).filter(e=>isHome(e.lat,e.lon));
+    if(home.some(e=>crowdTier(e)!=='local'))return home;
+    return [...home,...(events||[]).filter(e=>!isHome(e.lat,e.lon)&&awayEligible(e))];
+  }
+  return {crowdTier,awayEligible,routeEvents,eventSize,eventImpact,eventPhase,liveSignal,schoolStage,schoolWeight,warehouse,workerWeight,mallClosingHours,fallbackEligible,candidatesForHour,selectRanked};
 });

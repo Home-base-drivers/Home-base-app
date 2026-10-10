@@ -61,3 +61,17 @@ test('a Baltimore driver sees DC market events; ordinary distances still apply t
   const rows = publicData.eventsForLocation(payload, towson[0], towson[1], now);
   assert.deepEqual(rows.map(r => r.name), ['Wizards game']);
 });
+
+test('DC and Virginia events join the route only in rare, very large cases', () => {
+  const home = market.isHomeRegionPoint, now = new Date();
+  const ravens = { name: 'Ravens game', venue: 'M&T Bank Stadium', lat: 39.278, lon: -76.6227, eventStart: now, tags: { league: 'NFL' }, routeEventPhase: 'exit' };
+  const smallLocal = { name: 'Campus talk', venue: 'Cook Library', lat: 39.394, lon: -76.607, eventStart: now, routeEventPhase: 'arrival' };
+  const nats = { name: 'Nationals game', venue: 'Nationals Park', lat: 38.873, lon: -77.0074, eventStart: now, tags: { league: 'MLB' }, routeEventPhase: 'exit' };
+  const commanders = { name: 'Commanders game', venue: 'Northwest Stadium', lat: 38.9077, lon: -76.8645, eventStart: now, tags: { league: 'NFL' }, routeEventPhase: 'exit' };
+  const bigConcert = { name: 'Stadium concert', venue: 'Northwest Stadium', lat: 38.9077, lon: -76.8645, eventStart: now, expectedAttendance: 45000, attendanceBasis: 'published_estimate', attendanceSourceUrl: 'https://example.org', routeEventPhase: 'arrival' };
+  assert.deepEqual(policy.routeEvents([smallLocal, nats], home).map(e => e.name), ['Campus talk'], 'a regular-season Nationals game is not rare enough');
+  assert.deepEqual(policy.routeEvents([smallLocal, commanders], home).map(e => e.name), ['Campus talk', 'Commanders game'], 'an NFL crowd leaving qualifies');
+  assert.deepEqual(policy.routeEvents([ravens, commanders], home).map(e => e.name), ['Ravens game'], 'a big home event always wins the hour');
+  assert.deepEqual(policy.routeEvents([bigConcert], home), [], 'away events only during the crowd exit');
+  assert.equal(policy.crowdTier(ravens), 'mega'); assert.equal(policy.crowdTier(smallLocal), 'local');
+});

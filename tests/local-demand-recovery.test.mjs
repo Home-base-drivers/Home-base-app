@@ -96,3 +96,12 @@ test('a dated event may repeat in the route for its arrival and exit windows',()
  context.buildRoute([event],41,-74,'Local',[event]);
  assert.ok(context.shiftPlan.filter(p=>p.stop?.name===event.name).length>=1);
 });
+test('hours before a big event stage the route toward its venue',()=>{
+ const {context}=routeFixture(),start=Date.now(),game={name:'Big game',cat:'event',venue:'M&T Bank Stadium',lat:41.2,lon:-74,eventStart:new Date(start+3*3600000),eventEnd:new Date(start+6*3600000),tags:{league:'NFL',providerEvent:true}};
+ const near={name:'Near venue',cat:'neighborhood',lat:41.19,lon:-74,tags:{publicVenue:true}},far={name:'Far side',cat:'neighborhood',lat:40.99,lon:-74,tags:{publicVenue:true}};
+ context.buildRoute([game,near,far],41,-74,'Local',[game,near,far]);
+ const gameHour=context.shiftPlan.findIndex(p=>p.stop?.name==='Big game'),before=context.shiftPlan[gameHour-1];
+ assert.ok(gameHour>0);assert.equal(before.stop.name,'Near venue','the hour before the game ends next to the stadium');assert.equal(before.stop.stagingFor,'Big game');
+ assert.ok(!context.shiftPlan.some(p=>p.stop?.name==='Far side'&&p.stop.stagingFor),'only nearby stops are labeled staging');
+ assert.ok(context.shiftPlan.some(p=>p.stop?.name==='Big game'));
+});

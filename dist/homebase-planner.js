@@ -95,7 +95,7 @@
     return candidates.filter(r=>Number.isFinite(r.lat)&&Number.isFinite(r.lon)&&r.score>0).map(r=>{
       const miles=origin?distance(origin,[r.lat,r.lon])*.621371*1.25:0,minutes=driveMinutes(miles),travelCost=miles*cost,timeCost=minutes/60*rate;
       const travelPenalty=Math.min(minutes,preferred)*.12+Math.max(0,minutes-preferred)*.6,outsideHome=!!(isHome&&!isHome(r.lat,r.lon));
-      return{...r,estimatedMiles:miles,estimatedMinutes:minutes,outsideHomeRegion:outsideHome,relocationCost:travelCost+timeCost,planningScore:r.score-travelPenalty-(travelCost+timeCost)*.25-(outsideHome?(r.majorEvent?3:6):0)};
+      return{...r,estimatedMiles:miles,estimatedMinutes:minutes,outsideHomeRegion:outsideHome,relocationCost:travelCost+timeCost,planningScore:r.score-travelPenalty-(travelCost+timeCost)*.25-(outsideHome?(r.majorEvent?10:6):0)};
     }).filter(r=>r.majorEvent?r.estimatedMinutes<=majorMax:r.estimatedMiles<=radius).sort((a,b)=>b.planningScore-a.planningScore||a.estimatedMinutes-b.estimatedMinutes);
   }
   function evaluateForecasts(records,snapshots){
