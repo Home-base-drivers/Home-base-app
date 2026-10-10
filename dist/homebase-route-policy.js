@@ -161,11 +161,16 @@
     const huge=league==='NFL'||(impact.attendance!=null&&impact.attendance>=30000);
     return huge&&['exit','closing'].includes(source.routeEventPhase);
   }
-  function routeEvents(events,isHome){
+  // "Far" means DC / Prince George's / Virginia scale distance (over ~42 km from
+  // the home market center). Nearby counties (Anne Arundel, Howard, Harford)
+  // stay normal destinations, ranked a little lower by the planner.
+  const HOME_CENTER=[39.2904,-76.6122];
+  function km(a,b){const r=Math.PI/180,x=(b[1]-a[1])*r*Math.cos((a[0]+b[0])*r/2),y=(b[0]-a[0])*r;return Math.sqrt(x*x+y*y)*6371;}
+  function routeEvents(events,isHome,center=HOME_CENTER){
     if(typeof isHome!=='function')return events||[];
-    const home=(events||[]).filter(e=>isHome(e.lat,e.lon));
-    if(home.some(e=>crowdTier(e)!=='local'))return home;
-    return [...home,...(events||[]).filter(e=>!isHome(e.lat,e.lon)&&awayEligible(e))];
+    const far=e=>!isHome(e.lat,e.lon)&&km(center,[e.lat,e.lon])>42,near=(events||[]).filter(e=>!far(e));
+    if(near.some(e=>isHome(e.lat,e.lon)&&crowdTier(e)!=='local'))return near;
+    return [...near,...(events||[]).filter(e=>far(e)&&awayEligible(e))];
   }
   return {crowdTier,awayEligible,routeEvents,eventSize,eventImpact,eventPhase,liveSignal,schoolStage,schoolWeight,warehouse,workerWeight,mallClosingHours,fallbackEligible,candidatesForHour,selectRanked};
 });

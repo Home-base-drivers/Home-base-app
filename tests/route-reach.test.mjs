@@ -75,3 +75,11 @@ test('DC and Virginia events join the route only in rare, very large cases', () 
   assert.deepEqual(policy.routeEvents([bigConcert], home), [], 'away events only during the crowd exit');
   assert.equal(policy.crowdTier(ravens), 'mega'); assert.equal(policy.crowdTier(smallLocal), 'local');
 });
+
+test('nearby counties are normal destinations; only DC-distance events need the rare-crowd rule', () => {
+  const now = new Date(), home = market.isHomeRegionPoint;
+  const gala = { name: 'Homecoming Gala', venue: 'Live! Casino and Hotel', lat: 39.156853, lon: -76.727784, eventStart: now, routeEventPhase: 'exit' };
+  const navy = { name: 'Navy game', venue: 'Navy-Marine Corps Memorial Stadium', lat: 38.985, lon: -76.507, eventStart: now, routeEventPhase: 'exit' };
+  const nats = { name: 'Nationals game', venue: 'Nationals Park', lat: 38.873, lon: -77.0074, eventStart: now, tags: { league: 'MLB' }, routeEventPhase: 'exit' };
+  assert.deepEqual(policy.routeEvents([gala, navy, nats], home).map(e => e.name), ['Homecoming Gala', 'Navy game']);
+});
