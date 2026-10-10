@@ -86,14 +86,22 @@
     }
     return 'modeled';
   }
+  function smoothstep(a,b,x){const t=clamp((x-a)/(b-a),0,1);return t*t*(3-2*t);}
+  // Evidence fades in with its own field strength, so the faint tail of a
+  // live surge or event never switches a whole area to full color (no hard
+  // square or oval edge where the evidence first becomes non-zero).
+  function evidenceWeights(evidence={}){const event=clamp(Number(evidence.event)||0,0,1),surge=clamp(Number(evidence.surge)||0,0,1);return {event,surge,we:smoothstep(.01,.12,event),ws:smoothstep(.02,.45,surge)};}
   function evidenceLevel(value, weightedShade, evidence = {}) {
-    const raw=compositeLevel(value,weightedShade);
+    const raw=compositeLevel(value,weightedShade),{event,surge,we,ws}=evidenceWeights(evidence);
     // Confirmed scheduled activity is demand context, not platform price surge.
-    const event=clamp(Number(evidence.event)||0,0,1),surge=clamp(Number(evidence.surge)||0,0,1);
-    return Math.max(Math.min(raw,event>0?.42:.57),Math.min(raw,.78)*event,surge>0?Math.max(.82,surge):0);
+    const base=Math.max(Math.min(raw,.57-.15*we),Math.min(raw,.78)*event);
+    const target=Math.max(base,.78+.22*surge);
+    return base+(target-base)*ws;
   }
   function evidenceOpacity(value,evidence = {}) {
-    const ceiling=evidence.surge>0?.8:evidence.event>0?.35+.45*clamp(Number(evidence.event)||0,0,1):.38;
+    const {event,we,ws}=evidenceWeights(evidence);
+    let ceiling=.38+((.35+.45*event)-.38)*we;
+    ceiling+=(.8-ceiling)*ws;
     return Math.min(compositeOpacity(value),ceiling);
   }
   // History up to 0.08 is a faint reference. Above that a neighborhood has a
@@ -104,7 +112,8 @@
     // Fresh evidence wins even when it reports no surge.
     const prior=evidence.current>.12?0:clamp(Number(history)||0,0,.45),boost=historyBoost(prior),pattern=prior>.08;
     if(value<.018)return pattern?{level:.32+(prior-.08)*1.0,opacity:Math.min(.5,.14+(prior-.08)*1.0)}:{level:.32,opacity:prior>.006?Math.min(.14,compositeOpacity(prior)):0};
-    return {level:Math.min(evidenceLevel(value,weightedShade,evidence)+boost.level,evidence.surge>0?1:evidence.event>0?.78:pattern?.7:.57),opacity:Math.min(evidenceOpacity(value,evidence)+boost.opacity,evidence.current>.12?.8:pattern?.6:.38)};
+    const {we,ws}=evidenceWeights(evidence),capBase=pattern?.7:.57,levelCap=capBase+(Math.max(capBase,.78)-capBase)*we+(1-Math.max(capBase,.78))*ws;
+    return {level:Math.min(evidenceLevel(value,weightedShade,evidence)+boost.level,levelCap),opacity:Math.min(evidenceOpacity(value,evidence)+boost.opacity,evidence.current>.12?.8:pattern?.6:.38)};
   }
   function sourceStrength(source, when, scoreSource) {
     if(source.tags?.historicalPrior)return clamp(Number(source.tags.historicalPrior),0,.45);
@@ -141,19 +150,28 @@
     // Background density cannot accumulate into a city-wide surge. Fresh
     // signals replace context inside their own geographically anchored field.
     const prior=evidence.current>.12?0:Math.max(0,Number(background)||0);
-    if(!signal&&!(evidence.event>0||evidence.surge>0)){
+    const {we,ws}=evidenceWeights(evidence),live=Math.max(we,ws);
+    const backgroundOnly=()=>{
       if(evidence.current>.12)return {level:0,opacity:0};
       // Retain local differences instead of clipping every busy POI to the
       // same yellow. Background context runs from faint green to soft yellow.
       const activity=prior/(prior+.18),shade=prior>0?clamp(backgroundShade/prior,0,1):0;
       if(history>.08)return composePixel(0,0,evidence,history);
       return {level:.14+.28*activity+.02*shade,opacity:Math.min(.34,activity*.34+clamp(history,0,.08))};
-    }
+    };
+    if(!signal&&!(we>0||ws>0))return backgroundOnly();
     const capped=Math.min(prior,.1),ratio=prior>0?capped/prior:0;
     const pixel=composePixel(signal+capped,signalShade+backgroundShade*ratio,evidence,history);
-    if(!(evidence.event>0||evidence.surge>0)){const pattern=evidence.current>.12?0:Math.max(0,history-.08);pixel.opacity=Math.min(pixel.opacity,.18+pattern*1.0);pixel.level=Math.min(pixel.level,.45+pattern*.7);}
-    return pixel;
+    if(live<1){const pattern=evidence.current>.12?0:Math.max(0,history-.08),oc=.18+pattern*1.0,lc=.45+pattern*.7;pixel.opacity=Math.min(pixel.opacity,oc+(1-oc)*live);pixel.level=Math.min(pixel.level,lc+(1-lc)*live);}
+    // The faint tail of a signal fades into the background layer instead of
+    // replacing it at a visible edge.
+    const w=Math.max(smoothstep(.004,.06,signal),live);
+    if(w>=1)return pixel;
+    const base=backgroundOnly(),opacity=base.opacity*(1-w)+pixel.opacity*w;
+    if(!opacity)return {level:pixel.level,opacity:0};
+    return {level:(base.level*base.opacity*(1-w)+pixel.level*pixel.opacity*w)/opacity,opacity};
   }
+
 
   function areaIntensity(weightedValue) {
     return 1 - Math.exp(-Math.max(0, weightedValue) * 2.05);
@@ -192,7 +210,7 @@
   function sourceFootprintKm(source) {
     const tags = source.tags || {};
     if(['school','k12'].includes(source.cat)&&!source.eventStart)return .25;
-    if (tags.providerSignal) return 1.35;
+    if (tags.providerSignal) return 1.75;
     if (tags.metroBaseline) {
       // Community anchors represent an area, not a single address. Wider,
       // category-specific footprints connect county demand without turning it
@@ -205,6 +223,19 @@
     return sourceRadiusKm(source.cat);
   }
 
+  // Geographically anchored value noise (Web Mercator world coordinates), so
+  // heat edges are free-form like the provider maps and stay put while the
+  // driver pans or zooms.
+  function hash2(ix,iy){let h=(Math.imul(ix|0,374761393)+Math.imul(iy|0,668265263))|0;h=Math.imul(h^(h>>>13),1274126177);return ((h^(h>>>16))>>>0)/4294967295;}
+  function valueNoise(x,y){const ix=Math.floor(x),iy=Math.floor(y),fx=x-ix,fy=y-iy,u=fx*fx*(3-2*fx),v=fy*fy*(3-2*fy),a=hash2(ix,iy),b=hash2(ix+1,iy),c=hash2(ix,iy+1),d=hash2(ix+1,iy+1);return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v;}
+  function fractalNoise(x,y){return .52*valueNoise(x,y)+.3*valueNoise(x*2.07+17.3,y*2.07-9.1)+.18*valueNoise(x*4.3-3.7,y*4.3+5.9);}
+  // Separable box blur used to melt overlapping layers into one surface.
+  function boxBlur(data,width,height,radius){
+    if(radius<1)return data;const tmp=new Float32Array(data.length),span=radius*2+1;
+    for(let y=0;y<height;y++){let sum=0;const row=y*width;for(let x=-radius;x<=radius;x++)sum+=data[row+clamp(x,0,width-1)];for(let x=0;x<width;x++){tmp[row+x]=sum/span;sum+=data[row+Math.min(width-1,x+radius+1)]-data[row+Math.max(0,x-radius)];}}
+    for(let x=0;x<width;x++){let sum=0;for(let y=-radius;y<=radius;y++)sum+=tmp[clamp(y,0,height-1)*width+x];for(let y=0;y<height;y++){data[y*width+x]=sum/span;sum+=tmp[Math.min(height-1,y+radius+1)*width+x]-tmp[Math.max(0,y-radius)*width+x];}}
+    return data;
+  }
   function stableAngle(source, index) {
     const value = `${source.name || ''}:${source.cat || ''}:${index}`;
     let hash = 2166136261;
@@ -463,6 +494,17 @@
         const backgroundField=new Float32Array(field.length),backgroundShade=new Float32Array(field.length);
         const eventField=new Float32Array(field.length),surgeField=new Float32Array(field.length),historyField=new Float32Array(field.length),currentField=new Float32Array(field.length);
 
+        // Free-form edges: warp each sample by geographic fractal noise and
+        // vary density inside the field, like layered provider heat maps.
+        const zoomScale=Math.pow(2,map.getZoom()),pixelOrigin=map.getPixelOrigin(),layerZero=map.containerPointToLayerPoint([0,0]);
+        const worldX=px=>(layerZero.x+pixelOrigin.x+px)/zoomScale,worldY=py=>(layerZero.y+pixelOrigin.y+py)/zoomScale;
+        const centerLat=map.getCenter().lat,pxPerKm=256*zoomScale/(40075*Math.max(.2,Math.cos(centerLat*Math.PI/180)));
+        // One world pixel at zoom 0 is ~120 km here; noise features are ~1.3 km.
+        const noiseFreq=95,warpPx=.85*pxPerKm;
+        const warpX=new Float32Array(gridWidth*gridHeight),warpY=new Float32Array(warpX.length),texture=new Float32Array(warpX.length);
+        for(let y=0;y<gridHeight;y++){const wy=worldY(gridTop+(y+.5)*sample)*noiseFreq;for(let x=0;x<gridWidth;x++){const wx=worldX(gridLeft+(x+.5)*sample)*noiseFreq,i=y*gridWidth+x;
+          warpX[i]=(fractalNoise(wx*.4+31.7,wy*.4-12.4)-.5)*2*warpPx+(valueNoise(wx*1.4+5.5,wy*1.4+2.2)-.5)*.6*pxPerKm;warpY[i]=(fractalNoise(wx*.4-8.3,wy*.4+44.1)-.5)*2*warpPx+(valueNoise(wx*1.4-6.6,wy*1.4-1.9)-.5)*.6*pxPerKm;
+          texture[i]=.58+.62*fractalNoise(wx*1.6+3.1,wy*1.6-7.7);}}
         sources.forEach(source => {
           const radius = Math.max(source.rx, source.ry) * 3.1;
           const left = Math.max(0, Math.floor((source.center.x - radius - gridLeft) / sample));
@@ -471,7 +513,8 @@
           const bottom = Math.min(gridHeight - 1, Math.ceil((source.center.y + radius - gridTop) / sample));
           const cos = Math.cos(source.angle), sin = Math.sin(source.angle);
           for (let y = top; y <= bottom; y++) for (let x = left; x <= right; x++) {
-            const px = gridLeft + (x + .5) * sample, py = gridTop + (y + .5) * sample;
+            const cell = y * gridWidth + x;
+            const px = gridLeft + (x + .5) * sample + warpX[cell], py = gridTop + (y + .5) * sample + warpY[cell];
             const dx = px - source.center.x, dy = py - source.center.y;
             if(dx*dx+dy*dy>source.influenceLimit*source.influenceLimit)continue;
             const rx = (dx * cos + dy * sin) / source.rx, ry = (-dx * sin + dy * cos) / source.ry;
@@ -479,9 +522,7 @@
             // but avoid the artificial bullseye/ring effect of a single radial
             // gradient. Real nearby venue points then overlap into block-scale
             // shade changes across the same neighborhood.
-            const primary = source.blockShape
-              ? Math.pow(Math.pow(Math.abs(rx), 2.8) + Math.pow(Math.abs(ry), 2.8), 2 / 2.8)
-              : rx * rx + ry * ry;
+            const primary = rx * rx + ry * ry;
             const shoulderA = (rx - .48) ** 2 / 1.18 + (ry + source.skew) ** 2 / .82;
             const shoulderB = (rx + .34) ** 2 / .9 + (ry - .3 - source.skew) ** 2 / 1.12;
             if (primary < 18) {
@@ -489,8 +530,7 @@
               .66 * Math.exp(-primary * .72) +
               .2 * Math.exp(-shoulderA * 1.05) +
               .14 * Math.exp(-shoulderB * 1.2);
-              const texture = clamp(.82 + .11 * Math.sin(rx * 3.3 + source.angle * 5) + .08 * Math.cos(ry * 4.1 - source.angle * 3), .62, 1.04);
-              const contribution = source.strength * profile * texture * source.detailOpacity;
+              const contribution = source.strength * profile * texture[cell] * source.detailOpacity;
               const offset = y * gridWidth + x;
               if(['event','current','surge','activity'].includes(source.evidence))currentField[offset]=Math.max(currentField[offset],profile);
               if(source.evidence==='history'){historyField[offset]=Math.max(historyField[offset],contribution);continue;}
@@ -511,6 +551,9 @@
           }
         });
 
+        // Melt overlapping sources into one layered surface with no seams.
+        const blurCells=clamp(Math.round(.16*pxPerKm/sample),1,6);
+        [field,shadeField,backgroundField,backgroundShade,historyField,eventField,surgeField].forEach(data=>{boxBlur(data,gridWidth,gridHeight,blurCells);boxBlur(data,gridWidth,gridHeight,blurCells);});
         const paint = document.createElement('canvas');
         paint.width = gridWidth; paint.height = gridHeight;
         const context = paint.getContext('2d'), image = context.createImageData(gridWidth, gridHeight), pixels = image.data;
@@ -532,5 +575,5 @@
     return new HeatLayer();
   }
 
-  return { historicalPriorForSource, composeFields, composePixel, currentEvidence, evidenceLevel, evidenceOpacity, colorAt, setPalette, getCustomColors, setCustomColors, getPalette: () => activePalette, paletteNames: Object.keys(PALETTES), sourceStrength, areaIntensity, sourceShade, compositeLevel, compositeOpacity, sourceRadiusKm, sourceFootprintKm, sourceInfluenceLimitKm, anchoredGridOrigin, createLayer };
+  return { fractalNoise, boxBlur, historicalPriorForSource, composeFields, composePixel, currentEvidence, evidenceLevel, evidenceOpacity, colorAt, setPalette, getCustomColors, setCustomColors, getPalette: () => activePalette, paletteNames: Object.keys(PALETTES), sourceStrength, areaIntensity, sourceShade, compositeLevel, compositeOpacity, sourceRadiusKm, sourceFootprintKm, sourceInfluenceLimitKm, anchoredGridOrigin, createLayer };
 });

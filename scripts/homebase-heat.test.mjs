@@ -89,7 +89,7 @@ test('public place density stays subordinate to live demand signals', () => {
 test('provider and community footprint sizes reflect their current source classes', () => {
   const provider = heat.sourceFootprintKm({ cat: 'neighborhood', tags: { providerSignal: true } });
   const baseline = heat.sourceFootprintKm({ cat: 'neighborhood', tags: { metroBaseline: true } });
-  assert.equal(provider, 1.35);
+  assert.equal(provider, 1.75);
   assert.equal(baseline, 1.25);
   assert.notEqual(
     heat.sourceFootprintKm({ cat: 'transit', tags: { metroBaseline: true } }),
