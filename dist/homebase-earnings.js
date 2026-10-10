@@ -64,6 +64,24 @@
     return {period,platform,today,start,rows,totals,platforms,perPlatform,months,undated,future,
       hourlyRate:totals.onlineHours>0?totals.onlineGross/totals.onlineHours:null};
   }
+  // Empower Baltimore Monthly Flex: the fee is set by the month's Empower
+  // earnings (tier cap -> total fee). Published in the Empower driver app.
+  const EMPOWER_FLEX=[[250,49.99],[500,99.99],[900,149.99],[1400,199.99],[2000,249.99],[2500,299.99],[3000,349.99],[3500,399.99],[Infinity,449.99]];
+  function empowerFlexFee(gross){const g=Math.max(0,Number(gross)||0);if(!g)return 0;return EMPOWER_FLEX.find(([cap])=>g<=cap)[1];}
+  // Uber pay shown to drivers is already after Uber's cut; Empower fares are kept
+  // in full, minus the subscription. Vehicle costs are the same per hour on both.
+  function compareEmpower({hours,uberRate,empowerRate}){
+    const h=Math.max(0,Number(hours)||0),u=Math.max(0,Number(uberRate)||0),e=Math.max(0,Number(empowerRate)||0);
+    const uberNet=h*u,empowerGross=h*e,fee=empowerFlexFee(empowerGross),empowerNet=empowerGross-fee;
+    // Lowest Empower $/hr whose net equals Uber's net at these hours.
+    let breakEven=null;for(const [cap,f] of EMPOWER_FLEX){const g=uberNet+f;if(g<=cap&&h>0){breakEven=g/h;break;}}
+    return {hours:h,uberNet,empowerGross,fee,feeShare:empowerGross?fee/empowerGross:0,empowerNet,difference:empowerNet-uberNet,breakEven,better:empowerNet>uberNet?'Empower':empowerNet<uberNet?'Uber':'Even'};
+  }
+  function platformRate(records,name,now=new Date(),days=60){
+    const since=now.getTime()-days*86400000;let g=0,h=0;
+    for(const r of records||[])if(r.platform===name&&r.payType==='gross'&&r.hoursType==='online'&&r.hours>0&&Number.isFinite(r.earnings)&&(!r.startedAt||Date.parse(r.startedAt)>=since)){g+=r.earnings;h+=r.hours;}
+    return h>=3?{rate:g/h,hours:h}:null;
+  }
   function mount(root,{records,money,timezone,onOptions,view,onViewChange,importedCount,manualCount,weeklyGoal=0}){
     root.querySelector('.platform-connection-status')?.remove();
     const section=root.querySelector('#earningsCsv')?.closest('section');
@@ -118,6 +136,24 @@
       history.querySelector('#earningsPlatformFilter').onchange=event=>{selection.platform=event.target.value;onViewChange(selection);render();};
     }
     render();
+    renderEmpowerCompare();
+    function renderEmpowerCompare(){
+      root.querySelector('#empowerCompare')?.remove();
+      const saved=(()=>{try{return JSON.parse(localStorage.getItem('homeBaseEmpowerCompare')||'{}')}catch(e){return {}}})();
+      const uberRec=platformRate(records,'Uber'),empRec=platformRate(records,'Empower');
+      const box=document.createElement('section');box.id='empowerCompare';box.className='workspace-section';
+      const val=(k,rec,fallback)=>saved[k]!=null&&saved[k]!==''?saved[k]:rec?rec.rate.toFixed(2):fallback;
+      box.innerHTML='<h3>UBER VS EMPOWER · MONTHLY NET</h3><p class="earnings-data-note">Empower Monthly Flex fee is set by your Empower earnings that month. Enter what you average per online hour on each app'+(uberRec||empRec?' (filled from your last 60 days of records)':'')+'.</p>'+
+        '<style>#empowerCompare .emp-in{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0}#empowerCompare .emp-in label{font-size:.6rem;color:var(--muted,#9fb3c0);display:grid;gap:4px}#empowerCompare .emp-in input{width:100%;min-height:38px;border-radius:8px;border:1px solid rgba(91,145,178,.5);background:#061018;color:#fff;font:700 .9rem Arial,sans-serif;padding:6px 8px}</style><div class="emp-in"><label>Empower hrs/month<input type="number" min="0" step="1" data-k="hours" value="'+esc(String(saved.hours??80))+'"></label><label>Uber $/hr<input type="number" min="0" step="0.5" data-k="uber" value="'+esc(String(val('uber',uberRec,'')))+'" placeholder="e.g. 28"></label><label>Empower $/hr<input type="number" min="0" step="0.5" data-k="empower" value="'+esc(String(val('empower',empRec,'')))+'" placeholder="e.g. 32"></label></div><div class="empower-result"></div>';
+      history.after(box);
+      const out=box.querySelector('.empower-result');
+      const update=()=>{const v={};box.querySelectorAll('[data-k]').forEach(i=>v[i.dataset.k]=i.value);try{localStorage.setItem('homeBaseEmpowerCompare',JSON.stringify(v))}catch(e){}
+        if(!(Number(v.hours)>0&&Number(v.uber)>0&&Number(v.empower)>0)){out.innerHTML='<p class="earnings-empty">Enter hours and both hourly rates to compare.</p>';return;}
+        const c=compareEmpower({hours:v.hours,uberRate:v.uber,empowerRate:v.empower});
+        out.innerHTML='<div class="planner-metrics">'+[['Empower gross',money(c.empowerGross)],['Flex fee',money(c.fee)+' ('+Math.round(c.feeShare*100)+'%)'],['Empower net',money(c.empowerNet)],['Uber same hours',money(c.uberNet)]].map(([a,b])=>'<div><span>'+a+'</span><b>'+b+'</b></div>').join('')+'</div>'+
+          '<p class="earnings-data-note"><b>'+(c.better==='Even'?'About even':c.better+' nets '+money(Math.abs(c.difference))+' more')+'</b> for '+c.hours+' hours. '+(c.breakEven?'Empower wins once it pays more than '+money(c.breakEven)+'/hr.':'')+' Gas and car costs are the same on both, so they are left out.</p>';};
+      box.querySelectorAll('[data-k]').forEach(i=>i.oninput=update);update();
+    }
   }
-  return {dayKey,recordDay,periodStart,historyView,mount};
+  return {EMPOWER_FLEX,empowerFlexFee,compareEmpower,platformRate,dayKey,recordDay,periodStart,historyView,mount};
 });
