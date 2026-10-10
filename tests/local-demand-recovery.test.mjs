@@ -81,3 +81,18 @@ test('the London preview loads actual dated events and does not clear them when 
  vm.createContext(context);vm.runInContext(extract('loadDemo'),context);await context.loadDemo();
  assert.equal(renders.at(-1),events);assert.ok(routes.at(-1).some(s=>s.name===events[0].name));assert.ok(routes.at(-1).includes(area));assert.match(nodes.get('#updated').textContent,/1 dated events/);
 });
+test('the 12-hour route chains twelve distinct stops, each ranked from the previous stop',()=>{
+ const {context}=routeFixture(),areas=Array.from({length:14},(_,i)=>({name:'Area '+i,cat:'neighborhood',lat:41+i*.03,lon:-74,tags:{publicVenue:true}}));
+ context.buildRoute(areas,41,-74,'Local',areas);
+ const plan=context.shiftPlan.filter(p=>p.stop);
+ assert.equal(context.shiftPlan.length,12);assert.equal(plan.length,12);
+ assert.equal(new Set(plan.map(p=>p.stop.name)).size,12,'a new place each hour when modeled areas are available');
+ // Legs are measured from the previous stop, so they stay short instead of growing from home.
+ assert.ok(plan.every(p=>p.legMiles<6),JSON.stringify(plan.map(p=>Math.round(p.legMiles))));
+ assert.equal(context.hourlyDestinations[3][0].name,plan[3].stop.name,'each hour lists its route stop first, then alternatives');
+});
+test('a dated event may repeat in the route for its arrival and exit windows',()=>{
+ const {context}=routeFixture(),event={name:'Stadium game',cat:'event',lat:41.002,lon:-74,eventStart:new Date(Date.now()+30*60000),eventEnd:new Date(Date.now()+150*60000),tags:{providerEvent:true}};
+ context.buildRoute([event],41,-74,'Local',[event]);
+ assert.ok(context.shiftPlan.filter(p=>p.stop?.name===event.name).length>=1);
+});
