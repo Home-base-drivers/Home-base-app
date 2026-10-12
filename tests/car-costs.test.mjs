@@ -27,3 +27,10 @@ test('gas per mile pro-rates miles to the last date in the file; full day net',(
   assert.equal(r.fixedMonthly.toFixed(2),'524.80');
   assert.ok(r.day.netRate<r.day.grossRate);
 });
+test('left-out rows, price/mpg and fill-based day gas',()=>{
+  const rows=E.carExpensesFromCsv(csv),payment=rows.find(r=>r.type==='Car payment');
+  const r=E.carCostSummary(rows,{from:'2026-08-01',exclude:[E.carKey(payment)],washMonthly:120,gasPrice:4.25,mpg:19,dayEarned:364.29,dayHours:12.72,fillCost:57.5});
+  assert.equal(r.byType['Car payment'],undefined);assert.equal(r.fixedMonthly,120);
+  assert.equal(r.gasPerMile.toFixed(4),'0.2237');
+  assert.equal(r.day.gas.toFixed(2),(57.5*12.72/12).toFixed(2));
+});
