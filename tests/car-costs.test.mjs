@@ -34,3 +34,9 @@ test('left-out rows, price/mpg and fill-based day gas',()=>{
   assert.equal(r.gasPerMile.toFixed(4),'0.2237');
   assert.equal(r.day.gas.toFixed(2),(57.5*12.72/12).toFixed(2));
 });
+test('car costs are measured against the 20% of gross limit',()=>{
+  const rows=E.carExpensesFromCsv(csv),payment=rows.find(r=>r.type==='Car payment');
+  const r=E.carCostSummary(rows,{from:'2026-08-01',exclude:[E.carKey(payment)],washMonthly:120,dayEarned:364.29,dayHours:12.72,fillCost:57.5,costTarget:20});
+  assert.equal(r.costTarget,20);assert.ok(r.day.costShare>0.15&&r.day.costShare<0.25);
+  assert.equal(r.day.costs.toFixed(2),(r.day.gas+r.day.fixed+r.day.repairs).toFixed(2));
+});

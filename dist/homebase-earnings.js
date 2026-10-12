@@ -141,7 +141,7 @@
   }
   const DAY=86400000,days=(a,b)=>Math.round((Date.parse(b+'T12:00:00Z')-Date.parse(a+'T12:00:00Z'))/DAY)+1;
   const carKey=r=>r.date+'|'+r.merchant+'|'+r.amount;
-  function carCostSummary(rows,{from,miles,milesAsOf,washMonthly=120,dayEarned,dayHours,dayMiles,fullTimeDays=22,exclude=[],gasPrice,mpg,fillCost}={}){
+  function carCostSummary(rows,{from,miles,milesAsOf,washMonthly=120,costTarget=20,dayEarned,dayHours,dayMiles,fullTimeDays=22,exclude=[],gasPrice,mpg,fillCost}={}){
     const skip=new Set(exclude||[]);rows=(rows||[]).filter(r=>!skip.has(carKey(r)));
     const inRange=rows.filter(r=>!from||r.date>=from);
     if(!inRange.length)return null;
@@ -151,10 +151,11 @@
     // Miles are pro-rated to the CSV's last date when they were counted later.
     const windowMiles=m>0?(asOf>end?m*span/days(start,asOf):m):0,pumpRate=Number(gasPrice)>0&&Number(mpg)>0?Number(gasPrice)/Number(mpg):null,receiptRate=windowMiles>0?gas/windowMiles:null,gasPerMile=pumpRate||receiptRate;
     const lastPayment=[...(rows||[])].reverse().find(r=>r.type==='Car payment'),fixedMonthly=(lastPayment?lastPayment.amount:0)+(Number(washMonthly)||0);
-    const res={start,end,span,byType,gas,gasPer30:gas/span*30,windowMiles,gasPerMile,receiptRate,pumpRate,fixedMonthly};
+    const res={costTarget:Number(costTarget)||20,start,end,span,byType,gas,gasPer30:gas/span*30,windowMiles,gasPerMile,receiptRate,pumpRate,fixedMonthly};
     const e=Number(dayEarned),h=Number(dayHours),dm=Number(dayMiles);
     if(e>0&&h>0){const dayGas=gasPerMile&&dm>0?gasPerMile*dm:Number(fillCost)>0?Number(fillCost)*h/12:null,dayFixed=fixedMonthly/Math.max(1,Number(fullTimeDays)||22),net=e-(dayGas||0)-dayFixed;
-      res.day={gross:e,hours:h,grossRate:e/h,gas:dayGas,fixed:dayFixed,net,netRate:net/h,per3:net/h*3,milesKnown:dayGas!=null};}
+      const repairsMonthly=(byType['Repairs & maintenance']||0)/span*30,dayRepairs=repairsMonthly/Math.max(1,Number(fullTimeDays)||22),costs=(dayGas||0)+dayFixed+dayRepairs;
+      res.day={gross:e,hours:h,grossRate:e/h,gas:dayGas,fixed:dayFixed,repairs:dayRepairs,costs,costShare:costs/e,net,netRate:net/h,per3:net/h*3,milesKnown:dayGas!=null};}
     return res;
   }
   function mount(root,{records,money,timezone,onOptions,view,onViewChange,importedCount,manualCount,weeklyGoal=0}){
@@ -228,16 +229,16 @@
         '<label>Full day earned ($)<input type="number" min="0" step="0.01" data-k="dayE" value="'+f('dayE','364.29')+'"></label><label>Full day working hours<input type="number" min="0" step="0.01" data-k="dayH" value="'+f('dayH','12.72')+'"></label>'+
         '<label>Full day miles<input type="number" min="0" step="1" data-k="dayM" value="'+f('dayM')+'" placeholder="odometer"></label><label>Full-time days / month<input type="number" min="1" max="31" step="1" data-k="days" value="'+f('days','22')+'"></label>'+
         '<label>Gas price ($/gal)<input type="number" min="0" step="0.01" data-k="price" value="'+f('price')+'" placeholder="e.g. 4.25"></label><label>Your MPG<input type="number" min="0" step="0.5" data-k="mpg" value="'+f('mpg')+'" placeholder="e.g. 19"></label>'+
-        '<label>Gas for a 12-hour day ($)<input type="number" min="0" step="1" data-k="fill" value="'+f('fill')+'" placeholder="one fill-up"></label></div><div class="car-result"></div>';
+        '<label>Gas for a 12-hour day ($)<input type="number" min="0" step="1" data-k="fill" value="'+f('fill')+'" placeholder="one fill-up"></label><label>Keep costs under (% of gross)<input type="number" min="1" max="100" step="1" data-k="target" value="'+f('target','20')+'"></label></div><div class="car-result"></div>';
       (root.querySelector('#goalPace')||root.querySelector('#empowerCompare')||history).after(box);
       const out=box.querySelector('.car-result');
       const update=()=>{const v={};box.querySelectorAll('[data-k]').forEach(i=>v[i.dataset.k]=i.value);try{localStorage.setItem('homeBaseCarCostInputs',JSON.stringify(v))}catch(e){}
-        const exclude=load('homeBaseCarExclude',[]),r=carCostSummary(rows,{from:v.from,miles:v.miles,milesAsOf:v.asOf,washMonthly:v.wash,dayEarned:v.dayE,dayHours:v.dayH,dayMiles:v.dayM,fullTimeDays:v.days,exclude,gasPrice:v.price,mpg:v.mpg,fillCost:v.fill});
+        const exclude=load('homeBaseCarExclude',[]),r=carCostSummary(rows,{from:v.from,miles:v.miles,milesAsOf:v.asOf,washMonthly:v.wash,dayEarned:v.dayE,dayHours:v.dayH,dayMiles:v.dayM,fullTimeDays:v.days,exclude,gasPrice:v.price,mpg:v.mpg,fillCost:v.fill,costTarget:v.target});
         if(!r){out.innerHTML='<p class="earnings-empty">'+(rows.length?'No car expenses after that date.':'Import a CSV to see your car costs.')+'</p>';return;}
         const order=['Gas','Car wash','Repairs & maintenance','Car payment','Insurance','Tolls','Parking','Tickets & registration','Other car'];
         out.innerHTML='<p class="earnings-data-note">'+esc(r.start)+' to '+esc(r.end)+' ('+r.span+' days of data)</p>'+order.filter(t=>r.byType[t]).map(t=>'<div class="car-row"><span>'+t+'</span><b>'+money(r.byType[t])+'</b></div>').join('')+
-          '<div class="planner-metrics">'+[['Gas per 30 days',money(r.gasPer30)],['Gas per mile',r.gasPerMile?'$'+r.gasPerMile.toFixed(3)+(r.pumpRate?' (price ÷ mpg)':' (receipts)'):'Add miles or mpg'],['Car payment + wash / month',money(r.fixedMonthly)],r.day?['Full day kept / hr',r.day.milesKnown?money(r.day.netRate):'Add day miles or fill cost']:['Full day','Add earnings']].map(([a,b])=>'<div><span>'+a+'</span><b>'+b+'</b></div>').join('')+'</div>'+
-          (r.day?'<p class="earnings-data-note"><b>Full day: '+money(r.day.gross)+' earned, '+money(r.day.grossRate)+'/hr before costs.</b> Gas '+(r.day.milesKnown?money(r.day.gas):'needs day miles or fill cost')+', car payment + wash '+money(r.day.fixed)+' per day. Kept '+money(r.day.net)+' = '+money(r.day.netRate)+'/hr, '+money(r.day.per3)+' per 3 hours.'+(r.windowMiles&&v.asOf>r.end?' Miles pro-rated to the last date in the file.':'')+' Repairs are shown above but not charged to one day.</p>':'')+
+          '<div class="planner-metrics">'+[['Gas per 30 days',money(r.gasPer30)],['Gas per mile',r.gasPerMile?'$'+r.gasPerMile.toFixed(3)+(r.pumpRate?' (price ÷ mpg)':' (receipts)'):'Add miles or mpg'],['Car payment + wash / month',money(r.fixedMonthly)],r.day?['Car costs / gross',r.day.milesKnown?Math.round(r.day.costShare*1000)/10+'%'+(r.day.costShare<=r.costTarget/100?' ✓':' ⚠'):'Add day miles or fill cost']:['Full day','Add earnings']].map(([a,b])=>'<div><span>'+a+'</span><b>'+b+'</b></div>').join('')+'</div>'+
+          (r.day&&r.day.milesKnown?'<p class="earnings-data-note"><b>'+(r.day.costShare<=r.costTarget/100?'Under':'Over')+' your '+r.costTarget+'% cost limit:</b> gas '+money(r.day.gas)+' + car wash/fees '+money(r.day.fixed)+' + repairs '+money(r.day.repairs)+' = '+money(r.day.costs)+' of '+money(r.day.gross)+' ('+Math.round(r.day.costShare*1000)/10+'%). Limit is '+money(r.day.gross*r.costTarget/100)+' a day.</p>':'')+(r.day?'<p class="earnings-data-note"><b>Full day: '+money(r.day.gross)+' earned, '+money(r.day.grossRate)+'/hr before costs.</b> Gas '+(r.day.milesKnown?money(r.day.gas):'needs day miles or fill cost')+', car payment + wash '+money(r.day.fixed)+' per day. Kept '+money(r.day.net)+' = '+money(r.day.netRate)+'/hr, '+money(r.day.per3)+' per 3 hours.'+(r.windowMiles&&v.asOf>r.end?' Miles pro-rated to the last date in the file.':'')+' Repairs are shown above but not charged to one day.</p>':'')+
           '<details class="earnings-fallback"><summary>Not my car or not for driving? Tap to leave out</summary>'+rows.filter(x=>!v.from||x.date>=v.from).map(x=>'<label class="car-row"><span><input type="checkbox" data-x="'+esc(carKey(x))+'"'+(exclude.includes(carKey(x))?'':' checked')+'> '+esc(x.date)+' · '+esc(x.merchant.slice(0,28))+'</span><b>'+money(x.amount)+'</b></label>').join('')+'</details>';
         out.querySelectorAll('[data-x]').forEach(c=>c.onchange=()=>{const set=new Set(load('homeBaseCarExclude',[]));c.checked?set.delete(c.dataset.x):set.add(c.dataset.x);try{localStorage.setItem('homeBaseCarExclude',JSON.stringify([...set]))}catch(e){}const open=out.querySelector('details')?.open;update();if(open)out.querySelector('details').open=true;});};
       box.querySelector('#carCsv').onchange=async ev=>{const file=ev.target.files?.[0];if(!file)return;const next=carExpensesFromCsv(await file.text());if(next.length){rows=next;try{localStorage.setItem('homeBaseCarExpenses',JSON.stringify(rows))}catch(e){}}renderCarCosts();};
