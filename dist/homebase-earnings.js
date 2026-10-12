@@ -98,6 +98,63 @@
     if(!(t>0))return null;
     return {target:t,done:Math.min(d,t),left:Math.max(0,t-d),reward:r,perTrip:r/t,complete:d>=t};
   }
+  // Car costs from a bank/budget CSV (Rocket Money export). Only car and gas
+  // rows are kept; every other row is dropped before anything is stored.
+  const SKIP_CATEGORIES=/^(credit card payment|internal transfers|mortgage|bge|income|savings transfer)$/i;
+  const GAS=/\bSHELL\b|SHEETZ|\bBP\b|BP#|CROWN\b|DASH IN|CONOCO|SUNOCO|RUTTER|BOLLA|VALERO|EXXON|CITGO|SPEEDWAY|\bGULF\b|CHEVRON|MARATHON|AMOCO|LUKOIL|QUICK CHECK|\bCMF\b/;
+  function carExpenseType(name,category,amount){
+    const n=String(name||'').toUpperCase(),c=String(category||''),a=Number(amount);
+    if(!Number.isFinite(a)||a<=0||SKIP_CATEGORIES.test(c))return null;
+    if(/CAR WASH|SUDSVILLE|ROYAL FARMS CW/.test(n))return 'Car wash';
+    if(/ROYAL FARMS|WAWA|7-ELEVEN|SAMS CLUB|SAM'S CLUB|COSTCO GAS/.test(n))return a>=20&&(/ROYAL FARMS|WAWA|7-ELEVEN/.test(n)||/auto/i.test(c))?'Gas':null;
+    if(GAS.test(n))return a>=10?'Gas':null;
+    if(!/auto|transport/i.test(c))return null;
+    if(/DRIVEEZ|EZPASS|E-ZPASS|TOLL/.test(n))return 'Tolls';
+    if(/SPOTHERO|PABC|PARK|GARAGE/.test(n))return 'Parking';
+    if(/MECANICO|MECHANIC|AUTO|TIRE|GEAR|FIRESTONE|JIFFY|VALVOLINE|PEP BOYS|MEINEKE|TRANSMISSION|OIL/.test(n))return 'Repairs & maintenance';
+    if(/PROGRESSIVE|TRAVELERS|GEICO|STATE FARM|ALLSTATE|INSUR/.test(n))return 'Insurance';
+    if(/CARMAX|ACURA FIN|ALLY AUTO|AUTO LOAN/.test(n))return 'Car payment';
+    if(/MVA|CITY GOVT|BALTIMORECNTY|TICKET|CITATION/.test(n))return 'Tickets & registration';
+    if(/U-HAUL|UBER|LYFT|SPIN|ZELLE FROM/.test(n))return null;
+    return 'Other car';
+  }
+  function parseCsv(text){
+    const rows=[];let row=[],cell='',q=false;
+    for(let i=0;i<text.length;i++){const ch=text[i];
+      if(q){if(ch==='"'){if(text[i+1]==='"'){cell+='"';i++}else q=false}else cell+=ch}
+      else if(ch==='"')q=true;else if(ch===','){row.push(cell);cell=''}else if(ch==='\n'||ch==='\r'){if(ch==='\r'&&text[i+1]==='\n')i++;row.push(cell);rows.push(row);row=[];cell=''}else cell+=ch}
+    if(cell||row.length){row.push(cell);rows.push(row)}
+    return rows.filter(r=>r.some(v=>v.trim()));
+  }
+  function carExpensesFromCsv(text){
+    const [head,...body]=parseCsv(String(text||''));if(!head)return [];
+    const col=re=>head.findIndex(h=>re.test(h.trim()));
+    const di=col(/^date$/i),ni=col(/^name$|^description$|^merchant/i),ci=col(/^category$/i),ai=col(/^amount$/i),ii=col(/^ignored/i);
+    if(di<0||ni<0||ai<0)return [];
+    const out=[];
+    for(const r of body){
+      if(ii>=0&&String(r[ii]||'').trim())continue;
+      const date=String(r[di]||'').slice(0,10),amount=Number(String(r[ai]).replace(/[$,]/g,'')),type=carExpenseType(r[ni],ci>=0?r[ci]:'',amount);
+      if(type&&/^\d{4}-\d{2}-\d{2}$/.test(date))out.push({date,merchant:String(r[ni]).slice(0,60),amount:Math.round(amount*100)/100,type});
+    }
+    return out.sort((a,b)=>a.date.localeCompare(b.date));
+  }
+  const DAY=86400000,days=(a,b)=>Math.round((Date.parse(b+'T12:00:00Z')-Date.parse(a+'T12:00:00Z'))/DAY)+1;
+  function carCostSummary(rows,{from,miles,milesAsOf,washMonthly=120,dayEarned,dayHours,dayMiles,fullTimeDays=22}={}){
+    const inRange=(rows||[]).filter(r=>!from||r.date>=from);
+    if(!inRange.length)return null;
+    const start=from||inRange[0].date,end=inRange[inRange.length-1].date,span=days(start,end),byType={};
+    for(const r of inRange)byType[r.type]=(byType[r.type]||0)+r.amount;
+    const gas=byType.Gas||0,m=Number(miles)||0,asOf=milesAsOf||end;
+    // Miles are pro-rated to the CSV's last date when they were counted later.
+    const windowMiles=m>0?(asOf>end?m*span/days(start,asOf):m):0,gasPerMile=windowMiles>0?gas/windowMiles:null;
+    const lastPayment=[...(rows||[])].reverse().find(r=>r.type==='Car payment'),fixedMonthly=(lastPayment?lastPayment.amount:0)+(Number(washMonthly)||0);
+    const res={start,end,span,byType,gas,gasPer30:gas/span*30,windowMiles,gasPerMile,fixedMonthly};
+    const e=Number(dayEarned),h=Number(dayHours),dm=Number(dayMiles);
+    if(e>0&&h>0){const dayGas=gasPerMile&&dm>0?gasPerMile*dm:null,dayFixed=fixedMonthly/Math.max(1,Number(fullTimeDays)||22),net=e-(dayGas||0)-dayFixed;
+      res.day={gross:e,hours:h,grossRate:e/h,gas:dayGas,fixed:dayFixed,net,netRate:net/h,per3:net/h*3,milesKnown:dayGas!=null};}
+    return res;
+  }
   function mount(root,{records,money,timezone,onOptions,view,onViewChange,importedCount,manualCount,weeklyGoal=0}){
     root.querySelector('.platform-connection-status')?.remove();
     const section=root.querySelector('#earningsCsv')?.closest('section');
@@ -154,6 +211,32 @@
     render();
     renderEmpowerCompare();
     renderGoalPace();
+    renderCarCosts();
+    function renderCarCosts(){
+      root.querySelector('#carCosts')?.remove();
+      const load=(k,d)=>{try{return JSON.parse(localStorage.getItem(k)||'null')??d}catch(e){return d}};
+      let rows=load('homeBaseCarExpenses',[]);const saved=load('homeBaseCarCostInputs',{});
+      const f=(k,d='')=>esc(String(saved[k]??d));
+      const box=document.createElement('section');box.id='carCosts';box.className='workspace-section';
+      box.innerHTML='<h3>CAR COSTS · WHAT YOU KEEP</h3><p class="earnings-data-note">Import your Rocket Money (or bank) CSV. Only gas, car wash, repairs, insurance, tolls, parking and car payments are kept, on this device. Everything else in the file is ignored.</p>'+
+        '<style>#carCosts .emp-in{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:8px 0}#carCosts .emp-in label{font-size:.6rem;color:var(--muted,#9fb3c0);display:grid;gap:4px}#carCosts .emp-in input{width:100%;min-height:38px;border-radius:8px;border:1px solid rgba(91,145,178,.5);background:#061018;color:#fff;font:700 .9rem Arial,sans-serif;padding:6px 8px}#carCosts .car-row{display:flex;justify-content:space-between;font-size:.72rem;padding:4px 0;border-bottom:1px solid rgba(94,155,190,.15)}</style>'+
+        '<label class="csv-upload"><div><b>'+(rows.length?rows.length+' car expenses saved':'Import car expenses')+'</b><span>CSV · car and gas rows only</span></div><em>CHOOSE CSV</em><input id="carCsv" type="file" accept=".csv,text/csv"></label>'+
+        '<div class="emp-in"><label>Count from<input type="date" data-k="from" value="'+f('from')+'"></label><label>Miles driven since then<input type="number" min="0" step="1" data-k="miles" value="'+f('miles')+'" placeholder="e.g. 9000"></label>'+
+        '<label>Miles counted as of<input type="date" data-k="asOf" value="'+f('asOf')+'"></label><label>Car wash per month ($)<input type="number" min="0" step="1" data-k="wash" value="'+f('wash','120')+'"></label>'+
+        '<label>Full day earned ($)<input type="number" min="0" step="0.01" data-k="dayE" value="'+f('dayE','364.29')+'"></label><label>Full day working hours<input type="number" min="0" step="0.01" data-k="dayH" value="'+f('dayH','12.72')+'"></label>'+
+        '<label>Full day miles<input type="number" min="0" step="1" data-k="dayM" value="'+f('dayM')+'" placeholder="odometer"></label><label>Full-time days / month<input type="number" min="1" max="31" step="1" data-k="days" value="'+f('days','22')+'"></label></div><div class="car-result"></div>';
+      (root.querySelector('#goalPace')||root.querySelector('#empowerCompare')||history).after(box);
+      const out=box.querySelector('.car-result');
+      const update=()=>{const v={};box.querySelectorAll('[data-k]').forEach(i=>v[i.dataset.k]=i.value);try{localStorage.setItem('homeBaseCarCostInputs',JSON.stringify(v))}catch(e){}
+        const r=carCostSummary(rows,{from:v.from,miles:v.miles,milesAsOf:v.asOf,washMonthly:v.wash,dayEarned:v.dayE,dayHours:v.dayH,dayMiles:v.dayM,fullTimeDays:v.days});
+        if(!r){out.innerHTML='<p class="earnings-empty">'+(rows.length?'No car expenses after that date.':'Import a CSV to see your car costs.')+'</p>';return;}
+        const order=['Gas','Car wash','Repairs & maintenance','Car payment','Insurance','Tolls','Parking','Tickets & registration','Other car'];
+        out.innerHTML='<p class="earnings-data-note">'+esc(r.start)+' to '+esc(r.end)+' ('+r.span+' days of data)</p>'+order.filter(t=>r.byType[t]).map(t=>'<div class="car-row"><span>'+t+'</span><b>'+money(r.byType[t])+'</b></div>').join('')+
+          '<div class="planner-metrics">'+[['Gas per 30 days',money(r.gasPer30)],['Gas per mile',r.gasPerMile?'$'+r.gasPerMile.toFixed(3):'Add miles'],['Car payment + wash / month',money(r.fixedMonthly)],r.day?['Full day kept / hr',r.day.milesKnown?money(r.day.netRate):'Add day miles']:['Full day','Add earnings']].map(([a,b])=>'<div><span>'+a+'</span><b>'+b+'</b></div>').join('')+'</div>'+
+          (r.day?'<p class="earnings-data-note"><b>Full day: '+money(r.day.gross)+' earned, '+money(r.day.grossRate)+'/hr before costs.</b> Gas '+(r.day.milesKnown?money(r.day.gas):'needs day miles')+', car payment + wash '+money(r.day.fixed)+' per day. Kept '+money(r.day.net)+' = '+money(r.day.netRate)+'/hr, '+money(r.day.per3)+' per 3 hours.'+(r.windowMiles&&v.asOf>r.end?' Miles pro-rated to the last date in the file.':'')+' Repairs are shown above but not charged to one day.</p>':'');};
+      box.querySelector('#carCsv').onchange=async ev=>{const file=ev.target.files?.[0];if(!file)return;const next=carExpensesFromCsv(await file.text());if(next.length){rows=next;try{localStorage.setItem('homeBaseCarExpenses',JSON.stringify(rows))}catch(e){}}renderCarCosts();};
+      box.querySelectorAll('[data-k]').forEach(i=>i.oninput=update);update();
+    }
     function renderGoalPace(){
       root.querySelector('#goalPace')?.remove();
       const saved=(()=>{try{return JSON.parse(localStorage.getItem('homeBaseGoalPace')||'{}')}catch(e){return {}}})();
@@ -195,5 +278,5 @@
       box.querySelectorAll('[data-k]').forEach(i=>i.oninput=update);update();
     }
   }
-  return {EMPOWER_FLEX,empowerFlexFee,workingRate,questPlan,compareEmpower,platformRate,dayKey,recordDay,periodStart,historyView,mount};
+  return {EMPOWER_FLEX,empowerFlexFee,carExpenseType,parseCsv,carExpensesFromCsv,carCostSummary,workingRate,questPlan,compareEmpower,platformRate,dayKey,recordDay,periodStart,historyView,mount};
 });
