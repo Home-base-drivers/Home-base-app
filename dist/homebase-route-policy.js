@@ -138,6 +138,7 @@
     if(!source||!(source.eventStart||source.cat==='event'))return{major:false,bonus:0};
     const impact=eventImpact(source),league=source.tags?.league||source.league||'',venue=String(source.venue||'')+' '+String(source.name||'');
     if(impact.attendance!=null)return{major:impact.attendance>=10000,bonus:Math.min(14,5*Math.log10(1+impact.attendance/1000))};
+    if(source.tags?.watchParty)return{major:false,bonus:5};
     if(PRO.test(league))return{major:true,bonus:8};
     if(MAJOR_VENUE.test(venue))return{major:true,bonus:6};
     if(/^(College football|NCAA)/.test(league))return{major:false,bonus:4};

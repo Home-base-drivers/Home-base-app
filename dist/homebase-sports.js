@@ -105,5 +105,17 @@
     if(row.state==='live')return 'Live · '+(row.gameDetail||'in progress');
     return 'Scheduled';
   }
-  return{ESPN_LEAGUES,espnUrl,mlbUrl,scoreboardDates,espnGame,mlbGame,trackGame,trackAll,relevant,mergeObservations,describe};
+  /* Away games fill local sports bars: the crowd leaves when the game ends,
+     so demand lands in the home city's bar districts, not at the stadium.
+     Seen Sun Oct 11 2026 (Ravens away): purple across Baltimore after the game. */
+  const WATCH_PARTY_TEAMS=[{league:'NFL',team:'BAL',label:'Ravens',districts:[
+    ['Federal Hill',39.2775,-76.6135],['Fells Point',39.2825,-76.5934],['Canton',39.2817,-76.5765],
+    ['Power Plant Live',39.28936,-76.60689],['Towson',39.4015,-76.6019],['Hampden',39.3305,-76.6326]]}];
+  function watchParties(row){
+    if(!row||!/@/.test(row.name||''))return [];
+    const [away,home]=String(row.name).split('@').map(t=>t.trim().toUpperCase());
+    const team=WATCH_PARTY_TEAMS.find(t=>t.league===row.league&&away===t.team&&home!==t.team);
+    return team?team.districts.map(([name,lat,lon])=>({name,lat,lon,team:team.label})):[];
+  }
+  return{ESPN_LEAGUES,WATCH_PARTY_TEAMS,watchParties,espnUrl,mlbUrl,scoreboardDates,espnGame,mlbGame,trackGame,trackAll,relevant,mergeObservations,describe};
 });

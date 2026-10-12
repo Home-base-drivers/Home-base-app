@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Home Base">
-  <meta name="homebase-build" content="v248">
+  <meta name="homebase-build" content="v249">
   <meta name="description" content="Home Base connects local driver platforms, earnings forecasts, events and a GPS-based 12-hour route in one app.">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icon-192.png">
@@ -221,10 +221,10 @@
 <link rel="stylesheet" href="homebase-earnings.css?v=110">
 <link rel="stylesheet" href="homebase-growth.css?v=111">
 <script src="homebase-earnings.js?v=113"></script>
-<script src="homebase-demand-history.js?v=139"></script>
-<script src="homebase-route-policy.js?v=12"></script>
+<script src="homebase-demand-history.js?v=140"></script>
+<script src="homebase-route-policy.js?v=13"></script>
 <script src="homebase-public-data.js?v=5"></script>
-<script src="homebase-sports.js?v=1"></script>
+<script src="homebase-sports.js?v=2"></script>
 <script src="homebase-weather.js?v=1"></script>
 <script src="homebase-school-events.js?v=4"></script>
 <script src="homebase-planner.js?v=129"></script>
@@ -992,6 +992,8 @@ async function loadScoreboardEvents(lat,lon,market,venues=[],keys){
   const rows=await scoreboardGames(keys),marketName=eventToken(market),out=[];
   for(const row of rows){
     if(keys&&!keys.includes(scoreboardKey(row.id)))continue;
+    const parties=HomeBaseSports.watchParties(row);
+    if(parties.length){if(isGreaterBaltimoreLocation(lat,lon))for(const p of parties){const e=scoreboardEvent(row,p);e.name=p.name+' bars · '+p.team+' game · '+marketTime(new Date(row.eventStart));e.venue=p.name+' bars';e.classification='sports watch party';e.tags.watchParty=true;e.tags.league='Watch party';out.push(e)}continue;}
     let place=Number.isFinite(row.lat)&&Number.isFinite(row.lon)?{lat:row.lat,lon:row.lon,name:row.venue}:null;
     if(!place){const match=findEventVenue(row.venue,venues),city=eventToken(row.city);if(!match&&!(city&&marketName&&(city.includes(marketName)||marketName.includes(city))))continue;place=knownBaltimoreVenue(row.venue)||match}
     if(!place)continue;
@@ -1340,7 +1342,7 @@ setInterval(()=>{updateClimateAdvisory();const selected=$('[data-hour][aria-pres
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){schoolSearchAt=0;if(currentLocation)refreshSchoolEvents(...currentLocation);if(Date.now()-lastAutoGpsRefresh>300000){if(demoLocale)refreshLiveDemandLayer();else autoRefreshGps()}}});
 window.addEventListener('homebase-calendar-identity',()=>{schoolSearchAt=0;schoolSearchKey='';schoolEventRows=[];if(currentLocation)refreshSchoolEvents(...currentLocation);});
 window.addEventListener('load',()=>{schoolSearchAt=0;if(currentLocation)refreshSchoolEvents(...currentLocation);},{once:true});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=248',{updateViaCache:'none'}).then(r=>{r.update();navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!sessionStorage.getItem('hb-release-reload-v248')){sessionStorage.setItem('hb-release-reload-v248','1');location.reload()}})}).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';}));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=249',{updateViaCache:'none'}).then(r=>{r.update();navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!sessionStorage.getItem('hb-release-reload-v249')){sessionStorage.setItem('hb-release-reload-v249','1');location.reload()}})}).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';}));
 </script>
 <script src="homebase-live.js?v=38"></script>
 </body>
