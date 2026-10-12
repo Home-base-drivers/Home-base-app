@@ -82,6 +82,22 @@
     for(const r of records||[])if(r.platform===name&&r.payType==='gross'&&r.hoursType==='online'&&r.hours>0&&Number.isFinite(r.earnings)&&(!r.startedAt||Date.parse(r.startedAt)>=since)){g+=r.earnings;h+=r.hours;}
     return h>=3?{rate:g/h,hours:h}:null;
   }
+  // Pay per working hour: time out minus breaks (gas, food, car wash) is the
+  // time actually working. Weekly trip bonuses are shown with and without,
+  // since they are earned across the whole week's trips.
+  function workingRate({earned,bonus=0,hoursOut,breakMinutes=0,goal=100,goalHours=3}){
+    const e=Math.max(0,Number(earned)||0),b=Math.max(0,Number(bonus)||0),out=Math.max(0,Number(hoursOut)||0);
+    const work=Math.max(0,out-Math.max(0,Number(breakMinutes)||0)/60),gh=Math.max(.25,Number(goalHours)||3),target=Math.max(0,Number(goal)||0)/gh;
+    if(!(work>0))return null;
+    const rate=e/work,withBonus=(e+b)/work;
+    return {workingHours:work,rate,withBonus,perGoalWindow:rate*gh,perGoalWindowWithBonus:withBonus*gh,targetRate:target,
+      meetsGoal:target>0?rate>=target:null,meetsGoalWithBonus:target>0?withBonus>=target:null,shortBy:target>0?Math.max(0,target*work-e):0};
+  }
+  function questPlan({target,done,reward}){
+    const t=Math.max(0,Math.round(Number(target)||0)),d=Math.max(0,Math.round(Number(done)||0)),r=Math.max(0,Number(reward)||0);
+    if(!(t>0))return null;
+    return {target:t,done:Math.min(d,t),left:Math.max(0,t-d),reward:r,perTrip:r/t,complete:d>=t};
+  }
   function mount(root,{records,money,timezone,onOptions,view,onViewChange,importedCount,manualCount,weeklyGoal=0}){
     root.querySelector('.platform-connection-status')?.remove();
     const section=root.querySelector('#earningsCsv')?.closest('section');
@@ -137,6 +153,30 @@
     }
     render();
     renderEmpowerCompare();
+    renderGoalPace();
+    function renderGoalPace(){
+      root.querySelector('#goalPace')?.remove();
+      const saved=(()=>{try{return JSON.parse(localStorage.getItem('homeBaseGoalPace')||'{}')}catch(e){return {}}})();
+      const f=(k,d='')=>esc(String(saved[k]??d));
+      const box=document.createElement('section');box.id='goalPace';box.className='workspace-section';
+      box.innerHTML='<h3>TODAY · PAY PER WORKING HOUR</h3><p class="earnings-data-note">Add up every app you drove for today. Breaks (gas, food, car wash) are not working time, so they come out of your hours. Pickup drives and short waits count, because fares are priced to cover them.</p>'+
+        '<style>#goalPace .emp-in{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:8px 0}#goalPace .emp-in label{font-size:.6rem;color:var(--muted,#9fb3c0);display:grid;gap:4px}#goalPace .emp-in input{width:100%;min-height:38px;border-radius:8px;border:1px solid rgba(91,145,178,.5);background:#061018;color:#fff;font:700 .9rem Arial,sans-serif;padding:6px 8px}</style>'+
+        '<div class="emp-in"><label>Earned today, all apps ($)<input type="number" min="0" step="0.01" data-k="earned" value="'+f('earned')+'" placeholder="e.g. 136.05"></label><label>Hours out<input type="number" min="0" step="0.25" data-k="out" value="'+f('out')+'" placeholder="e.g. 5"></label>'+
+        '<label>Break minutes<input type="number" min="0" step="5" data-k="brk" value="'+f('brk','0')+'"></label><label>Trip bonus paid today ($)<input type="number" min="0" step="0.01" data-k="bonus" value="'+f('bonus','0')+'"></label>'+
+        '<label>Goal ($)<input type="number" min="0" step="5" data-k="goal" value="'+f('goal','100')+'"></label><label>Every (hours)<input type="number" min="0.5" step="0.5" data-k="gh" value="'+f('gh','3')+'"></label></div><div class="goal-result"></div>'+
+        '<details class="earnings-fallback"><summary>Weekly trip bonus</summary><div class="emp-in"><label>Trips needed<input type="number" min="0" step="1" data-k="qt" value="'+f('qt')+'" placeholder="e.g. 50"></label><label>Trips done<input type="number" min="0" step="1" data-k="qd" value="'+f('qd')+'"></label><label>Bonus ($)<input type="number" min="0" step="1" data-k="qr" value="'+f('qr')+'" placeholder="e.g. 67"></label></div><div class="quest-result"></div></details>';
+      (root.querySelector('#empowerCompare')||history).after(box);
+      const out=box.querySelector('.goal-result'),qout=box.querySelector('.quest-result');
+      const update=()=>{const v={};box.querySelectorAll('[data-k]').forEach(i=>v[i.dataset.k]=i.value);try{localStorage.setItem('homeBaseGoalPace',JSON.stringify(v))}catch(e){}
+        const r=workingRate({earned:v.earned,bonus:v.bonus,hoursOut:v.out,breakMinutes:v.brk,goal:v.goal,goalHours:v.gh}),gh=Number(v.gh)||3;
+        if(!r||!(Number(v.earned)>0)){out.innerHTML='<p class="earnings-empty">Enter what you earned and how long you were out.</p>';}
+        else{const hb=Number(v.bonus)>0,hrs=Math.floor(r.workingHours)+'h '+Math.round(r.workingHours%1*60)+'m';
+          out.innerHTML='<div class="planner-metrics">'+[['Working time',hrs],['Per working hour',money(r.rate)],['Per '+gh+' hours',money(r.perGoalWindow)],hb?['With trip bonus',money(r.withBonus)+'/hr']:['Goal pace',money(r.targetRate)+'/hr']].map(([a,b])=>'<div><span>'+a+'</span><b>'+b+'</b></div>').join('')+'</div>'+
+          '<p class="earnings-data-note"><b>'+(r.meetsGoal?'On goal':'Below goal')+'</b>'+(r.meetsGoal?' — '+money(r.perGoalWindow)+' every '+gh+' hours.':' by '+money(r.shortBy)+' for the time worked'+(hb&&r.meetsGoalWithBonus?'; the trip bonus puts you over.':'.'))+'</p>';}
+        const q=questPlan({target:v.qt,done:v.qd,reward:v.qr});
+        qout.innerHTML=q?'<p class="earnings-data-note"><b>'+(q.complete?'Bonus earned':q.left+' trips to go')+'</b> · each trip adds about '+money(q.perTrip)+' on top of its fare'+(q.complete?'.':'. In a bonus week, quick short trips help you reach it.')+'</p>':'';};
+      box.querySelectorAll('[data-k]').forEach(i=>i.oninput=update);update();
+    }
     function renderEmpowerCompare(){
       root.querySelector('#empowerCompare')?.remove();
       const saved=(()=>{try{return JSON.parse(localStorage.getItem('homeBaseEmpowerCompare')||'{}')}catch(e){return {}}})();
@@ -155,5 +195,5 @@
       box.querySelectorAll('[data-k]').forEach(i=>i.oninput=update);update();
     }
   }
-  return {EMPOWER_FLEX,empowerFlexFee,compareEmpower,platformRate,dayKey,recordDay,periodStart,historyView,mount};
+  return {EMPOWER_FLEX,empowerFlexFee,workingRate,questPlan,compareEmpower,platformRate,dayKey,recordDay,periodStart,historyView,mount};
 });
