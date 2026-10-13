@@ -9,8 +9,9 @@ export function makeDispatchHandler({engine,authenticate,loadState,loadTrips,par
   let user;try{user=await authenticate(token);}catch{return response({error:'Invalid session'},401);}
   if(!user?.id||user.is_anonymous)return response({error:'Sign in first'},401);
   try{
-   const raw=await request.text();if(raw.length>65536)return response({error:'Request too large'},413);
-   const payload=JSON.parse(raw);if(!['score','recommend','chat','agent','agent-result','translate','voice','live-session'].includes(payload.operation))return response({error:'Unsupported operation'},400);
+   const raw=await request.text();if(raw.length>6_000_000)return response({error:'Request too large',code:'too_large'},413);
+   const payload0=JSON.parse(raw);if(raw.length>65536&&!['agent','chat'].includes(payload0.operation))return response({error:'Request too large',code:'too_large'},413);
+   const payload=payload0;if(!['score','recommend','chat','agent','agent-result','translate','voice','live-session'].includes(payload.operation))return response({error:'Unsupported operation'},400);
    if(payload.operation==='live-session'){
     if(!createLiveSession)return response({configured:false,error:'GPT Live is not configured on the Home Base server.'},503);
     return response(await createLiveSession({sdp:payload.sdp,locale:payload.locale,voice:payload.voice,style:payload.style,history:payload.history,context:payload.context}));
@@ -24,12 +25,12 @@ export function makeDispatchHandler({engine,authenticate,loadState,loadTrips,par
     return new Response(result.audio,{status:200,headers:{...headers,'Content-Type':'application/octet-stream','Cache-Control':'no-store','X-HomeBase-Voice':'ai','X-HomeBase-Audio-Type':result.contentType||'audio/mpeg'}});
    }
    if(payload.operation==='translate'){if(!translateLanguage)return response({translated:false,provider:'not_configured'});return response(await translateLanguage(payload.text,payload.locale));}
-   if(payload.operation==='agent'||payload.operation==='agent-result'||payload.operation==='chat'){if(agent)return response(await agent({userId:user.id,utterance:payload.utterance,context:payload.context||{},conversationId:payload.conversationId||'default',capabilities:payload.capabilities||[],actionResults:payload.actionResults||[]}));const language=parseLanguage?await parseLanguage(payload.utterance,payload.locale,payload.context):{command:engine.parseCommand(payload.utterance),provider:'not_configured',execution:'advisory'};return response(language);}
+   if(payload.operation==='agent'||payload.operation==='agent-result'||payload.operation==='chat'){if(agent){try{return response(await agent({userId:user.id,utterance:typeof payload.utterance==='string'?payload.utterance:'',context:payload.context||{},conversationId:String(payload.conversationId||'default').slice(0,120),capabilities:payload.capabilities||[],actionResults:payload.actionResults||[],channel:payload.channel==='chat'?'chat':'voice',attachments:payload.attachments||[]}));}catch(e){const status=e?.code==='ai_not_configured'?503:e?.code==='ai_timeout'?504:e?.code==='ai_provider_error'?502:400;return response({error:e?.message||'Home Base AI is unavailable.',code:e?.code||'ai_error'},status);}}const language=parseLanguage?await parseLanguage(payload.utterance,payload.locale,payload.context):{command:engine.parseCommand(payload.utterance),provider:'not_configured',execution:'advisory'};return response(language);}
    const stored=await loadState(user.id),trips=await loadTrips(user.id);
    const state=engine.DriverState.create({...stored,...payload.state});
    // Request context is driver-reported; no client can create official capability support.
    const result=payload.operation==='score'?engine.scoreTrip(payload.trip,state,engine.learn(trips).weights):engine.recommend(state,payload.context||{});
    return response({...result,input_origin:'USER-REPORTED',execution:'advisory',server_evaluated:true});
-  }catch(e){return response({error:e.message||'Dispatch calculation unavailable'},400);}
+  }catch(e){return response({error:e.message||'Dispatch calculation unavailable',code:e?.code||'dispatch_error'},400);}
  };
 }

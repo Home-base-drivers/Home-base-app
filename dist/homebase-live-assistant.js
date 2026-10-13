@@ -38,9 +38,11 @@ async function start(){
   if(!answer?.transport?.sdp)throw Error(answer?.error||'GPT Live session could not start.');
   await pc.setRemoteDescription({type:'answer',sdp:answer.transport.sdp});active=true;starting=false;buttonState(true,'GPT Live · listening');status('GPT Live · connected. Speak naturally in any language.',true);
  }catch(error){
-  await stop('GPT Live could not connect. Switching back to device voice…');
+  const reason=window.HomeBaseAgentClient?.describeError?.(error)||String(error?.message||'GPT Live could not connect.');
+  await stop('GPT Live unavailable · '+reason);
   guestActive=true;
-  status('Guest voice · no account needed. Listening on this device…',true);
+  // Signed-in drivers keep full Home Base AI answers through phone speech.
+  status('Phone voice + Home Base AI · listening. ('+reason+')',true);
   try{const result=oldToggle?.();if(result&&typeof result.then==='function')await result;return result}catch{guestActive=false;status('Voice could not start. Allow microphone access and tap again.',true)}
  }
 }

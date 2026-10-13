@@ -200,7 +200,20 @@ export function createHomeBaseBackend(client) {
     },
     async evaluateDispatch(payload) {
       await user();
-      return result(await client.functions.invoke('dispatch',{body:payload}));
+      const response = await client.functions.invoke('dispatch',{body:payload});
+      // A non-2xx Edge Function reply hides the server's reason behind a generic
+      // message. Read the JSON body so the app can tell the driver what failed.
+      if (response.error && response.error.context && typeof response.error.context.json === 'function') {
+        let body = null;
+        try { body = await response.error.context.clone().json(); } catch { body = null; }
+        if (body && typeof body.error === 'string') {
+          const failure = new Error(body.error);
+          failure.code = typeof body.code === 'string' ? body.code : 'dispatch_error';
+          failure.status = response.error.context.status;
+          throw failure;
+        }
+      }
+      return result(response);
     },
     async dispatchRegistry() {
       return {capabilities: result(await client.from('platform_capabilities').select('*')),

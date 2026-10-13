@@ -33,14 +33,24 @@ const ACTION_TOOLS=[
  {type:'function',name:'navigate',description:'Start navigation to the destination already selected in Home Base. Use only when the driver clearly asks to navigate/go/take me there; never invent a destination.',parameters:{type:'object',properties:{},additionalProperties:false}}
 ];
 
-export function makeHomeBaseAgent({apiKey,model='gpt-6-luna',fetchImpl=fetch,loadMemory,loadTurns,saveTurn,upsertMemories}={}){
- return async({userId,utterance,context={},conversationId='default',capabilities=[],actionResults=[]}={})=>{
-  if(!apiKey)throw Error('Home Base AI is not configured.');
-  if(!userId)throw Error('Sign in first.');
-  if(typeof utterance!=='string'||!utterance.trim()||utterance.length>4000)throw Error('Ask Home Base a shorter question.');
+// Accept at most one driver photo (screenshot of a driver app, a sign, a receipt) as a data URL.
+function cleanAttachments(attachments){
+ if(!Array.isArray(attachments))return[];
+ return attachments.slice(0,1).flatMap(a=>{const url=String(a?.dataUrl||a?.url||'');if(!/^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(url)||url.length>5_000_000)return[];return[{type:'input_image',image_url:url,detail:'auto'}]});
+}
+function errorWithCode(message,code){return Object.assign(new Error(message),{code})}
+
+export function makeHomeBaseAgent({apiKey,model='gpt-6-luna',fetchImpl=fetch,loadMemory,loadTurns,saveTurn,upsertMemories,timeoutMs=60000}={}){
+ return async({userId,utterance,context={},conversationId='default',capabilities=[],actionResults=[],channel='voice',attachments=[]}={})=>{
+  if(!apiKey)throw errorWithCode('Home Base AI is not configured.','ai_not_configured');
+  if(!userId)throw errorWithCode('Sign in first.','sign_in');
+  const images=cleanAttachments(attachments);
+  if(typeof utterance!=='string'||utterance.length>8000)throw Error('Ask Home Base a shorter question.');
+  if(!utterance.trim()&&!images.length)throw Error('Ask Home Base a question.');
+  const typed=channel==='chat';
   const memories=await loadMemory(userId);
   const turns=await loadTurns(userId,conversationId);
-  const instructions=`You are Home Base Copilot, a persistent learning AI dispatcher and general-purpose assistant. You are the primary intelligence, not a command parser. Use the project brain below as durable product knowledge.
+  const instructions=`You are Home Base Copilot, a persistent learning AI dispatcher and a full general-purpose assistant (the same breadth as ChatGPT). You are the primary intelligence, not a command parser. Use the project brain below as durable product knowledge.
 
 ${PROJECT_KNOWLEDGE}
 
@@ -51,31 +61,38 @@ CURRENT HOME BASE STATE:
 ${safe(context,14000)}
 
 Behavior:
-- Answer the driver's actual question. Never respond with a canned command menu merely because wording is unfamiliar.
+- Hold a real back-and-forth conversation. Use the earlier turns in this conversation; resolve "it", "there", "that one" from them. Ask a short follow-up question only when you truly cannot answer.
+- Answer the driver's actual question, whatever the topic. Never respond with a canned command menu merely because wording is unfamiliar.
 - Treat conversation history, current state, and durable memory as context. Preserve active goals and constraints until changed.
 - If a fact may be current, local, changing, unknown, or outside supplied Home Base data, use web search. Do not guess.
 - For driving questions, combine real-world facts with Home Base state and provide actionable advice: what to do, where/direction, timing, platform/mode, why, and uncertainty.
+- If the driver attaches a photo (for example a driver-app screenshot), read it carefully and use what it shows; say plainly if something is unreadable.
 - Never present a prediction as live platform data.
 - Do not fabricate demand, surge, earnings, events, traffic, weather, airport conditions, or platform capabilities.
 - For general knowledge questions, answer normally. Driving advice is optional unless relevant.
 - Learn from outcomes and explicit preferences, but do not treat one observation as a permanent truth. Prefer repeated evidence.
 - Never self-modify code or security rules. Learning means updating driver memory and future recommendations.
-- If the driver is moving, lead with the decision and use short spoken-friendly paragraphs. If parked or asking for detail, be more comprehensive.
+${typed?'- This message was TYPED in the Home Base chat screen. Reply like ChatGPT: complete and well organized, using short Markdown (bold, bullet lists, numbered steps, small tables) when it helps. The driver is not reading while moving.':'- This message was SPOKEN. Your reply will be read aloud: no Markdown, no lists, no links or URLs, no emoji. If the driver is moving, lead with the decision in two or three short sentences; give more only when parked or asked.'}
 - Sound like a capable human dispatcher, not a radio parody.`;
   const verifiedResults=Array.isArray(actionResults)?actionResults.slice(0,8):[];
-  const input=[...turns.slice(-20).map(t=>({role:t.role,content:t.content})),{role:'user',content:utterance+(verifiedResults.length?'\n\nVERIFIED HOME BASE ACTION RESULTS:\n'+safe(verifiedResults,5000):'')}];
-  const response=await fetchImpl('https://api.openai.com/v1/responses',{method:'POST',signal:AbortSignal.timeout(25000),headers:{Authorization:'Bearer '+apiKey,'Content-Type':'application/json'},body:JSON.stringify({model,store:false,instructions,input,reasoning:{effort:'medium'},tools:[{type:'web_search'},...ACTION_TOOLS.filter(t=>!Array.isArray(capabilities)||!capabilities.length||capabilities.includes(t.name))],tool_choice:'auto',max_output_tokens:1400})});
-  const payload=await response.json().catch(()=>({}));if(!response.ok)throw Error(payload?.error?.message||'Home Base AI is unavailable.');
+  const text=(utterance.trim()||'What does this photo show, and what should I do about it?')+(verifiedResults.length?'\n\nVERIFIED HOME BASE ACTION RESULTS:\n'+safe(verifiedResults,5000):'');
+  const userContent=images.length?[{type:'input_text',text},...images]:text;
+  const input=[...turns.slice(-40).map(t=>({role:t.role==='assistant'?'assistant':'user',content:String(t.content||'')})).filter(t=>t.content),{role:'user',content:userContent}];
+  let response;
+  try{response=await fetchImpl('https://api.openai.com/v1/responses',{method:'POST',signal:AbortSignal.timeout(timeoutMs),headers:{Authorization:'Bearer '+apiKey,'Content-Type':'application/json'},body:JSON.stringify({model,store:false,instructions,input,reasoning:{effort:typed?'medium':'low'},tools:[{type:'web_search'},...ACTION_TOOLS.filter(t=>!Array.isArray(capabilities)||!capabilities.length||capabilities.includes(t.name))],tool_choice:'auto',max_output_tokens:typed?4000:1400})});}
+  catch(error){if(error?.name==='TimeoutError'||error?.name==='AbortError')throw errorWithCode('Home Base AI took too long to answer.','ai_timeout');throw error;}
+  const payload=await response.json().catch(()=>({}));if(!response.ok)throw errorWithCode(payload?.error?.message||'Home Base AI is unavailable.','ai_provider_error');
   const actions=actionCalls(payload);
   const answer=outputText(payload);
   if(actions.length)return{answer:answer||'Executing the requested Home Base action.',actions,provider:'OpenAI',agent:true,execution:'action_required'};
-  if(!answer)throw Error('Home Base AI returned no answer.');
-  await saveTurn(userId,conversationId,'user',utterance,context);
-  await saveTurn(userId,conversationId,'assistant',answer,{});
+  if(!answer)throw errorWithCode('Home Base AI returned no answer.','ai_empty');
+  const savedUtterance=(utterance.trim()||'(photo)')+(images.length&&utterance.trim()?' [photo attached]':'');
+  await saveTurn(userId,conversationId,'user',savedUtterance,context);
+  await saveTurn(userId,conversationId,'assistant',answer,{channel});
   try{
-   const learn=await fetchImpl('https://api.openai.com/v1/responses',{method:'POST',signal:AbortSignal.timeout(9000),headers:{Authorization:'Bearer '+apiKey,'Content-Type':'application/json'},body:JSON.stringify({model,store:false,instructions:'Extract only durable driver-specific information that should improve future Home Base recommendations: explicit preferences, goals, constraints, repeated lessons, stable facts, or strategies. Do not save transient weather, one-time locations, secrets, passwords, exact home address, health data, or guesses. Return JSON only.',input:'User: '+utterance+'\nAssistant: '+answer,max_output_tokens:400,text:{format:{type:'json_schema',name:'homebase_memory_update',strict:true,schema:{type:'object',additionalProperties:false,required:['memories'],properties:{memories:{type:'array',maxItems:5,items:{type:'object',additionalProperties:false,required:['key','type','summary','confidence'],properties:{key:{type:'string'},type:{type:'string',enum:['preference','goal','constraint','lesson','fact','strategy']},summary:{type:'string'},confidence:{type:'number'}}}}}}}}})});
+   const learn=await fetchImpl('https://api.openai.com/v1/responses',{method:'POST',signal:AbortSignal.timeout(9000),headers:{Authorization:'Bearer '+apiKey,'Content-Type':'application/json'},body:JSON.stringify({model,store:false,instructions:'Extract only durable driver-specific information that should improve future Home Base recommendations: explicit preferences, goals, constraints, repeated lessons, stable facts, or strategies. Do not save transient weather, one-time locations, secrets, passwords, exact home address, health data, or guesses. Return JSON only.',input:'User: '+savedUtterance+'\nAssistant: '+answer,max_output_tokens:400,text:{format:{type:'json_schema',name:'homebase_memory_update',strict:true,schema:{type:'object',additionalProperties:false,required:['memories'],properties:{memories:{type:'array',maxItems:5,items:{type:'object',additionalProperties:false,required:['key','type','summary','confidence'],properties:{key:{type:'string'},type:{type:'string',enum:['preference','goal','constraint','lesson','fact','strategy']},summary:{type:'string'},confidence:{type:'number'}}}}}}}}})});
    if(learn.ok){const lp=await learn.json(),raw=outputText(lp),parsed=JSON.parse(raw||'{"memories":[]}');if(Array.isArray(parsed.memories)&&parsed.memories.length)await upsertMemories(userId,parsed.memories);}
   }catch{}
-  return{answer,provider:'OpenAI',agent:true,execution:verifiedResults.length?'verified_action_result':'advisory'};
+  return{answer,provider:'OpenAI',agent:true,channel,conversationId,execution:verifiedResults.length?'verified_action_result':'advisory'};
  };
 }

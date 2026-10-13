@@ -11,14 +11,28 @@
   twelve_hour:()=>click('timelineQuickBtn')
  });
  async function execute(action){if(!action||typeof action!=='object')return{ok:false,error:'invalid_action'};const name=String(action.name||action.type||'').toLowerCase().replaceAll('-','_');const fn=actions[name];if(!fn)return{ok:false,error:'unsupported_action',action:name};try{return{action:name,...await fn(action.arguments||action.args||{})}}catch(error){return{ok:false,error:String(error?.message||error),action:name}}}
- async function ask(raw,prefs={}){
+ // Plain-language reason for an AI failure. Never hide it behind a canned answer.
+ function describeError(error){
+  const code=String(error?.code||''),message=String(error?.message||error||'');
+  if(code==='ai_not_configured'||/not configured/i.test(message))return'Home Base AI is not switched on yet on the server.';
+  if(code==='sign_in'||/sign in|session|auth/i.test(message))return'Sign in to talk with Home Base AI.';
+  if(code==='ai_timeout'||/timed? ?out|abort/i.test(message))return'Home Base AI took too long to answer. Try again.';
+  if(/failed to fetch|network|load failed|offline/i.test(message))return'Can\'t reach Home Base AI right now. Check your signal and try again.';
+  if(/backend unavailable/i.test(message))return'Home Base AI is still loading. Try again in a moment.';
+  return message&&message.length<200?'Home Base AI: '+message:'Home Base AI could not answer. Try again.';
+ }
+ async function signedIn(){try{const user=await window.HomeBaseAccounts?.backend?.getUser?.();return!!(user?.id&&!user.is_anonymous)}catch{return false}}
+ async function ask(raw,prefs={},options={}){
   if(!window.HomeBaseAccounts?.backend?.evaluateDispatch)throw new Error('Home Base backend unavailable');
-  const result=await window.HomeBaseAccounts.backend.evaluateDispatch({operation:'agent',utterance:String(raw||'').trim(),locale:prefs.locale||navigator.language||'en-US',context:window.HomeBaseCopilot?.liveContext?.()||{},conversationId:conversationId(),capabilities:Object.keys(actions)});
+  if(!await signedIn())throw Object.assign(new Error('Sign in first'),{code:'sign_in'});
+  const channel=options.channel||prefs.channel||'voice',attachments=Array.isArray(options.attachments)?options.attachments.slice(0,1):[];
+  const base={utterance:String(raw||'').trim(),locale:prefs.locale||navigator.language||'en-US',conversationId:options.conversationId||conversationId(),channel};
+  const result=await window.HomeBaseAccounts.backend.evaluateDispatch({operation:'agent',...base,context:window.HomeBaseCopilot?.liveContext?.()||{},capabilities:Object.keys(actions),attachments});
   const requested=Array.isArray(result?.actions)?result.actions:result?.action?[result.action]:[];
   const actionResults=[];for(const action of requested)actionResults.push(await execute(action));
-  if(actionResults.length){try{const verified=await window.HomeBaseAccounts.backend.evaluateDispatch({operation:'agent-result',utterance:String(raw||'').trim(),locale:prefs.locale||navigator.language||'en-US',context:window.HomeBaseCopilot?.liveContext?.()||{},conversationId:conversationId(),actionResults});if(verified?.answer)return{...result,...verified,actionResults}}catch{}}
+  if(actionResults.length){try{const verified=await window.HomeBaseAccounts.backend.evaluateDispatch({operation:'agent-result',...base,context:window.HomeBaseCopilot?.liveContext?.()||{},actionResults});if(verified?.answer)return{...result,...verified,actionResults}}catch{}}
   return{...result,actionResults};
  }
- window.HomeBaseAgentClient={ask,execute,actions:Object.keys(actions),conversationId};
- window.HomeBaseAgentBridge=async function(raw,prefs){const result=await ask(raw,prefs);const answer=typeof result?.answer==='string'?result.answer.trim():'';if(!answer)throw new Error('Home Base Agent returned no answer');return answer;};
+ window.HomeBaseAgentClient={ask,execute,actions:Object.keys(actions),conversationId,describeError,signedIn};
+ window.HomeBaseAgentBridge=async function(raw,prefs){const result=await ask(raw,prefs,{channel:prefs?.channel||'voice'});const answer=typeof result?.answer==='string'?result.answer.trim():'';if(!answer)throw new Error('Home Base Agent returned no answer');return answer;};
 })();
