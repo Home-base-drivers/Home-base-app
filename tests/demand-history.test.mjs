@@ -15,7 +15,7 @@ test('historical recurrence fades continuously within one hour of its neighborho
  const half=H.forecastFor('Towson',future('16:26'),true).strength;
  assert.ok(peak>half&&half>0&&half<=.01);
  assert.equal(H.forecastFor('Towson',future('17:10'),true).strength,0);
- assert.equal(H.forecastFor('Towson',future('14:26'),true).strength,0);
+ assert.equal(H.forecastFor('Towson',future('13:30'),true).strength,0); // Oct 14 2:40 PM Towson adds a faint 2:26 PM reference; 1:30 PM stays clear.
  assert.equal(H.forecastFor('Unrelated neighborhood',future('15:26'),true).strength,0);
  // Weekday patterns carry across weekdays (Oct 8 Thu + Oct 9 Fri), never into the weekend.
  assert.ok(H.forecastFor('Towson',new Date('2026-10-16T15:16:00-04:00'),true).distinctDates>=2);
