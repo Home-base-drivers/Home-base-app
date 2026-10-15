@@ -21,19 +21,23 @@ test('GPT Live keeps user and assistant transcripts in Copilot history',()=>{
 });
 
 test('GPT Live asset is versioned and cached by the PWA',()=>{
- assert.match(html,/homebase-live-assistant\.js\?v=5/);
- assert.match(sw,/homebase-live-assistant\.js\?v=5/);
+ assert.match(html,/homebase-live-assistant\.js\?v=6/);
+ assert.match(sw,/homebase-live-assistant\.js\?v=6/);
  assert.match(sw,/home-base-v\d+/);
 });
 
-function voiceHarness(getUser){
- const calls=[],messages=[];
+function voiceHarness(getUser,{mediaError=true,execute=async()=>({ok:false,confirmed:false,requested:true})}={}){
+ const calls=[],messages=[],sent=[];let peer;
+ class Events{listeners=new Map();addEventListener(name,fn){if(!this.listeners.has(name))this.listeners.set(name,new Set());this.listeners.get(name).add(fn)}removeEventListener(name,fn){this.listeners.get(name)?.delete(fn)}emit(name,event={}){for(const fn of this.listeners.get(name)||[])fn(event)}}
+ class Peer extends Events{constructor(){super();peer=this;this.connectionState='new';this.iceGatheringState='complete';this.channel=new Events();this.channel.readyState='open';this.channel.send=s=>sent.push(JSON.parse(s));this.channel.close=()=>{this.channel.readyState='closed'}}addTrack(){}createDataChannel(){return this.channel}async createOffer(){return{type:'offer',sdp:'valid-offer'}}async setLocalDescription(d){this.localDescription=d}async setRemoteDescription(){calls.push('answer applied')}close(){this.connectionState='closed'}}
+ const track={stop:()=>calls.push('track stopped')};
  const ctx={document:{getElementById:id=>id==='navProfile'?{click:()=>calls.push('profile')}:null,querySelector:()=>({focus:()=>calls.push('focus')}),addEventListener:()=>{}},
-  navigator:{mediaDevices:{getUserMedia:async()=>{calls.push('microphone');throw Error('Test microphone unavailable');}}},
-  RTCPeerConnection:function(){},HomeBaseAccounts:{backend:{getUser:async()=>{calls.push('auth');return getUser();}}},
-  HomeBaseCopilot:{toggleConversation:()=>calls.push('guest voice'),stopConversation:()=>calls.push('old voice stopped')},HomeBaseShell:{setVoiceStatus:text=>messages.push(text)},clearTimeout,setTimeout,Date};
+  navigator:{mediaDevices:{getUserMedia:async()=>{calls.push('microphone');if(mediaError)throw Error('Test microphone unavailable');return{getTracks:()=>[track]}}}},
+  RTCPeerConnection:Peer,HomeBaseAccounts:{backend:{getUser:async()=>{calls.push('auth');return getUser();},evaluateDispatch:async()=>({transport:{sdp:'answer'}})}},
+  HomeBaseAgentClient:{execute},HomeBaseCopilot:{toggleConversation:()=>calls.push('guest voice'),stopConversation:()=>calls.push('old voice stopped')},HomeBaseShell:{setVoiceStatus:text=>messages.push(text)},clearTimeout,setTimeout,Date};
+ ctx.document.body={append:()=>{}};ctx.document.createElement=()=>({setAttribute:()=>{},pause:()=>{},remove:()=>{},play:()=>Promise.resolve()});
  ctx.window=ctx;vm.createContext(ctx);vm.runInContext(live,ctx);
- return{start:ctx.HomeBaseLiveAssistant.start,calls,messages,assistant:ctx.HomeBaseLiveAssistant};
+ return{start:ctx.HomeBaseLiveAssistant.start,stop:ctx.HomeBaseLiveAssistant.stop,calls,messages,sent,assistant:ctx.HomeBaseLiveAssistant,get peer(){return peer},event:e=>peer.channel.emit('message',{data:JSON.stringify(e)})};
 }
 test('missing Home Base session starts guest voice without opening Profile',async()=>{
  const h=voiceHarness(()=>{throw Object.assign(Error('Auth session missing!'),{name:'AuthSessionMissingError'});});
@@ -43,7 +47,28 @@ test('missing Home Base session starts guest voice without opening Profile',asyn
 test('anonymous identity can use guest voice without creating an account',async()=>{
  const h=voiceHarness(()=>({id:'anonymous',is_anonymous:true}));await h.start();assert.deepEqual(h.calls,['auth','guest voice']);
 });
-test('confirmed account upgrades to GPT Live while account lookup failures fall back to guest voice',async()=>{
- const h=voiceHarness(()=>({id:'driver'}));await h.start();assert.deepEqual(h.calls,['auth','old voice stopped','microphone','guest voice']);
- const failed=voiceHarness(()=>{throw Error('Network request failed');});await failed.start();assert.deepEqual(failed.calls,['auth','guest voice']);assert.match(failed.messages.at(-1),/no account needed/i);
+test('signed-in Live failures do not silently downgrade to phone voice',async()=>{
+ const h=voiceHarness(()=>({id:'driver'}));await h.start();assert.deepEqual(h.calls,['auth','old voice stopped','microphone']);
+ assert.equal(h.assistant.active,false);assert.match(h.messages.at(-1),/Test microphone unavailable.*retry/);
+ const failed=voiceHarness(()=>{throw Error('Network request failed');});await failed.start();assert.deepEqual(failed.calls,['auth']);assert.doesNotMatch(failed.messages.at(-1),/no account needed/i);
+});
+const tick=()=>new Promise(resolve=>setImmediate(resolve));
+test('SDP answer alone cannot report Live connected; session event and WebRTC are required',async()=>{
+ const h=voiceHarness(()=>({id:'driver'}),{mediaError:false});const starting=h.start();await tick();
+ assert.ok(h.calls.includes('answer applied'));assert.equal(h.assistant.active,false);assert.equal(h.assistant.starting,true);
+ h.event({type:'session.started'});await tick();assert.equal(h.assistant.active,false);
+ h.peer.connectionState='connected';h.peer.emit('connectionstatechange');await starting;
+ assert.equal(h.assistant.active,true);assert.match(h.messages.at(-1),/connected/);await h.stop();assert.ok(h.calls.includes('track stopped'));
+});
+test('stop during account lookup cannot later open the microphone',async()=>{
+ let resolve;const h=voiceHarness(()=>new Promise(r=>{resolve=r}));const starting=h.start();await h.stop();resolve({id:'driver'});await starting;assert.deepEqual(h.calls,['auth']);assert.equal(h.assistant.active,false);
+});
+test('delegation validation failure closes Live without phone fallback',async()=>{
+ const h=voiceHarness(()=>({id:'driver'}),{mediaError:false});const starting=h.start();await tick();h.event({type:'error',error:{code:'responses_validation_failed',message:'Model access rejected'}});await starting;
+ assert.equal(h.assistant.active,false);assert.match(h.messages.at(-1),/Model access rejected/);assert.ok(!h.calls.includes('guest voice'));
+});
+test('Live tools share verified app actions and duplicate calls are not executed twice',async()=>{
+ let executions=0;const h=voiceHarness(()=>({id:'driver'}),{mediaError:false,execute:async()=>{executions++;return{ok:false,confirmed:false,requested:true}}});const starting=h.start();await tick();h.peer.connectionState='connected';h.event({type:'session.started'});await starting;
+ const event={type:'response.event',event:{type:'response.output_item.done',item:{type:'function_call',name:'homebase_action',call_id:'call-1',arguments:'{"action":"refresh_location"}'}}};h.event(event);h.event(event);await tick();
+ assert.equal(executions,1);const tool=h.sent.find(e=>e.type==='response.item.create');assert.equal(JSON.parse(tool.item.output).confirmed,false);await h.stop();
 });

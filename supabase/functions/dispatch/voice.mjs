@@ -1,3 +1,4 @@
+import {providerFailure} from './errors.mjs';
 const voices=new Set(['alloy','ash','ballad','coral','echo','fable','nova','onyx','sage','shimmer','verse','marin','cedar']);
 const styles=new Set(['all','masculine','feminine']);
 const localeNames={
@@ -24,7 +25,7 @@ export function makeVoiceSynthesizer({apiKey,model='gpt-4o-mini-tts',fetchImpl=f
   const accent=localeNames[locale],presentation=style==='masculine'?'Use a natural masculine vocal presentation.':style==='feminine'?'Use a natural feminine vocal presentation.':'Use a natural, balanced vocal presentation.';
   const instructions='You are the Home Base driver copilot. Speak exactly the supplied text without adding, removing, translating, or paraphrasing words. Speak naturally in '+accent+'. Use the regional accent associated with '+accent+' when appropriate. '+presentation+' Sound warm, confident, clear, conversational, and human-like rather than robotic. Keep a calm driving-assistant pace with natural intonation.';
   const response=await fetchImpl('https://api.openai.com/v1/audio/speech',{method:'POST',signal:AbortSignal.timeout(20000),headers:{Authorization:'Bearer '+apiKey,'Content-Type':'application/json'},body:JSON.stringify({model,voice,input:text,instructions,response_format:'mp3'})});
-  if(!response.ok)throw Error('AI voice service unavailable.');
+  if(!response.ok)throw providerFailure(response,await response.json().catch(()=>({})),'speech');
   const audio=new Uint8Array(await response.arrayBuffer());if(!audio.length)throw Error('AI voice returned no audio.');
   return{configured:true,audio,contentType:response.headers.get('content-type')||'audio/mpeg',provider:'OpenAI',voice,locale,style};
  };

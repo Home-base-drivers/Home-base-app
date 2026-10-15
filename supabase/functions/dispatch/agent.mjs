@@ -1,3 +1,4 @@
+import {providerFailure} from './errors.mjs';
 const PROJECT_KNOWLEDGE=`
 HOME BASE PRODUCT BRAIN
 Home Base is an AI intelligence layer above rideshare driver platforms, not merely a heat map.
@@ -81,7 +82,7 @@ ${typed?'- This message was TYPED in the Home Base chat screen. Reply like ChatG
   let response;
   try{response=await fetchImpl('https://api.openai.com/v1/responses',{method:'POST',signal:AbortSignal.timeout(timeoutMs),headers:{Authorization:'Bearer '+apiKey,'Content-Type':'application/json'},body:JSON.stringify({model,store:false,instructions,input,reasoning:{effort:typed?'medium':'low'},tools:[{type:'web_search'},...ACTION_TOOLS.filter(t=>!Array.isArray(capabilities)||!capabilities.length||capabilities.includes(t.name))],tool_choice:'auto',max_output_tokens:typed?4000:1400})});}
   catch(error){if(error?.name==='TimeoutError'||error?.name==='AbortError')throw errorWithCode('Home Base AI took too long to answer.','ai_timeout');throw error;}
-  const payload=await response.json().catch(()=>({}));if(!response.ok)throw errorWithCode(payload?.error?.message||'Home Base AI is unavailable.','ai_provider_error');
+  const payload=await response.json().catch(()=>({}));if(!response.ok)throw providerFailure(response,payload,'responses');
   const actions=actionCalls(payload);
   const answer=outputText(payload);
   if(actions.length)return{answer:answer||'Executing the requested Home Base action.',actions,provider:'OpenAI',agent:true,execution:'action_required'};

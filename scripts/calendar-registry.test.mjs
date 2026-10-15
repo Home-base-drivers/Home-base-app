@@ -17,6 +17,15 @@ test('saved local minimum is checked again on load, discoveries persist and dist
 test('local source validation rejects private URLs and unmapped remote calendars',()=>{
  assert.equal(localCalendarSources([source,{...source,url:'https://127.0.0.1/'},{name:'Unmapped',url:'https://other.example.org'}],market).length,1);
 });
+test('calendar saves deduplicate conflict keys before batching and retain the latest definition',async()=>{
+ const batches=[];const registry=cloudCalendarRegistry({url:'https://project.supabase.co',key:'public',authorization:'Bearer verified',userId:'owner',request:async(url,options)=>{batches.push(JSON.parse(options.body));return new Response(null,{status:201});}});
+ const sources=Array.from({length:105},(_,i)=>({...source,url:source.url+'?id='+i}));
+ await registry.save(market,[...sources,{...sources[0],name:'Updated name'},...sources],0,'partial');
+ assert.deepEqual(batches.map(b=>b.length),[100,5]);
+ const rows=batches.flat();assert.equal(new Set(rows.map(r=>r.user_id+'|'+r.url)).size,105);
+ await registry.save(market,[source,{...source,name:'Updated name'}],0,'partial');
+ assert.equal(batches.at(-1).length,1);assert.equal(batches.at(-1)[0].definition.name,'Updated name');
+});
 test('private database requests carry verified identity, paginate and never delete old sources',async()=>{
  const calls=[];const registry=cloudCalendarRegistry({url:'https://project.supabase.co',key:'public',authorization:'Bearer verified',userId:'owner',request:async(url,options)=>{calls.push([url,options]);return options.method==='POST'?new Response(null,{status:201}):new Response('[]');}});
  await registry.load(market);await registry.save(market,[source],Date.now(),'partial');

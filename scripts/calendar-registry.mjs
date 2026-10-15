@@ -24,7 +24,9 @@ export function cloudCalendarRegistry({url,key,authorization,userId,request=fetc
    return{sources:localCalendarSources(sources,market),discoveredAt:Date.parse(areas[0]?.discovered_at)||0,discoveryStatus:areas[0]?.status||'unavailable'};
   },
   async save(market,sources,discoveredAt,status){
-   const area=calendarArea(market),rows=localCalendarSources(sources,market).map(s=>{const p=Number.isFinite(s.lat)?s:s.venues?.filter(v=>Number.isFinite(v.lat)&&Number.isFinite(v.lon)).sort((a,b)=>distanceKm(market.center,a)-distanceKm(market.center,b))[0]||s.registryCenter;return{user_id:userId,url:s.url,lat:Math.round(p.lat*4)/4,lon:Math.round(p.lon*4)/4,definition:s};});
+   // Deduplicate the entire save, not individual batches: Postgres cannot update
+   // the same (user_id,url) twice in one INSERT, and page discovery repeats URLs.
+   const area=calendarArea(market),rows=mergeCalendarSources(localCalendarSources(sources,market)).map(s=>{const p=Number.isFinite(s.lat)?s:s.venues?.filter(v=>Number.isFinite(v.lat)&&Number.isFinite(v.lon)).sort((a,b)=>distanceKm(market.center,a)-distanceKm(market.center,b))[0]||s.registryCenter;return{user_id:userId,url:s.url,lat:Math.round(p.lat*4)/4,lon:Math.round(p.lon*4)/4,definition:s};});
    for(let i=0;i<rows.length;i+=100)await rest('user_calendar_sources?on_conflict=user_id,url',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(rows.slice(i,i+100))});
    if(discoveredAt)await rest('user_calendar_areas?on_conflict=user_id,lat,lon,radius_km',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({user_id:userId,...area,radius_km:market.radiusKm,discovered_at:new Date(discoveredAt).toISOString(),status})});
   }
