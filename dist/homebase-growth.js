@@ -56,10 +56,16 @@
     const localBackup = () => Object.fromEntries(deviceKeys.filter(k=>!['homeBaseActiveShift','homeBasePrivateDestination'].includes(k)).map(k => [k,read(k)]).filter(([,v])=>v!==null));
     const download = (name,data) => { const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));
       const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000); };
+    const K=HomeBaseCloud.SYNC_KEYS;
+    // Record what actually happened, so no screen can claim a save that did not finish.
+    const markSynced = () => { try{localStorage.setItem(K.syncedAt,String(Date.now()));localStorage.removeItem(K.failedAt);localStorage.removeItem(K.failure);}catch{} };
+    const markFailed = kind => { try{localStorage.setItem(K.failedAt,String(Date.now()));localStorage.setItem(K.failure,kind);}catch{} };
+    const publishSession = () => { globalThis.HomeBaseCloudState={signedIn:!!me,busy,email:me?.email||''}; };
+    const syncState = () => HomeBaseCloud.syncStatus(localStorage,{signedIn:!!me,busy});
     const status = text => { message=text; const node=document.getElementById('cloudStatus');if(node)node.textContent=text; };
-    const fail = error => {if(error?.name==='CloudConflictError'){autosave=false;localStorage.setItem('homeBaseAutoCloud','false');}
+    const fail = error => {const conflict=error?.name==='CloudConflictError';if(conflict){autosave=false;localStorage.setItem('homeBaseAutoCloud','false');}markFailed(conflict?'conflict':'error');publishSession();
       status(error?.name==='CloudConflictError' ? 'Another device has newer settings. Automatic saving paused. Download a device backup, then choose Restore cloud copy. No settings were overwritten.' : (authMessage(error) || error?.message || 'Cloud request failed. Your device data was kept.'));};
-    const action = async fn => { if(busy)return;busy=true;try{await fn();}catch(error){fail(error);}finally{busy=false;} };
+    const action = async fn => { if(busy)return;busy=true;publishSession();try{await fn();}catch(error){fail(error);}finally{busy=false;publishSession();} };
     async function refreshIdentity() {
       let user;try{user=await backend.getUser();}catch{user=null;}
       me=user;privacy=emptyPrefs();version=null;autosave=false;fingerprint='';
@@ -67,6 +73,7 @@
         const remembered=Number(localStorage.getItem('homeBaseCloudVersion'));
         version=canSync(readOwner(),me.id)&&localStorage.getItem('homeBaseCloudVersion')!==null?remembered:cloud.version;
         autosave=canSync(readOwner(),me.id) && localStorage.getItem('homeBaseCloudVersion')!==null && localStorage.getItem('homeBaseAutoCloud')==='true';}
+      publishSession();
       if(document.getElementById('workspaceTitle').textContent==='Profile') renderProfile();
     }
     async function listAllEarnings() {
@@ -87,6 +94,7 @@
       version=saved.version;localStorage.setItem('homeBaseCloudVersion',String(version));
       localStorage.setItem('homeBaseCloudOwner',me.id);
       await backend.saveEarnings(imported,{source:'csv'});
+      markSynced();
       localStorage.setItem('homeBaseCloudOwner',me.id);localStorage.setItem('homeBaseAutoCloud','true');autosave=true;
       fingerprint=JSON.stringify([state,ledger]);status('Cloud saved · '+new Date().toLocaleTimeString()+'. New changes will save automatically while online.');
     }
@@ -103,6 +111,7 @@
       write('homeBaseLedger',rows);const summary=HomeBasePlanner.summarize(rows,'Cloud history');write('homeBaseEarningsProfile',summary);earningsProfile=summary;
       localStorage.setItem('homeBaseCloudOwner',me.id);localStorage.setItem('homeBaseAutoCloud','true');autosave=true;version=cloud.version;
       localStorage.setItem('homeBaseCloudVersion',String(version));document.dispatchEvent(new Event('homebase:device-data-changed'));
+      markSynced();
       fingerprint=JSON.stringify([HomeBaseCloud.progressSnapshot(localStorage),rows]);
       applyProductPrefs();updateEarnings();status('Cloud copy restored. Refresh the map to apply saved map preferences.');renderProfile();
     }
@@ -112,7 +121,7 @@
         '<p>Signed in as <b>'+esc(me.email)+'</b></p><p>'+ (canSync(readOwner(),me.id)?'This device is linked to your cloud account.':'Device history is not linked. Nothing is uploaded automatically.')+'</p><div class="growth-actions"><button id="cloudSave" class="primary-action">Save device to cloud</button><button id="cloudRestore" class="secondary-action">Restore cloud copy</button><button id="cloudExport" class="secondary-action">Export cloud data</button><button id="cloudSignOut" class="secondary-action">Sign out</button></div><label><input type="checkbox" id="cloudAuto" '+(autosave?'checked':'')+'> Automatically save changes after linking this device</label>':
         '<p>Your map remains free without an account. Sign in to save earnings and settings privately.</p><form id="cloudAuth"><label>Email<input name="email" type="email" autocomplete="email" required></label><label>Password<input name="password" type="password" autocomplete="current-password" minlength="8" required></label><div class="growth-actions"><button class="primary-action" name="mode" value="signin">Sign in</button><button class="secondary-action" name="mode" value="signup">Create account</button></div></form><button id="cloudReset" class="secondary-action">Forgot password</button>')+
         (recovery?'<form id="cloudRecovery"><label>New password<input name="password" type="password" autocomplete="new-password" minlength="8" required></label><button class="primary-action">Update password</button></form>':'')+
-        (!me&&needsConfirm?'<div class="growth-actions"><button id="cloudResend" class="secondary-action">Resend confirmation email</button></div>':'')+'<p class="growth-note">No Uber/Lyft passwords are collected here.</p><div class="growth-actions"><button id="deviceBackup" class="secondary-action">Download device backup</button></div><p id="cloudStatus" role="status">'+esc(message)+'</p>';
+        (!me&&needsConfirm?'<div class="growth-actions"><button id="cloudResend" class="secondary-action">Resend confirmation email</button></div>':'')+'<p class="growth-sync growth-sync-'+syncState().state+'" role="status">'+esc(syncState().detail)+'</p>'+'<p class="growth-note">No Uber/Lyft passwords are collected here.</p><div class="growth-actions"><button id="deviceBackup" class="secondary-action">Download device backup</button></div><p id="cloudStatus" role="status">'+esc(message)+'</p>';
       section.querySelector('#deviceBackup').onclick=()=>download('home-base-device-backup.json',{format:'home-base-backup',version:1,state:localBackup()});
       section.querySelector('#cloudAuth')?.addEventListener('submit',event=>{event.preventDefault();const data=new FormData(event.target),mode=event.submitter?.value;
         action(async()=>{const email=String(data.get('email')),password=String(data.get('password'));

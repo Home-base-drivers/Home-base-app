@@ -79,6 +79,54 @@ export function fromEarningsRecord(row) {
   };
 }
 
+// Keys the browser writes about its own sync state. They live here so the
+// account screen and the backup card describe the same thing.
+export const SYNC_KEYS = Object.freeze({
+  owner: 'homeBaseCloudOwner',
+  version: 'homeBaseCloudVersion',
+  enabled: 'homeBaseAutoCloud',
+  syncedAt: 'homeBaseCloudSyncedAt',
+  failedAt: 'homeBaseCloudFailedAt',
+  failure: 'homeBaseCloudFailure'
+});
+
+function sinceLabel(then, now) {
+  const seconds = Math.max(0, Math.round((now - then) / 1000));
+  if (seconds < 45) return 'just now';
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return minutes <= 1 ? 'a minute ago' : minutes + ' minutes ago';
+  const hours = Math.round(minutes / 60);
+  if (hours < 36) return hours === 1 ? 'an hour ago' : hours + ' hours ago';
+  return 'on ' + new Date(then).toLocaleDateString();
+}
+
+// One source of truth for what the driver is told about cloud saving. Returns a
+// state rather than a sentence so each screen can word it for its own context,
+// and never claims a save that did not finish: a failure newer than the last
+// success keeps the state 'failed' until a later save succeeds.
+export function syncStatus(storage, session = {}, now = Date.now()) {
+  const read = key => { try { return storage?.getItem?.(key) ?? null; } catch { return null; } };
+  const stamp = key => { const value = Number(read(key)); return Number.isFinite(value) && value > 0 ? value : null; };
+  const owner = read(SYNC_KEYS.owner);
+  const linked = !!owner && read(SYNC_KEYS.version) !== null;
+  const enabled = read(SYNC_KEYS.enabled) === 'true';
+  const syncedAt = stamp(SYNC_KEYS.syncedAt);
+  const failedAt = stamp(SYNC_KEYS.failedAt);
+  const failure = read(SYNC_KEYS.failure) || '';
+  const base = { linked, enabled, syncedAt, lastSaved: syncedAt ? sinceLabel(syncedAt, now) : null };
+
+  if (session.busy) return { ...base, state: 'syncing', detail: 'Saving to your account…' };
+  if (!session.signedIn) return { ...base, state: 'signed-out', detail: 'Signed out. Records stay on this device.' };
+  if (failedAt && (!syncedAt || failedAt > syncedAt)) return { ...base, state: 'failed',
+    detail: failure === 'conflict'
+      ? 'Not saved. Another device has newer records, and nothing was overwritten.'
+      : 'The last save did not finish. Your device records were kept.' };
+  if (!linked) return { ...base, state: 'disabled', detail: 'Not linked yet. Save or restore once to copy records to your account.' };
+  if (!enabled) return { ...base, state: 'disabled', detail: 'Automatic saving is off, so this device is not copying records to your account.' };
+  return { ...base, state: 'saved',
+    detail: syncedAt ? 'Saved to your account ' + sinceLabel(syncedAt, now) + '.' : 'Saving to your account is on.' };
+}
+
 export function createHomeBaseBackend(client) {
   async function user() {
     const data = result(await client.auth.getUser());
