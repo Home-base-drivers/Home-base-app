@@ -29,6 +29,18 @@ work has equal priority. Preserve both owners' changes.
 7. Never force-push, bypass hooks, or retry a rejected update with stale file
    contents. Wait for your own validation/deployment to finish and verify the result.
 
+## Before you start
+
+Read [docs/AGENT_ENVIRONMENT.md](docs/AGENT_ENVIRONMENT.md). It covers the
+release-version files that must stay aligned, which files under `dist/` are
+generated, the guard's proxy failure and the clone refspec that hides the other
+owner's branches — each of which has already cost a session's time. It also lists
+what a sandboxed session cannot verify, so nothing in that list gets reported as
+checked when it was not.
+
+Configuration that lives only in a dashboard is requested with
+[docs/CHATGPT_STATUS_REQUEST.md](docs/CHATGPT_STATUS_REQUEST.md).
+
 Enable the local guard in each checkout with `npm run setup:hooks`. Local hooks
 cannot intercept GitHub web edits or connector calls; those must follow the same
 pre-submit check above. GitHub does not expose work still being edited locally:
