@@ -116,7 +116,9 @@ origin without a path, in the Edge Function CORS allow-lists.
 Do not guess at any of these, and do not report them as verified:
 
 - **Supabase Auth → URL Configuration** (Site URL, Redirect URLs) is not exposed
-  through the Supabase MCP tools. Tables, advisors, logs and migrations are.
+  through the Supabase MCP tools. Tables, advisors, logs and migrations are — and
+  the logs answer the redirect question on their own; see the next two sections
+  before asking anyone to read a dashboard.
 - **`https://home-base-drivers.github.io/`** and **`homebasedrivers.com`** are
   blocked by the session's egress proxy, so the deployed app cannot be loaded.
 - The **GitHub Pages REST endpoint** (`/repos/{owner}/{repo}/pages`) returns 403
@@ -125,6 +127,62 @@ Do not guess at any of these, and do not report them as verified:
 
 `docs/CHATGPT_STATUS_REQUEST.md` is a ready-made request for a human or an
 assistant with full dashboard access to fill these gaps.
+
+## Verify the Auth redirect from logs, not the dashboard
+
+The Auth dashboard is unreadable from a session, but the redirect question can be
+answered outright from the project's logs, which the Supabase MCP tools *can*
+reach. The confirmation and recovery links Supabase emails carry the redirect as
+a query parameter, so a successful click proves what the allow list accepted:
+
+```sql
+select timestamp, event_message from logs
+where source = 'edge_logs' and position(event_message, 'redirect_to') > 0
+order by timestamp desc limit 12
+```
+
+Read the result like this:
+
+- `GET | 303 | .../auth/v1/verify?token=…&type=signup&redirect_to=<URL>` is an
+  emailed confirmation link that was clicked. **303 means Auth accepted that
+  redirect.** A `redirect_to` not on the allow list is replaced by the Site URL
+  when the link is generated, so the URL appearing here *is* the allow-listed one.
+- `type=recovery` is the password-reset equivalent.
+- `POST | 200 | .../auth/v1/signup?redirect_to=<URL>` is the app's own call, which
+  shows what the client sent — compare it with the `verify` line to see whether
+  Auth honoured it or substituted something else.
+- A `429` on `/signup` or `/resend` reading "you can only request this after N
+  seconds" is the normal per-address cooldown, not a misconfigured hourly cap.
+  Only "email rate limit exceeded" means the hourly limit was hit.
+
+Confirmed on 2026-10-14: `signup` and `recovery` links both carried
+`redirect_to=https%3A%2F%2Fhome-base-drivers.github.io%2FHome-base-app%2F` and
+both returned 303, on two different iPhones, with `user_signedup` recorded for
+each. The allow list accepts the exact URL the app sends, capital H and trailing
+slash included.
+
+## Confirm which mailer is actually sending
+
+Supabase's built-in mailer logs each send with its own sender address:
+
+```sql
+select timestamp, event_message from logs
+where source = 'auth_logs' and position(event_message, 'mail.send') > 0
+order by timestamp desc limit 20
+```
+
+A row with `"mail_from":"noreply@mail.app.supabase.io"` is the **default**
+Supabase mailer, which is capped around 2 emails per hour and is not a public
+signup delivery service. Custom SMTP sends do not appear as these rows, so the
+useful test is: find a confirmation that was clicked (a `verify` 303 in
+`edge_logs`) and check whether a `mail.send` row from the default sender exists
+for that address. Delivery with no such row means custom SMTP carried it.
+
+The hourly limit changes are logged too, as
+`env GOTRUE_RATE_LIMIT_EMAIL_SENT changed, updating Email limiter from X to Y`,
+which dates the switch precisely. Historical default-sender rows from *before*
+such a change say nothing about the current configuration — check the timestamps
+before reporting the sender as wrong.
 
 ## Checks before submitting
 

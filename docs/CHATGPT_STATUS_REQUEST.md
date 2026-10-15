@@ -10,6 +10,13 @@ connector access, to fill those gaps. Replace the three bracketed values under
 "Current state" with the live numbers, then paste everything below the rule into
 the assistant. Keep it read-only: it asks for facts, not changes.
 
+Check the project's own logs first. The redirect allow list and the active mailer
+can both be established from them without any dashboard access — see "Verify the
+Auth redirect from logs" in [AGENT_ENVIRONMENT.md](AGENT_ENVIRONMENT.md). Sections
+A, B and F below are then a cross-check rather than the only route, which matters
+because an assistant without dashboard sign-in will answer most of them "could
+not check".
+
 ---
 
 You have connector access to GitHub, Supabase, Resend and the web. I need a
