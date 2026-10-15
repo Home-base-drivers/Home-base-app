@@ -40,7 +40,7 @@
     const readOwner = () => localStorage.getItem('homeBaseCloudOwner');
     const emptyPrefs = () => ({usage_analytics:false,model_improvement:false,benchmark_sharing:false});
     const redirect = 'https://home-base-drivers.github.io/Home-base-app/';
-    let needsConfirm = null;
+    let needsConfirm = null, identityRevision = 0;
     // Supabase returns terse auth errors; show drivers what to do next instead.
     const authHints = [
       [/email not confirmed/i,'That email has not been confirmed yet. Check your inbox and spam folder, or use Resend confirmation email below.'],
@@ -61,20 +61,37 @@
     const markSynced = () => { try{localStorage.setItem(K.syncedAt,String(Date.now()));localStorage.removeItem(K.failedAt);localStorage.removeItem(K.failure);}catch{} };
     const markFailed = kind => { try{localStorage.setItem(K.failedAt,String(Date.now()));localStorage.setItem(K.failure,kind);}catch{} };
     const publishSession = () => { globalThis.HomeBaseCloudState={signedIn:!!me,busy,email:me?.email||''}; };
-    const syncState = () => HomeBaseCloud.syncStatus(localStorage,{signedIn:!!me,busy});
+    const syncState = () => HomeBaseCloud.syncStatus(localStorage,{signedIn:!!me,busy:busy&&!!me&&!recovery});
     const status = text => { message=text; const node=document.getElementById('cloudStatus');if(node)node.textContent=text; };
     const fail = error => {const conflict=error?.name==='CloudConflictError';if(conflict){autosave=false;localStorage.setItem('homeBaseAutoCloud','false');}markFailed(conflict?'conflict':'error');publishSession();
       status(error?.name==='CloudConflictError' ? 'Another device has newer settings. Automatic saving paused. Download a device backup, then choose Restore cloud copy. No settings were overwritten.' : (authMessage(error) || error?.message || 'Cloud request failed. Your device data was kept.'));};
-    const action = async fn => { if(busy)return;busy=true;publishSession();try{await fn();}catch(error){fail(error);}finally{busy=false;publishSession();} };
+    const action = async fn => { if(busy)return;busy=true;publishSession();try{await fn();}catch(error){fail(error);}finally{busy=false;publishSession();if(document.getElementById('workspaceTitle').textContent==='Profile')renderProfile();} };
     async function refreshIdentity() {
-      let user;try{user=await backend.getUser();}catch{user=null;}
+      const revision=++identityRevision;
+      let user;
+      try{user=await backend.getUser();}
+      catch(error){
+        if(revision!==identityRevision)return;
+        // A connection failure does not prove that an existing account signed out.
+        if(error?.name==='AuthSessionMissingError'||/auth session missing|sign in.*first/i.test(error?.message||''))user=null;
+        else throw error;
+      }
+      if(revision!==identityRevision)return;
       me=user;privacy=emptyPrefs();version=null;autosave=false;fingerprint='';
-      if(me){await backend.ensureProfile();privacy=await backend.privacy();const cloud=await backend.getProgress();
-        const remembered=Number(localStorage.getItem('homeBaseCloudVersion'));
-        version=canSync(readOwner(),me.id)&&localStorage.getItem('homeBaseCloudVersion')!==null?remembered:cloud.version;
-        autosave=canSync(readOwner(),me.id) && localStorage.getItem('homeBaseCloudVersion')!==null && localStorage.getItem('homeBaseAutoCloud')==='true';}
+      // Account identity is independent of optional cloud settings loading.
       publishSession();
-      if(document.getElementById('workspaceTitle').textContent==='Profile') renderProfile();
+      if(document.getElementById('workspaceTitle').textContent==='Profile')renderProfile();
+      if(!me)return;
+      const userId=me.id;
+      await backend.ensureProfile();
+      const [prefs,cloud]=await Promise.all([backend.privacy(),backend.getProgress()]);
+      if(revision!==identityRevision||me?.id!==userId)return;
+      privacy=prefs;
+      const remembered=Number(localStorage.getItem('homeBaseCloudVersion'));
+      version=canSync(readOwner(),userId)&&localStorage.getItem('homeBaseCloudVersion')!==null?remembered:cloud.version;
+      autosave=canSync(readOwner(),userId) && localStorage.getItem('homeBaseCloudVersion')!==null && localStorage.getItem('homeBaseAutoCloud')==='true';
+      publishSession();
+      if(document.getElementById('workspaceTitle').textContent==='Profile')renderProfile();
     }
     async function listAllEarnings() {
       const rows=[];for(let offset=0;;offset+=500){const page=await backend.listEarnings({offset});rows.push(...page);if(page.length<500)break;}
@@ -124,7 +141,7 @@
         (!me&&needsConfirm?'<div class="growth-actions"><button id="cloudResend" class="secondary-action">Resend confirmation email</button></div>':'')+'<p class="growth-sync growth-sync-'+syncState().state+'" role="status">'+esc(syncState().detail)+'</p>'+'<p class="growth-note">No Uber/Lyft passwords are collected here.</p><div class="growth-actions"><button id="deviceBackup" class="secondary-action">Download device backup</button></div><p id="cloudStatus" role="status">'+esc(message)+'</p>';
       section.querySelector('#deviceBackup').onclick=()=>download('home-base-device-backup.json',{format:'home-base-backup',version:1,state:localBackup()});
       section.querySelector('#cloudAuth')?.addEventListener('submit',event=>{event.preventDefault();const data=new FormData(event.target),mode=event.submitter?.value;
-        action(async()=>{const email=String(data.get('email')),password=String(data.get('password'));
+        action(async()=>{const email=String(data.get('email')).trim(),password=String(data.get('password'));
           if(mode==='signup'){const result=await backend.signUp(email,password,redirect);status(result.session?'Account created.':'Account created. Check your email to confirm your address.');}
           else {
             try{await backend.signIn(email,password);}
@@ -133,7 +150,7 @@
               const wasSignedIn=!!me;await refreshIdentity();const hint=authHint(error,email);if(!hint)throw error;status(hint+(wasSignedIn&&!me?' You were signed out on this phone, so sign in again to use Home Base AI and cloud saving.':''));renderProfile();return;}
             needsConfirm=null;await refreshIdentity();status('Signed in. Device history has not been uploaded.');renderProfile();
           }});});
-      section.querySelector('#cloudReset')?.addEventListener('click',()=>action(async()=>{const email=section.querySelector('[name=email]').value;if(!email)throw Error('Enter your email first.');await backend.resetPassword(email,redirect);status('If an account exists for that email, a recovery link is on its way. Check your inbox and spam folder.');}));
+      section.querySelector('#cloudReset')?.addEventListener('click',()=>action(async()=>{const email=section.querySelector('[name=email]').value.trim();if(!email)throw Error('Enter your email first.');await backend.resetPassword(email,redirect);status('If an account exists for that email, a recovery link is on its way. Check your inbox and spam folder.');}));
       section.querySelector('#cloudResend')?.addEventListener('click',()=>action(async()=>{await backend.resendConfirmation(needsConfirm,redirect);status('Confirmation email sent again to '+needsConfirm+'. Check your inbox and spam folder.');}));
       section.querySelector('#cloudRecovery')?.addEventListener('submit',event=>{event.preventDefault();action(async()=>{await backend.updatePassword(new FormData(event.target).get('password'));recovery=false;status('Password updated.');renderProfile();});});
       section.querySelector('#cloudSave')?.addEventListener('click',()=>action(()=>uploadDevice(true)));
@@ -198,9 +215,13 @@
       }
       try{await collectLearning();}catch(error){fail(error);}
     }
-    backend.onAuthChange((event)=>{if(event==='PASSWORD_RECOVERY')recovery=true;
+    backend.onAuthChange((event)=>{if(event==='PASSWORD_RECOVERY'){
+      recovery=true;message='Choose a new password below and tap Update password to finish the reset.';
+      // Email links open the map first; make the final reset step visible immediately.
+      setTimeout(()=>document.getElementById('navProfile')?.click(),0);
+    }
       if(['INITIAL_SESSION','SIGNED_IN','SIGNED_OUT'].includes(event))setTimeout(()=>window.dispatchEvent(new Event('homebase-calendar-identity')),0);
-      if(['SIGNED_IN','SIGNED_OUT','PASSWORD_RECOVERY'].includes(event))setTimeout(()=>refreshIdentity().catch(fail),0);});
+      if(['INITIAL_SESSION','SIGNED_IN','SIGNED_OUT','PASSWORD_RECOVERY'].includes(event))setTimeout(()=>refreshIdentity().catch(fail),0);});
     fetch('baltimore-demand-areas.geojson').then(r=>r.json()).then(data=>{areas=data.features||[];}).catch(()=>{});
     backend.sponsors().then(rows=>{sponsors=rows;}).catch(()=>{});
     function renderSponsors(){
