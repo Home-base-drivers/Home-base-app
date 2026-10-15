@@ -128,7 +128,9 @@
           if(mode==='signup'){const result=await backend.signUp(email,password,redirect);status(result.session?'Account created.':'Account created. Check your email to confirm your address.');}
           else {
             try{await backend.signIn(email,password);}
-            catch(error){const hint=authHint(error,email);if(!hint)throw error;status(hint);renderProfile();return;}
+            catch(error){
+              // A failed password attempt ends any earlier session on this device, so re-read the real state.
+              const wasSignedIn=!!me;await refreshIdentity();const hint=authHint(error,email);if(!hint)throw error;status(hint+(wasSignedIn&&!me?' You were signed out on this phone, so sign in again to use Home Base AI and cloud saving.':''));renderProfile();return;}
             needsConfirm=null;await refreshIdentity();status('Signed in. Device history has not been uploaded.');renderProfile();
           }});});
       section.querySelector('#cloudReset')?.addEventListener('click',()=>action(async()=>{const email=section.querySelector('[name=email]').value;if(!email)throw Error('Enter your email first.');await backend.resetPassword(email,redirect);status('If an account exists for that email, a recovery link is on its way. Check your inbox and spam folder.');}));

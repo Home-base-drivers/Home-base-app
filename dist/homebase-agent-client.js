@@ -16,7 +16,7 @@
  function describeError(error){
   const code=String(error?.code||''),message=String(error?.message||error||'');
   if(code==='ai_not_configured'||/not configured/i.test(message))return'Home Base AI is not switched on yet on the server.';
-  if(code==='sign_in'||error?.name==='AuthSessionMissingError'||/sign in.*first|auth session missing|invalid session/i.test(message))return'Sign in to talk with Home Base AI.';
+  if(code==='sign_in'||error?.name==='AuthSessionMissingError'||/sign in.*first|auth session missing|invalid session/i.test(message))return'You are signed out on this phone. Sign in from Profile to use Home Base AI.';
   if(code==='ai_timeout'||/timed? ?out|abort/i.test(message))return'Home Base AI took too long to answer. Try again.';
   if(/failed to fetch|network|load failed|offline/i.test(message))return'Can\'t reach Home Base AI right now. Check your signal and try again.';
   if(/backend unavailable/i.test(message))return'Home Base AI is still loading. Try again in a moment.';
