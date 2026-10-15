@@ -27,17 +27,17 @@ and the remaining subscription, sponsorship and commercial-data release gates.
 | Brand assets | dist/homebase-logo.png, dist/icon-192.png, dist/icon-512.png | Inventory origin and permitted use before transfer |
 | Provider pipeline | scripts/refresh-provider-signals.mjs, .github/workflows/provider-signals.yml | Adapters and freshness handling; live availability depends on provider access |
 | Private database | Supabase Home Base, nixihmurdtfcbffgvpij | RLS-protected earnings, consent and learning tables; growth migrations added |
-| Account client | src/backend-client.mjs, dist/homebase-backend.js, dist/homebase-growth.js | Account/cloud interface loaded; external email delivery remains pending |
+| Account client | src/backend-client.mjs, dist/homebase-backend.js, dist/homebase-growth.js | Account/cloud interface loaded; confirmation and recovery email delivering through Resend custom SMTP |
 | Setup and contracts | BACKEND.md, SUPABASE_SETUP.md, CONNECTIONS.md | Database behavior and outstanding integration steps |
-| Automated checks | scripts/*.test.mjs, tests/*.test.mjs | 82 checks passed on this release; rerun on each release |
+| Automated checks | scripts/*.test.mjs, tests/*.test.mjs | 356 checks passed on this release, plus 6 release-integrity checks; rerun on each release |
 
 ## Minimum-investment finish sequence
 
 | Priority | Deliverable | Spending decision | Acceptance condition |
 | --- | --- | --- | --- |
 | 1 | Reliable existing demo and provider-refresh workflow | No new service purchase | CI passes; scheduled job publishes fresh status even when providers are unavailable |
-| 2 | One owned sending domain | Buy one standard domain only after confirming checkout and renewal | Ownership and DNS access recorded under shared company control |
-| 3 | Resend SMTP and verified sender | Start with the free transactional allowance; no paid upgrade by default | DNS verified; confirmation and reset emails arrive for an external test address |
+| 2 | One owned sending domain (done) | Purchased; renewal cost recorded | Ownership and DNS access recorded under shared company control |
+| 3 | Resend SMTP and verified sender (done) | Running on the free transactional allowance; no paid upgrade | DNS verified; confirmation and reset emails arrive for an external test address |
 | 4 | Account interface and consented cloud saves | Use deployed Supabase backend | Sign-up, sign-in, sign-out, save, restore and conflict choice work across two devices |
 | 5 | Buyer demo and onboarding | No new provider subscription | A new developer can build and deploy from the pinned source and documented setup |
 | 6 | Authorized platform earnings sync | Defer commercial contracts to buyer unless a free permitted sandbox is available | Real linking, retrieval, refresh, reconciliation and revocation verified; otherwise labeled unavailable |
@@ -118,8 +118,9 @@ access transfer nor an asset sale has been performed by this document.
 
 ## Known gaps a buyer should see
 
-- Account UI remains in progress. SMTP and the sending domain are configured
-  (Resend, verified domain) with confirmation and recovery email delivering.
+- Account UI remains in progress. Email is done: Resend custom SMTP on a
+  verified sending domain, with confirmation and recovery email delivering.
+  A real multi-device pilot has not been run.
 - Automatic platform earnings sync needs authorized adapters and commercial access.
 - Auth identity deletion and provider revocation are not implemented.
 - Forecast/heat accuracy against independent rideshare outcomes is not yet validated.
