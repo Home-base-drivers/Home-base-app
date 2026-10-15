@@ -4,9 +4,14 @@ import {registeredVenueCalendars,venuesFromOsm,readVenueCalendar} from './venue-
 import {makeSchoolSearch} from './school-service.mjs';
 import client from '../dist/homebase-school-events.js';
 const now=Date.parse('2026-10-08T21:00:00Z'),market={center:{lat:39.29,lon:-76.61},radiusKm:35,timeZone:'America/New_York'};
+// The negative controls below must sit outside every market in
+// config/provider-markets.json. They used Miami until Miami was configured;
+// Kansas City is the current unconfigured stand-in. Adding a market near these
+// coordinates will fail these tests, and the coordinates are what to change.
+const UNCONFIGURED={lat:39.0997,lon:-94.5786};
 test('major Baltimore venues and park calendars are registered without transplanting to other cities',()=>{
  const sources=registeredVenueCalendars(market);for(const name of ['Power Plant','Convention Center','CFG','M&T','Orioles','Pier Six','Fairgrounds','Recreation','Lake Roland'])assert.ok(sources.some(s=>s.name.includes(name)),name);
- assert.equal(registeredVenueCalendars({...market,center:{lat:25.76,lon:-80.19}}).length,0);
+ assert.equal(registeredVenueCalendars({...market,center:{...UNCONFIGURED}}).length,0);
  assert.equal(venuesFromOsm({elements:[{tags:{name:'Park',website:'https://127.0.0.1/private'},lat:39.29,lon:-76.61}]},market).length,0);
 });
 test('official detail links yield timed events, reject foreign links and keep unknown ends and attendance',async()=>{
@@ -16,8 +21,8 @@ test('official detail links yield timed events, reject foreign links and keep un
  const result=await readVenueCalendar(source,market,now,request);assert.equal(result.events.length,1);assert.equal(result.events[0].eventStart,'2026-10-09T01:00:00.000Z');assert.equal(result.events[0].eventEnd,null);assert.equal(result.events[0].expectedAttendance,undefined);assert.equal(calls.length,2);
 });
 test('startup refresh bypasses prior calendar results and checks discovered venues',async()=>{
- const input={lat:25.76,lon:-80.19,radiusKm:35,timeZone:'America/New_York',refresh:true};let reads=0;
- const request=async url=>{if(String(url).includes('overpass'))return new Response(JSON.stringify({elements:String(url).includes('stadium')?[{type:'node',id:4,lat:25.76,lon:-80.19,tags:{name:'Local Arena',website:'https://venue.example.org/events'}}]:[]}));reads++;return new Response('<script type="application/ld+json">'+JSON.stringify({'@type':'SportsEvent',name:'Basketball',startDate:'2026-10-08T19:00:00-04:00',location:{name:'Local Arena'}})+'</script>');};
+ const input={...UNCONFIGURED,radiusKm:35,timeZone:'America/New_York',refresh:true};let reads=0;
+ const request=async url=>{if(String(url).includes('overpass'))return new Response(JSON.stringify({elements:String(url).includes('stadium')?[{type:'node',id:4,lat:UNCONFIGURED.lat,lon:UNCONFIGURED.lon,tags:{name:'Local Arena',website:'https://venue.example.org/events'}}]:[]}));reads++;return new Response('<script type="application/ld+json">'+JSON.stringify({'@type':'SportsEvent',name:'Basketball',startDate:'2026-10-08T19:00:00-04:00',location:{name:'Local Arena'}})+'</script>');};
  const search=makeSchoolSearch({request,now:()=>now});const first=await search(input);assert.equal(first.events.length,1);await search({...input,refresh:false});assert.equal(reads,1);await search(input);assert.equal(reads,2);
 });
 test('client requests fresh calendars on every first page, and preserves pagination',async()=>{
