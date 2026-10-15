@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Home Base">
-  <meta name="homebase-build" content="v263">
+  <meta name="homebase-build" content="v264">
   <meta name="description" content="Home Base connects local driver platforms, earnings forecasts, events and a GPS-based 12-hour route in one app.">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icon-192.png">
@@ -232,12 +232,12 @@
 <script src="homebase-config.js?v=111"></script>
 <script src="homebase-backend.js?v=127"></script>
 <script src="homebase-growth.js?v=126"></script>
-<link rel="stylesheet" href="homebase-copilot.css?v=50">
+<link rel="stylesheet" href="homebase-copilot.css?v=51">
 <script src="homebase-dispatch.js?v=2"></script>
 <script src="homebase-languages.js?v=2"></script>
 <script src="homebase-voice.js?v=4"></script>
 <script src="homebase-agent-client.js?v=5"></script>
-<script src="homebase-copilot.js?v=45"></script>
+<script src="homebase-copilot.js?v=46"></script>
 <script src="homebase-live-assistant.js?v=5"></script>
 <script src="homebase-chat.js?v=1"></script>
 <script>
@@ -1344,7 +1344,7 @@ setInterval(()=>{updateClimateAdvisory();const selected=$('[data-hour][aria-pres
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){schoolSearchAt=0;if(currentLocation)refreshSchoolEvents(...currentLocation);if(Date.now()-lastAutoGpsRefresh>300000){if(demoLocale)refreshLiveDemandLayer();else autoRefreshGps()}}});
 window.addEventListener('homebase-calendar-identity',()=>{schoolSearchAt=0;schoolSearchKey='';schoolEventRows=[];if(currentLocation)refreshSchoolEvents(...currentLocation);});
 window.addEventListener('load',()=>{schoolSearchAt=0;if(currentLocation)refreshSchoolEvents(...currentLocation);},{once:true});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>{const replacingWorker=!!navigator.serviceWorker.controller;navigator.serviceWorker.register('sw.js?v=263',{updateViaCache:'none'}).then(r=>{r.update();navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!replacingWorker)return;if(!sessionStorage.getItem('hb-release-reload-v263')){sessionStorage.setItem('hb-release-reload-v263','1');location.reload()}})}).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';})});
+if('serviceWorker' in navigator)window.addEventListener('load',()=>{const replacingWorker=!!navigator.serviceWorker.controller;navigator.serviceWorker.register('sw.js?v=264',{updateViaCache:'none'}).then(r=>{r.update();navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!replacingWorker)return;if(!sessionStorage.getItem('hb-release-reload-v264')){sessionStorage.setItem('hb-release-reload-v264','1');location.reload()}})}).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';})});
 </script>
 <script src="homebase-live.js?v=38"></script>
 </body>

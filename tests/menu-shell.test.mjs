@@ -28,7 +28,12 @@ test('former top controls live in the side menu',()=>{
 });
 
 test('Homebase wordmark is clean and transparent on the home map',()=>{
- assert.ok(shell.includes("homeWord.innerHTML='<strong>Homebase</strong><small>Drive. Earn. Connect.</small>'"));
+ // This pinned the top bar to wordmark-only. Christopher asked for the logo
+ // mark to be visible on the map, so the logo is now allowed alongside it. The
+ // wordmark, the tagline and the transparent, box-free treatment below are
+ // unchanged, and the logo must not bring a background with it.
+ assert.ok(shell.includes("<strong>Homebase</strong><small>Drive. Earn. Connect.</small>"));
+ assert.match(shell,/homeWord\.innerHTML='[^']*homebase-logo\.png/);
  assert.match(css,/\.hb-home-word\{[^}]*background:transparent/);
  assert.match(css,/\.hb-menu-toggle\{[^}]*background:transparent/);
 });
