@@ -1,0 +1,13 @@
+{
+  "note": "Candidate calendar sources for the miami market. These are NOT live. Nothing here reaches config/provider-markets.json until scripts/verify-calendar-sources.mjs fetches it and confirms it returns real dated events.",
+  "marketId": "miami",
+  "candidates": [
+    { "name": "Kaseya Center events", "url": "https://www.kaseyacenter.com/", "maxPages": 4 },
+    { "name": "City of Miami Beach events", "url": "https://events.miamibeachfl.gov/", "maxPages": 4 },
+    { "name": "Miami-Dade County Public Schools calendar", "url": "https://www.dadeschools.net/", "maxPages": 2,
+      "wanted": "early-release and dismissal days" },
+    { "name": "PortMiami cruise schedule", "url": "https://www.miamidade.gov/portmiami/cruise-schedule.asp", "maxPages": 2 },
+    { "name": "Miami Dolphins schedule (Hard Rock Stadium)", "url": "https://www.miamidolphins.com/schedule/", "maxPages": 2 },
+    { "name": "Miami Marlins schedule (loanDepot park)", "url": "https://www.mlb.com/marlins/schedule", "maxPages": 2 }
+  ]
+}
