@@ -82,8 +82,22 @@ cannot reach users without one.
 - `npm run build:backend-client` **silently does nothing when `node_modules` is
   absent**. Run `npm install` first and confirm the bundle actually changed before
   trusting it.
+- `supabase/functions/school-events/calendar.mjs` is **also generated**, and it
+  embeds the whole of `config/provider-markets.json`. Edit the config, then run
+  `npm run build:school-function` and commit the regenerated file.
 - `dist/homebase-growth.js`, `dist/homebase-copilot.js` and their siblings are
   hand-written and committed as-is. There is no build step for them.
+
+The Pages deploy re-runs both generators and fails on `git diff --exit-code`, so
+a config change committed without its regenerated output passes `npm test` and
+then breaks the deployment after the merge. Before pushing a change to anything
+under `config/`, run:
+
+```sh
+npm run build:backend-client && npm run build:school-function && git status --short
+```
+
+A clean tree there is the check `npm test` does not perform.
 
 ## Account-screen copy is assembled from two files
 
