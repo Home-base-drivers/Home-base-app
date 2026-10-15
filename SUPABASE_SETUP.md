@@ -4,14 +4,15 @@ This is an approval and deployment checklist for secure email-link login,
 cross-device progress, protected trip uploads, and a privacy-thresholded local
 hourly-rate benchmark. Both owners' approval of Supabase as the data processor
 was confirmed by Christopher on October 2, 2026. The October 3 account interface
-supports explicit device linking and private cloud save/restore. Complete email
-delivery and real multi-device pilot verification before public onboarding.
+supports explicit device linking and private cloud save/restore. Confirmation and recovery email delivery is live on Resend custom SMTP from a
+verified sending domain. A real multi-device pilot is still required before
+public onboarding.
 
 The Home Base project has been created in the Homebase organization:
 https://supabase.com/dashboard/project/nixihmurdtfcbffgvpij.
 The account and earnings migrations below are already applied; October 3 growth
 migrations add consent, optional learning and retention. Do not reapply them
-manually. Public email delivery is still pending; see [BACKEND.md](BACKEND.md).
+manually. Public email delivery is live; see [BACKEND.md](BACKEND.md).
 
 1. Create a Supabase project owned by the Home Base organization (completed).
 2. Open **SQL Editor**, paste the complete contents of

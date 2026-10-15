@@ -17,7 +17,7 @@ Updated October 3, 2026. This is an implementation checklist, not a claim of pro
 
 | Step | Required work | Release gate |
 | --- | --- | --- |
-| 1. Public accounts | Set up an owned sending domain and authenticated SMTP, confirm email delivery/recovery and run a real multi-device pilot | Default Supabase email is not a public signup delivery service; do not bypass confirmation |
+| 1. Public accounts | Owned sending domain and authenticated SMTP are set up and email delivery/recovery is confirmed; a real multi-device pilot has not been run | Default Supabase email is not a public signup delivery service; do not bypass confirmation |
 | 2. Provider earnings | Obtain approved Uber/Lyft/Empower or authorized aggregator access, verify actual coverage, add server-held credentials, connection callbacks, background sync, stable trip IDs and disconnect/revocation | No platform password collection, scraping, fake connected status, or paid provider commitment without approval |
 | 3. Reliable tracking | Verify completed-shift reconciliation, mileage consent and native/background requirements; support offline queues and explicit sync error recovery | Foreground neighborhood observations are not background mileage tracking |
 | 4. Forecast evidence | Join independently verified outcomes to earlier immutable predictions, evaluate by area/platform/horizon against simple baselines, track sample size and error, then validate holdout performance | Current estimates and screenshots are not measured accuracy or live surge data |
