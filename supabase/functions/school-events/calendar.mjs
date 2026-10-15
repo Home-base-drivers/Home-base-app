@@ -1280,6 +1280,108 @@ var provider_markets_default = {
           ]
         }
       ]
+    },
+    {
+      id: "miami",
+      name: "Miami",
+      center: {
+        lat: 25.7743,
+        lon: -80.1937
+      },
+      radiusKm: 60,
+      placeRadiusKm: 20,
+      countryCode: "US",
+      timeZone: "America/New_York",
+      flightawareAirport: {
+        id: "KMIA",
+        name: "Miami International Airport",
+        lat: 25.7959,
+        lon: -80.287
+      },
+      uberDestinations: [
+        {
+          name: "Downtown Miami",
+          lat: 25.7743,
+          lon: -80.1937
+        },
+        {
+          name: "Miami International Airport",
+          lat: 25.7959,
+          lon: -80.287
+        }
+      ],
+      sampleAreas: [
+        {
+          name: "Downtown Miami",
+          lat: 25.7743,
+          lon: -80.1937
+        },
+        {
+          name: "Brickell",
+          lat: 25.7601,
+          lon: -80.1951
+        },
+        {
+          name: "South Beach",
+          lat: 25.7826,
+          lon: -80.1341
+        },
+        {
+          name: "Wynwood",
+          lat: 25.801,
+          lon: -80.199
+        },
+        {
+          name: "Coconut Grove",
+          lat: 25.7289,
+          lon: -80.2434
+        },
+        {
+          name: "Coral Gables",
+          lat: 25.7215,
+          lon: -80.2684
+        },
+        {
+          name: "PortMiami",
+          lat: 25.7743,
+          lon: -80.168
+        },
+        {
+          name: "Miami International Airport",
+          lat: 25.7959,
+          lon: -80.287
+        }
+      ],
+      sportsVenues: [
+        {
+          name: "Kaseya Center",
+          match: "kaseya center",
+          city: "Miami",
+          lat: 25.7814,
+          lon: -80.187
+        },
+        {
+          name: "loanDepot park",
+          match: "loandepot park",
+          city: "Miami",
+          lat: 25.7781,
+          lon: -80.2197
+        },
+        {
+          name: "Hard Rock Stadium",
+          match: "hard rock stadium",
+          city: "Miami Gardens",
+          lat: 25.958,
+          lon: -80.2389
+        }
+      ],
+      publicCalendars: [
+        {
+          name: "Ticketmaster Miami public listings",
+          url: "https://www.ticketmaster.com/discover/miami",
+          maxPages: 6
+        }
+      ]
     }
   ]
 };
