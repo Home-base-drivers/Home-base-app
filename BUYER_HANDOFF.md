@@ -118,7 +118,8 @@ access transfer nor an asset sale has been performed by this document.
 
 ## Known gaps a buyer should see
 
-- SMTP/sending domain and account UI remain pending.
+- Account UI remains in progress. SMTP and the sending domain are configured
+  (Resend, verified domain) with confirmation and recovery email delivering.
 - Automatic platform earnings sync needs authorized adapters and commercial access.
 - Auth identity deletion and provider revocation are not implemented.
 - Forecast/heat accuracy against independent rideshare outcomes is not yet validated.

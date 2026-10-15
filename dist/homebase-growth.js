@@ -40,6 +40,17 @@
     const readOwner = () => localStorage.getItem('homeBaseCloudOwner');
     const emptyPrefs = () => ({usage_analytics:false,model_improvement:false,benchmark_sharing:false});
     const redirect = 'https://home-base-drivers.github.io/Home-base-app/';
+    let needsConfirm = null;
+    // Supabase returns terse auth errors; show drivers what to do next instead.
+    const authHints = [
+      [/email not confirmed/i,'That email has not been confirmed yet. Check your inbox and spam folder, or use Resend confirmation email below.'],
+      [/invalid login credentials/i,'That email and password do not match an account. Check them, or use Forgot password below to set a new one.']
+    ];
+    const authMessage = error => authHints.find(([pattern])=>pattern.test(String(error?.message||'')))?.[1] || null;
+    const authHint = (error,email) => {
+      if(/email not confirmed/i.test(String(error?.message||'')))needsConfirm=email;
+      return authMessage(error);
+    };
     const deviceKeys = [...HomeBaseCloud.progressKeys,'homeBaseLedger','homeBaseEarningsProfile','homeBaseTripRows','homeBaseActiveShift','homeBaseDispatchState','homeBaseDispatchLog','homeBaseDriverEvidence','homeBasePrivateDestination'];
     // In-progress shifts are intentionally excluded from the existing backup format.
     const localBackup = () => Object.fromEntries(deviceKeys.filter(k=>!['homeBaseActiveShift','homeBasePrivateDestination'].includes(k)).map(k => [k,read(k)]).filter(([,v])=>v!==null));
@@ -47,7 +58,7 @@
       const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000); };
     const status = text => { message=text; const node=document.getElementById('cloudStatus');if(node)node.textContent=text; };
     const fail = error => {if(error?.name==='CloudConflictError'){autosave=false;localStorage.setItem('homeBaseAutoCloud','false');}
-      status(error?.name==='CloudConflictError' ? 'Another device has newer settings. Automatic saving paused. Download a device backup, then choose Restore cloud copy. No settings were overwritten.' : (error?.message || 'Cloud request failed. Your device data was kept.'));};
+      status(error?.name==='CloudConflictError' ? 'Another device has newer settings. Automatic saving paused. Download a device backup, then choose Restore cloud copy. No settings were overwritten.' : (authMessage(error) || error?.message || 'Cloud request failed. Your device data was kept.'));};
     const action = async fn => { if(busy)return;busy=true;try{await fn();}catch(error){fail(error);}finally{busy=false;} };
     async function refreshIdentity() {
       let user;try{user=await backend.getUser();}catch{user=null;}
@@ -101,13 +112,18 @@
         '<p>Signed in as <b>'+esc(me.email)+'</b></p><p>'+ (canSync(readOwner(),me.id)?'This device is linked to your cloud account.':'Device history is not linked. Nothing is uploaded automatically.')+'</p><div class="growth-actions"><button id="cloudSave" class="primary-action">Save device to cloud</button><button id="cloudRestore" class="secondary-action">Restore cloud copy</button><button id="cloudExport" class="secondary-action">Export cloud data</button><button id="cloudSignOut" class="secondary-action">Sign out</button></div><label><input type="checkbox" id="cloudAuto" '+(autosave?'checked':'')+'> Automatically save changes after linking this device</label>':
         '<p>Your map remains free without an account. Sign in to save earnings and settings privately.</p><form id="cloudAuth"><label>Email<input name="email" type="email" autocomplete="email" required></label><label>Password<input name="password" type="password" autocomplete="current-password" minlength="8" required></label><div class="growth-actions"><button class="primary-action" name="mode" value="signin">Sign in</button><button class="secondary-action" name="mode" value="signup">Create account</button></div></form><button id="cloudReset" class="secondary-action">Forgot password</button>')+
         (recovery?'<form id="cloudRecovery"><label>New password<input name="password" type="password" autocomplete="new-password" minlength="8" required></label><button class="primary-action">Update password</button></form>':'')+
-        '<p class="growth-note">Public signup and recovery emails are awaiting the sending-domain setup. Existing confirmed accounts can sign in. No platform passwords are collected here.</p><div class="growth-actions"><button id="deviceBackup" class="secondary-action">Download device backup</button></div><p id="cloudStatus" role="status">'+esc(message)+'</p>';
+        (!me&&needsConfirm?'<div class="growth-actions"><button id="cloudResend" class="secondary-action">Resend confirmation email</button></div>':'')+'<p class="growth-note">No Uber/Lyft passwords are collected here.</p><div class="growth-actions"><button id="deviceBackup" class="secondary-action">Download device backup</button></div><p id="cloudStatus" role="status">'+esc(message)+'</p>';
       section.querySelector('#deviceBackup').onclick=()=>download('home-base-device-backup.json',{format:'home-base-backup',version:1,state:localBackup()});
       section.querySelector('#cloudAuth')?.addEventListener('submit',event=>{event.preventDefault();const data=new FormData(event.target),mode=event.submitter?.value;
         action(async()=>{const email=String(data.get('email')),password=String(data.get('password'));
-          if(mode==='signup'){const result=await backend.signUp(email,password,redirect);status(result.session?'Account created.':'Check your email to confirm. If delivery is unavailable, the sending-domain setup must be completed.');}
-          else {await backend.signIn(email,password);await refreshIdentity();status('Signed in. Device history has not been uploaded.');renderProfile();}});});
-      section.querySelector('#cloudReset')?.addEventListener('click',()=>action(async()=>{const email=section.querySelector('[name=email]').value;if(!email)throw Error('Enter your email first.');await backend.resetPassword(email,redirect);status('If the account is eligible and email delivery is configured, a recovery link will arrive.');}));
+          if(mode==='signup'){const result=await backend.signUp(email,password,redirect);status(result.session?'Account created.':'Account created. Check your email to confirm your address.');}
+          else {
+            try{await backend.signIn(email,password);}
+            catch(error){const hint=authHint(error,email);if(!hint)throw error;status(hint);renderProfile();return;}
+            needsConfirm=null;await refreshIdentity();status('Signed in. Device history has not been uploaded.');renderProfile();
+          }});});
+      section.querySelector('#cloudReset')?.addEventListener('click',()=>action(async()=>{const email=section.querySelector('[name=email]').value;if(!email)throw Error('Enter your email first.');await backend.resetPassword(email,redirect);status('If an account exists for that email, a recovery link is on its way. Check your inbox and spam folder.');}));
+      section.querySelector('#cloudResend')?.addEventListener('click',()=>action(async()=>{await backend.resendConfirmation(needsConfirm,redirect);status('Confirmation email sent again to '+needsConfirm+'. Check your inbox and spam folder.');}));
       section.querySelector('#cloudRecovery')?.addEventListener('submit',event=>{event.preventDefault();action(async()=>{await backend.updatePassword(new FormData(event.target).get('password'));recovery=false;status('Password updated.');renderProfile();});});
       section.querySelector('#cloudSave')?.addEventListener('click',()=>action(()=>uploadDevice(true)));
       section.querySelector('#cloudRestore')?.addEventListener('click',()=>action(restoreCloud));

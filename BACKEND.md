@@ -43,7 +43,7 @@ adapter needs approved access and server-side secret storage before activation.
 
 The account screen initializes `HomeBaseCloud.connectHomeBase` with the approved
 project URL and **publishable** key. Secret and service-role keys are rejected by
-the client. Public email signup/recovery still needs sending-domain and SMTP setup.
+the client. Public email signup/recovery is live on Resend custom SMTP.
 
 The API supports email-link sign-in, password sign-in/signup, sign-out, profile
 creation, benchmark consent, earnings save/read, connection status, saved
@@ -102,10 +102,11 @@ reads are paginated; the interface must read all pages when restoring history.
 - Auth URL configuration was saved and verified on October 2, 2026: Site URL
   and the single exact allowed redirect both point to
   `https://home-base-drivers.github.io/Home-base-app/`.
-- Custom SMTP is disabled. The default mail service is restricted to project
-  team addresses and is not a public-driver email delivery setup.
-- Pending: a configured SMTP provider and verified sending domain, end-to-end
-  Auth/REST verification with a consenting account, and browser integration.
+- Custom SMTP is enabled through Resend, sending as "Home Base"
+  <noreply@mail.homebasedrivers.com> from a verified domain. The Auth email rate
+  limit is raised to 100/hour. Signup confirmation and password recovery are
+  confirmed delivering to external addresses.
+- Pending: end-to-end Auth/REST verification with a consenting account at scale.
   Provider earnings adapters remain separate and inactive.
 
 1. Confirm the organization for project creation. Proposed: **Homebase**.
@@ -116,8 +117,9 @@ reads are paginated; the interface must read all pages when restoring history.
 5. Verify anonymous denial, driver ownership, duplicate handling, stale-version
    rejection, and deletion against the hosted project before wiring the app.
 6. Configure Auth Site URL and allowed redirects to
-   `https://home-base-drivers.github.io/Home-base-app/`. Confirm email delivery;
-   the default SMTP service is not the production mailing setup.
+   `https://home-base-drivers.github.io/Home-base-app/`. Custom SMTP (Resend) is
+   configured; keep this redirect and the Site URL byte-identical to the value
+   the app sends, including capitalisation and the trailing slash.
 7. Retrieve the public project URL and publishable key. Keep service keys and
    provider credentials server-side. Complete the browser integration in a
    separate release under `SUPABASE_SETUP.md`.

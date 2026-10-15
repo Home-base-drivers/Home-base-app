@@ -149,8 +149,9 @@ signals, and the app discards expired provider data rather than presenting it as
 The private Supabase database and both account/earnings migrations are deployed.
 Both owners' data-processor approval is recorded, and the Home Base Auth Site
 URL and allowed redirect are configured. The account interface supports explicit
-device linking and optional private cloud saves. Public SMTP delivery and
-automatic provider connections remain pending. See BACKEND.md, SUPABASE_SETUP.md
+device linking and optional private cloud saves. Public email delivery runs on
+Resend custom SMTP from a verified sending domain; automatic provider
+connections remain pending. See BACKEND.md, SUPABASE_SETUP.md
 and GROWTH_READINESS.md for release status and activation gates. Device CSVs and
 manual shifts remain available without an account; cloud and optional learning
 contributions require the corresponding user action or consent.

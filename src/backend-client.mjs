@@ -112,6 +112,10 @@ export function createHomeBaseBackend(client) {
     async signUp(email, password, redirectTo) {
       return result(await client.auth.signUp({ email, password, options: { emailRedirectTo: redirectTo } }));
     },
+    async resendConfirmation(email, redirectTo) {
+      return result(await client.auth.resend({ type: 'signup', email,
+        options: { emailRedirectTo: redirectTo } }));
+    },
     async signOut() { result(await client.auth.signOut({ scope: 'global' })); },
     getUser: user,
     async ensureProfile() {
