@@ -29,6 +29,20 @@ test('service worker is network-first and immediately takes control',()=>{
  assert.match(sw,/fetch\(event\.request,\{cache:'no-store'\}\)/);
 });
 
+test('a first service-worker install does not reload the app',()=>{
+ // clients.claim() fires controllerchange even when no earlier worker is being
+ // replaced, so an unguarded handler loads the whole app twice for every new
+ // driver on their very first open.
+ assert.match(html,/const replacingWorker=!!navigator\.serviceWorker\.controller;/);
+ assert.match(html,/addEventListener\('controllerchange',\(\)=>\{if\(!replacingWorker\)return;/);
+});
+
+test('a release upgrade still reloads once so drivers get the new version',()=>{
+ const guard=html.match(/if\(!replacingWorker\)return;if\(!sessionStorage\.getItem\('hb-release-reload-v(\d+)'\)\)\{sessionStorage\.setItem\('hb-release-reload-v(\d+)','1'\);location\.reload\(\)\}/);
+ assert.ok(guard,'the one-shot reload must stay reachable behind the controller check');
+ assert.equal(guard[1],guard[2]);
+});
+
 test('global heat and decision UI are present in the shipped shell',()=>{
  assert.match(html,/id="layerBtn"/);
  assert.match(html,/BEST MOVE RIGHT NOW/);
