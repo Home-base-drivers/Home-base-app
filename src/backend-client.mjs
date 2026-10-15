@@ -262,6 +262,10 @@ export function createHomeBaseBackend(client) {
           const failure = new Error(body.error);
           failure.code = typeof body.code === 'string' ? body.code : 'dispatch_error';
           failure.status = response.error.context.status;
+          // Only allow bounded diagnostic identifiers, never copy the response
+          // wholesale (or credentials) into the client error.
+          if (typeof body.request_id === 'string' && /^[a-zA-Z0-9-]{1,80}$/.test(body.request_id)) failure.requestId = body.request_id;
+          if (typeof body.provider_code === 'string' && /^[a-zA-Z0-9_.:-]{1,100}$/.test(body.provider_code)) failure.providerCode = body.provider_code;
           throw failure;
         }
       }

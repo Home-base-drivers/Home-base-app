@@ -65,6 +65,11 @@ test('frontend initialization refuses server keys and incomplete configuration',
   assert.throws(() => connectHomeBase({ supabaseUrl: 'https://test.supabase.co', supabasePublishableKey: 'sb_secret_private' }));
   assert.throws(() => connectHomeBase({}));
 });
+test('dispatch errors preserve safe support identifiers without copying private response fields',async()=>{
+ const client={...fake(async()=>({data:{}})),functions:{invoke:async()=>({error:{context:new Response(JSON.stringify({error:'Provider quota unavailable',code:'ai_provider_error',request_id:'support-123',provider_code:'insufficient_quota',private_field:'private data'}),{status:502})}})}};
+ const api=createHomeBaseBackend(client);
+ await assert.rejects(()=>api.evaluateDispatch({operation:'agent',utterance:'hi'}),e=>{assert.equal(e.code,'ai_provider_error');assert.equal(e.status,502);assert.equal(e.requestId,'support-123');assert.equal(e.providerCode,'insufficient_quota');assert.equal(e.private_field,undefined);return true});
+});
 test('dispatch preference syncing keeps complete editable settings while withholding destinations',async()=>{
  let saved;
  const api=createHomeBaseBackend({...fake(async()=>({data:{}})),from:name=>({upsert:async row=>{saved={name,row};return{data:row};}})});
