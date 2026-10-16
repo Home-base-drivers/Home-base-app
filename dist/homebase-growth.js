@@ -40,11 +40,12 @@
     const readOwner = () => localStorage.getItem('homeBaseCloudOwner');
     const emptyPrefs = () => ({usage_analytics:false,model_improvement:false,benchmark_sharing:false});
     const redirect = 'https://home-base-drivers.github.io/Home-base-app/';
-    let needsConfirm = null, identityRevision = 0, authEmail = '';
+    let needsConfirm = null, identityRevision = 0, authEmail = '', codeEmail = '';
     // Supabase returns terse auth errors; show drivers what to do next instead.
     const authHints = [
       [/email not confirmed/i,'That email has not been confirmed yet. Check your inbox and spam folder, or use Resend confirmation email below.'],
-      [/invalid login credentials/i,'That email and password were not accepted. You can use Email me a sign-in link without changing your password.'],
+      [/invalid login credentials/i,'That email and password were not accepted. You can use Email me a sign-in code without changing your password.'],
+      [/token has expired|otp_expired|invalid.*otp|invalid.*token/i,'That code is invalid or expired. Use the newest sign-in code, or request another.'],
       [/email rate limit|over_email_send_rate_limit|only request this after/i,'Too many email requests. Wait before requesting another link, and check your inbox and spam folder for the latest message.']
     ];
     const authMessage = error => authHints.find(([pattern])=>pattern.test(String(error?.message||'')))?.[1] || null;
@@ -137,7 +138,8 @@
       const section=document.createElement('section');section.className='workspace-section growth-account';section.id='growthAccount';
       section.innerHTML='<h3>HOME BASE ACCOUNT</h3>'+(me?
         '<p>Signed in as <b>'+esc(me.email)+'</b></p><p>'+ (canSync(readOwner(),me.id)?'This device is linked to your cloud account.':'Device history is not linked. Nothing is uploaded automatically.')+'</p><div class="growth-actions"><button id="cloudSave" class="primary-action">Save device to cloud</button><button id="cloudRestore" class="secondary-action">Restore cloud copy</button><button id="cloudExport" class="secondary-action">Export cloud data</button><button id="cloudSignOut" class="secondary-action">Sign out</button></div><label><input type="checkbox" id="cloudAuto" '+(autosave?'checked':'')+'> Automatically save changes after linking this device</label>':
-        '<p>Your map remains free without an account. Sign in to save earnings and settings privately.</p><form id="cloudAuth"><label>Email<input name="email" type="email" autocomplete="email" value="'+esc(authEmail)+'" required></label><label>Password<input name="password" type="password" autocomplete="current-password" minlength="8" required></label><div class="growth-actions"><button class="primary-action" name="mode" value="signin">Sign in</button><button class="secondary-action" name="mode" value="signup">Create account</button><button type="button" id="cloudEmailLink" class="secondary-action">Email me a sign-in link</button></div></form><button id="cloudReset" class="secondary-action">Forgot password</button>')+
+        '<p>Your map remains free without an account. Sign in to save earnings and settings privately.</p><form id="cloudAuth"><label>Email<input name="email" type="email" autocomplete="email" value="'+esc(authEmail)+'" required></label><label>Password<input name="password" type="password" autocomplete="current-password" minlength="8" required></label><div class="growth-actions"><button class="primary-action" name="mode" value="signin">Sign in</button><button class="secondary-action" name="mode" value="signup">Create account</button><button type="button" id="cloudEmailLink" class="secondary-action">Email me a sign-in code</button></div></form><button id="cloudReset" class="secondary-action">Forgot password</button>')+
+        (!me&&codeEmail?'<form id="cloudCode"><p>Enter the code sent to '+esc(codeEmail)+'. Stay in this app to sign in here.</p><label>Sign-in code<input name="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" minlength="6" maxlength="6" required></label><button class="primary-action">Verify code and sign in</button></form>':'')+
         (recovery?'<form id="cloudRecovery"><label>New password<input name="password" type="password" autocomplete="new-password" minlength="8" required></label><button class="primary-action">Update password</button></form>':'')+
         (!me&&needsConfirm?'<div class="growth-actions"><button id="cloudResend" class="secondary-action">Resend confirmation email</button></div>':'')+'<p class="growth-sync growth-sync-'+syncState().state+'" role="status">'+esc(syncState().detail)+'</p>'+'<p class="growth-note">No Uber/Lyft passwords are collected here.</p><div class="growth-actions"><button id="deviceBackup" class="secondary-action">Download device backup</button></div><p id="cloudStatus" role="status">'+esc(message)+'</p>';
       section.querySelector('#deviceBackup').onclick=()=>download('home-base-device-backup.json',{format:'home-base-backup',version:1,state:localBackup()});
@@ -147,7 +149,7 @@
           else {
             try{await backend.signIn(email,password);}
             catch(error){
-              // A failed password attempt ends any earlier session on this device, so re-read the real state.
+              // Re-read identity: a rejected password is not proof of the earlier session's state.
               const wasSignedIn=!!me;await refreshIdentity();const hint=authHint(error,email);if(!hint)throw error;status(hint+(wasSignedIn&&!me?' You were signed out on this phone, so sign in again to use Home Base AI and cloud saving.':''));renderProfile();return;}
             needsConfirm=null;await refreshIdentity();status('Signed in. Device history has not been uploaded.');renderProfile();
           }});});
@@ -155,7 +157,12 @@
         const input=section.querySelector('[name=email]');input.value=input.value.trim();
         if(!input.reportValidity())return;
         authEmail=input.value;
-        action(async()=>{await backend.sendSignInLink(authEmail,redirect);status('If this email has a Home Base account, a sign-in link is on its way. Open the newest sign-in email on this device. No password reset is needed.');});
+        const email=authEmail;
+        action(async()=>{await backend.sendSignInLink(email,redirect);codeEmail=email;status('If this email has a Home Base account, a sign-in code is on its way. Return to this Home Base app and enter the code below. Do not open the browser link.');});
+      });
+      section.querySelector('#cloudCode')?.addEventListener('submit',event=>{
+        event.preventDefault();const code=String(new FormData(event.target).get('code')||'');
+        action(async()=>{await backend.verifyEmailCode(codeEmail,code);codeEmail='';needsConfirm=null;await refreshIdentity();status('Signed in on this device. Device history has not been uploaded.');});
       });
       section.querySelector('#cloudReset')?.addEventListener('click',()=>action(async()=>{const email=section.querySelector('[name=email]').value.trim();if(!email)throw Error('Enter your email first.');await backend.resetPassword(email,redirect);status('If an account exists for that email, a recovery link is on its way. Check your inbox and spam folder.');}));
       section.querySelector('#cloudResend')?.addEventListener('click',()=>action(async()=>{await backend.resendConfirmation(needsConfirm,redirect);status('Confirmation email sent again to '+needsConfirm+'. Check your inbox and spam folder.');}));
