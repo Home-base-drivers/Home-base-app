@@ -1,0 +1,54 @@
+# Checks candidate calendar sources from a runner, which has the outbound
+# network a sandboxed session does not. Manual only: it fetches third-party
+# sites, so it should run when someone is deciding whether to add a source,
+# not on a schedule.
+name: Verify calendar candidates
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'Optional single URL to check instead of the staged candidates'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify candidates
+        id: verify
+        # A rejected candidate is a result, not a build failure.
+        continue-on-error: true
+        env:
+          CANDIDATE_URL: ${{ inputs.url }}
+        run: |
+          if [ -n "$CANDIDATE_URL" ]; then
+            node scripts/verify-calendar-sources.mjs --url "$CANDIDATE_URL" | tee report.txt
+          else
+            node scripts/verify-calendar-sources.mjs | tee report.txt
+          fi
+      - name: Publish the report
+        if: always()
+        run: |
+          {
+            echo '## Calendar candidate verification'
+            echo
+            echo 'PASS means the live reader (readVenueCalendar) got named, dated,'
+            echo 'future events from the source. UNKNOWN means the host could not be'
+            echo 'reached, which says nothing about the source.'
+            echo
+            echo '```'
+            cat report.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

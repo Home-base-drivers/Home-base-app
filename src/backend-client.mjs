@@ -152,7 +152,7 @@ export function createHomeBaseBackend(client) {
     },
     async sendSignInLink(email, redirectTo) {
       return result(await client.auth.signInWithOtp({ email,
-        options: { emailRedirectTo: redirectTo, shouldCreateUser: true } }));
+        options: { emailRedirectTo: redirectTo, shouldCreateUser: false } }));
     },
     async signIn(email, password) {
       return result(await client.auth.signInWithPassword({ email, password }));

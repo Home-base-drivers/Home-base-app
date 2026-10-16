@@ -56,9 +56,12 @@
     const badge = ensureFreshnessBadge();
     if (!currentLocation) { badge.textContent = 'DEMAND · GPS NEEDED'; return; }
     try {
-      const response = await fetch(`./provider-signals.json?ts=${Date.now()}`, { cache: 'no-store', headers: { Accept: 'application/json' } });
-      if (!response.ok) throw Error('feed unavailable');
-      const payload = await response.json();
+      const fetchJson = async url => {
+        const response = await fetch(url, { cache: 'no-store', headers: { Accept: 'application/json' } });
+        if (!response.ok) throw Error('feed unavailable');
+        return response.json();
+      };
+      const payload = await HomeBasePublicData.loadSnapshot(fetchJson);
       const match = (payload.markets || []).find(item => distanceKm(currentLocation, [item.center.lat, item.center.lon]) <= Number(item.radiusKm || 0));
       if (!match || !payload.generatedAt) throw Error('no current market feed');
       currentMarket = match.name || marketName();
