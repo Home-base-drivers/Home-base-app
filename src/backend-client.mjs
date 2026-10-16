@@ -3,7 +3,11 @@ import { createClient } from '@supabase/supabase-js';
 export const progressKeys = Object.freeze([
   'homeBaseDriverProfile', 'homeBaseCostPrefs', 'homeBaseAlertPrefs',
   'homeBaseProductPrefs', 'homeBaseMapUi', 'homeBaseEarningsView',
-  'homeBaseShifts', 'homeBaseForecastSnapshots', 'homeBaseForecastAccuracy'
+  'homeBaseShifts', 'homeBaseForecastSnapshots', 'homeBaseForecastAccuracy',
+  // Earnings cards: goal pace, car-cost inputs, car expense rows (car/gas only)
+  // and the Uber vs Empower inputs. Without these a new phone loses them.
+  'homeBaseGoalPace', 'homeBaseCarCostInputs', 'homeBaseCarExpenses',
+  'homeBaseCarExclude', 'homeBaseEmpowerCompare'
 ]);
 
 export class CloudConflictError extends Error {

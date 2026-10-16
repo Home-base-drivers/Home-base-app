@@ -108,3 +108,12 @@ test('signed-out screen leads with the email code and keeps password sign-in ava
  const h=harness();await h.flush();const html=h.account().innerHTML;
  assert.ok(html.indexOf('cloudEmailLink')<html.indexOf('cloudPasswordBox'));assert.match(html,/The same code creates your account/);assert.match(html,/Sign in with a password instead/);
 });
+
+test('goal pace and car-cost settings travel with the account and merge with the phone',async()=>{
+ for(const key of ['homeBaseGoalPace','homeBaseCarCostInputs','homeBaseCarExpenses','homeBaseCarExclude','homeBaseEmpowerCompare'])assert.ok(progressKeys.includes(key),key);
+ const h=harness({device:{homeBaseCarCostInputs:{wash:'120',price:'4.29'}},cloud:{version:4,state:{homeBaseGoalPace:{goal:'100',gh:'3'},homeBaseCarCostInputs:{mpg:'19',target:'20',price:''}}}});
+ await h.flush();h.setUser({id:'driver',email:'driver@example.test'});h.event('SIGNED_IN');await h.flush();
+ assert.deepEqual(h.local.json('homeBaseGoalPace'),{goal:'100',gh:'3'});
+ assert.deepEqual(h.local.json('homeBaseCarCostInputs'),{mpg:'19',target:'20',price:'4.29',wash:'120'});
+ assert.deepEqual(h.calls.saveProgress.at(-1).state.homeBaseGoalPace,{goal:'100',gh:'3'});
+});
