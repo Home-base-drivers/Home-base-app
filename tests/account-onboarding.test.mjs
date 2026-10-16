@@ -56,33 +56,50 @@ test('signing in on an empty phone brings the account data down automatically',a
  assert.equal(h.calls.saveEarnings.length,0,'nothing from an empty phone is uploaded');
 });
 
-test('a phone with driver data asks once, then combines it with the account',async()=>{
+test('a phone with driver data is combined with the account automatically — nothing is replaced',async()=>{
  const h=harness({device:{homeBaseDriverProfile:{market:'Paramus',vehicle:'RDX'},homeBaseLedger:[{id:'d1',earnings:50,source:'csv'}]},
   cloud:{version:2,state:{homeBaseDriverProfile:{name:'Chris'}}},cloudRows:[{id:'e1',earnings:100}]});
  await h.flush();h.setUser({id:'driver',email:'driver@example.test'});h.event('SIGNED_IN');await h.flush();
- let account=h.account();assert.match(account.innerHTML,/Add this phone’s driver data to your account\?/);
- assert.equal(h.calls.saveProgress.length,0,'nothing is uploaded before the driver chooses');
- account.querySelector('#cloudLinkYes').click();await h.flush();
+ assert.doesNotMatch(h.account().innerHTML,/cloudLinkCard|Not mine/);
  assert.deepEqual(h.local.json('homeBaseDriverProfile'),{name:'Chris',market:'Paramus',vehicle:'RDX'});
  assert.equal(h.calls.saveProgress[0].v,2);assert.equal(h.calls.saveEarnings[0][0].id,'d1');
  assert.deepEqual(h.local.json('homeBaseLedger').map(r=>r.id).sort(),['d1','e1']);
  assert.equal(h.local.getItem('homeBaseCloudOwner'),'driver');
- assert.doesNotMatch(h.account().innerHTML,/cloudLinkCard/);
 });
 
-test('"Not mine" replaces the phone data with the account without uploading it',async()=>{
- const h=harness({device:{homeBaseDriverProfile:{market:'Elsewhere'},homeBasePrivateDestination:{coords:[1,2]}},cloud:{version:1,state:{homeBaseDriverProfile:{name:'Chris'}}}});
+test('every later save combines with newer cloud changes instead of overwriting them',async()=>{
+ const h=harness({device:{homeBaseDriverProfile:{vehicle:'RDX'}},cloud:{version:1,state:{homeBaseDriverProfile:{name:'Chris'}}}});
  await h.flush();h.setUser({id:'driver',email:'driver@example.test'});h.event('SIGNED_IN');await h.flush();
- h.account().querySelector('#cloudLinkNo').click();await h.flush();
- assert.deepEqual(h.local.json('homeBaseDriverProfile'),{name:'Chris'});assert.equal(h.local.getItem('homeBasePrivateDestination'),null);
- assert.equal(h.calls.saveProgress.length+h.calls.saveEarnings.length,0);
+ // Another device adds a field; this phone then changes something else and saves.
+ const before=h.calls.saveProgress.length;
+ h.backend.getProgress=async()=>({version:9,state:{homeBaseDriverProfile:{name:'Chris',goal:120}}});
+ h.local.setItem('homeBaseDriverProfile',JSON.stringify({name:'Chris',vehicle:'RDX',platform:'Uber'}));
+ h.account().querySelector('#cloudSave').click();await h.flush();
+ const saved=h.calls.saveProgress.at(-1);assert.ok(h.calls.saveProgress.length>before);assert.equal(saved.v,9);
+ assert.deepEqual(saved.state.homeBaseDriverProfile,{name:'Chris',goal:120,vehicle:'RDX',platform:'Uber'});
+ assert.deepEqual(h.local.json('homeBaseDriverProfile'),{name:'Chris',goal:120,vehicle:'RDX',platform:'Uber'});
+});
+
+test('a save that races another device retries with a fresh combine',async()=>{
+ const h=harness({cloud:{version:1,state:{}}});await h.flush();h.setUser({id:'driver',email:'driver@example.test'});h.event('SIGNED_IN');await h.flush();
+ let first=true;const original=h.backend.saveProgress;
+ h.backend.saveProgress=async(state,v)=>{if(first){first=false;throw Object.assign(new Error('changed'),{name:'CloudConflictError'});}return original(state,v);};
+ h.backend.getProgress=async()=>({version:5,state:{homeBaseShifts:[{id:'other-device'}]}});
+ h.local.setItem('homeBaseShifts',JSON.stringify([{id:'this-phone'}]));
+ h.account().querySelector('#cloudSave').click();await h.flush();
+ assert.deepEqual(h.calls.saveProgress.at(-1).state.homeBaseShifts.map(s=>s.id).sort(),['other-device','this-phone']);
+});
+
+test('password forms submit for real into a hidden frame so iPhone Passwords can save them',async()=>{
+ const h=harness();await h.flush();const html=h.account().innerHTML;
+ assert.match(html,/<iframe name="hbCredentialSink"/);assert.match(html,/id="cloudAuth" method="post" action="about:blank" target="hbCredentialSink"/);
 });
 
 test('after a code sign-in the driver can save a password the iPhone can remember',async()=>{
  const h=harness();await h.flush();h.context.renderProfile();
  let account=h.account();account.querySelector('[name=email]').value='driver@example.test';account.querySelector('#cloudEmailLink').click();await h.flush();
  account=h.account();account.querySelector('#cloudCode').submit({preventDefault(){},target:{values:{code:'123456'}}});await h.flush();
- account=h.account();assert.match(account.innerHTML,/autocomplete="username" value="driver@example.test"/);assert.match(account.innerHTML,/autocomplete="new-password"/);
+ account=h.account();assert.match(account.innerHTML,/autocomplete="username" value="driver@example.test">/);assert.match(account.innerHTML,/id="cloudSetPassword" class="growth-password" method="post" action="about:blank" target="hbCredentialSink"/);assert.match(account.innerHTML,/autocomplete="new-password"/);
  account.querySelector('#cloudSetPassword').submit({preventDefault(){},target:{values:{password:'a-long-password'}}});await h.flush();
  assert.deepEqual(h.calls.updatePassword,['a-long-password']);assert.doesNotMatch(h.account().innerHTML,/cloudSetPassword/);
 });

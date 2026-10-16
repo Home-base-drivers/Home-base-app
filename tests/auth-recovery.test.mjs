@@ -7,8 +7,10 @@ function harness(){
  let callback,nav=0,user=null,identityError=null,cloudError=null;
  let account;
  const timers=[];
- const backend={getUser:async()=>{if(identityError)throw identityError;return user;},ensureProfile:async()=>{if(cloudError)throw cloudError;},privacy:async()=>({}),getProgress:async()=>({version:0}),sponsors:async()=>[],onAuthChange:fn=>{callback=fn;}};
- const context={module:{exports:{}},HomeBaseCloud:{connectHomeBase:()=>backend,progressKeys:[],SYNC_KEYS:{}},HomeBaseConfig:{},localStorage:{getItem:()=>null,setItem(){},removeItem(){}},document:{getElementById:id=>id==='workspaceTitle'?{textContent:'Map'}:id==='navProfile'?{click(){nav++;}}:{},querySelector:()=>null,addEventListener(){},createElement:()=>({})},renderProfile(){},renderEarningsPanel(){},renderSupport(){},hbTrack(){},fetch:async()=>({json:async()=>({features:[]})}),setTimeout:fn=>timers.push(fn),setInterval(){},Event:class{}};
+ const backend={getUser:async()=>{if(identityError)throw identityError;return user;},ensureProfile:async()=>{if(cloudError)throw cloudError;},privacy:async()=>({}),getProgress:async()=>({version:0}),sponsors:async()=>[],onAuthChange:fn=>{callback=fn;},
+  // Account sync stubs: signing in combines (empty) device and cloud data.
+  listEarnings:async()=>[],listDispatchTrips:async()=>[],getDispatchState:async()=>null,listDispatchRecommendations:async()=>[],saveProgress:async(s,v)=>({version:v+1})};
+ const context={module:{exports:{}},HomeBaseCloud:{connectHomeBase:()=>backend,progressKeys:[],SYNC_KEYS:{},progressSnapshot:()=>({}),mergeProgress:(c,d)=>({...c,...d}),deviceHasDriverData:()=>false},HomeBasePlanner:{summarize:()=>({})},applyProductPrefs(){},updateEarnings(){},earningsProfile:null,HomeBaseConfig:{},localStorage:{getItem:()=>null,setItem(){},removeItem(){}},document:{getElementById:id=>id==='workspaceTitle'?{textContent:'Map'}:id==='navProfile'?{click(){nav++;}}:{},querySelector:()=>null,addEventListener(){},createElement:()=>({})},renderProfile(){},renderEarningsPanel(){},renderSupport(){},hbTrack(){},fetch:async()=>({json:async()=>({features:[]})}),setTimeout:fn=>timers.push(fn),setInterval(){},Event:class{}};
  context.window=context;context.addEventListener=()=>{};context.dispatchEvent=()=>{};
  context.FormData=class{constructor(form){this.values=form.values;}get(key){return this.values?.[key]??null;}};
  const content={prepend:node=>{account=node;},append(){}};
