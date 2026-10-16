@@ -21,6 +21,8 @@ test('email code verification uses email OTP in the requesting client and requir
   await assert.rejects(api.verifyEmailCode('driver@example.test','not-a-code'));assert.equal(calls,0);
   await api.verifyEmailCode('driver@example.test','000000');
   assert.deepEqual(request,{email:'driver@example.test',token:'000000',type:'email'});
+  await api.verifyEmailCode('driver@example.test','00000000');assert.equal(request.token,'00000000'); // projects may use 6-10 digit codes
+  await assert.rejects(api.verifyEmailCode('driver@example.test','12345'));await assert.rejects(api.verifyEmailCode('driver@example.test','12345678901'));
   const rejected=createHomeBaseBackend({auth:{verifyOtp:async()=>({error:new Error('Token has expired or is invalid')})}});
   await assert.rejects(rejected.verifyEmailCode('driver@example.test','000000'),/expired/);
   const missing=createHomeBaseBackend({auth:{verifyOtp:async()=>({data:{user:null,session:null},error:null})}});
