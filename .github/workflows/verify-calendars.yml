@@ -18,6 +18,7 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Check out source
         uses: actions/checkout@v4
@@ -29,9 +30,11 @@ jobs:
         id: verify
         # A rejected candidate is a result, not a build failure.
         continue-on-error: true
+        env:
+          CANDIDATE_URL: ${{ inputs.url }}
         run: |
-          if [ -n "${{ inputs.url }}" ]; then
-            node scripts/verify-calendar-sources.mjs --url "${{ inputs.url }}" | tee report.txt
+          if [ -n "$CANDIDATE_URL" ]; then
+            node scripts/verify-calendar-sources.mjs --url "$CANDIDATE_URL" | tee report.txt
           else
             node scripts/verify-calendar-sources.mjs | tee report.txt
           fi

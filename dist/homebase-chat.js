@@ -64,7 +64,7 @@
   file.addEventListener('change',async()=>{const picked=file.files?.[0];file.value='';if(!picked)return;try{attachment=await shrinkImage(picked);chip.querySelector('img').src=attachment;chip.hidden=false;showNotice('')}catch(error){showNotice(error.message||'That photo could not be attached.')}grow()});
   chip.querySelector('button').addEventListener('click',()=>{attachment=null;chip.hidden=true;grow()});
   form.addEventListener('submit',event=>{event.preventDefault();submit(input.value)});
-  function showNotice(text,retry=false){notice.hidden=!text;notice.innerHTML=text?esc(text)+(retry?' <button type="button" data-chat-retry>Retry</button>':''):'';notice.querySelector('[data-chat-retry]')?.addEventListener('click',()=>{if(lastFailed)submit(lastFailed.text,lastFailed.photo,true)})}
+  function showNotice(text,retry=false){const signIn=/sign in/i.test(text||'');notice.hidden=!text;notice.innerHTML=text?esc(text)+(signIn?' <button type="button" data-chat-signin>Sign in</button>':retry?' <button type="button" data-chat-retry>Retry</button>':''):'';notice.querySelector('[data-chat-signin]')?.addEventListener('click',()=>{document.getElementById('hbChatClose')?.click();document.getElementById('navProfile')?.click()});notice.querySelector('[data-chat-retry]')?.addEventListener('click',()=>{if(lastFailed)submit(lastFailed.text,lastFailed.photo,true)})}
   async function submit(raw,photo=attachment,isRetry=false){
    const text=String(raw||'').trim();if(pending||(!text&&!photo))return;
    const agent=window.HomeBaseAgentClient;if(!agent){showNotice('Home Base AI is still loading. Try again in a moment.');return}

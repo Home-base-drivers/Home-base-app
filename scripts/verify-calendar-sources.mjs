@@ -11,16 +11,18 @@
 // reason, and the report says so rather than reporting the sources as bad.
 import { readFile } from 'node:fs/promises';
 import { readVenueCalendar } from './venue-calendars.mjs';
+import { schoolPage } from './school-events.mjs';
 
 const MIN_EVENTS = 1;
-const HORIZON_DAYS = 400;
+const HORIZON_HOURS = 36; // The production normalizer already filters to this window.
 
 // readVenueCalendar swallows transport errors and returns an empty event list,
 // so a blocked network looks exactly like a dead source. Probe first and report
 // UNKNOWN rather than condemning a source this machine simply cannot reach.
-export async function reachable(url, request = fetch) {
-  try { const r = await request(url, { method: 'GET', redirect: 'follow' });
-        return { ok: true, status: r.status }; }
+export async function reachable(url, pageReader = schoolPage) {
+  // Preserve the live reader's DNS/public-address checks, redirect bounds,
+  // response-size limit, HTTP status check, and request timeout.
+  try { await pageReader(url); return { ok: true }; }
   catch (error) { return { ok: false, detail: String(error?.cause?.code || error?.message || error).slice(0, 60) }; }
 }
 
@@ -28,11 +30,12 @@ export function judge(result, now = Date.now()) {
   if (result?.unreachable) return { verdict: 'UNKNOWN', reason: `cannot reach this host from here (${result.unreachable})` };
   if (result?.error) return { verdict: 'REJECT', reason: result.error };
   const events = Array.isArray(result?.events) ? result.events : [];
-  if (!events.length) return { verdict: 'REJECT', reason: 'no events returned' };
+  if (!events.length && result?.source?.pages === 0) return { verdict: 'UNKNOWN', reason: 'live reader could not load a calendar page' };
+  if (!events.length) return { verdict: 'REJECT', reason: 'no events returned in the live 36-hour forecast window; this is not a full-season schedule check' };
   const dated = events.filter(e => {
     const t = Date.parse(e?.eventStart ?? '');
     // A real dated event: parseable, not in the past, not absurdly far out.
-    return Number.isFinite(t) && t >= now - 36e5 && t <= now + HORIZON_DAYS * 864e5;
+    return Number.isFinite(t) && t >= now - 36e5 && t <= now + HORIZON_HOURS * 36e5;
   });
   if (dated.length < MIN_EVENTS) {
     return { verdict: 'REJECT', reason: `${events.length} event(s) but none carried a usable future date` };

@@ -7,6 +7,14 @@ const sample = { id: 'provider:Uber:123', platform: 'Uber', earnings: 40, date: 
   hoursType: 'online', payType: 'gross', miles: null, trips: 4, filename: 'uber.csv' };
 const fake = (rpc, user = { id: 'alice' }) => ({ auth: { getUser: async () => ({ data: { user }, error: null }) }, rpc });
 
+test('email sign-in requests a link for existing accounts without creating users or claiming a session',async()=>{
+  let request;
+  const api=createHomeBaseBackend({auth:{signInWithOtp:async args=>{request=args;return {data:{user:null,session:null},error:null};}}});
+  const response=await api.sendSignInLink('driver@example.test','https://home-base-drivers.github.io/Home-base-app/');
+  assert.deepEqual(request,{email:'driver@example.test',options:{emailRedirectTo:'https://home-base-drivers.github.io/Home-base-app/',shouldCreateUser:false}});
+  assert.equal(response.session,null);
+});
+
 test('cloud snapshots exclude earnings copies, credentials, GPS, and diagnostic logs', () => {
   const values = { homeBaseMapUi: '{"heat":true}', homeBaseDriverProfile: '{"name":"Driver"}',
     homeBaseLedger: '[1]', 'home-base-auth': '{"access_token":"private"}', driverRouterLocation: '[39,-76]', homeBaseErrorLog: '[]' };
@@ -64,6 +72,11 @@ test('missing and anonymous sessions cannot send private data', async () => {
 test('frontend initialization refuses server keys and incomplete configuration', () => {
   assert.throws(() => connectHomeBase({ supabaseUrl: 'https://test.supabase.co', supabasePublishableKey: 'sb_secret_private' }));
   assert.throws(() => connectHomeBase({}));
+});
+test('dispatch errors preserve safe support identifiers without copying private response fields',async()=>{
+ const client={...fake(async()=>({data:{}})),functions:{invoke:async()=>({error:{context:new Response(JSON.stringify({error:'Provider quota unavailable',code:'ai_provider_error',request_id:'support-123',provider_code:'insufficient_quota',private_field:'private data'}),{status:502})}})}};
+ const api=createHomeBaseBackend(client);
+ await assert.rejects(()=>api.evaluateDispatch({operation:'agent',utterance:'hi'}),e=>{assert.equal(e.code,'ai_provider_error');assert.equal(e.status,502);assert.equal(e.requestId,'support-123');assert.equal(e.providerCode,'insufficient_quota');assert.equal(e.private_field,undefined);return true});
 });
 test('dispatch preference syncing keeps complete editable settings while withholding destinations',async()=>{
  let saved;

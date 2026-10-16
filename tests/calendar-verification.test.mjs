@@ -1,15 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { judge } from '../scripts/verify-calendar-sources.mjs';
+import { judge, reachable } from '../scripts/verify-calendar-sources.mjs';
 
 const NOW = Date.parse('2026-10-15T12:00:00Z');
 const at = days => new Date(NOW + days * 864e5).toISOString();
 
 test('a source with real future dated events passes', () => {
   const v = judge({ events: [
-    { name: 'Heat vs Celtics', eventStart: at(3) },
-    { name: 'Concert', eventStart: at(10) }
+    { name: 'Heat vs Celtics', eventStart: at(.3) },
+    { name: 'Concert', eventStart: at(1) }
   ] }, NOW);
   assert.equal(v.verdict, 'PASS');
   assert.match(v.reason, /2 dated event/);
@@ -48,7 +48,7 @@ test('absurdly far-future dates do not count as real schedule data', () => {
 });
 
 test('dated entries without names are rejected', () => {
-  const v = judge({ events: [{ eventStart: at(2) }, { name: ' ', eventStart: at(4) }] }, NOW);
+  const v = judge({ events: [{ eventStart: at(.2) }, { name: ' ', eventStart: at(.4) }] }, NOW);
   assert.equal(v.verdict, 'REJECT');
   assert.match(v.reason, /no event names/);
 });
@@ -73,4 +73,24 @@ test('an unreachable host is UNKNOWN, never REJECT', () => {
   const v = judge({ unreachable: 'ENOTFOUND' }, NOW);
   assert.equal(v.verdict, 'UNKNOWN');
   assert.match(v.reason, /cannot reach/);
+});
+
+test('preflight uses the public calendar page reader and preserves transport failures',async()=>{
+  let seen;
+  assert.deepEqual(await reachable('https://venue.example.org/events',async url=>{seen=url;return {body:'calendar'};}),{ok:true});
+  assert.equal(seen,'https://venue.example.org/events');
+  const result=await reachable('https://venue.example.org/events',async()=>{throw Object.assign(new Error('DNS unavailable'),{cause:{code:'ECONNREFUSED'}});});
+  assert.equal(result.ok,false);assert.equal(judge({unreachable:result.detail}).verdict,'UNKNOWN');
+  assert.equal(judge({source:{pages:0,status:'unavailable'},events:[]}).verdict,'UNKNOWN');
+});
+
+test('verification horizon matches the live reader rather than claiming full-season support',()=>{
+  assert.equal(judge({events:[{name:'Next month',eventStart:at(30)}]},NOW).verdict,'REJECT');
+});
+
+test('workflow treats a candidate URL as quoted environment data, not shell code',async()=>{
+  const workflow=await readFile(new URL('../.github/workflows/verify-calendars.yml',import.meta.url),'utf8');
+  assert.match(workflow,/CANDIDATE_URL: \$\{\{ inputs\.url \}\}/);
+  assert.match(workflow,/--url "\$CANDIDATE_URL"/);
+  assert.doesNotMatch(workflow,/--url "\$\{\{ inputs\.url/);
 });
