@@ -54,7 +54,7 @@ if(state.aiUnderstanding===undefined)state.aiUnderstanding=true;
   if(recognition&&listening){recognition.stop();listening=false;}
   speechBusy=true;
   let text=HomeBaseLanguages.localize(message,prefs.locale),outputLocale=prefs.locale;
-  if(text===null&&state.aiUnderstanding&&window.HomeBaseAccounts){
+  if(text===null&&state.aiUnderstanding&&window.HomeBaseAccounts&&window.HomeBaseInternalAI?.plan?.()!=='builtin'){
    q('#copilotStatus').textContent='Preparing response…';
    try{const result=await HomeBaseAccounts.backend.evaluateDispatch({operation:'translate',text:String(message),locale:prefs.locale});if(result.translated===true&&result.locale===prefs.locale&&typeof result.text==='string'&&result.text.trim())text=result.text;}catch{}
   }
@@ -124,7 +124,12 @@ if(state.aiUnderstanding===undefined)state.aiUnderstanding=true;
  function command(raw,parsed){
  if(raw&&!parsed)window.HomeBaseShell?.logChat?.('user',raw);
  const prefs=getVoicePrefs();
- if(raw&&!parsed&&state.aiUnderstanding&&window.HomeBaseAgentBridge){cancelSpeech();const pendingReply=replySequence;speechBusy=true;q('#copilotStatus').textContent='Home Base AI · thinking…';window.HomeBaseAgentBridge(raw,{...prefs,channel:'voice'}).then(answer=>{if(pendingReply!==replySequence)return;speechBusy=false;say(answer);}).catch(error=>{if(pendingReply!==replySequence)return;speechBusy=false;aiFailure=window.HomeBaseAgentClient?.describeError?.(error)||'Home Base AI could not answer.';return command(raw,{type:'model_fallback'});});return;}
+ // Free plan: the built-in AI answers on the phone. Driving commands (modes,
+ // pause, minimums) still go to the command parser first.
+ const builtin=window.HomeBaseInternalAI?.plan?.()==='builtin';
+ const spoken=t=>String(t).replace(/^\s*[-*•]\s+/gm,'').replace(/\*\*/g,'').replace(/\n+/g,' ');
+ if(raw&&!parsed&&builtin){const cmd=HomeBaseLanguages.parseCommand(raw,prefs.locale)||(prefs.language==='en'?D.parseCommand(raw):null);if(!cmd||cmd.type==='unknown'){const r=window.HomeBaseInternalAI.ask(raw);if(r.handled)return say(spoken(r.answer));}}
+ if(raw&&!parsed&&!builtin&&state.aiUnderstanding&&window.HomeBaseAgentBridge){cancelSpeech();const pendingReply=replySequence;speechBusy=true;q('#copilotStatus').textContent='Home Base AI · thinking…';window.HomeBaseAgentBridge(raw,{...prefs,channel:'voice'}).then(answer=>{if(pendingReply!==replySequence)return;speechBusy=false;say(answer);}).catch(error=>{if(pendingReply!==replySequence)return;speechBusy=false;aiFailure=window.HomeBaseAgentClient?.describeError?.(error)||'Home Base AI could not answer.';const r=window.HomeBaseInternalAI?.ask?.(raw);if(r?.handled){const reason=aiFailure;aiFailure='';window.HomeBaseShell?.setVoiceStatus?.(reason,true);return say(spoken(r.answer));}return command(raw,{type:'model_fallback'});});return;}
  if(raw&&!parsed&&!state.aiUnderstanding&&/(busiest|busy\s+(?:area|zone|neighborhood)|best\s+(?:area|zone|neighborhood)|hotspot|zona\s+(?:más\s+)?(?:activa|ocupada|movida)|área\s+(?:más\s+)?(?:activa|ocupada)|d[oó]nde\s+(?:hay|est[aá])\s+(?:m[aá]s\s+)?demanda)/i.test(raw)){
   const zones=context().zones.filter(z=>Number.isFinite(z.score)).sort((a,b)=>b.score-a.score).slice(0,3);
   if(zones.length)return say('Right now, the highest-scoring demand areas are '+zones.map(z=>z.name).join(', ')+'. This is a Home Base prediction, not a guarantee of ride requests.');

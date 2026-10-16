@@ -138,7 +138,7 @@
       localStorage.setItem('homeBaseCloudOwner',me.id);localStorage.setItem('homeBaseAutoCloud','true');autosave=true;
       version=nextVersion;localStorage.setItem('homeBaseCloudVersion',String(version));
       markSynced();linkChoice=null;
-      fingerprint=JSON.stringify([HomeBaseCloud.progressSnapshot(localStorage),read('homeBaseLedger')||[]]);
+      fingerprint=JSON.stringify([HomeBaseCloud.progressSnapshot(localStorage),read('homeBaseLedger')||[],read('homeBaseTripRows')||[]]);
       document.dispatchEvent(new Event('homebase:device-data-changed'));applyProductPrefs();updateEarnings();
       status(quiet?'Cloud saved · '+new Date().toLocaleTimeString()+'. Everything on this phone and your account is combined.':'Your account is synced on this phone. Everything from this phone and your account is combined, and new changes save automatically.');
     }
@@ -167,7 +167,7 @@
       localStorage.setItem('homeBaseCloudOwner',me.id);localStorage.setItem('homeBaseAutoCloud','true');autosave=true;version=cloud.version;
       localStorage.setItem('homeBaseCloudVersion',String(version));document.dispatchEvent(new Event('homebase:device-data-changed'));
       markSynced();
-      fingerprint=JSON.stringify([HomeBaseCloud.progressSnapshot(localStorage),rows]);
+      fingerprint=JSON.stringify([HomeBaseCloud.progressSnapshot(localStorage),rows,read('homeBaseTripRows')||[]]);
       applyProductPrefs();updateEarnings();status('Cloud copy restored. Refresh the map to apply saved map preferences.');renderProfile();
     }
     function accountSection() {
@@ -269,7 +269,7 @@
     async function tick() {
       if(!navigator.onLine||busy||!me)return;
       if(autosave&&canSync(readOwner(),me.id)){
-        const next=JSON.stringify([HomeBaseCloud.progressSnapshot(localStorage),read('homeBaseLedger')||[]]);
+        const next=JSON.stringify([HomeBaseCloud.progressSnapshot(localStorage),read('homeBaseLedger')||[],read('homeBaseTripRows')||[]]);
         if(next!==fingerprint)await action(()=>uploadDevice());
       }
       try{await collectLearning();}catch(error){fail(error);}

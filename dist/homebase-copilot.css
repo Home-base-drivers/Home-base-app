@@ -1168,3 +1168,14 @@
 #hbHomeWord{display:flex!important;flex-direction:row!important;align-items:center;gap:9px!important;width:216px!important;padding-left:46px!important}
 #hbHomeWord .hb-home-logo{width:30px!important;height:30px!important;flex:0 0 30px;object-fit:contain;filter:drop-shadow(0 1px 3px rgba(0,0,0,.55))}
 #hbHomeWord .hb-home-text{display:flex!important;flex-direction:column!important;min-width:0}
+/* Built-in vs Plus switch in the chat composer */
+.hb-chat-engine{display:flex;gap:6px;margin:0 0 6px}.hb-chat-engine button{flex:1;min-height:34px;border-radius:10px;border:1px solid rgba(91,145,178,.45);background:#061018;color:#9fb3c0;font:700 .72rem Arial,sans-serif}.hb-chat-engine button[aria-pressed="true"]{background:#0d3550;color:#e6f7ff;border-color:#3ac9ff}
+/* Screenshot review sheet */
+.hb-read-review{position:fixed;inset:0;z-index:3000;background:rgba(0,8,14,.72);display:flex;align-items:flex-end;justify-content:center;padding:12px;padding-bottom:max(12px,env(safe-area-inset-bottom))}
+.hb-read-card{width:min(100%,640px);max-height:calc(100dvh - 24px);overflow:auto;background:#04131f;border:1px solid #2f6a88;border-radius:16px;padding:14px;color:#e6f2f8;font:14px/1.4 Arial,sans-serif}
+.hb-read-card h3{margin:0 0 6px;font-size:15px;letter-spacing:.04em}.hb-read-note{color:#9fb3c0;font-size:12px;margin:0 0 8px}
+.hb-read-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}.hb-read-meta label{display:grid;gap:4px;font-size:11px;color:#9fb3c0}
+.hb-read-card input,.hb-read-card select{min-height:36px;border-radius:8px;border:1px solid rgba(91,145,178,.5);background:#061018;color:#fff;font:700 14px Arial,sans-serif;padding:4px 6px;width:100%;box-sizing:border-box}
+.hb-read-table{overflow-x:auto}.hb-read-table table{width:100%;border-collapse:collapse}.hb-read-table th{font-size:11px;color:#9fb3c0;text-align:left;padding:4px}.hb-read-table td{padding:3px}.hb-read-table td:first-child{width:28px}.hb-read-table td:first-child input{width:20px;min-height:20px}
+.hb-read-table td small{display:block;color:#ffb36b;font-size:10px}.hb-read-table tr.flag input[data-f]:placeholder-shown,.hb-read-table tr.flag td{background:rgba(255,179,107,.06)}
+.hb-read-total{font-weight:700;font-size:13px;margin:10px 0}.hb-read-actions{display:flex;gap:8px;justify-content:flex-end}.hb-read-actions button{min-height:44px;padding:0 16px;border-radius:12px;border:1px solid #41738e;background:#071c2c;color:#bceaff;font-weight:750}.hb-read-actions .primary-action{background:#0f8fd0;color:#fff;border-color:#0f8fd0}
