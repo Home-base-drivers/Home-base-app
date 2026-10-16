@@ -15,6 +15,20 @@ test('email sign-in requests a link for existing accounts without creating users
   assert.equal(response.session,null);
 });
 
+test('email code verification uses email OTP in the requesting client and requires a session',async()=>{
+  let request,calls=0;
+  const api=createHomeBaseBackend({auth:{verifyOtp:async args=>{request=args;calls++;return {data:{user:{id:'driver'},session:{user:{id:'driver'}}},error:null};}}});
+  await assert.rejects(api.verifyEmailCode('driver@example.test','not-a-code'));assert.equal(calls,0);
+  await api.verifyEmailCode('driver@example.test','000000');
+  assert.deepEqual(request,{email:'driver@example.test',token:'000000',type:'email'});
+  await api.verifyEmailCode('driver@example.test','00000000');assert.equal(request.token,'00000000'); // projects may use 6-10 digit codes
+  await assert.rejects(api.verifyEmailCode('driver@example.test','12345'));await assert.rejects(api.verifyEmailCode('driver@example.test','12345678901'));
+  const rejected=createHomeBaseBackend({auth:{verifyOtp:async()=>({error:new Error('Token has expired or is invalid')})}});
+  await assert.rejects(rejected.verifyEmailCode('driver@example.test','000000'),/expired/);
+  const missing=createHomeBaseBackend({auth:{verifyOtp:async()=>({data:{user:null,session:null},error:null})}});
+  await assert.rejects(missing.verifyEmailCode('driver@example.test','000000'),/could not be confirmed/);
+});
+
 test('cloud snapshots exclude earnings copies, credentials, GPS, and diagnostic logs', () => {
   const values = { homeBaseMapUi: '{"heat":true}', homeBaseDriverProfile: '{"name":"Driver"}',
     homeBaseLedger: '[1]', 'home-base-auth': '{"access_token":"private"}', driverRouterLocation: '[39,-76]', homeBaseErrorLog: '[]' };

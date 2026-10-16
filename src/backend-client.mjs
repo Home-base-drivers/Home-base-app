@@ -154,6 +154,14 @@ export function createHomeBaseBackend(client) {
       return result(await client.auth.signInWithOtp({ email,
         options: { emailRedirectTo: redirectTo, shouldCreateUser: false } }));
     },
+    async verifyEmailCode(email, code) {
+      const token=String(code||'').trim();
+      // Supabase lets the project choose a 6-10 digit email code; accept that range.
+      if(!/^[0-9]{6,10}$/.test(token))throw new Error('Enter the code from your newest Home Base sign-in email.');
+      const data=result(await client.auth.verifyOtp({email:String(email||'').trim(),token,type:'email'}));
+      if(!data?.session||!data?.user?.id||data.user.is_anonymous)throw new Error('Sign-in could not be confirmed. Request a new code.');
+      return data;
+    },
     async signIn(email, password) {
       return result(await client.auth.signInWithPassword({ email, password }));
     },
