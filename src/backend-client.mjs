@@ -29,6 +29,50 @@ export function progressSnapshot(storage) {
   return state;
 }
 
+const isPlainObject = value => !!value && typeof value === 'object' && !Array.isArray(value);
+const isBlank = value => value === null || value === undefined || value === '' ||
+  (Array.isArray(value) && value.length === 0) || (isPlainObject(value) && Object.keys(value).length === 0);
+const itemKey = item => isPlainObject(item) && (item.id ?? item.record_id ?? item.startedAt) !== undefined
+  ? 'id:' + String(item.id ?? item.record_id ?? item.startedAt) : 'json:' + JSON.stringify(item);
+
+// Combine one saved setting from the account (cloud) with the same setting on
+// this device. Nothing filled in on either side is dropped: blanks never
+// overwrite values, lists are combined without duplicates, and when both sides
+// hold a different value the device wins because it is what the driver sees now.
+export function mergeValue(cloud, device) {
+  if (isBlank(device)) return isBlank(cloud) ? (device ?? cloud ?? null) : cloud;
+  if (isBlank(cloud)) return device;
+  if (Array.isArray(cloud) && Array.isArray(device)) {
+    const seen = new Map();
+    for (const item of [...cloud, ...device]) seen.set(itemKey(item), item);
+    return [...seen.values()];
+  }
+  if (isPlainObject(cloud) && isPlainObject(device)) {
+    const merged = { ...cloud };
+    for (const [key, value] of Object.entries(device)) merged[key] = mergeValue(cloud[key], value);
+    return merged;
+  }
+  return device;
+}
+
+export function mergeProgress(cloudState = {}, deviceState = {}) {
+  const merged = {};
+  for (const key of progressKeys) {
+    const value = mergeValue(cloudState?.[key], deviceState?.[key]);
+    if (value !== null && value !== undefined) merged[key] = value;
+  }
+  return merged;
+}
+
+// Driver-entered data that is worth asking about before adding it to an account.
+export const driverDataKeys = Object.freeze(['homeBaseDriverProfile', 'homeBaseLedger', 'homeBaseTripRows',
+  'homeBaseShifts', 'homeBaseCostPrefs', 'homeBaseDispatchState']);
+export function deviceHasDriverData(storage) {
+  return driverDataKeys.some(key => {
+    try { const raw = storage.getItem(key); return raw !== null && !isBlank(JSON.parse(raw)); } catch { return false; }
+  });
+}
+
 function finite(value, name, nullable = true) {
   if (value === null || value === undefined) {
     if (nullable) return null;
@@ -150,9 +194,10 @@ export function createHomeBaseBackend(client) {
       await user();
       return result(await client.auth.updateUser({ password }));
     },
-    async sendSignInLink(email, redirectTo) {
+    // One email code signs drivers in; with createAccount it also starts a new account.
+    async sendSignInLink(email, redirectTo, { createAccount = false } = {}) {
       return result(await client.auth.signInWithOtp({ email,
-        options: { emailRedirectTo: redirectTo, shouldCreateUser: false } }));
+        options: { emailRedirectTo: redirectTo, shouldCreateUser: !!createAccount } }));
     },
     async verifyEmailCode(email, code) {
       const token=String(code||'').trim();

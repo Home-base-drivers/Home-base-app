@@ -41,6 +41,8 @@
     const emptyPrefs = () => ({usage_analytics:false,model_improvement:false,benchmark_sharing:false});
     const redirect = 'https://home-base-drivers.github.io/Home-base-app/';
     let needsConfirm = null, identityRevision = 0, authEmail = '', codeEmail = '';
+    // Account onboarding: link this device once per account, then offer an optional saved password.
+    let linkChoice = null, autoLinkedFor = '', offerPassword = false;
     // Supabase returns terse auth errors; show drivers what to do next instead.
     const authHints = [
       [/email not confirmed/i,'That email has not been confirmed yet. Check your inbox and spam folder, or use Resend confirmation email below.'],
@@ -93,7 +95,50 @@
       version=canSync(readOwner(),userId)&&localStorage.getItem('homeBaseCloudVersion')!==null?remembered:cloud.version;
       autosave=canSync(readOwner(),userId) && localStorage.getItem('homeBaseCloudVersion')!==null && localStorage.getItem('homeBaseAutoCloud')==='true';
       publishSession();
+      if(autoLinkedFor!==userId){autoLinkedFor=userId;try{await autoLink(userId);}catch(error){fail(error);}}
       if(document.getElementById('workspaceTitle').textContent==='Profile')renderProfile();
+    }
+    // First sign-in on a device: bring the account's data here, and offer to keep this phone's data.
+    async function autoLink(userId) {
+      if(!me||me.id!==userId||canSync(readOwner(),userId))return;
+      const owner=readOwner();
+      if(owner&&owner!==userId){status('This phone holds another Home Base account’s data. Download a device backup, then choose Restore cloud copy to switch accounts.');return;}
+      if(HomeBaseCloud.deviceHasDriverData(localStorage)){linkChoice='ask';return;}
+      await linkDevice(true);
+    }
+    // Combine (or replace) this device's data with the signed-in account, then keep both in sync.
+    async function linkDevice(includeDevice) {
+      if(!me)throw Error('Sign in first.');
+      const [cloud,cloudRows,cloudTrips,dispatchState,dispatchLog]=await Promise.all([backend.getProgress(),listAllEarnings(),backend.listDispatchTrips(),backend.getDispatchState(),backend.listDispatchRecommendations()]);
+      const cloudState=cloud.state||{},deviceState=HomeBaseCloud.progressSnapshot(localStorage);
+      const deviceLedger=includeDevice?(read('homeBaseLedger')||[]):[];
+      const deviceTrips=includeDevice?(read('homeBaseTripRows')||[]).filter(r=>r&&r.record_id):[];
+      const merged=includeDevice?HomeBaseCloud.mergeProgress(cloudState,deviceState):cloudState;
+      let nextVersion=cloud.version||0;
+      if(includeDevice){
+        const ledgerUploads=deviceLedger.filter(r=>r&&r.source!=='provider');
+        if(ledgerUploads.length)await backend.saveEarnings(ledgerUploads,{source:'csv'});
+        const tripUploads=deviceTrips.filter(r=>['manual','csv','screenshot'].includes(r.source));
+        if(tripUploads.length)await backend.saveDispatchTrips(tripUploads);
+        if(!cloud.version||JSON.stringify(merged)!==JSON.stringify(cloudState)){const saved=await backend.saveProgress(merged,cloud.version||0);nextVersion=saved.version;}
+      }
+      const rows=includeDevice?await listAllEarnings():cloudRows,trips=includeDevice?await backend.listDispatchTrips():cloudTrips;
+      const union=(list,key)=>{const m=new Map();for(const r of list)m.set(String(r?.[key]??JSON.stringify(r)),r);return[...m.values()];};
+      const ledger=union([...deviceLedger,...rows],'id'),tripRows=union([...deviceTrips,...trips],'record_id');
+      const privateBase=includeDevice?read('homeBasePrivateDestination'):null;
+      if(!includeDevice)deviceKeys.filter(k=>k!=='homeBaseActiveShift').forEach(k=>localStorage.removeItem(k));
+      for(const [key,value] of Object.entries(merged))if(HomeBaseCloud.progressKeys.includes(key))write(key,value);
+      write('homeBaseLedger',ledger);write('homeBaseTripRows',tripRows);
+      if(dispatchState&&read('homeBaseDispatchState')===null)write('homeBaseDispatchState',dispatchState.settings);
+      if(Array.isArray(dispatchLog)&&dispatchLog.length&&read('homeBaseDispatchLog')===null)write('homeBaseDispatchLog',dispatchLog);
+      if(privateBase)write('homeBasePrivateDestination',privateBase);
+      const summary=HomeBasePlanner.summarize(ledger,'Account history');write('homeBaseEarningsProfile',summary);earningsProfile=summary;
+      localStorage.setItem('homeBaseCloudOwner',me.id);localStorage.setItem('homeBaseAutoCloud','true');autosave=true;
+      version=nextVersion;localStorage.setItem('homeBaseCloudVersion',String(version));
+      markSynced();linkChoice=null;
+      fingerprint=JSON.stringify([HomeBaseCloud.progressSnapshot(localStorage),read('homeBaseLedger')||[]]);
+      document.dispatchEvent(new Event('homebase:device-data-changed'));applyProductPrefs();updateEarnings();
+      status(includeDevice?'Your account is ready on this phone. Profile, earnings and trips are synced, and new changes save automatically.':'This phone now shows your account’s data. New changes save automatically.');
     }
     async function listAllEarnings() {
       const rows=[];for(let offset=0;;offset+=500){const page=await backend.listEarnings({offset});rows.push(...page);if(page.length<500)break;}
@@ -137,37 +182,47 @@
     function accountSection() {
       const section=document.createElement('section');section.className='workspace-section growth-account';section.id='growthAccount';
       section.innerHTML='<h3>HOME BASE ACCOUNT</h3>'+(me?
-        '<p>Signed in as <b>'+esc(me.email)+'</b></p><p>'+ (canSync(readOwner(),me.id)?'This device is linked to your cloud account.':'Device history is not linked. Nothing is uploaded automatically.')+'</p><div class="growth-actions"><button id="cloudSave" class="primary-action">Save device to cloud</button><button id="cloudRestore" class="secondary-action">Restore cloud copy</button><button id="cloudExport" class="secondary-action">Export cloud data</button><button id="cloudSignOut" class="secondary-action">Sign out</button></div><label><input type="checkbox" id="cloudAuto" '+(autosave?'checked':'')+'> Automatically save changes after linking this device</label>':
-        '<p>Your map remains free without an account. Sign in to save earnings and settings privately.</p><form id="cloudAuth"><label>Email<input name="email" type="email" autocomplete="email" value="'+esc(authEmail)+'" required></label><label>Password<input name="password" type="password" autocomplete="current-password" minlength="8" required></label><div class="growth-actions"><button class="primary-action" name="mode" value="signin">Sign in</button><button class="secondary-action" name="mode" value="signup">Create account</button><button type="button" id="cloudEmailLink" class="secondary-action">Email me a sign-in code</button></div></form><button id="cloudReset" class="secondary-action">Forgot password</button>')+
+        '<p>Signed in as <b>'+esc(me.email)+'</b></p>'+
+        (linkChoice==='ask'?'<div class="growth-link" id="cloudLinkCard"><p><b>Add this phone’s driver data to your account?</b></p><p>Your profile, earnings and trips on this phone will be combined with your account, so they follow you to any device.</p><div class="growth-actions"><button id="cloudLinkYes" class="primary-action">Yes, add it</button><button id="cloudLinkNo" class="secondary-action">Not mine — use my account only</button></div></div>':'')+
+        (offerPassword?'<form id="cloudSetPassword" class="growth-password"><p><b>Save a password for faster sign-in</b></p><p>Optional. Your iPhone can keep it in Passwords so next time is one tap.</p><label>Email<input name="username" type="email" autocomplete="username" value="'+esc(me.email)+'" readonly></label><label>New password<input name="password" type="password" autocomplete="new-password" minlength="8" required></label><div class="growth-actions"><button class="primary-action">Save password</button><button type="button" id="cloudSkipPassword" class="secondary-action">Not now</button></div></form>':'')+
+        '<p>'+ (canSync(readOwner(),me.id)?'This device is linked to your cloud account.':'Device history is not linked. Nothing is uploaded automatically.')+'</p><div class="growth-actions"><button id="cloudSave" class="primary-action">Save device to cloud</button><button id="cloudRestore" class="secondary-action">Restore cloud copy</button><button id="cloudExport" class="secondary-action">Export cloud data</button><button id="cloudSignOut" class="secondary-action">Sign out</button></div><label><input type="checkbox" id="cloudAuto" '+(autosave?'checked':'')+'> Automatically save changes after linking this device</label>':
+        '<p>Sign in to keep your profile, earnings and trips on every device. The map stays free without an account.</p><form id="cloudAuth"><label>Email<input name="email" type="email" autocomplete="username" value="'+esc(authEmail)+'" required></label><div class="growth-actions"><button type="button" id="cloudEmailLink" class="primary-action">Email me a sign-in code</button></div><p class="growth-note">New to Home Base? The same code creates your account. No password needed.</p><details id="cloudPasswordBox"><summary>Sign in with a password instead</summary><label>Password<input name="password" type="password" autocomplete="current-password" minlength="8"></label><div class="growth-actions"><button class="primary-action" name="mode" value="signin">Sign in</button><button type="button" id="cloudReset" class="secondary-action">Forgot password</button></div></details></form>')+
         (!me&&codeEmail?'<form id="cloudCode"><p>Enter the code sent to '+esc(codeEmail)+'. Stay in this app to sign in here.</p><label>Sign-in code<input name="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6,10}" minlength="6" maxlength="10" required></label><button class="primary-action">Verify code and sign in</button></form>':'')+
         (recovery?'<form id="cloudRecovery"><label>New password<input name="password" type="password" autocomplete="new-password" minlength="8" required></label><button class="primary-action">Update password</button></form>':'')+
         (!me&&needsConfirm?'<div class="growth-actions"><button id="cloudResend" class="secondary-action">Resend confirmation email</button></div>':'')+'<p class="growth-sync growth-sync-'+syncState().state+'" role="status">'+esc(syncState().detail)+'</p>'+'<p class="growth-note">No Uber/Lyft passwords are collected here.</p><div class="growth-actions"><button id="deviceBackup" class="secondary-action">Download device backup</button></div><p id="cloudStatus" role="status">'+esc(message)+'</p>';
       section.querySelector('#deviceBackup').onclick=()=>download('home-base-device-backup.json',{format:'home-base-backup',version:1,state:localBackup()});
       section.querySelector('#cloudAuth')?.addEventListener('submit',event=>{event.preventDefault();const data=new FormData(event.target),mode=event.submitter?.value;
-        action(async()=>{const email=String(data.get('email')).trim(),password=String(data.get('password'));authEmail=email;
+        action(async()=>{const email=String(data.get('email')).trim(),password=String(data.get('password')||'');authEmail=email;
+          if(mode!=='signup'&&!password){status('Enter your password, or use Email me a sign-in code.');return;}
           if(mode==='signup'){const result=await backend.signUp(email,password,redirect);status(result.session?'Account created.':'Account created. Check your email to confirm your address.');}
           else {
             try{await backend.signIn(email,password);}
             catch(error){
               // Re-read identity: a rejected password is not proof of the earlier session's state.
               const wasSignedIn=!!me;await refreshIdentity();const hint=authHint(error,email);if(!hint)throw error;status(hint+(wasSignedIn&&!me?' You were signed out on this phone, so sign in again to use Home Base AI and cloud saving.':''));renderProfile();return;}
-            needsConfirm=null;await refreshIdentity();status('Signed in. Device history has not been uploaded.');renderProfile();
+            needsConfirm=null;await refreshIdentity();if(linkChoice==='ask')status('Signed in. One more step: choose what to do with this phone’s data above.');else if(!/synced|ready|shows your account/i.test(message))status('Signed in on this device.');renderProfile();
           }});});
       section.querySelector('#cloudEmailLink')?.addEventListener('click',()=>{
         const input=section.querySelector('[name=email]');input.value=input.value.trim();
         if(!input.reportValidity())return;
         authEmail=input.value;
         const email=authEmail;
-        action(async()=>{await backend.sendSignInLink(email,redirect);codeEmail=email;status('If this email has a Home Base account, a sign-in code is on its way. Return to this Home Base app and enter the code below. Do not open the browser link.');});
+        action(async()=>{await backend.sendSignInLink(email,redirect,{createAccount:true});codeEmail=email;status('Check your email: a sign-in code is on its way. Enter it below in this app. Do not open the email link.');});
       });
       section.querySelector('#cloudCode')?.addEventListener('submit',event=>{
         event.preventDefault();const code=String(new FormData(event.target).get('code')||'');
-        action(async()=>{await backend.verifyEmailCode(codeEmail,code);codeEmail='';needsConfirm=null;await refreshIdentity();status('Signed in on this device. Device history has not been uploaded.');});
+        action(async()=>{await backend.verifyEmailCode(codeEmail,code);codeEmail='';needsConfirm=null;offerPassword=true;await refreshIdentity();if(linkChoice==='ask')status('Signed in. One more step: choose what to do with this phone’s data above.');else if(!/synced|ready|shows your account/i.test(message))status('Signed in on this device.');});
       });
       section.querySelector('#cloudReset')?.addEventListener('click',()=>action(async()=>{const email=section.querySelector('[name=email]').value.trim();if(!email)throw Error('Enter your email first.');await backend.resetPassword(email,redirect);status('If an account exists for that email, a recovery link is on its way. Check your inbox and spam folder.');}));
       section.querySelector('#cloudResend')?.addEventListener('click',()=>action(async()=>{await backend.resendConfirmation(needsConfirm,redirect);status('Confirmation email sent again to '+needsConfirm+'. Check your inbox and spam folder.');}));
       section.querySelector('#cloudRecovery')?.addEventListener('submit',event=>{event.preventDefault();action(async()=>{await backend.updatePassword(new FormData(event.target).get('password'));recovery=false;status('Password updated.');renderProfile();});});
-      section.querySelector('#cloudSave')?.addEventListener('click',()=>action(()=>uploadDevice(true)));
+      section.querySelector('#cloudLinkYes')?.addEventListener('click',()=>action(()=>linkDevice(true)));
+      section.querySelector('#cloudLinkNo')?.addEventListener('click',()=>{if(!confirm('Replace the Home Base data on this phone with your account’s data? Download a device backup first if you might need it.'))return;action(()=>linkDevice(false));});
+      section.querySelector('#cloudSetPassword')?.addEventListener('submit',event=>{event.preventDefault();const password=String(new FormData(event.target).get('password')||'');
+        action(async()=>{await backend.updatePassword(password);offerPassword=false;status('Password saved. If your iPhone offers to save it, tap Save Password so sign-in is one tap next time.');});});
+      section.querySelector('#cloudSkipPassword')?.addEventListener('click',()=>{offerPassword=false;renderProfile();});
+      // An unlinked device combines with the account instead of being refused when the account already has data.
+      section.querySelector('#cloudSave')?.addEventListener('click',()=>action(()=>canSync(readOwner(),me.id)?uploadDevice(true):linkDevice(true)));
       section.querySelector('#cloudRestore')?.addEventListener('click',()=>action(restoreCloud));
       section.querySelector('#cloudAuto')?.addEventListener('change',event=>{if(event.target.checked&&!canSync(readOwner(),me.id)){event.target.checked=false;return status('Save or restore once to link this device first.');}autosave=event.target.checked;localStorage.setItem('homeBaseAutoCloud',String(autosave));});
       section.querySelector('#cloudExport')?.addEventListener('click',()=>action(async()=>download('home-base-cloud-data.json',{exportedAt:new Date().toISOString(),earnings:await listAllEarnings(),progress:await backend.getProgress(),...(await backend.dataInventory())})));
