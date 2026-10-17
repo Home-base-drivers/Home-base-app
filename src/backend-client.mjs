@@ -378,6 +378,18 @@ export function createHomeBaseBackend(client) {
       }
       return output;
     },
+    // Subscriptions (Stripe). The server returns a checkout/portal link or the
+    // plan status; plans change only after Stripe confirms payment to the server.
+    async billing(payload) {
+      await user();
+      const response = await client.functions.invoke('billing', { body: payload });
+      if (response.error && response.error.context && typeof response.error.context.json === 'function') {
+        let body = null;
+        try { body = await response.error.context.clone().json(); } catch { body = null; }
+        if (body && typeof body.error === 'string') throw Object.assign(new Error(body.error), { code: typeof body.code === 'string' ? body.code : 'billing_error' });
+      }
+      return result(response);
+    },
     async deleteAccount() {
       await user();
       return result(await client.functions.invoke('delete-account', { body: { confirmation: 'DELETE' } }));

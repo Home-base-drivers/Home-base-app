@@ -112,3 +112,20 @@ test('a day split across several screenshots becomes one review with one date',(
  const odd=AI.parseScreenshotText('UberX $10.04\n9112 AM\n1 min 52 sec : 10.46 mi',{now,date:'2026-10-10'});
  assert.equal(odd.trips[0].time,'9:12 AM');assert.ok(odd.trips[0].flags.includes('check minutes or miles'));
 });
+
+test('free briefing, weekly report and keep-driving answers use only the driver\'s data',()=>{
+ const now=new Date('2026-10-10T14:00:00-04:00');
+ const records=[{platform:'Uber',date:'2026-10-10',earnings:200,trips:20,hours:6,hoursType:'online',payType:'gross',miles:100},{platform:'Uber',date:'2026-10-03',earnings:150,trips:15,hours:5,hoursType:'online',payType:'gross'}];
+ const trips=[];for(const d of ['2026-10-03','2026-09-26'])for(let h=6;h<21;h++)trips.push({platform:'Uber',request_time:new Date(Date.parse(d+'T'+String(h).padStart(2,'0')+':10:00-04:00')).toISOString(),fare:h>=16?16:8,trip_time:12});
+ const ctx={now,records,tripRows:trips,goalPace:{goal:'100',gh:'3'},carInputs:{mpg:'19',price:'4.25'},live:{zones:[{name:'Fells Point',score:.9}],events:[{name:'Ravens game',start:'2026-10-10T16:25:00-04:00'}],shiftHours:6}};
+ const b=AI.answer('brief me',ctx);assert.equal(b.intent,'briefing');assert.match(b.answer,/\$200\.00 so far/);assert.match(b.answer,/4 PM \(\$16\.00\/trip\)/);assert.match(b.answer,/Saturdays/);assert.match(b.answer,/Ravens game 4:25 PM/);
+ const w=AI.answer('how was my week',ctx);assert.equal(w.intent,'week');assert.match(w.answer,/up \$50\.00/);assert.match(w.answer,/Best day: Sat, Oct 10/);
+ const s=AI.answer('should I keep driving?',ctx);assert.equal(s.intent,'stop');assert.match(s.answer,/Worth staying/);
+});
+
+test('plans and payments are wired into the app',()=>{
+ const html=fs.readFileSync(new URL('../dist/index.html',import.meta.url),'utf8'),plans=fs.readFileSync(new URL('../dist/homebase-plans.js',import.meta.url),'utf8');
+ assert.ok(html.indexOf('homebase-plans.js')>html.indexOf('homebase-internal-ai.js'));
+ assert.match(plans,/operation,plan/);assert.match(plans,/billing=success|'billing'/);assert.match(plans,/Opens soon/);
+ assert.doesNotMatch(plans,/sk_(live|test)_/,'no Stripe secret in the app');
+});
