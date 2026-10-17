@@ -36,3 +36,13 @@ never a made-up answer.
 ## Verified
 Synthetic Uber-style screenshots (dark and light, 34-trip day over 4 screenshots, Empower)
 read 34/34 rows exactly in headless Chromium. Real Uber screenshots still need a phone test.
+
+## Plans and GPT Live minutes (v275)
+- Server tables `ai_plan_limits` (free 0 s, plus 7200 s = 120 min at $19.99, pro 15600 s = 260 min at $39.99),
+  `ai_entitlements` (written only by `set_ai_plan`, service role), `voice_sessions` (metered from server time).
+- `dispatch` refuses GPT chat, GPT voice, translate and GPT Live for free plans (402 `plan_required`) and opens
+  GPT Live only through `start_voice_session` (402 `voice_minutes_used_up` when the month is used).
+- Phone: Talk is hybrid by default (phone speech + built-in AI / GPT text, no Live minutes). GPT Live opens in
+  Live mode or on "let's talk"/"go live"; it closes after 20 s of quiet, at the cap, or in the background, sends a
+  heartbeat every 60 s and reports its end. A crashed phone stops counting 45 s after its last heartbeat.
+- Deploy order: apply migration → set owner plans with `set_ai_plan` → deploy `dispatch` → release the app.

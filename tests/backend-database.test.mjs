@@ -313,3 +313,32 @@ test('dispatch ingestion preserves stable identity across coordinate precision a
   await assert.rejects(db.query('select public.ingest_dispatch_trips($1::jsonb)',[JSON.stringify([{...trip,record_id:'bad-coordinate',pickup_location:[91,0]}])]),{code:'22023'});
  });
 });
+
+test('GPT Live minutes: free is refused, paid is metered from server time and capped',async()=>{
+ const asAlice=sql=>as('authenticated',alice,()=>db.query(sql[0],sql[1]||[]));
+ const admin=(q,p=[])=>as('service_role',null,()=>db.query(q,p));
+ const one=async(q,p=[])=>Object.values((await as('authenticated',alice,()=>db.query(q,p))).rows[0])[0];
+ assert.equal((await one('select public.my_ai_allowance()')).plan,'free');
+ await assert.rejects(asAlice(['select public.start_voice_session()']),/plan_required/);
+ await assert.rejects(asAlice(["select public.set_ai_plan($1,'pro','self')",[alice]]),{code:'42501'},'drivers cannot give themselves a plan');
+ await assert.rejects(asAlice(["insert into public.ai_entitlements(user_id,plan) values ($1,'pro')",[alice]]),{code:'42501'});
+ await admin("select public.set_ai_plan($1,'plus','test')",[alice]);
+ const s=await one('select public.start_voice_session()');
+ assert.equal(s.plan,'plus');assert.equal(s.max_seconds,7200);
+ await admin("update public.voice_sessions set started_at=now()-interval '600 seconds', last_seen_at=now() where id=$1",[s.session_id]);
+ const end=await one("select public.end_voice_session($1,'ended')",[s.session_id]);
+ assert.ok(end.used_seconds>=600&&end.used_seconds<=602,String(end.used_seconds));assert.equal(end.remaining_seconds,7200-end.used_seconds);
+ // A crashed phone stops counting 45 s after its last heartbeat.
+ const s2=await one('select public.start_voice_session()');
+ await admin("update public.voice_sessions set started_at=now()-interval '3000 seconds', last_seen_at=now()-interval '2900 seconds' where id=$1",[s2.session_id]);
+ const a=await one('select public.my_ai_allowance()');
+ assert.ok(a.used_seconds>=745&&a.used_seconds<=747,String(a.used_seconds));
+ const failed=await one('select public.start_voice_session()');
+ const after=await one("select public.end_voice_session($1,'failed')",[failed.session_id]);
+ assert.equal(after.used_seconds,a.used_seconds,'a session that never connected is free');
+ await admin("update public.voice_sessions set billed_seconds=7200 where user_id=$1 and end_reason='ended'",[alice]);
+ await assert.rejects(asAlice(['select public.start_voice_session()']),/voice_minutes_used_up/);
+ await admin("select public.set_ai_plan($1,'plus','test',null,6000,(date_trunc('month', now() at time zone 'America/New_York'))::date)",[alice]);
+ const s3=await one('select public.start_voice_session()');assert.ok(s3.max_seconds>=5800&&s3.max_seconds<=6000,String(s3.max_seconds));
+ assert.equal((await as('authenticated',bob,()=>db.query('select * from public.voice_sessions'))).rows.length,0,'sessions are private');
+});

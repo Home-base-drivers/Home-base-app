@@ -66,7 +66,7 @@ if(state.aiUnderstanding===undefined)state.aiUnderstanding=true;
   if(fallback)window.HomeBaseShell?.setVoiceStatus?.(displayed,true);
   const sequence=++speechSequence;
   const finish=()=>{if(sequence!==speechSequence)return;speechBusy=false;q('#copilotStatus').textContent=conversationActive?'Listening will resume…':'Dispatcher ready · tap Talk · advisory';if(conversationActive&&getVoicePrefs().conversation!==false)setTimeout(()=>listen({resume:true}),260);};
-  if(window.HomeBaseAccounts?.backend){
+  if(window.HomeBaseAccounts?.backend&&window.HomeBaseInternalAI?.plan?.()!=='builtin'){
    q('#copilotStatus').textContent='Generating Home Base AI voice…';
    try{
     const audio=await HomeBaseAccounts.backend.evaluateDispatch({operation:'voice',text,locale:outputLocale,voice:prefs.aiVoice||((prefs.voiceStyle||'all')==='masculine'?'cedar':(prefs.voiceStyle||'all')==='feminine'?'marin':'cedar'),style:prefs.voiceStyle||'all'});
@@ -127,6 +127,9 @@ if(state.aiUnderstanding===undefined)state.aiUnderstanding=true;
  // Free plan: the built-in AI answers on the phone. Driving commands (modes,
  // pause, minimums) still go to the command parser first.
  const builtin=window.HomeBaseInternalAI?.plan?.()==='builtin';
+ // "Let's talk" / "go live" opens GPT Live (metered minutes) from the free phone voice.
+ const wake=raw&&!parsed&&String(raw).match(/^(.*?)\b(let'?s talk|go live|live mode|talk live|start live)\b[,.!?\s]*(.*)$/i);
+ if(wake&&window.HomeBaseLiveAssistant?.startLive){const question=(wake[3]||'').trim();window.HomeBaseLiveAssistant.startLive({question});return;}
  const spoken=t=>String(t).replace(/^\s*[-*•]\s+/gm,'').replace(/\*\*/g,'').replace(/\n+/g,' ');
  if(raw&&!parsed&&builtin){const cmd=HomeBaseLanguages.parseCommand(raw,prefs.locale)||(prefs.language==='en'?D.parseCommand(raw):null);if(!cmd||cmd.type==='unknown'){const r=window.HomeBaseInternalAI.ask(raw);if(r.handled)return say(spoken(r.answer));}}
  if(raw&&!parsed&&!builtin&&state.aiUnderstanding&&window.HomeBaseAgentBridge){cancelSpeech();const pendingReply=replySequence;speechBusy=true;q('#copilotStatus').textContent='Home Base AI · thinking…';window.HomeBaseAgentBridge(raw,{...prefs,channel:'voice'}).then(answer=>{if(pendingReply!==replySequence)return;speechBusy=false;say(answer);}).catch(error=>{if(pendingReply!==replySequence)return;speechBusy=false;aiFailure=window.HomeBaseAgentClient?.describeError?.(error)||'Home Base AI could not answer.';const r=window.HomeBaseInternalAI?.ask?.(raw);if(r?.handled){const reason=aiFailure;aiFailure='';window.HomeBaseShell?.setVoiceStatus?.(reason,true);return say(spoken(r.answer));}return command(raw,{type:'model_fallback'});});return;}
