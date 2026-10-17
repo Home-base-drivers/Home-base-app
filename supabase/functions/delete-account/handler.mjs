@@ -1,11 +1,12 @@
+import { isAllowedOrigin } from './cors.mjs';
 // Verified identity, never a browser-supplied user ID. No provider is silently revoked.
 export function deleteAccountHandler(createClient, env) {
-  const origin = 'https://home-base-drivers.github.io';
   return async request => {
+    const origin = isAllowedOrigin(request.headers.get('Origin')) ? request.headers.get('Origin') : 'https://homebasedrivers.com';
     const cors = { 'Access-Control-Allow-Origin': origin, 'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info',
       'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Vary': 'Origin' };
     const reply = (status, body) => new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
-    if (request.headers.get('Origin') && request.headers.get('Origin') !== origin) return reply(403, { error: 'Origin not allowed' });
+    if (request.headers.get('Origin') && !isAllowedOrigin(request.headers.get('Origin'))) return reply(403, { error: 'Origin not allowed' });
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
     if (request.method !== 'POST') return reply(405, { error: 'POST required' });
     const token = request.headers.get('Authorization')?.match(/^Bearer (.+)$/)?.[1];
