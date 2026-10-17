@@ -1,4 +1,5 @@
 import {makeSchoolSearch,cloudCalendarRegistry} from './calendar.mjs';
+import {withAllowedOrigin} from './cors.mjs';
 const headers={'Content-Type':'application/json','Access-Control-Allow-Origin':'https://home-base-drivers.github.io','Access-Control-Allow-Headers':'authorization,apikey,content-type,x-client-info','Access-Control-Allow-Methods':'POST,OPTIONS','Cache-Control':'no-store'};
 const answer=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers});
 const keys=new Map<string,number>();
@@ -6,7 +7,7 @@ const search=makeSchoolSearch({lookup:async(host:string)=>{
  const resolved=await Promise.allSettled([Deno.resolveDns(host,'A'),Deno.resolveDns(host,'AAAA')]);
  return resolved.flatMap(r=>r.status==='fulfilled'?r.value:[]);
 }});
-Deno.serve(async(req:Request)=>{
+Deno.serve(withAllowedOrigin(async(req:Request)=>{
  if(req.method==='OPTIONS')return new Response(null,{status:204,headers});
  if(req.method!=='POST')return answer({error:'POST required'},405);
  // Public calendar data is available to every driver, including signed-out users.
@@ -21,4 +22,4 @@ Deno.serve(async(req:Request)=>{
   try{const r=await fetch(Deno.env.get('SUPABASE_URL')+'/auth/v1/user',{headers:{apikey:key,Authorization:authorization},signal:AbortSignal.timeout(5000)});if(!r.ok)return answer({error:'Sign in again to access your calendar registry'},401);const user=await r.json();if(!user.id||user.is_anonymous)return answer({error:'Permanent account required'},401);session={userId:user.id,registry:cloudCalendarRegistry({url:Deno.env.get('SUPABASE_URL')!,key,authorization,userId:user.id})};}catch{return answer({error:'Account validation unavailable'},503);}
  }
  try{const raw=await req.text();if(raw.length>1000000)return answer({error:'Request too large'},413);const input=JSON.parse(raw);if(input.savedSources&&(!Array.isArray(input.savedSources)||input.savedSources.length>2000))return answer({error:'Too many saved calendars'},413);return answer(await search(input,session));}catch{return answer({error:'Public school calendar search unavailable'},400);}
-});
+}));

@@ -11,9 +11,11 @@
 // portal configuration. Without STRIPE_WEBHOOK_SECRET, each webhook is verified by
 // fetching the event back from Stripe with the secret key and using Stripe's copy.
 
+import { isAllowedOrigin } from './cors.mjs';
 const STRIPE = 'https://api.stripe.com/v1';
-const ORIGIN = 'https://home-base-drivers.github.io';
-const APP_URL = ORIGIN + '/Home-base-app/';
+// Public home of the app (Stripe pages link here). Drivers return to whichever site they came from.
+const APP_URL = 'https://homebasedrivers.com/';
+const appUrlFor = origin => origin === 'https://home-base-drivers.github.io' ? origin + '/Home-base-app/' : isAllowedOrigin(origin) ? origin + '/' : APP_URL;
 const MINUTES_PACK_SECONDS = 6000; // 100 GPT Live minutes
 const GRACE_SECONDS = 3 * 86400; // a late renewal does not cut a driver off mid-shift
 export const WEBHOOK_URL = 'https://nixihmurdtfcbffgvpij.supabase.co/functions/v1/billing';
@@ -114,7 +116,8 @@ export function billingHandler(createClient, env, fetchImpl = fetch) {
     setupCache.set(cacheKey, out);
     return (resolved = out);
   }
-  const cors = { 'Access-Control-Allow-Origin': ORIGIN, 'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Vary': 'Origin' };
+  // Default origin; withAllowedOrigin (index.ts) echoes the caller's allowed origin per request.
+  const cors = { 'Access-Control-Allow-Origin': 'https://homebasedrivers.com', 'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Vary': 'Origin' };
   const reply = (status, body) => new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
   const admin = () => createClient(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'), { auth: { persistSession: false } });
   const configured = () => !!env('STRIPE_SECRET_KEY');
@@ -202,12 +205,13 @@ export function billingHandler(createClient, env, fetchImpl = fetch) {
   }
 
   return async request => {
+    const appUrl = appUrlFor(request.headers.get('Origin'));
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
     if (request.method === 'GET' && new URL(request.url).searchParams.get('health') === '1') { try { return await health(); } catch { return reply(502, { error: 'unavailable' }); } }
     if (request.method !== 'POST') return reply(405, { error: 'POST required' });
     try {
       if (request.headers.get('Stripe-Signature')) return await webhook(request);
-      if (request.headers.get('Origin') && request.headers.get('Origin') !== ORIGIN) return reply(403, { error: 'Origin not allowed' });
+      if (request.headers.get('Origin') && !isAllowedOrigin(request.headers.get('Origin'))) return reply(403, { error: 'Origin not allowed' });
       const peek = await request.clone().json().catch(() => ({}));
       if (peek.operation === 'health') return await health();
       const token = request.headers.get('Authorization')?.match(/^Bearer (.+)$/)?.[1];
@@ -225,7 +229,7 @@ export function billingHandler(createClient, env, fetchImpl = fetch) {
       if (body.operation === 'portal') {
         if (!configured()) return reply(503, { error: 'Subscriptions are not set up yet.', code: 'billing_closed' });
         if (!customer?.stripe_customer_id) return reply(404, { error: 'No subscription to manage yet.' });
-        const portal = await stripe('POST', '/billing_portal/sessions', { customer: customer.stripe_customer_id, return_url: APP_URL + '?billing=portal', configuration: resolved?.portal || undefined });
+        const portal = await stripe('POST', '/billing_portal/sessions', { customer: customer.stripe_customer_id, return_url: appUrl + '?billing=portal', configuration: resolved?.portal || undefined });
         return reply(200, { url: portal.url });
       }
       if (body.operation === 'checkout') {
@@ -245,7 +249,7 @@ export function billingHandler(createClient, env, fetchImpl = fetch) {
         const session = await stripe('POST', '/checkout/sessions', {
           mode: kind === 'minutes' ? 'payment' : 'subscription', customer: customerId, client_reference_id: user.id,
           line_items: { 0: { price: prices()[kind], quantity: 1 } },
-          success_url: APP_URL + '?billing=success', cancel_url: APP_URL + '?billing=cancel', allow_promotion_codes: 'true', billing_address_collection: 'auto',
+          success_url: appUrl + '?billing=success', cancel_url: appUrl + '?billing=cancel', allow_promotion_codes: 'true', billing_address_collection: 'auto',
           custom_text: { submit: { message: 'Cancel anytime in Manage subscription. Terms and refund policy: ' + LEGAL_URL } },
           metadata: { user_id: user.id, kind },
           ...(kind === 'minutes' ? {} : { subscription_data: { metadata: { user_id: user.id } } })

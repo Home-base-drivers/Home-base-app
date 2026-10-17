@@ -176,3 +176,15 @@ test('health is also readable with a plain GET and never needs sign-in',async()=
  assert.equal((await billingHandler(()=>fakeDb(),()=>undefined)(new Request('https://x/billing?health=1'))).status,200);
  assert.equal((await h(new Request('https://x/billing'))).status,405);
 });
+
+test('app works from homebasedrivers.com and GitHub Pages during the move; other sites are refused',async()=>{
+ const {withAllowedOrigin,isAllowedOrigin}=await import('../supabase/functions/billing/cors.mjs');
+ assert.ok(isAllowedOrigin('https://homebasedrivers.com'));assert.ok(isAllowedOrigin('https://www.homebasedrivers.com'));assert.ok(isAllowedOrigin('https://home-base-drivers.github.io'));
+ assert.ok(!isAllowedOrigin('https://evil.example'));
+ const f=fakeStripe(),db=fakeDb();
+ const h=withAllowedOrigin(billingHandler(()=>db,liveEnv('sk_live_originG',{BILLING_ENABLED:'true'}),f.fetchImpl));
+ const call=(origin,body)=>h(new Request('https://x/billing',{method:'POST',headers:{Authorization:'Bearer good',Origin:origin},body:JSON.stringify(body)}));
+ const r=await call('https://homebasedrivers.com',{operation:'status'});assert.equal(r.status,200);assert.equal(r.headers.get('Access-Control-Allow-Origin'),'https://homebasedrivers.com');
+ const g=await call('https://home-base-drivers.github.io',{operation:'status'});assert.equal(g.headers.get('Access-Control-Allow-Origin'),'https://home-base-drivers.github.io');
+ assert.equal((await call('https://evil.example',{operation:'status'})).status,403);
+});

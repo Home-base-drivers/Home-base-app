@@ -39,7 +39,8 @@
     let areas = [], sponsors = [], lastPrediction = 0, lastObservation = 0, fingerprint = '', autosave = false;
     const readOwner = () => localStorage.getItem('homeBaseCloudOwner');
     const emptyPrefs = () => ({usage_analytics:false,model_improvement:false,benchmark_sharing:false});
-    const redirect = 'https://home-base-drivers.github.io/Home-base-app/';
+    // Send sign-in links back to whichever site the driver is using (GitHub Pages or homebasedrivers.com).
+    const redirect = (typeof location !== 'undefined' && /^https:/.test(location.origin || '')) ? location.origin + location.pathname.replace(/[^/]*$/, '') : 'https://home-base-drivers.github.io/Home-base-app/';
     let needsConfirm = null, identityRevision = 0, authEmail = '', codeEmail = '';
     // Account onboarding: link this device once per account, then offer an optional saved password.
     let linkChoice = null, autoLinkedFor = '', offerPassword = false;
