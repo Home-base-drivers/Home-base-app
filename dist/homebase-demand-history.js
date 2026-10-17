@@ -68,25 +68,28 @@
   function local(date){const p=Object.fromEntries(LOCAL.formatToParts(date).map(x=>[x.type,x.value]));return{day:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(p.weekday),minute:(Number(p.hour)%24)*60+Number(p.minute)};}
   const weekday=d=>d>=1&&d<=5;
   // Full weight within 15 minutes of the observed time, fading to zero at 45.
-  function timeWeight(observed,target){
+  // Route planning (opts.route) looks wider: full weight within an hour, fading to
+  // zero at two hours, and Saturday/Sunday count for each other like weekdays do.
+  function timeWeight(observed,target,opts){
     let delta=target.minute-observed.minute,day=observed.day;
     if(delta>720){delta-=1440;day=(day+1)%7;}else if(delta<-720){delta+=1440;day=(day+6)%7;}
-    const minutes=Math.abs(delta),w=minutes<=15?1:Math.max(0,1-(minutes-15)/30);
-    return w*(day===target.day?1:weekday(day)&&weekday(target.day)?.7:0);
+    const full=opts?.route?60:15,fade=opts?.route?60:30,minutes=Math.abs(delta),w=minutes<=full?1:Math.max(0,1-(minutes-full)/fade);
+    const same=weekday(day)===weekday(target.day);
+    return w*(day===target.day?1:weekday(day)&&weekday(target.day)?.7:opts?.route&&same?.7:0);
   }
   function captureTime(row){
     if(!['uber_reference','empower_reference'].includes(row.record_type)||(Object.prototype.hasOwnProperty.call(row,'captured_at')&&!row.captured_at)||!Number.isFinite(Number(row.capture_hour_local)))return NaN;
     return Date.parse(row.captured_at||row.observed_at);
   }
   function distanceKm(a,b){const r=Math.PI/180,x=(b[1]-a[1])*r*Math.cos((a[0]+b[0])*r/2),y=(b[0]-a[0])*r;return Math.sqrt(x*x+y*y)*6371;}
-  function recurrence(matchItem,when){
+  function recurrence(matchItem,when,opts){
     const target=when instanceof Date?when:new Date(when);if(!Number.isFinite(+target))return{distinctDates:0,observedDates:0,band:null,confidence:0,share:0};
     const targetLocal=local(target),dates=new Map();
     for(const row of screenshotBenchmarks){
       const capture=captureTime(row);if(!Number.isFinite(capture))continue;
       // Timed notifications (Empower) pin the observation to each alert minute.
       const stamps=(row.notifications||[]).map(n=>Date.parse(n.at)).filter(Number.isFinite);
-      let stamp=NaN,tw=0;for(const t of stamps.length?stamps:[capture]){const w=timeWeight(local(new Date(t)),targetLocal);if(w>tw){tw=w;stamp=t;}}
+      let stamp=NaN,tw=0;for(const t of stamps.length?stamps:[capture]){const w=timeWeight(local(new Date(t)),targetLocal,opts);if(w>tw){tw=w;stamp=t;}}
       const age=+target-stamp;if(!tw||!Number.isFinite(stamp)||age<0||age>120*86400000)continue;
       for(const item of row.area_observations||[]){
         const proximity=matchItem(item);if(!(proximity>0)||!(item.band in BANDS))continue;
@@ -111,14 +114,14 @@
     return item=>{const aliases=String(item.area||'').toLowerCase().split(/[\\/&,]+/).map(v=>v.replace(/[^a-z0-9]+/g,' ').trim()).filter(Boolean);return aliases.some(a=>a.length>=4&&name.includes(a))?1:0;};
   }
   // Named Baltimore neighborhoods (older captures carry names only).
-  function recurrenceFor(areaName,when,isBaltimore){
+  function recurrenceFor(areaName,when,isBaltimore,opts){
     if(!isBaltimore)return{distinctDates:0,band:null,confidence:0};
-    return recurrence(nameMatcher(areaName),when);
+    return recurrence(nameMatcher(areaName),when,opts);
   }
   // Any location: captures that carry coordinates, within their area radius.
-  function recurrenceAt(lat,lon,when){
+  function recurrenceAt(lat,lon,when,opts){
     if(!Number.isFinite(lat)||!Number.isFinite(lon))return{distinctDates:0,band:null,confidence:0};
-    return recurrence(item=>{if(!Number.isFinite(item.lat)||!Number.isFinite(item.lon))return 0;const r=Number(item.radiusKm)||1.6,d=distanceKm([lat,lon],[item.lat,item.lon]);return d>=r?0:1-d/r;},when);
+    return recurrence(item=>{if(!Number.isFinite(item.lat)||!Number.isFinite(item.lon))return 0;const r=Number(item.radiusKm)||1.6,d=distanceKm([lat,lon],[item.lat,item.lon]);return d>=r?0:1-d/r;},when,opts);
   }
   // One pattern point per observed location, for the heat layer anywhere.
   function patternSources(when){

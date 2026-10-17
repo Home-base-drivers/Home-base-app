@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Home Base">
-  <meta name="homebase-build" content="v279">
+  <meta name="homebase-build" content="v280">
   <meta name="description" content="Home Base connects local driver platforms, earnings forecasts, events and a GPS-based 12-hour route in one app.">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icon-192.png">
@@ -222,8 +222,8 @@
 <link rel="stylesheet" href="homebase-earnings.css?v=110">
 <link rel="stylesheet" href="homebase-growth.css?v=113">
 <script src="homebase-earnings.js?v=117"></script>
-<script src="homebase-demand-history.js?v=146"></script>
-<script src="homebase-route-policy.js?v=13"></script>
+<script src="homebase-demand-history.js?v=147"></script>
+<script src="homebase-route-policy.js?v=14"></script>
 <script src="homebase-public-data.js?v=5"></script>
 <script src="homebase-sports.js?v=2"></script>
 <script src="homebase-weather.js?v=1"></script>
@@ -1136,7 +1136,12 @@ function driverRouteLabel(s){
   if(s.routeBasis==='verified_event')return (phase==='exit'?'Crowd leaving':phase==='closing'?'Game ending now':phase==='arrival'?'Crowd arriving':'Event')+(s.eventStart?' · starts '+marketTime(new Date(s.eventStart)):'');
   if(s.routeBasis==='live_signal')return s.routeSignalType==='airport_activity'?'Flights landing':'Surge right now';
   if(s.cat==='school'||s.cat==='k12')return 'School '+(marketParts(s.when).hour<10?'drop-off':'pickup')+(s.schoolEnd&&marketParts(s.when).hour>=10?' · lets out '+clockLabel(s.schoolEnd):'');
-  return staging+({nightlife:'Nightlife',transit:'Transit hub',restaurant_district:'Dining area',hotel:'Hotels',medical:'Hospital',shopping:'Shopping',warehouse:'Shift change',attraction:'Visitors',neighborhood:'Busy area',university:'Campus'}[s.cat]||'Busy area')+' · usually busy now';
+  const ev=s.routeEvidence||{};
+  if(ev.kind==='history')return staging+`Surged here on ${ev.days} past days around this time`;
+  if(ev.kind==='shift')return staging+(s.cat==='medical'?'Hospital shift change':'Shift change');
+  if(ev.kind==='closing')return staging+'Closing time · shoppers leaving';
+  if(ev.kind==='staging')return 'Get in place for '+String(ev.event||s.stagingFor||'the event').split(' · ')[0];
+  return staging+'Verified hot spot';
 }
 function renderRouteStopsPanel(stops=activeStops){
   const box=$('#routeStops');if(!box)return;
@@ -1144,7 +1149,7 @@ function renderRouteStopsPanel(stops=activeStops){
   const selected=Number(document.querySelector('[data-hour][aria-pressed="true"]')?.dataset.hour)||0,plan=(shiftPlan||[]).slice(0,routeStopLimit()),planned=plan.filter(p=>p.stop),totals=shiftPlanTotals();
   $('#routePlanTitle').textContent=planned.length?`12-HOUR ROUTE · ${planned.length} STOPS · ~${Math.round(totals.miles)} MI`:`${stops.length} HOT SPOTS · ${Math.abs(selectedForecastTime.getTime()-Date.now())<1800000?'NOW':marketTime(selectedForecastTime)}`;
   const planRows=routeStopsExpanded?plan:plan.slice(Math.max(0,Math.min(selected,plan.length-4)),Math.max(0,Math.min(selected,plan.length-4))+4);
-  const planHtml=planned.length?planRows.map(p=>{const i=plan.indexOf(p),s=p.stop;return s?`<button type="button" class="route-stop shift-row${i===selected?' on':''}" data-plan-hour="${i}"><div class="stop-num" style="--stop:${s.color}">${i+1}</div><div><b><time>${marketTime(p.when)}</time><em>·</em> ${safeText(s.name.split(' · ')[0])}</b><span>${p.legMinutes>=1?Math.round(p.legMinutes)+' min drive · ':'Stay · '}${safeText(routeLabel(s))}</span></div></button>`:`<div class="route-stop shift-row empty"><div class="stop-num">${i+1}</div><div><b><time>${marketTime(p.when)}</time></b><span>No qualifying hot spot · stay near the previous stop</span></div></div>`}).join('')+(plan.length>4?`<button type="button" class="route-more list-expand" data-expand="routes" aria-expanded="${routeStopsExpanded}">${routeStopsExpanded?'Show less':`Show all ${plan.length} hours`}</button>`:'')+`<button type="button" class="shift-maps" data-shift-maps="1" style="background:#14baff;color:#02121c;font-weight:900;font-size:.62rem;border:0;border-radius:8px;min-height:40px;padding:8px;opacity:1;-webkit-text-fill-color:#02121c">Full route in Google Maps ↗</button>`:'';
+  const planHtml=planned.length?planRows.map(p=>{const i=plan.indexOf(p),s=p.stop;return s?`<button type="button" class="route-stop shift-row${i===selected?' on':''}" data-plan-hour="${i}"><div class="stop-num" style="--stop:${s.color}">${i+1}</div><div><b><time>${marketTime(p.when)}</time><em>·</em> ${safeText(s.name.split(' · ')[0])}</b><span>${p.legMinutes>=1?Math.round(p.legMinutes)+' min drive · ':'Stay · '}${safeText(routeLabel(s))}</span></div></button>`:`<div class="route-stop shift-row empty"><div class="stop-num">${i+1}</div><div><b><time>${marketTime(p.when)}</time></b><span>No verified hot spot this hour · stay near your last stop</span></div></div>`}).join('')+(plan.length>4?`<button type="button" class="route-more list-expand" data-expand="routes" aria-expanded="${routeStopsExpanded}">${routeStopsExpanded?'Show less':`Show all ${plan.length} hours`}</button>`:'')+`<button type="button" class="shift-maps" data-shift-maps="1" style="background:#14baff;color:#02121c;font-weight:900;font-size:.62rem;border:0;border-radius:8px;min-height:40px;padding:8px;opacity:1;-webkit-text-fill-color:#02121c">Full route in Google Maps ↗</button>`:'';
   const alternates=stops.slice(planned.length?1:0),altHtml=alternates.length?`<div class="panel-subhead">${planned.length?'OTHER OPTIONS':'OPTIONS'} · ${Math.abs(selectedForecastTime.getTime()-Date.now())<1800000?'NOW':marketTime(selectedForecastTime)}</div>`+alternates.slice(0,planned.length?3:(routeStopsExpanded?alternates.length:4)).map(s=>`<div class="route-stop compact-route-stop"><div class="stop-num" style="--stop:${s.color}">${categoryIcon(s.cat)}</div><div><b><time>${marketDateTime(s.when)}</time><em>·</em> ${safeText(s.name)}</b><span>${safeText(routeLabel(s))}</span></div></div>`).join(''):'';
   box.innerHTML=planHtml+altHtml;
 }
@@ -1185,7 +1190,37 @@ function applyBellTimes(sources){
     return w?{...source,schoolStart:w.open,schoolEnd:w.close,tags:{...(source.tags||{}),bellSource:match.url,bellSchool:match.name}}:source;
   });
 }
+// Re-center automatically only on a new location, never while the driver is
+// looking around the map (zooming out to see the route, panning to a stop).
+let mapTouchedAt=0,lastFramedAt=null;
+['pointerdown','wheel','touchstart','keydown'].forEach(type=>liveMap.getContainer?.()?.addEventListener?.(type,()=>{mapTouchedAt=Date.now()},{passive:true}));
+function frameMapOn(lat,lon,zoom){
+  if(Date.now()-mapTouchedAt<20*60000)return;
+  if(lastFramedAt&&distanceKm(lastFramedAt,[lat,lon])<0.75)return;
+  lastFramedAt=[lat,lon];liveMap.setView([lat,lon],zoom,{animate:false});
+}
+function showWholeRoute(){
+  const pts=(shiftPlan||[]).filter(p=>p.stop).map(p=>[p.stop.lat,p.stop.lon]);if(currentLocation)pts.push(currentLocation);
+  if(!pts.length)return;mapTouchedAt=Date.now();
+  liveMap.fitBounds(L.latLngBounds(pts),{padding:[36,36],maxZoom:14,animate:true});
+}
+(function addWholeRouteButton(){const title=document.getElementById('routePlanTitle');if(!title||typeof title.insertAdjacentElement!=='function'||document.getElementById('wholeRouteBtn'))return;const b=document.createElement('button');b.type='button';b.id='wholeRouteBtn';b.className='hb-whole-route';b.textContent='Show whole route';b.setAttribute('aria-label','Show the whole route on the map');b.style.cssText='margin-left:8px;padding:4px 10px;border-radius:999px;border:1px solid rgba(91,198,232,.6);background:transparent;color:inherit;font:inherit;font-size:12px;cursor:pointer';b.addEventListener('click',e=>{e.stopPropagation();showWholeRoute();});title.insertAdjacentElement('afterend',b);})();
 function buildRoute(venues,lat,lon,market,publicHeatSources=venues){
+  // Past history that makes a place a verified hot spot at a given time: surge seen there
+  // on 2+ different days around that time (screenshots, driver logs, provider samples).
+  const routeHistoryAt=(v,when)=>{
+    const H=globalThis.HomeBaseDemandHistory;if(!H)return null;
+    const near=H.recurrenceAt?H.recurrenceAt(v.lat,v.lon,when,{route:true}):null;
+    const named=isGreaterBaltimoreLocation(v.lat,v.lon)&&H.recurrenceFor?H.recurrenceFor(v.heatAreaName||v.name,when,true,{route:true}):null;
+    return (named?.distinctDates||0)>(near?.distinctDates||0)?named:near;
+  };
+  // Recurring surge spots become route candidates themselves, not only heat.
+  const historyPatternStops=(when,lat,lon)=>{
+    const H=globalThis.HomeBaseDemandHistory;if(!H?.observationRows||!H.recurrenceAt)return[];
+    try{const seen=new Map();for(const row of H.observationRows())for(const item of row.area_observations||[]){if(!Number.isFinite(item.lat)||!Number.isFinite(item.lon))continue;const key=item.lat.toFixed(3)+':'+item.lon.toFixed(3);if(!seen.has(key)&&distanceKm([lat,lon],[item.lat,item.lon])<=65)seen.set(key,item);}
+      const out=[];for(const item of seen.values()){const r=H.recurrenceAt(item.lat,item.lon,when,{route:true});if(r.distinctDates>=2&&r.share>0)out.push({name:String(item.area||'Hot spot').split(' / ')[0],cat:'neighborhood',lat:item.lat,lon:item.lon,tags:{recurringPattern:true,patternDays:r.distinctDates,historyBand:r.band,source:'Past surge history'}});}
+      return out;}catch{return[]}
+  };
   venues=applySiteStatus(applyBellTimes(venues));publicHeatSources=applySiteStatus(applyBellTimes(publicHeatSources));
   hourlyDestinations=[];shiftPlan=[];
   routeLayers.forEach(x=>liveMap.removeLayer(x));routeLayers=[];routeStrokeLayers=[];if(heatAreaLayer)liveMap.removeLayer(heatAreaLayer);heatAreaLayer=L.layerGroup().addTo(liveMap);demandAreaSourceRef=null;if(!heatLayer)heatLayer=HomeBaseHeat.createLayer(L).addTo(liveMap);
@@ -1198,7 +1233,7 @@ function buildRoute(venues,lat,lon,market,publicHeatSources=venues){
   // one pull toward its venue so the driver is close when the crowd moves.
   const bigByHour=Array.from({length:12},(_,i)=>{const when=new Date(start.getTime()+i*3600000),parts=marketParts(when),evs=HomeBaseRoutePolicy.routeEvents(HomeBaseRoutePolicy.candidatesForHour(pool,when,{day:parts.day,hour:parts.hour+when.getMinutes()/60},start).events,homeRegion);return evs.filter(e=>HomeBaseRoutePolicy.crowdTier(e)!=='local').sort((a,b)=>HomeBaseRoutePolicy.eventSize(b).bonus-HomeBaseRoutePolicy.eventSize(a).bonus)[0]||null});
   for(let i=0;i<12;i++){
-    const when=new Date(start.getTime()+i*3600000),parts=marketParts(when),eligible=HomeBaseRoutePolicy.candidatesForHour([...pool,...restaurantDistrictCandidates(lat,lon,when)],when,{day:parts.day,hour:parts.hour+when.getMinutes()/60},start),eventCandidates=HomeBaseRoutePolicy.routeEvents(eligible.events,homeRegion).map(v=>{const size=HomeBaseRoutePolicy.eventSize(v),demand=demandWeight(v,when),tier=HomeBaseRoutePolicy.crowdTier(v);return{...v,majorEvent:size.major,crowdTier:tier,routeDemand:demand,score:demand+28+size.bonus*2.5+(tier==='mega'?10:0)}}),liveCandidates=eligible.live.map(v=>({...v,routeDemand:demandWeight(v,when),score:demandWeight(v,when)+18})),generalCandidates=eligible.general.map(v=>({...v,routeDemand:v.tags?.aggregateDistrict?8:demandWeight(v,when),score:v.tags?.aggregateDistrict?8:demandWeight(v,when)})),destinations=[...eventCandidates,...liveCandidates,...generalCandidates],candidates=HomeBaseRoutePolicy.selectRanked(HomeBasePlanner.rankCandidates(destinations,{origin:planOrigin,radiusMiles:Number(readProfile().radius)||25,hourlyRate:currentApps[0]?.base||23,costPerMile:Number(readCostPrefs().reserveRate)||.2,preferredMinutes:30,majorMaxMinutes:90,isHome:isGreaterBaltimoreLocation(lat,lon)&&window.HomeBaseMarket?.isHomeRegionPoint?HomeBaseMarket.isHomeRegionPoint:null})),seen=new Set(),options=[];
+    const when=new Date(start.getTime()+i*3600000),parts=marketParts(when),eligible=HomeBaseRoutePolicy.candidatesForHour([...pool,...restaurantDistrictCandidates(lat,lon,when),...historyPatternStops(when,lat,lon)],when,{day:parts.day,hour:parts.hour+when.getMinutes()/60},start),eventCandidates=HomeBaseRoutePolicy.routeEvents(eligible.events,homeRegion).map(v=>{const size=HomeBaseRoutePolicy.eventSize(v),demand=demandWeight(v,when),tier=HomeBaseRoutePolicy.crowdTier(v);return{...v,majorEvent:size.major,crowdTier:tier,routeDemand:demand,score:demand+28+size.bonus*2.5+(tier==='mega'?10:0)}}),liveCandidates=eligible.live.map(v=>({...v,routeDemand:demandWeight(v,when),score:demandWeight(v,when)+18})),generalCandidates=eligible.general.map(v=>({...v,routeEvidence:HomeBaseRoutePolicy.generalEvidence(v,{day:parts.day,hour:parts.hour+when.getMinutes()/60},when,{history:routeHistoryAt,nextBig:bigByHour.slice(i+1,i+4).find(Boolean),distanceKm})})).filter(v=>v.routeEvidence).map(v=>({...v,routeDemand:v.tags?.aggregateDistrict?8:demandWeight(v,when),score:v.tags?.aggregateDistrict?8:demandWeight(v,when)})),destinations=[...eventCandidates,...liveCandidates,...generalCandidates],candidates=HomeBaseRoutePolicy.selectRanked(HomeBasePlanner.rankCandidates(destinations,{origin:planOrigin,radiusMiles:Number(readProfile().radius)||25,hourlyRate:currentApps[0]?.base||23,costPerMile:Number(readCostPrefs().reserveRate)||.2,preferredMinutes:30,majorMaxMinutes:90,isHome:isGreaterBaltimoreLocation(lat,lon)&&window.HomeBaseMarket?.isHomeRegionPoint?HomeBaseMarket.isHomeRegionPoint:null})),seen=new Set(),options=[];
     const nextBig=bigByHour.slice(i+1,i+4).find(Boolean);
     if(nextBig&&candidates.length&&candidates.every(c=>c.routeBasis==='general_area')){
       // Hours without evidence stage toward the next big event (within 3 hours).
@@ -1225,9 +1260,9 @@ function buildRoute(venues,lat,lon,market,publicHeatSources=venues){
     // Keep Baltimore's initial view on the driver's current neighborhood.
     // Fitting every county anchor and distant 12-hour route stop zoomed out to
     // county scale, which prevented the neighborhood layer from appearing.
-    liveMap.setView([lat,lon],13.5,{animate:false});
+    if(typeof frameMapOn==='function')frameMapOn(lat,lon,13.5);else liveMap.setView([lat,lon],13.5,{animate:false});
   }else{
-    liveMap.setView([lat,lon],13,{animate:false});
+    if(typeof frameMapOn==='function')frameMapOn(lat,lon,13);else liveMap.setView([lat,lon],13,{animate:false});
   }
   setTimeout(()=>renderDemandGrid(activeDemandSources,selectedHour,selectedForecastTime),650);
   activeStops=hourlyDestinations[selectedHour]||[];
@@ -1245,7 +1280,7 @@ function refreshLocationFast(){
   const applyPosition=pos=>{
     if(locationRequest!==locationRequestId)return;
     gpsRequestInFlight=false;const lat=pos.coords.latitude,lon=pos.coords.longitude,accuracy=Math.round(pos.coords.accuracy),requestKey=`${lat.toFixed(4)},${lon.toFixed(4)}`;currentLocation=[lat,lon];if(locationMode==='current')window.HomeBaseCopilot?.observePosition(pos);
-    try{localStorage.setItem('driverRouterLocation',JSON.stringify({lat,lon,market:'Local',savedAt:Date.now()}))}catch{}liveMap.setView([lat,lon],13,{animate:false});
+    try{localStorage.setItem('driverRouterLocation',JSON.stringify({lat,lon,market:'Local',savedAt:Date.now()}))}catch{}frameMapOn(lat,lon,13);
     if(gpsMarker)liveMap.removeLayer(gpsMarker);if(gpsCircle)liveMap.removeLayer(gpsCircle);gpsMarker=L.circleMarker([lat,lon],{radius:9,color:'#fff',weight:4,fillColor:'#2563eb',fillOpacity:1}).addTo(liveMap).bindTooltip('You are here',{permanent:true,direction:'top'});gpsCircle=L.circle([lat,lon],{radius:Math.min(accuracy,1000),color:'#38bdf8',weight:1,fillOpacity:.1}).addTo(liveMap);
     buildRoute(fallbackVenues(lat,lon,'Local'),lat,lon,'Local');$('.route-source').textContent='GPS · refining public activity';$('#updated').textContent='Location ready · refining today’s hotspots';btn.classList.remove('refreshing');loadWeather(lat,lon);loadHighways(lat,lon);
     const isCurrentRequest=()=>locationRequest===locationRequestId&&currentLocation&&`${currentLocation[0].toFixed(4)},${currentLocation[1].toFixed(4)}`===requestKey;
@@ -1305,9 +1340,9 @@ function setTimelineOpen(open){
 }
 setTimelineOpen(false);
 timelineQuickBtn.addEventListener('click',()=>setTimelineOpen(app.classList.contains('hb-timeline-hidden')));
-$('#refreshBtn').addEventListener('click',()=>refreshLocationFast());
+$('#refreshBtn').addEventListener('click',()=>{mapTouchedAt=0;lastFramedAt=null;refreshLocationFast();});
 function refreshCurrentGps(){
-  locationMode='current';
+  locationMode='current';mapTouchedAt=0;lastFramedAt=null;
   gpsRequestInFlight=false;
   refreshLocationFast();
 }
@@ -1346,7 +1381,7 @@ setInterval(()=>{updateClimateAdvisory();const selected=$('[data-hour][aria-pres
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){schoolSearchAt=0;if(currentLocation)refreshSchoolEvents(...currentLocation);if(Date.now()-lastAutoGpsRefresh>300000){if(demoLocale)refreshLiveDemandLayer();else autoRefreshGps()}}});
 window.addEventListener('homebase-calendar-identity',()=>{schoolSearchAt=0;schoolSearchKey='';schoolEventRows=[];if(currentLocation)refreshSchoolEvents(...currentLocation);});
 window.addEventListener('load',()=>{schoolSearchAt=0;if(currentLocation)refreshSchoolEvents(...currentLocation);},{once:true});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>{const replacingWorker=!!navigator.serviceWorker.controller;navigator.serviceWorker.register('sw.js?v=279',{updateViaCache:'none'}).then(r=>{r.update();navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!replacingWorker)return;if(!sessionStorage.getItem('hb-release-reload-v279')){sessionStorage.setItem('hb-release-reload-v279','1');location.reload()}})}).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';})});
+if('serviceWorker' in navigator)window.addEventListener('load',()=>{const replacingWorker=!!navigator.serviceWorker.controller;navigator.serviceWorker.register('sw.js?v=280',{updateViaCache:'none'}).then(r=>{r.update();navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!replacingWorker)return;if(!sessionStorage.getItem('hb-release-reload-v280')){sessionStorage.setItem('hb-release-reload-v280','1');location.reload()}})}).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';})});
 </script>
 <script src="homebase-live.js?v=39"></script>
 </body>

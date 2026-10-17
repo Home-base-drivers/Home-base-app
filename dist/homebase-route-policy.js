@@ -104,6 +104,22 @@
     if(source.cat==='school'||source.cat==='k12')return schoolWeight(source,parts,when)>0&&!/pickup cluster/i.test(source.name||'');
     return ['neighborhood','nightlife','transit','hotel','medical','shopping','attraction','restaurant_district'].includes(source.cat);
   }
+  // A route stop without a dated event or live signal must still be a verified hot spot:
+  // surge seen here on 2+ past days around this time, a published schedule (bell times,
+  // verified shift change, posted closing time), or staging within 5 km of a big event.
+  // Generic "this kind of place is usually busy" is not enough.
+  function generalEvidence(source,parts,when,options={}){
+    const tags=source.tags||{};
+    if(tags.recurringPattern)return{kind:'history',days:Number(tags.patternDays)||2};
+    const h=typeof options.history==='function'?options.history(source,when):null;
+    if(h&&Number(h.distinctDates)>=2)return{kind:'history',days:Number(h.distinctDates),band:h.band||null};
+    if((source.cat==='school'||source.cat==='k12')&&(source.schoolEnd||tags.bellSource)&&schoolWeight(source,parts,when)>0)return{kind:'school'};
+    if(tags.employerSite&&workerWeight(source,parts)>0)return{kind:'shift'};
+    if(source.cat==='shopping'&&(tags.opening_hours||source.mallClosingHour!=null||tags.mallClosingHour!=null)&&workerWeight(source,parts)>0)return{kind:'closing'};
+    const big=options.nextBig,dist=options.distanceKm;
+    if(big&&typeof dist==='function'&&Number.isFinite(big.lat)&&dist([source.lat,source.lon],[big.lat,big.lon])<=5)return{kind:'staging',event:big.name};
+    return null;
+  }
   function liveSignal(source,when,now=new Date()){
     const tags=source.tags||{},time=stamp(when),current=stamp(now);
     if(!tags.providerSignal||tags.deliveryRelevant||!Number.isFinite(time)||!Number.isFinite(current))return null;
@@ -173,5 +189,5 @@
     if(near.some(e=>isHome(e.lat,e.lon)&&crowdTier(e)!=='local'))return near;
     return [...near,...(events||[]).filter(e=>far(e)&&awayEligible(e))];
   }
-  return {crowdTier,awayEligible,routeEvents,eventSize,eventImpact,eventPhase,liveSignal,schoolStage,schoolWeight,warehouse,workerWeight,mallClosingHours,fallbackEligible,candidatesForHour,selectRanked};
+  return {crowdTier,awayEligible,routeEvents,eventSize,eventImpact,eventPhase,liveSignal,schoolStage,schoolWeight,warehouse,workerWeight,mallClosingHours,fallbackEligible,generalEvidence,candidatesForHour,selectRanked};
 });

@@ -43,14 +43,21 @@ test('an empty current hour does not suppress a later verified event in the 12-h
  assert.ok(context.hourlyDestinations.slice(1).some(options=>options[0]?.name===event.name));
  assert.ok(calls.heat.at(-1).some(source=>source.name===event.name));
 });
-test('a real local area remains a destination and heat source without Baltimore polygons',()=>{
+test('a generic busy area with no events or history is heat only, never a route stop',()=>{
  const {context,calls}=routeFixture(),area={name:'Public local town',cat:'neighborhood',lat:41.01,lon:-74.01,tags:{publicVenue:true,place:'town'}};
+ context.buildRoute([area],41,-74,'Local',[area]);
+ assert.equal(context.activeStops.length,0,'no supporting data, no destination');assert.equal(context.shiftPlan.filter(p=>p.stop).length,0);
+ assert.ok(calls.heat.at(-1).includes(area),'the area still shows on the heat map');
+});
+test('a local area with surge history at this time is a verified route stop and heat source',()=>{
+ const {context,calls}=routeFixture(),area={name:'Public local town',cat:'neighborhood',lat:41.01,lon:-74.01,tags:{publicVenue:true,place:'town',recurringPattern:true,patternDays:3}};
  context.buildRoute([area],41,-74,'Local',[area]);
  assert.equal(context.activeStops.length,1,'one real source stays one location, never twelve duplicate rows');assert.equal(context.hourlyDestinations.length,12);
  assert.equal(calls.markers[0][0].name,area.name);assert.ok(calls.heat.at(-1).includes(area));
+ assert.equal(context.activeStops[0].routeEvidence.kind,'history');
 });
 test('one dated event remains the only destination while history stays on the independent heat layer',()=>{
- const {context,calls}=routeFixture(),areas=Array.from({length:20},(_,i)=>({name:'Public area '+i,cat:'neighborhood',lat:41.01+i*.004,lon:-74.01,tags:{publicVenue:true}})),event={name:'Published concert',cat:'event',lat:41.002,lon:-74,eventStart:new Date(Date.now()+30*60000),eventEnd:new Date(Date.now()+2*3600000),tags:{providerEvent:true}};
+ const {context,calls}=routeFixture(),areas=Array.from({length:20},(_,i)=>({name:'Public area '+i,cat:'neighborhood',lat:41.01+i*.004,lon:-74.01,tags:{publicVenue:true,recurringPattern:true,patternDays:2}})),event={name:'Published concert',cat:'event',lat:41.002,lon:-74,eventStart:new Date(Date.now()+30*60000),eventEnd:new Date(Date.now()+2*3600000),tags:{providerEvent:true}};
  context.buildRoute([event,...areas],41,-74,'Local',[event,...areas]);
  assert.equal(context.activeStops.length,1);assert.equal(context.activeStops[0].name,event.name);assert.equal(context.activeStops.filter(s=>s.routeBasis==='general_area').length,0);
  assert.equal(calls.markers.at(-1).length,1);assert.equal(calls.stops.length,1);
@@ -82,7 +89,7 @@ test('the London preview loads actual dated events and does not clear them when 
  assert.equal(renders.at(-1),events);assert.ok(routes.at(-1).some(s=>s.name===events[0].name));assert.ok(routes.at(-1).includes(area));assert.match(nodes.get('#updated').textContent,/1 dated events/);
 });
 test('the 12-hour route chains twelve distinct stops, each ranked from the previous stop',()=>{
- const {context}=routeFixture(),areas=Array.from({length:14},(_,i)=>({name:'Area '+i,cat:'neighborhood',lat:41+i*.03,lon:-74,tags:{publicVenue:true}}));
+ const {context}=routeFixture(),areas=Array.from({length:14},(_,i)=>({name:'Area '+i,cat:'neighborhood',lat:41+i*.03,lon:-74,tags:{publicVenue:true,recurringPattern:true,patternDays:2}}));
  context.buildRoute(areas,41,-74,'Local',areas);
  const plan=context.shiftPlan.filter(p=>p.stop);
  assert.equal(context.shiftPlan.length,12);assert.equal(plan.length,12);
@@ -104,4 +111,23 @@ test('hours before a big event stage the route toward its venue',()=>{
  assert.ok(gameHour>0);assert.equal(before.stop.name,'Near venue','the hour before the game ends next to the stadium');assert.equal(before.stop.stagingFor,'Big game');
  assert.ok(!context.shiftPlan.some(p=>p.stop?.name==='Far side'&&p.stop.stagingFor),'only nearby stops are labeled staging');
  assert.ok(context.shiftPlan.some(p=>p.stop?.name==='Big game'));
+});
+
+test('history from past days (not only live data) makes a place a route stop; generic categories do not',()=>{
+ const {context}=routeFixture(),hot={name:'Seen surging',cat:'nightlife',lat:41.01,lon:-74,tags:{publicVenue:true}},plain={name:'Just a bar strip',cat:'nightlife',lat:41.02,lon:-74,tags:{publicVenue:true}};
+ context.HomeBaseDemandHistory={recurrenceAt:(lat,lon)=>Math.abs(lat-41.01)<.001?{distinctDates:4,band:'high',confidence:.3}:{distinctDates:0},recurrenceFor:()=>({distinctDates:0}),patternSources:()=>[]};
+ context.globalThis=context;
+ context.buildRoute([hot,plain],41,-74,'Local',[hot,plain]);
+ const names=context.shiftPlan.filter(p=>p.stop).map(p=>p.stop.name);
+ assert.ok(names.includes('Seen surging'));assert.ok(!names.includes('Just a bar strip'));
+});
+test('route labels say why a stop is hot instead of "usually busy"',()=>{
+ assert.doesNotMatch(html,/usually busy now/);assert.match(html,/Surged here on \$\{ev\.days\} past days around this time/);
+ assert.match(html,/No verified hot spot this hour/);
+});
+test('the map re-centers only on a new location and never while the driver is looking around; whole-route button exists',()=>{
+ assert.match(html,/function frameMapOn\(lat,lon,zoom\)\{\n  if\(Date\.now\(\)-mapTouchedAt<20\*60000\)return;/);
+ assert.match(html,/distanceKm\(lastFramedAt,\[lat,lon\]\)<0\.75/);
+ assert.match(html,/function showWholeRoute\(\)/);assert.match(html,/Show the whole route on the map/);
+ const build=extract('buildRoute');assert.doesNotMatch(build,/^\s*liveMap\.setView\(\[lat,lon\],13\.5/m);
 });
