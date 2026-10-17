@@ -1,6 +1,6 @@
 # Home Base growth readiness
 
-Updated October 3, 2026. This is an implementation checklist, not a claim of production provider connectivity, legal approval, revenue, or valuation.
+Updated October 3, 2026; paid-plan row updated October 17, 2026 (v277). This is an implementation checklist, not a claim of production provider connectivity, legal approval, revenue, or valuation.
 
 ## Available in this release
 
@@ -21,7 +21,7 @@ Updated October 3, 2026. This is an implementation checklist, not a claim of pro
 | 2. Provider earnings | Obtain approved Uber/Lyft/Empower or authorized aggregator access, verify actual coverage, add server-held credentials, connection callbacks, background sync, stable trip IDs and disconnect/revocation | No platform password collection, scraping, fake connected status, or paid provider commitment without approval |
 | 3. Reliable tracking | Verify completed-shift reconciliation, mileage consent and native/background requirements; support offline queues and explicit sync error recovery | Foreground neighborhood observations are not background mileage tracking |
 | 4. Forecast evidence | Join independently verified outcomes to earlier immutable predictions, evaluate by area/platform/horizon against simple baselines, track sample size and error, then validate holdout performance | Current estimates and screenshots are not measured accuracy or live surge data |
-| 5. Paid Plus | Configure a billing provider, server webhooks, entitlement checks, cancellation/refunds and a reviewed feature split | No payment form or purchasable subscription is active |
+| 5. Paid Plus | Built (v276–v277): Stripe Checkout, signed webhooks, plan metering, portal, owner protection, tester-only test checkout. Remaining: Supabase secrets, end-to-end TEST purchase, live-mode setup, refund policy | Sales closed until `BILLING_ENABLED=true`, which waits for OpenAI credit and the passed test; see docs/PAYMENTS.md |
 | 6. Sponsorship revenue | Secure advertiser agreements, review campaigns, add compliant impression reporting and billing; keep driving view ad-free | Campaign approval is server-side, not user-editable; no revenue is assumed |
 | 7. Commercial analytics | Review applicable privacy law and provider/data licenses, re-identification risks, consent/withdrawal and minimum-group rules; approve specific releases | No raw location/earnings sale, public bulk export, or commercial release endpoint is enabled |
 | 8. Buyer-ready proof | Run a small consented pilot, document support burden and costs, measure retention and outcomes, record actual revenue and assemble the handoff | A $1M valuation is a business outcome, not something code or data collection guarantees |

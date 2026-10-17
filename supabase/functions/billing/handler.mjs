@@ -2,6 +2,10 @@
 // The phone asks for a checkout or portal link; Stripe tells the server what was
 // paid (signed webhook), and only then does the server change the driver's plan.
 // Sales stay closed until BILLING_ENABLED=true (GPT must be funded before selling Plus).
+// Before that, owners can still run a full TEST purchase: with a Stripe test key
+// (sk_test_...), accounts listed in BILLING_TEST_EMAILS may check out. No real money
+// moves, everyone else still sees "Opens soon", and a live key never opens this way.
+// Owner/complimentary plans are never changed by Stripe.
 
 const STRIPE = 'https://api.stripe.com/v1';
 const ORIGIN = 'https://home-base-drivers.github.io';
@@ -50,6 +54,12 @@ export function billingHandler(createClient, env, fetchImpl = fetch) {
   const admin = () => createClient(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'), { auth: { persistSession: false } });
   const configured = () => !!(env('STRIPE_SECRET_KEY') && env('STRIPE_PRICE_PLUS') && env('STRIPE_PRICE_PRO'));
   const open = () => configured() && env('BILLING_ENABLED') === 'true';
+  const testMode = () => String(env('STRIPE_SECRET_KEY') || '').startsWith('sk_test_');
+  const testers = () => String(env('BILLING_TEST_EMAILS') || '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
+  const isTester = user => configured() && testMode() && !!user?.email && testers().includes(String(user.email).toLowerCase());
+  const canBuy = user => open() || isTester(user);
+  const PROTECTED = ['owner', 'comp'];
+  const entitlement = async (db, userId) => (await db.from('ai_entitlements').select('plan,source,current_period_end,extra_voice_seconds,extra_month').eq('user_id', userId).maybeSingle()).data || null;
 
   async function setPlan(db, userId, plan, periodEnd, extra) {
     const { error } = await db.rpc('set_ai_plan', { p_user: userId, p_plan: plan, p_source: 'stripe', p_period_end: periodEnd,
@@ -60,16 +70,19 @@ export function billingHandler(createClient, env, fetchImpl = fetch) {
     let userId = sub.metadata?.user_id || null;
     if (!userId) { const { data } = await db.from('billing_customers').select('user_id').eq('stripe_customer_id', sub.customer).maybeSingle(); userId = data?.user_id || null; }
     if (!userId) return 'unknown customer';
+    const kept = PROTECTED.includes((await entitlement(db, userId))?.source);
     const item = sub.items?.data?.[0], priceId = item?.price?.id || null, plan = planForPrice(priceId);
     const end = Number(sub.current_period_end ?? item?.current_period_end) || null;
     const live = ['active', 'trialing', 'past_due'].includes(sub.status) && plan;
     await db.from('billing_customers').upsert({ user_id: userId, stripe_customer_id: sub.customer, subscription_id: sub.id, subscription_status: sub.status,
       price_id: priceId, plan: live ? plan : 'free', current_period_end: end ? new Date(end * 1000).toISOString() : null, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+    if (kept) return 'owner plan kept';
     await setPlan(db, userId, live ? plan : 'free', live && end ? new Date((end + GRACE_SECONDS) * 1000).toISOString() : null);
     return live ? 'plan ' + plan : 'plan free';
   }
   async function addMinutes(db, userId) {
-    const { data } = await db.from('ai_entitlements').select('plan,current_period_end,extra_voice_seconds,extra_month').eq('user_id', userId).maybeSingle();
+    const data = await entitlement(db, userId);
+    if (PROTECTED.includes(data?.source)) return 'owner plan kept';
     const month = localMonth(), current = data?.extra_month === month ? Number(data.extra_voice_seconds) || 0 : 0;
     const { error } = await db.rpc('set_ai_plan', { p_user: userId, p_plan: data?.plan || 'free', p_source: 'stripe', p_period_end: data?.current_period_end ?? null,
       p_extra_voice_seconds: current + MINUTES_PACK_SECONDS, p_extra_month: month });
@@ -118,7 +131,7 @@ export function billingHandler(createClient, env, fetchImpl = fetch) {
       const { data: customer } = await db.from('billing_customers').select('*').eq('user_id', user.id).maybeSingle();
       if (body.operation === 'status') {
         const { data: plans } = await db.from('ai_plan_limits').select('plan,included_voice_seconds,monthly_price_usd');
-        return reply(200, { open: open(), configured: configured(), plans: plans || [], subscription: customer ? { plan: customer.plan, status: customer.subscription_status, renews: customer.current_period_end } : null });
+        return reply(200, { open: canBuy(user), test: !open() && isTester(user), configured: configured(), plans: plans || [], subscription: customer ? { plan: customer.plan, status: customer.subscription_status, renews: customer.current_period_end } : null });
       }
       if (body.operation === 'portal') {
         if (!configured()) return reply(503, { error: 'Subscriptions are not set up yet.', code: 'billing_closed' });
@@ -127,8 +140,9 @@ export function billingHandler(createClient, env, fetchImpl = fetch) {
         return reply(200, { url: portal.url });
       }
       if (body.operation === 'checkout') {
-        if (!open()) return reply(503, { error: 'Home Base Plus opens soon. The built-in AI stays free.', code: 'billing_closed' });
+        if (!canBuy(user)) return reply(503, { error: 'Home Base Plus opens soon. The built-in AI stays free.', code: 'billing_closed' });
         const kind = ['plus', 'pro', 'minutes'].includes(body.plan) ? body.plan : null;
+        if (PROTECTED.includes((await entitlement(db, user.id))?.source)) return reply(409, { error: 'Your account already has Pro access as an owner. Use a separate account to test purchases.', code: 'owner_plan' });
         if (!kind || !prices()[kind]) return reply(400, { error: 'Choose Plus, Pro or extra minutes.' });
         if (kind === 'minutes' && !['plus', 'pro'].includes(customer?.plan)) return reply(400, { error: 'Extra minutes are for Plus and Pro members.' });
         if (kind !== 'minutes' && ['plus', 'pro'].includes(customer?.plan) && ['active', 'trialing', 'past_due'].includes(customer?.subscription_status))
