@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {billingHandler,verifyStripeSignature,form,localMonth} from '../supabase/functions/billing/handler.mjs';
+import {billingHandler,verifyStripeSignature,form,localMonth,WEBHOOK_URL,CATALOG} from '../supabase/functions/billing/handler.mjs';
 
 const USER='30fc8904-041b-4b90-991d-fdccaed05b25';
 function fakeDb(){
@@ -26,6 +26,8 @@ function setup({open=true,extra={}}={}){
   if(url.endsWith('/checkout/sessions'))return new Response(JSON.stringify({url:'https://checkout.stripe.com/c/1'}));
   if(url.endsWith('/billing_portal/sessions'))return new Response(JSON.stringify({url:'https://billing.stripe.com/p/1'}));
   if(url.includes('/subscriptions/'))return new Response(JSON.stringify({id:'sub_1',customer:'cus_1',status:'active',items:{data:[{price:{id:'price_plus'},current_period_end:1795000000}]}}));
+  if(url.includes('/webhook_endpoints'))return new Response(JSON.stringify(init.method==='GET'?{data:[]}:{id:'we_1'}));
+  if(url.includes('/billing_portal/configurations'))return new Response(JSON.stringify(init.method==='GET'?{data:[]}:{id:'bpc_1'}));
   return new Response('{}',{status:404});};
  const handler=billingHandler(()=>db,env,fetchImpl);
  const app=body=>handler(new Request('https://x/billing',{method:'POST',headers:{Authorization:'Bearer good',Origin:'https://home-base-drivers.github.io'},body:JSON.stringify(body)}));
@@ -97,4 +99,80 @@ test('owner Pro is never sold over or changed by Stripe events',async()=>{
  const pack=await s.hook({id:'evt_p',type:'checkout.session.completed',data:{object:{mode:'payment',payment_status:'paid',client_reference_id:USER,metadata:{kind:'minutes'}}}});
  assert.equal((await pack.json()).result,'owner plan kept');
  assert.equal(s.db.rpcs.length,0);assert.equal(s.db.tables.ai_entitlements[0].plan,'pro');assert.equal(s.db.tables.ai_entitlements[0].source,'owner');
+});
+
+// A small in-memory Stripe for the live self-setup path.
+function fakeStripe(){
+ const st={products:{},prices:[],hooks:[],portals:[],events:{},calls:[]};let n=0;
+ const ok=b=>new Response(JSON.stringify(b)),err=(status,code)=>new Response(JSON.stringify({error:{code}}),{status});
+ const fetchImpl=async(url,init)=>{const u=new URL(url),path=u.pathname.replace('/v1',''),body=init.body?Object.fromEntries(new URLSearchParams(init.body)):{};st.calls.push([init.method,path]);
+  if(path.startsWith('/products/'))return st.products[path.slice(10)]?ok(st.products[path.slice(10)]):err(404,'resource_missing');
+  if(path==='/products'){if(st.products[body.id])return err(400,'resource_already_exists');st.products[body.id]={id:body.id};return ok(st.products[body.id]);}
+  if(path==='/prices'&&init.method==='GET'){const keys=u.searchParams.getAll('lookup_keys[]');return ok({data:st.prices.filter(p=>keys.includes(p.lookup_key))});}
+  if(path==='/prices'){const p={id:'price_'+(++n),lookup_key:body.lookup_key,product:body.product,unit_amount:+body.unit_amount,recurring:body['recurring[interval]']||null};st.prices.push(p);return ok(p);}
+  if(path==='/webhook_endpoints'&&init.method==='GET')return ok({data:st.hooks});
+  if(path==='/webhook_endpoints'){const h={id:'we_'+(++n),url:body.url,enabled_events:Object.entries(body).filter(([k])=>k.startsWith('enabled_events')).map(([,v])=>v),status:'enabled'};st.hooks.push(h);return ok(h);}
+  if(path==='/billing_portal/configurations'&&init.method==='GET')return ok({data:st.portals});
+  if(path==='/billing_portal/configurations'){const c={id:'bpc_'+(++n),metadata:{app:body['metadata[app]']},body};st.portals.push(c);return ok(c);}
+  if(path.startsWith('/events/'))return st.events[path.slice(8)]?ok(st.events[path.slice(8)]):err(404,'resource_missing');
+  if(path==='/customers')return ok({id:'cus_live'});
+  if(path==='/checkout/sessions')return ok({url:'https://checkout.stripe.com/live',body});
+  if(path.startsWith('/subscriptions/'))return ok({id:'sub_live',customer:'cus_live',status:'active',items:{data:[{price:{id:st.prices.find(p=>p.lookup_key==='homebase_pro_monthly').id},current_period_end:1795000000}]}});
+  return err(404,'resource_missing');};
+ return{st,fetchImpl};
+}
+const liveEnv=(key,extra={})=>k=>({SUPABASE_URL:'u',SUPABASE_SERVICE_ROLE_KEY:'s',STRIPE_SECRET_KEY:key,...extra})[k];
+const call=(handler,body,headers={})=>handler(new Request('https://x/billing',{method:'POST',headers:{Origin:'https://home-base-drivers.github.io',...headers},body:JSON.stringify(body)}));
+
+test('live key alone: server creates products, prices, webhook and portal once, and finds them again',async()=>{
+ const f=fakeStripe();
+ const h1=billingHandler(()=>fakeDb(),liveEnv('sk_live_setupA'),f.fetchImpl);
+ const r=await (await call(h1,{operation:'health'})).json();
+ assert.equal(r.mode,'live');assert.equal(r.ready,true);assert.equal(r.open,false,'sales stay closed without BILLING_ENABLED');
+ assert.equal(f.st.prices.length,3);assert.deepEqual(f.st.prices.map(p=>[p.lookup_key,p.unit_amount,p.recurring]),[['homebase_plus_monthly',1999,'month'],['homebase_pro_monthly',3999,'month'],['homebase_minutes_100',1499,null]]);
+ assert.equal(f.st.hooks.length,1);assert.equal(f.st.hooks[0].url,WEBHOOK_URL);assert.deepEqual(f.st.hooks[0].enabled_events.sort(),['checkout.session.completed','customer.subscription.created','customer.subscription.deleted','customer.subscription.updated']);
+ assert.equal(f.st.portals.length,1);assert.equal(f.st.portals[0].body['features[subscription_cancel][mode]'],'at_period_end');
+ assert.equal(f.st.portals[0].body['features[subscription_update][products][1][prices][0]'],f.st.prices[1].id);
+ assert.ok(!JSON.stringify(r).includes('sk_live'),'no secret in the response');
+ // A new server instance (different cache key) reuses everything instead of duplicating it.
+ const h2=billingHandler(()=>fakeDb(),liveEnv('sk_live_setupB'),f.fetchImpl);
+ const r2=await (await call(h2,{operation:'health'})).json();
+ assert.equal(r2.ready,true);assert.equal(f.st.prices.length,3);assert.equal(f.st.hooks.length,1);assert.equal(f.st.portals.length,1);
+ assert.deepEqual(r2.prices,r.prices);
+});
+
+test('without a signing secret, webhooks use Stripe\'s own copy of the event; forged bodies change nothing',async()=>{
+ const f=fakeStripe(),db=fakeDb();
+ const h=billingHandler(()=>db,liveEnv('sk_live_hookC',{BILLING_ENABLED:'true'}),f.fetchImpl);
+ await call(h,{operation:'health'});
+ f.st.events.evt_real={id:'evt_real',type:'checkout.session.completed',data:{object:{mode:'subscription',subscription:'sub_live',client_reference_id:USER}}};
+ // Attacker posts a body claiming a different user and plan; only the id is used.
+ const forged=await h(new Request('https://x/billing',{method:'POST',headers:{'Stripe-Signature':'t=1,v1=00'},body:JSON.stringify({id:'evt_real',type:'checkout.session.completed',data:{object:{client_reference_id:'someone-else'}}})}));
+ assert.equal((await forged.json()).result,'plan pro');
+ assert.equal(db.tables.ai_entitlements[0].user_id,USER);assert.equal(db.tables.ai_entitlements[0].plan,'pro');
+ const fake=await h(new Request('https://x/billing',{method:'POST',headers:{'Stripe-Signature':'x'},body:JSON.stringify({id:'evt_made_up'})}));assert.equal(fake.status,400);
+ const junk=await h(new Request('https://x/billing',{method:'POST',headers:{'Stripe-Signature':'x'},body:'{"id":"../customers"}'}));assert.equal(junk.status,400);
+});
+
+test('live checkout uses the created price, card/wallet methods from the dashboard, and links the terms',async()=>{
+ const f=fakeStripe(),db=fakeDb();
+ const h=billingHandler(()=>db,liveEnv('sk_live_checkD',{BILLING_ENABLED:'true',BILLING_TEST_EMAILS:'driver@example.test'}),f.fetchImpl);
+ const st=await (await h(new Request('https://x/billing',{method:'POST',headers:{Authorization:'Bearer good',Origin:'https://home-base-drivers.github.io'},body:JSON.stringify({operation:'status'})}))).json();
+ assert.equal(st.open,true);assert.equal(st.test,false);
+ const r=await h(new Request('https://x/billing',{method:'POST',headers:{Authorization:'Bearer good',Origin:'https://home-base-drivers.github.io'},body:JSON.stringify({operation:'checkout',plan:'plus'})}));
+ assert.equal(r.status,200);
+ const session=(await r.json());assert.equal(session.url,'https://checkout.stripe.com/live');
+ const sent=f.st.calls.filter(c=>c[1]==='/checkout/sessions').length;assert.equal(sent,1);
+ const closed=billingHandler(()=>fakeDb(),liveEnv('sk_live_checkE',{BILLING_TEST_EMAILS:'driver@example.test'}),f.fetchImpl);
+ const c2=await closed(new Request('https://x/billing',{method:'POST',headers:{Authorization:'Bearer good',Origin:'https://home-base-drivers.github.io'},body:JSON.stringify({operation:'checkout',plan:'plus'})}));
+ assert.equal(c2.status,503,'live key + tester list does not open sales');
+});
+
+test('health is also readable with a plain GET and never needs sign-in',async()=>{
+ const f=fakeStripe();
+ const h=billingHandler(()=>fakeDb(),liveEnv('sk_live_getF'),f.fetchImpl);
+ const r=await h(new Request('https://x/billing?health=1'));assert.equal(r.status,200);
+ const j=await r.json();assert.equal(j.ready,true);assert.equal(j.mode,'live');
+ assert.equal((await billingHandler(()=>fakeDb(),()=>undefined)(new Request('https://x/billing?health=1'))).status,200);
+ assert.equal((await h(new Request('https://x/billing'))).status,405);
 });
