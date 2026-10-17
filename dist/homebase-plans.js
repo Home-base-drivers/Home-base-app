@@ -31,6 +31,7 @@
    (current!=='free'?'<div class="hb-plan-actions"><button type="button" data-buy="minutes"'+(open?'':' disabled')+'>Add 100 GPT Live minutes · $14.99</button><button type="button" data-portal>Manage subscription</button></div>':'')+
    (status?.test?'<p class="earnings-data-note"><b>Test mode:</b> Stripe test checkout for approved testers. Use card 4242 4242 4242 4242. No real charge.</p>':'')+
    (!signed?'<p class="earnings-data-note">Sign in above to subscribe. Payments are handled by Stripe; Home Base never sees your card.</p>':!open?'<p class="earnings-data-note">Plus and Pro open soon. Everything on Free works today.</p>':'<p class="earnings-data-note">Secure payment by Stripe (card, Apple Pay, Google Pay). Cancel anytime in Manage subscription.</p>')+
+   '<p class="earnings-data-note"><a href="legal.html#refunds" target="_blank" rel="noopener">Terms, refunds and privacy</a></p>'+
    (message?'<p class="earnings-data-note" role="status">'+esc(message)+'</p>':'');
   box.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>go('checkout',b.dataset.buy));
   box.querySelectorAll('[data-portal]').forEach(b=>b.onclick=()=>go('portal'));

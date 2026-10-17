@@ -18,7 +18,21 @@ webhooks are verified by signature; app calls verify the Supabase session inside
 3. Cancel/unpaid → plan `free`. Manage/cancel/switch: `{operation:'portal'}` → Stripe customer portal.
 4. Tables: `billing_customers` (driver can read own row), `billing_events` (server only).
 
-## Owner setup (sales stay closed until step 4)
+## Live setup (v278): one key
+1. Stripe: activate the account (business details, identity, payout bank). Public pages for
+   Stripe review: `https://home-base-drivers.github.io/Home-base-app/legal.html`.
+2. Supabase secret `STRIPE_SECRET_KEY` = the **live** secret key. Do not set STRIPE_PRICE_* or
+   STRIPE_WEBHOOK_SECRET for live; leave them unset.
+3. Open `https://nixihmurdtfcbffgvpij.supabase.co/functions/v1/billing?health=1` (or POST `{"operation":"health"}`) once. The server creates, idempotently: products
+   `homebase_plus`, `homebase_pro`, `homebase_minutes_100`; prices with lookup keys
+   `homebase_plus_monthly` ($19.99/mo), `homebase_pro_monthly` ($39.99/mo), `homebase_minutes_100`
+   ($14.99); the webhook endpoint (4 events); and a customer-portal configuration (cancel at period
+   end, switch Plus/Pro, update card, invoices). It returns `ready:true` and ids, never secrets.
+4. Webhooks without `STRIPE_WEBHOOK_SECRET` are verified by fetching the event back from Stripe by id
+   and using Stripe's copy, so a forged request cannot change a plan.
+5. `BILLING_ENABLED=true` opens sales. Owners decided: only after OpenAI has credit.
+
+## Older manual setup (test mode, superseded)
 1. Stripe Dashboard → Products: create the three prices above; copy their `price_…` ids.
 2. Developers → Webhooks → add endpoint
    `https://nixihmurdtfcbffgvpij.supabase.co/functions/v1/billing` with events
