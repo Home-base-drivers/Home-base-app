@@ -192,6 +192,9 @@
  // ---------- answering questions ----------
  const INTENTS=[
   ['help',/\b(what can you do|help|commands|how do i use|que puedes)\b/i],
+  ['briefing',/\b(brief(ing)? me|briefing|daily brief|start (my )?(shift|day)|good morning|plan (my|the) (day|shift|night)|what'?s the plan|game plan|plan for today)\b/i],
+  ['week',/\b(how was my week|how'?s my week|weekly|week(ly)? (report|summary|recap)|recap|this week vs|compared to last week)\b/i],
+  ['stop',/\b(call it|keep driving|stay out|head home|go home|quit for|stop (driving|for (the )?(day|night))|worth staying|done for (the )?(day|night))\b/i],
   ['offer',/\$\s?\d+(?:\.\d+)?.*\b\d+(?:\.\d+)?\s*(mi|mile|miles|millas)\b|\b\d+(?:\.\d+)?\s*(mi|mile|miles|millas)\b.*\$\s?\d+/i],
   ['csv',/\b(export|download|csv|spreadsheet)\b/i],
   ['screenshot',/\b(screenshot|screen shot|photo|picture|captura)\b/i],
@@ -221,7 +224,50 @@
   const intent=intentOf(raw);
   const result=(answerText,extra={})=>({handled:true,intent,answer:answerText,source:'built-in',...extra});
   if(!raw)return{handled:false,intent:null,answer:''};
-  if(intent==='help')return result('Built-in Home Base AI (free) can:\n- Total your earnings for today, a day, this week or this month\n- Check your pace against your goal\n- Judge a trip offer: say the pay and miles, like "$14 for 9 miles, 20 minutes"\n- Compare Uber and Empower from your own records\n- Show your best hours and days\n- Read Uber, Empower or Lyft screenshots into trips (attach a photo)\n- Export your trips as a CSV\n- Point to the busiest areas and upcoming events on the map\n\nOpen-ended planning and conversation use Home Base AI Plus.');
+  const today=dayKey(now,tz),hourNow=+new Date(now).toLocaleString('en-US',{timeZone:tz,hour:'numeric',hourCycle:'h23'});
+  const fmtHour=h=>new Date(Date.UTC(2026,0,1,h)).toLocaleTimeString('en-US',{hour:'numeric',timeZone:'UTC'});
+  // Average pay per trip by start hour on this weekday (falls back to all days).
+  const hourProfile=(weekdayOnly)=>{const by={};for(const t of tripRows){if(!t?.request_time||!(num(t.fare)>=0))continue;const d=new Date(t.request_time),k=dayKey(d,tz);if(weekdayOnly&&weekday(k)!==weekday(today))continue;const h=+d.toLocaleString('en-US',{timeZone:tz,hour:'numeric',hourCycle:'h23'});(by[h]||(by[h]={pay:0,n:0})).pay+=num(t.fare);by[h].n++;}return Object.entries(by).filter(([,b])=>b.n>=2).map(([h,b])=>({h:+h,avg:b.pay/b.n,n:b.n}));};
+  const liveZones=()=>(ctx.live?.zones||[]).filter(z=>Number.isFinite(z.score)).sort((a,b)=>b.score-a.score).slice(0,3).map(z=>z.name);
+  const soonEvents=(hours=12)=>(ctx.live?.events||[]).filter(e=>{const t=Date.parse(e.start);return Number.isFinite(t)&&t>=+now-3*3600000&&t<=+now+hours*3600000;}).sort((a,b)=>Date.parse(a.start)-Date.parse(b.start));
+  const clock=iso=>new Date(iso).toLocaleTimeString('en-US',{timeZone:tz,hour:'numeric',minute:'2-digit'});
+  if(intent==='briefing'){
+   const g=goalRate(ctx),s=summarize(records,{from:today,to:today},tz),lines=[];
+   lines.push('**Today ('+prettyDay(today)+')**'+(s.rows?': '+money(s.gross)+' so far'+(s.trips?', '+plural(s.trips,'trip'):'')+'.':': no trips recorded yet.'));
+   if(g)lines.push('**Goal:** '+money(g.goal)+' every '+g.hours+' hours, so aim for '+money(g.rate)+' per working hour.');
+   const prof=hourProfile(true).length?hourProfile(true):hourProfile(false),ahead=prof.filter(x=>x.h>=hourNow).sort((a,b)=>b.avg-a.avg).slice(0,3);
+   if(ahead.length)lines.push('**Your best hours still ahead** ('+(hourProfile(true).length?DAYS[weekday(today)][0].toUpperCase()+DAYS[weekday(today)].slice(1)+'s':'all days')+'): '+ahead.map(x=>fmtHour(x.h)+' ('+money(x.avg)+'/trip)').join(', ')+'.');
+   const z=liveZones();if(z.length)lines.push('**Busiest areas right now:** '+z.join(', ')+'.');
+   const ev=soonEvents();if(ev.length)lines.push('**Events next 12 hours:** '+ev.slice(0,4).map(e=>e.name+' '+clock(e.start)).join('; ')+'.');
+   const over=overheadMinutes(records,tripRows,tz);if(over&&g)lines.push('**Offer rule for today:** with about '+Math.round(over)+' unpaid minutes per trip, a trip needs roughly '+money(g.rate*(over+12)/60)+' for a 12-minute ride to hold your pace.');
+   lines.push('Ask me "$X for Y miles, Z minutes" for any offer, or attach Uber screenshots to log trips.');
+   return result(lines.join('\n'));
+  }
+  if(intent==='week'){
+   const start=shiftDay(today,-((weekday(today)+6)%7)),days=(Date.parse(today)-Date.parse(start))/86400000;
+   const cur=summarize(records,{from:start,to:today},tz),prev=summarize(records,{from:shiftDay(start,-7),to:shiftDay(start,-7+days)},tz);
+   if(!cur.rows)return result('No earnings recorded this week yet. Add trips from screenshots in Earnings.');
+   const lines=['**This week so far ('+prettyDay(start)+' – '+prettyDay(today)+')**',lineFor(cur,'this week')];
+   if(prev.rows){const d=cur.gross-prev.gross;lines.push('Same days last week: '+money(prev.gross)+' → '+(d>=0?'up ':'down ')+money(Math.abs(d))+'.');}
+   const byDay={};for(const r of records){const k=recordDayOf(r,tz);if(!k||k<start||k>today||r.payType!=='gross'||!Number.isFinite(r.earnings))continue;byDay[k]=(byDay[k]||0)+r.earnings;}
+   const best=Object.entries(byDay).sort((a,b)=>b[1]-a[1])[0];if(best)lines.push('Best day: '+prettyDay(best[0])+' with '+money(best[1])+'.');
+   const g=goalRate(ctx);if(g&&cur.onlineHours>0){const rate=cur.onlineGross/cur.onlineHours;lines.push('Pace: '+money(rate)+' per online hour vs your '+money(g.rate)+' goal'+(rate>=g.rate?' ✓':'')+'.');}
+   const c=ctx.carInputs||{};if(num(c.price)>0&&num(c.mpg)>0&&cur.miles>0)lines.push('Gas on rider miles: about '+money(cur.miles*num(c.price)/num(c.mpg))+' ('+Math.round(cur.miles*num(c.price)/num(c.mpg)/cur.gross*100)+'% of gross).');
+   return result(lines.join('\n'));
+  }
+  if(intent==='stop'){
+   const g=goalRate(ctx),s=summarize(records,{from:today,to:today},tz),lines=[];
+   const prof=hourProfile(true).length?hourProfile(true):hourProfile(false),next=prof.filter(x=>x.h>hourNow&&x.h<=hourNow+3).sort((a,b)=>b.avg-a.avg)[0],typical=prof.length?prof.reduce((a,x)=>a+x.avg*x.n,0)/prof.reduce((a,x)=>a+x.n,0):null;
+   const ev=soonEvents(3);
+   let stay=0;if(next&&typical&&next.avg>=typical)stay++;if(ev.length)stay++;if(liveZones().length)stay+=0;
+   lines.push(stay>0?'**Worth staying a bit longer.**':'**Reasonable time to wrap up.**');
+   if(next&&typical)lines.push('Your '+fmtHour(next.h)+' hour averages '+money(next.avg)+' per trip vs your usual '+money(typical)+'.');
+   if(ev.length)lines.push('Coming up within 3 hours: '+ev.slice(0,3).map(e=>e.name+' '+clock(e.start)).join('; ')+'.');
+   if(g){const hours=num(ctx.live?.shiftHours)||(s.onlineHours||null);if(hours>0){const rate=s.gross/hours;lines.push('Today: '+money(s.gross)+' at '+money(rate)+'/hr vs '+money(g.rate)+' goal'+(rate>=g.rate?' ✓':'')+'.');}}
+   const max=num(ctx.live?.driverPreferences?.maxShiftHours),sh=num(ctx.live?.shiftHours);if(max&&sh&&sh>=max-0.5)lines.push('You are near your '+max+'-hour shift limit. Safety first.');
+   return result(lines.join('\n'));
+  }
+  if(intent==='help')return result('Built-in Home Base AI (free) can:\n- **"Brief me"**: today\'s plan, best hours ahead, busy areas, events\n- **"How was my week?"**: totals, best day, pace, gas share\n- **"Should I keep driving?"**: your next hours vs your usual\n- Total your earnings for today, a day, this week or this month\n- Check your pace against your goal\n- Judge a trip offer: say the pay and miles, like "$14 for 9 miles, 20 minutes"\n- Compare Uber and Empower from your own records\n- Show your best hours and days\n- Read Uber, Empower or Lyft screenshots into trips (attach a photo)\n- Export your trips as a CSV\n- Point to the busiest areas and upcoming events on the map\n\nOpen-ended planning and conversation use Home Base AI Plus.');
   if(intent==='offer'){
    const pay=num(raw.match(/\$\s?(\d+(?:\.\d+)?)/)?.[1]),mi=num(raw.match(/(\d+(?:\.\d+)?)\s*(?:mi|mile|miles|millas)\b/i)?.[1]),mins=num(raw.match(/(\d+(?:\.\d+)?)\s*(?:min|mins|minutes|minutos)\b/i)?.[1]);
    if(!(pay>0)||!(mi>0))return result('Tell me the pay and the miles, for example "$14 for 9 miles, 20 minutes".');

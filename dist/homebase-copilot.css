@@ -1180,3 +1180,10 @@
 .hb-read-table td small{display:block;color:#ffb36b;font-size:10px}.hb-read-table tr.flag input[data-f]:placeholder-shown,.hb-read-table tr.flag td{background:rgba(255,179,107,.06)}
 .hb-read-total{font-weight:700;font-size:13px;margin:10px 0}.hb-read-actions{display:flex;gap:8px;justify-content:flex-end}.hb-read-actions button{min-height:44px;padding:0 16px;border-radius:12px;border:1px solid #41738e;background:#071c2c;color:#bceaff;font-weight:750}.hb-read-actions .primary-action{background:#0f8fd0;color:#fff;border-color:#0f8fd0}
 .hb-plan-line{display:flex;gap:8px;align-items:center;justify-content:space-between;margin:0 0 6px;font:700 .7rem Arial,sans-serif;color:#9fb3c0}.hb-plan-line[hidden]{display:none}.hb-plan-line select{min-height:30px;border-radius:8px;border:1px solid rgba(91,145,178,.45);background:#061018;color:#e6f2f8;font:700 .68rem Arial,sans-serif;max-width:58%}
+/* Plans & payments (Profile) */
+.hb-plans .hb-plan-grid{display:grid;gap:10px;margin:10px 0}@media(min-width:620px){.hb-plans .hb-plan-grid{grid-template-columns:repeat(3,1fr)}}
+.hb-plan{border:1px solid rgba(91,145,178,.45);border-radius:14px;padding:12px;background:#061420;display:flex;flex-direction:column;gap:8px}.hb-plan.current{border-color:#3ac9ff;box-shadow:0 0 0 1px #3ac9ff inset}
+.hb-plan .hb-plan-head{display:flex;justify-content:space-between;align-items:baseline}.hb-plan .hb-plan-head b{font-size:1rem;color:#e6f7ff}.hb-plan .hb-plan-head span{font-weight:800;color:#9fe3ff}
+.hb-plan ul{margin:0;padding-left:18px;color:#c3d5e0;font-size:.78rem;line-height:1.4}.hb-plan em{font-style:normal;font-weight:800;color:#3ac9ff;font-size:.78rem}
+.hb-plan button,.hb-plan-actions button{min-height:44px;border-radius:12px;border:1px solid #41738e;background:#071c2c;color:#bceaff;font-weight:800}.hb-plan button.primary-action{background:#0f8fd0;color:#fff;border-color:#0f8fd0}.hb-plan button:disabled{opacity:.55}
+.hb-plan-actions{display:flex;gap:8px;flex-wrap:wrap}.hb-plan-actions button{flex:1}

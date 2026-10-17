@@ -46,7 +46,7 @@
   });
  }
 
- const SUGGESTIONS=['Where should I go right now?','What big events are near me in the next 12 hours?','Is it worth heading to BWI right now?','How am I doing on my goal today?'];
+ const SUGGESTIONS=['Brief me for today','$14 for 9 miles, 20 minutes — worth it?','How was my week?','Should I keep driving?'];
  let pending=false,attachment=null,lastFailed=null;
 
  function install(){
@@ -85,7 +85,7 @@
    if(photo){showNotice('Reading the screenshot on this phone…');const raw=await ai.readImage(photo,p=>showNotice('Reading the screenshot… '+p+'%'));showNotice('');const saved=await ai.review(ai.parseScreenshotText(raw));return saved?ai.summaryOf([saved]):'Nothing saved from that screenshot.';}
    const r=ai.ask(text);return r.handled?r.answer:r.answer+(ai.plan()==='builtin'?'\n\nSwitch to **GPT · Plus** above for open questions.':'');
   }
-  function showNotice(text,retry=false){const signIn=/sign in/i.test(text||'');notice.hidden=!text;notice.innerHTML=text?esc(text)+(signIn?' <button type="button" data-chat-signin>Sign in</button>':retry?' <button type="button" data-chat-retry>Retry</button>':''):'';notice.querySelector('[data-chat-signin]')?.addEventListener('click',()=>{document.getElementById('hbChatClose')?.click();document.getElementById('navProfile')?.click()});notice.querySelector('[data-chat-retry]')?.addEventListener('click',()=>{if(lastFailed)submit(lastFailed.text,lastFailed.photo,true)})}
+  function showNotice(text,retry=false){const signIn=/sign in/i.test(text||''),plans=/Home Base Plus|minutes are used/i.test(text||'');notice.hidden=!text;notice.innerHTML=text?esc(text)+(plans?' <button type="button" data-chat-plans>See plans</button>':signIn?' <button type="button" data-chat-signin>Sign in</button>':retry?' <button type="button" data-chat-retry>Retry</button>':''):'';notice.querySelector('[data-chat-plans]')?.addEventListener('click',()=>window.HomeBasePlans?.open?.());notice.querySelector('[data-chat-signin]')?.addEventListener('click',()=>{document.getElementById('hbChatClose')?.click();document.getElementById('navProfile')?.click()});notice.querySelector('[data-chat-retry]')?.addEventListener('click',()=>{if(lastFailed)submit(lastFailed.text,lastFailed.photo,true)})}
   async function submit(raw,photo=attachment,isRetry=false){
    const text=String(raw||'').trim();if(pending||(!text&&!photo))return;
    const agent=window.HomeBaseAgentClient,usePlus=window.HomeBaseInternalAI?.plan?.()==='plus';if(usePlus&&!agent){showNotice('Home Base AI is still loading. Try again in a moment.');return}

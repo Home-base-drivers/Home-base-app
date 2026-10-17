@@ -46,3 +46,9 @@ read 34/34 rows exactly in headless Chromium. Real Uber screenshots still need a
   Live mode or on "let's talk"/"go live"; it closes after 20 s of quiet, at the cap, or in the background, sends a
   heartbeat every 60 s and reports its end. A crashed phone stops counting 45 s after its last heartbeat.
 - Deploy order: apply migration → set owner plans with `set_ai_plan` → deploy `dispatch` → release the app.
+
+## v276 additions
+- "Brief me" (today so far, goal pace, best hours still ahead from the driver's own trips on this
+  weekday, busy areas, events in 12 h, per-trip pay needed for a 12-minute ride), "How was my week?"
+  (vs same days last week, best day, pace, gas share), "Should I keep driving?" (next hours vs usual,
+  events in 3 h, shift limit). Chat suggestions point to these. Payments: see docs/PAYMENTS.md.
