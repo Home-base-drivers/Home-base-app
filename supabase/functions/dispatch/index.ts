@@ -18,7 +18,11 @@ Deno.serve(async(request:Request)=>{
   saveTurn:async(userId:string,conversationId:string,role:string,content:string,context:any)=>{const {error}=await client.from('homebase_agent_turns').insert({user_id:userId,conversation_id:conversationId,role,content,context});if(error)throw error;},
   upsertMemories:async(userId:string,memories:any[])=>{for(const m of memories){const {error}=await client.from('homebase_agent_memory').upsert({user_id:userId,memory_key:String(m.key).slice(0,160),memory_type:m.type,content:{summary:String(m.summary).slice(0,1200)},confidence:Math.max(0,Math.min(1,Number(m.confidence)||.7)),source:'agent_learning',active:true,learned_at:new Date().toISOString()},{onConflict:'user_id,memory_key'});if(error)throw error;}}
  });
- return makeDispatchHandler({engine,parseLanguage,translateLanguage,synthesizeVoice,createLiveSession,agent,
+ // Plan checks and GPT Live minutes run as the signed-in driver through
+ // security-definer functions; the phone cannot change its own plan or usage.
+ const rpc=async(name:string,args?:Record<string,unknown>)=>{const {data,error}=await client.rpc(name,args);if(error)throw Object.assign(new Error(error.message),{code:error.message?.includes('plan_required')?'plan_required':error.message?.includes('voice_minutes_used_up')?'voice_minutes_used_up':undefined});return data;};
+ const entitlements={allowance:()=>rpc('my_ai_allowance'),start:()=>rpc('start_voice_session'),heartbeat:(id:string)=>rpc('heartbeat_voice_session',{p_session:id}),end:(id:string,reason:string)=>rpc('end_voice_session',{p_session:id,p_reason:reason})};
+ return makeDispatchHandler({engine,parseLanguage,translateLanguage,synthesizeVoice,createLiveSession,agent,entitlements,
   authenticate:async(token:string)=>{const {data,error}=await client.auth.getUser(token.slice(7));if(error)throw error;return data.user;},
   loadState:async(userId:string)=>{const {data,error}=await client.from('driver_dispatch_state').select('settings').eq('user_id',userId).maybeSingle();if(error)throw error;return data?.settings||{};},
   loadTrips:async(userId:string)=>{const {data,error}=await client.from('dispatch_recommendations').select('outcome').eq('user_id',userId).not('outcome','is',null).limit(500);if(error)throw error;return(data||[]).map((r:any)=>r.outcome);}

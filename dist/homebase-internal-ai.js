@@ -396,11 +396,28 @@
   s.querySelector('#hbShotInput').onchange=async e=>{const files=[...(e.target.files||[])];e.target.value='';if(!files.length)return;try{const results=await readScreenshots(files,{onStatus:t=>status.textContent=t});status.textContent=summaryOf(results);if(results.length&&typeof renderEarningsPanel==='function')setTimeout(()=>renderEarningsPanel(summaryOf(results)),50);}catch(error){status.textContent=error.message||'Could not read that screenshot.';}};
  }
  function plan(){try{return JSON.parse(localStorage.getItem('homeBaseProductPrefs')||'{}').aiPlan==='plus'?'plus':'builtin';}catch{return'builtin';}}
- function setPlan(value){let p={};try{p=JSON.parse(localStorage.getItem('homeBaseProductPrefs')||'{}')||{};}catch{}p.aiPlan=value==='plus'?'plus':'builtin';localStorage.setItem('homeBaseProductPrefs',JSON.stringify(p));}
+ function setPlan(value,{chosen=false}={}){let p={};try{p=JSON.parse(localStorage.getItem('homeBaseProductPrefs')||'{}')||{};}catch{}p.aiPlan=value==='plus'?'plus':'builtin';if(chosen)p.aiPlanChosen=true;localStorage.setItem('homeBaseProductPrefs',JSON.stringify(p));}
+ // The server decides the plan (free, plus, pro) and GPT Live minutes left.
+ let serverStatus=null;
+ function notePlanStatus(a){
+  if(!a||typeof a.plan!=='string')return;serverStatus={...a,at:Date.now()};try{localStorage.setItem('homeBasePlanStatus',JSON.stringify(serverStatus));}catch{}
+  let chosen=false;try{chosen=JSON.parse(localStorage.getItem('homeBaseProductPrefs')||'{}').aiPlanChosen===true;}catch{}
+  if(a.plan==='free')setPlan('builtin');else if(['plus','pro'].includes(a.plan)&&!chosen)setPlan('plus');
+  if(typeof document!=='undefined')document.dispatchEvent(new Event('homebase:plan-changed'));
+ }
+ function serverPlan(){return serverStatus?.plan||read('homeBasePlanStatus',null)?.plan||null;}
+ function planStatus(){return serverStatus||read('homeBasePlanStatus',null);}
+ async function refreshEntitlement(){
+  const b=typeof window!=='undefined'?window.HomeBaseAccounts?.backend:null;if(!b)return null;
+  try{const u=await b.getUser();if(!u?.id||u.is_anonymous){serverStatus={plan:'signed-out'};if(typeof document!=='undefined')document.dispatchEvent(new Event('homebase:plan-changed'));return serverStatus;}
+   const a=await b.evaluateDispatch({operation:'allowance'});notePlanStatus(a);return a;}catch{return null;}
+ }
  function ask(text){const r=answer(text,browserContext());if(r.action==='export_csv'&&typeof document!=='undefined')downloadCsv();return r;}
  if(typeof window!=='undefined'&&typeof document!=='undefined'){
   const hook=()=>{if(typeof renderEarningsPanel!=='function')return false;const base=renderEarningsPanel;renderEarningsPanel=function(...args){base(...args);try{const rootEl=document.getElementById('workspaceContent');if(rootEl?.querySelector('#earningsCsv'))mountEarnings(rootEl);}catch{}};return true;};
   if(!hook())window.addEventListener('DOMContentLoaded',hook,{once:true});
+  let tries=0;const wait=setInterval(()=>{if(window.HomeBaseAccounts?.backend||++tries>40){clearInterval(wait);refreshEntitlement();}},500);
+  window.addEventListener('homebase-calendar-identity',()=>setTimeout(refreshEntitlement,300));
  }
- return{VERSION:'builtin-1',combineParsed,_prepare:typeof document!=='undefined'?prepareImage:null,answer,ask,intentOf,periodFrom,summarize,overheadMinutes,parseScreenshotText,toRecords,tripsCsv,zonedIso,dayKey,readImage,readScreenshots,review,saveParsed,summaryOf,mountEarnings,downloadCsv,plan,setPlan};
+ return{VERSION:'builtin-1',notePlanStatus,serverPlan,planStatus,refreshEntitlement,combineParsed,_prepare:typeof document!=='undefined'?prepareImage:null,answer,ask,intentOf,periodFrom,summarize,overheadMinutes,parseScreenshotText,toRecords,tripsCsv,zonedIso,dayKey,readImage,readScreenshots,review,saveParsed,summaryOf,mountEarnings,downloadCsv,plan,setPlan};
 });

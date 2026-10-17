@@ -55,7 +55,7 @@
   const title=panel.querySelector('.hb-chat-head b');if(title)title.textContent='Home Base AI';
   const close=panel.querySelector('#hbChatClose');if(close)close.setAttribute('aria-label','Close Home Base AI chat');
   const form=document.createElement('form');form.id='hbChatComposer';form.className='hb-chat-composer';form.setAttribute('autocomplete','off');
-  form.innerHTML='<div class="hb-chat-engine" role="group" aria-label="Which Home Base AI answers"><button type="button" data-engine="builtin">Built-in · Free</button><button type="button" data-engine="plus">GPT · Plus</button></div><div class="hb-chat-notice" id="hbChatNotice" role="status" aria-live="polite" hidden></div><div class="hb-chat-attachment" id="hbChatAttachment" hidden><img alt="Attached photo"><button type="button" aria-label="Remove photo">×</button></div><div class="hb-chat-row"><label class="hb-chat-attach" aria-label="Attach a photo or screenshot"><input type="file" accept="image/*" id="hbChatFile" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.5 12.6 21a5.5 5.5 0 0 1-7.8-7.8l9-9a3.7 3.7 0 0 1 5.2 5.2l-9 9a1.8 1.8 0 0 1-2.6-2.6l8.3-8.3"/></svg></label><textarea id="hbChatInput" rows="1" placeholder="Message Home Base AI" aria-label="Message Home Base AI" enterkeyhint="send"></textarea><button type="submit" id="hbChatSend" aria-label="Send"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button></div>';
+  form.innerHTML='<div class="hb-chat-engine" role="group" aria-label="Which Home Base AI answers"><button type="button" data-engine="builtin">Built-in · Free</button><button type="button" data-engine="plus">GPT · Plus</button></div><div class="hb-plan-line" id="hbPlanLine" hidden><span id="hbPlanText"></span><select id="hbVoiceMode" aria-label="How voice works"><option value="hybrid">Voice: phone + GPT (saves minutes)</option><option value="live">Voice: GPT Live</option></select></div><div class="hb-chat-notice" id="hbChatNotice" role="status" aria-live="polite" hidden></div><div class="hb-chat-attachment" id="hbChatAttachment" hidden><img alt="Attached photo"><button type="button" aria-label="Remove photo">×</button></div><div class="hb-chat-row"><label class="hb-chat-attach" aria-label="Attach a photo or screenshot"><input type="file" accept="image/*" id="hbChatFile" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.5 12.6 21a5.5 5.5 0 0 1-7.8-7.8l9-9a3.7 3.7 0 0 1 5.2 5.2l-9 9a1.8 1.8 0 0 1-2.6-2.6l8.3-8.3"/></svg></label><textarea id="hbChatInput" rows="1" placeholder="Message Home Base AI" aria-label="Message Home Base AI" enterkeyhint="send"></textarea><button type="submit" id="hbChatSend" aria-label="Send"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button></div>';
   panel.append(form);
   const input=form.querySelector('#hbChatInput'),send=form.querySelector('#hbChatSend'),file=form.querySelector('#hbChatFile'),chip=form.querySelector('#hbChatAttachment'),notice=form.querySelector('#hbChatNotice');
   const grow=()=>{input.style.height='auto';input.style.height=Math.min(input.scrollHeight,160)+'px';send.disabled=pending||(!input.value.trim()&&!attachment)};
@@ -66,8 +66,19 @@
   form.addEventListener('submit',event=>{event.preventDefault();submit(input.value)});
   const engines=form.querySelectorAll('[data-engine]'),internal=()=>window.HomeBaseInternalAI;
   const showEngine=()=>{const plan=internal()?.plan?.()||'builtin';engines.forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.engine===plan)));input.placeholder=plan==='plus'?'Message Home Base AI Plus':'Message Home Base AI (built-in)';};
-  engines.forEach(b=>b.addEventListener('click',()=>{internal()?.setPlan?.(b.dataset.engine);showEngine();showNotice(b.dataset.engine==='plus'?'GPT · Plus answers with full conversation and voice. It needs you signed in.':'Built-in answers on this phone for free: earnings, goal pace, trip offers, screenshots, costs, best hours and where to go.')}));
-  showEngine();
+  const planLine=form.querySelector('#hbPlanLine'),planText=form.querySelector('#hbPlanText'),voiceSel=form.querySelector('#hbVoiceMode');
+  const readVoice=()=>{try{return JSON.parse(localStorage.getItem('homeBaseVoicePrefs')||'{}')}catch{return{}}};
+  voiceSel.value=readVoice().voiceMode==='live'?'live':'hybrid';
+  voiceSel.addEventListener('change',()=>{const v=readVoice();v.voiceMode=voiceSel.value;localStorage.setItem('homeBaseVoicePrefs',JSON.stringify(v));showNotice(voiceSel.value==='live'?'Talk opens GPT Live right away. It pauses after 20 seconds of quiet to save minutes.':'Talk runs on your phone for free; GPT answers by text and reads it aloud. Say "let\'s talk" to open GPT Live.')});
+  const showPlan=()=>{const st=internal()?.planStatus?.();const paid=st&&['plus','pro'].includes(st.plan);planLine.hidden=!paid;if(paid){const min=Math.floor((Number(st.remaining_seconds)||0)/60);planText.textContent=(st.plan==='pro'?'Pro':'Plus')+' · '+min+' GPT Live min left this month';}};
+  document.addEventListener('homebase:plan-changed',()=>{showEngine();showPlan();});
+  engines.forEach(b=>b.addEventListener('click',()=>{
+   const want=b.dataset.engine,server=internal()?.serverPlan?.();
+   if(want==='plus'&&server==='free'){showNotice('GPT · Plus is part of Home Base Plus ($19.99/month, 120 GPT Live minutes). The built-in AI stays free.');return;}
+   if(want==='plus'&&server==='signed-out'){showNotice('Sign in to use GPT · Plus. Open Profile to sign in.');return;}
+   internal()?.setPlan?.(want,{chosen:true});showEngine();showPlan();
+   showNotice(want==='plus'?'GPT · Plus answers with full conversation and voice.':'Built-in answers on this phone for free: earnings, goal pace, trip offers, screenshots, costs, best hours and where to go.')}));
+  showEngine();showPlan();internal()?.refreshEntitlement?.();
   // Built-in AI: free, on the phone. A photo is read into trips for review.
   async function builtinReply(text,photo){
    const ai=internal();if(!ai)throw Error('Built-in AI is still loading. Try again in a moment.');
@@ -91,8 +102,9 @@
       answer=typeof result?.answer==='string'?result.answer.trim():'';}
      catch(error){
       // Plus is unavailable: answer with the built-in AI when it can, and say why.
-      const r=!photo&&window.HomeBaseInternalAI?.ask?.(text);if(!r?.handled||error?.code==='sign_in')throw error;
-      answer=r.answer+'\n\n_Built-in answer: '+agent.describeError(error)+'_';}
+      if(error?.code==='plan_required'){window.HomeBaseInternalAI?.refreshEntitlement?.();answer=await builtinReply(text,photo)+'\n\n_'+agent.describeError(error)+'_';}
+      else{const r=!photo&&window.HomeBaseInternalAI?.ask?.(text);if(!r?.handled||error?.code==='sign_in')throw error;
+      answer=r.answer+'\n\n_Built-in answer: '+agent.describeError(error)+'_';}}
     }
     if(!answer)throw Error('Home Base AI returned no answer.');
     lastFailed=null;pending=false;window.HomeBaseShell?.logChat?.('assistant',answer);
