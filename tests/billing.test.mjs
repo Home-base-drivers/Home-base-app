@@ -18,9 +18,9 @@ function fakeDb(){
   rpc:async(name,args)=>{rpcs.push([name,args]);if(name==='set_ai_plan'){const i=tables.ai_entitlements.findIndex(r=>r.user_id===args.p_user);const row={user_id:args.p_user,plan:args.p_plan,current_period_end:args.p_period_end,extra_voice_seconds:args.p_extra_voice_seconds??(tables.ai_entitlements[i]?.extra_voice_seconds||0),extra_month:args.p_extra_month??tables.ai_entitlements[i]?.extra_month??null};if(i>=0)tables.ai_entitlements[i]=row;else tables.ai_entitlements.push(row);}return{data:{},error:null};}};
  return db;
 }
-function setup({open=true}={}){
+function setup({open=true,extra={}}={}){
  const db=fakeDb(),calls=[];
- const env=k=>({SUPABASE_URL:'u',SUPABASE_SERVICE_ROLE_KEY:'s',STRIPE_SECRET_KEY:'sk_test',STRIPE_WEBHOOK_SECRET:'whsec_test',STRIPE_PRICE_PLUS:'price_plus',STRIPE_PRICE_PRO:'price_pro',STRIPE_PRICE_MINUTES:'price_min',BILLING_ENABLED:open?'true':'false'})[k];
+ const env=k=>({SUPABASE_URL:'u',SUPABASE_SERVICE_ROLE_KEY:'s',STRIPE_SECRET_KEY:'sk_test',STRIPE_WEBHOOK_SECRET:'whsec_test',STRIPE_PRICE_PLUS:'price_plus',STRIPE_PRICE_PRO:'price_pro',STRIPE_PRICE_MINUTES:'price_min',BILLING_ENABLED:open?'true':'false',...extra})[k];
  const fetchImpl=async(url,init)=>{calls.push({url,body:init.body&&Object.fromEntries(new URLSearchParams(init.body))});
   if(url.endsWith('/customers'))return new Response(JSON.stringify({id:'cus_1'}));
   if(url.endsWith('/checkout/sessions'))return new Response(JSON.stringify({url:'https://checkout.stripe.com/c/1'}));
@@ -75,4 +75,26 @@ test('extra minutes add 100 minutes to this month and keep the plan',async()=>{
 test('form encoding and signature helpers',async()=>{
  assert.equal(form({a:{0:{b:1}},c:'x',d:null}).toString(),'a%5B0%5D%5Bb%5D=1&c=x');
  assert.equal(await verifyStripeSignature('{}','t=1,v1=00','s',1),false);
+});
+
+test('test-mode checkout opens only for listed testers, never with a live key',async()=>{
+ const tester=setup({open:false,extra:{STRIPE_SECRET_KEY:'sk_test_abc',BILLING_TEST_EMAILS:' Other@x.test , DRIVER@example.test'}});
+ const st=await (await tester.app({operation:'status'})).json();assert.equal(st.open,true);assert.equal(st.test,true);
+ assert.equal((await tester.app({operation:'checkout',plan:'plus'})).status,200);
+ const stranger=setup({open:false,extra:{STRIPE_SECRET_KEY:'sk_test_abc',BILLING_TEST_EMAILS:'other@x.test'}});
+ assert.equal((await stranger.app({operation:'checkout',plan:'plus'})).status,503);
+ const live=setup({open:false,extra:{STRIPE_SECRET_KEY:'sk_live_abc',BILLING_TEST_EMAILS:'driver@example.test'}});
+ assert.equal((await live.app({operation:'checkout',plan:'plus'})).status,503,'live key never opens through the tester list');
+ assert.equal((await (await live.app({operation:'status'})).json()).test,false);
+});
+
+test('owner Pro is never sold over or changed by Stripe events',async()=>{
+ const s=setup();s.db.tables.ai_entitlements.push({user_id:USER,plan:'pro',source:'owner',current_period_end:null,extra_voice_seconds:0,extra_month:null});
+ const r=await s.app({operation:'checkout',plan:'plus'});assert.equal(r.status,409);assert.equal((await r.json()).code,'owner_plan');
+ s.db.tables.billing_customers.push({user_id:USER,stripe_customer_id:'cus_1',plan:'free'});
+ const del=await s.hook({id:'evt_o',type:'customer.subscription.deleted',data:{object:{id:'sub_1',customer:'cus_1',status:'canceled',items:{data:[{price:{id:'price_plus'}}]}}}});
+ assert.equal((await del.json()).result,'owner plan kept');
+ const pack=await s.hook({id:'evt_p',type:'checkout.session.completed',data:{object:{mode:'payment',payment_status:'paid',client_reference_id:USER,metadata:{kind:'minutes'}}}});
+ assert.equal((await pack.json()).result,'owner plan kept');
+ assert.equal(s.db.rpcs.length,0);assert.equal(s.db.tables.ai_entitlements[0].plan,'pro');assert.equal(s.db.tables.ai_entitlements[0].source,'owner');
 });
