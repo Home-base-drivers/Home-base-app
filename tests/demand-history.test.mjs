@@ -9,7 +9,7 @@ test('campus feed excludes private, undated, virtual and all-day events, never c
 test('missing public weather is unknown, not zero rain',()=>{assert.equal(normalizeWeather({properties:{periods:[{startTime:'2026-10-03T00:00:00Z',endTime:'2026-10-03T01:00:00Z'}]}})[0].rainProbability,null);});
 test('source failures stay unavailable and do not produce invented events',async()=>{const result=await publicRecords({name:'Baltimore'},Date.now(),async()=>{throw Error('offline');});assert.equal(result.status,'unavailable');assert.deepEqual(result.events,[]);});
 test('historical recurrence fades continuously within one hour of its neighborhood observation',()=>{
- const captured='2026-10-08T15:26:00-04:00',future=time=>new Date(`2026-10-15T${time}:00-04:00`);
+ const captured='2026-10-08T15:26:00-04:00',future=time=>new Date(`2026-10-14T${time}:00-04:00`); // Wednesday, before the Oct 15 Towson captures
  const peak=H.forecastFor('Towson',future('15:26'),true).strength;
  // Oct 9 extends the window to ~4:04 PM; 4:26 is past the 2-day pattern and only a faint 1-day reference.
  const half=H.forecastFor('Towson',future('16:26'),true).strength;
@@ -18,7 +18,7 @@ test('historical recurrence fades continuously within one hour of its neighborho
  assert.equal(H.forecastFor('Towson',future('13:30'),true).strength,0); // Oct 14 2:40 PM Towson adds a faint 2:26 PM reference; 1:30 PM stays clear.
  assert.equal(H.forecastFor('Unrelated neighborhood',future('15:26'),true).strength,0);
  // Weekday patterns carry across weekdays (Oct 8 Thu + Oct 9 Fri), never into the weekend.
- assert.ok(H.forecastFor('Towson',new Date('2026-10-16T15:16:00-04:00'),true).distinctDates>=2);
+ assert.ok(H.forecastFor('Towson',new Date('2026-10-14T15:16:00-04:00'),true).distinctDates>=2);
  assert.equal(H.forecastFor('Towson',new Date('2026-10-17T15:26:00-04:00'),true).strength,0);
 });
 test('historical windows fade correctly across local midnight, retaining one independent night',()=>{
@@ -28,4 +28,20 @@ test('historical windows fade correctly across local midnight, retaining one ind
  assert.ok(strength('2026-10-16T00:10:00-04:00')>0);
  assert.equal(strength('2026-10-16T00:50:00-04:00'),0);
  assert.equal(strength('2026-10-15T22:50:00-04:00'),0);
+});
+test('Empower layers over Uber: combined pattern is never weaker than the Uber pattern alone',()=>{
+ for(const [area,time] of [['Towson','2026-10-22T15:30:00-04:00'],['Downtown','2026-10-22T16:45:00-04:00'],['Charles Village','2026-10-22T17:07:00-04:00'],['Mondawmin','2026-10-22T07:00:00-04:00']]){
+  const f=H.forecastFor(area,new Date(time),true);
+  assert.ok(f.confidence>=f.platforms.uber-1e-12&&f.confidence>=f.platforms.empower-1e-12,area);
+ }
+ // Downtown 4:45 PM: both apps have surged there, so the layered strength beats either app alone.
+ const d=H.forecastFor('Downtown',new Date('2026-10-22T16:45:00-04:00'),true);
+ assert.ok(d.platforms.uber>0&&d.platforms.empower>0&&d.confidence>Math.max(d.platforms.uber,d.platforms.empower));
+});
+test('weekday morning Empower wave is a frequent, recent pattern; older single sightings stay faint',()=>{
+ const m=H.forecastFor('Mondawmin',new Date('2026-10-22T07:00:00-04:00'),true);
+ assert.ok(m.distinctDates>=5&&m.strength>=.3);
+ // The same dates weigh less once they are two months old.
+ const later=H.forecastFor('Mondawmin',new Date('2026-12-17T07:00:00-05:00'),true);
+ assert.ok(later.strength<m.strength*.6);
 });

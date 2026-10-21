@@ -1,4 +1,4 @@
-const CACHE='home-base-v280';
+const CACHE='home-base-v281';
 const ASSETS=['homebase-school-events.js?v=4','homebase-public-data.js?v=5','homebase-sports.js?v=2','homebase-weather.js?v=1','data-attributions.txt','homebase-global-heat.js?v=3','./','index.html','manifest.webmanifest','favicon.svg','icon-192.png','icon-512.png','homebase-languages.js?v=2','homebase-voice.js?v=4','homebase-dispatch.js?v=2','homebase-internal-ai.js?v=3','homebase-plans.js?v=3','homebase-agent-client.js?v=8','homebase-copilot.js?v=48','homebase-live-assistant.js?v=7','homebase-chat.js?v=5','homebase-copilot.css?v=54','homebase-logo.png','baltimore-map.jpg','provider-signals.json','homebase-live.js?v=39','homebase-earnings.js?v=117','homebase-earnings.css?v=110','homebase-route-policy.js?v=14','homebase-planner.js?v=131','homebase-config.js?v=111','homebase-backend.js?v=133','homebase-growth.js?v=134','homebase-growth.css?v=113','homebase-demand-history.js?v=147','baltimore-market.js?v=73','homebase-metros.js?v=1','homebase-heat.js?v=110','baltimore-demand-areas.geojson'];
 self.addEventListener('install',event=>event.waitUntil((async()=>{
  const cache=await caches.open(CACHE);
