@@ -194,6 +194,12 @@
     return clamp(Math.pow(intensity, .78), .025, 1);
   }
 
+  // Display-only gain: keep evidence, palette levels and geographic coverage
+  // unchanged while making the Home overlay denser above the dark street map.
+  function displayOpacity(value) {
+    return 1 - Math.pow(1 - clamp(Number(value) || 0, 0, 1), 1.65);
+  }
+
   function compositeOpacity(value) {
     // Keep locally scored demand legible above the dark basemap. Opacity still
     // falls to zero with the measured field, so this does not manufacture a
@@ -562,7 +568,7 @@
           if(!composed.opacity)continue;
           const rgb=colorAt(composed.level),offset=i*4;
           pixels[offset] = rgb[0]; pixels[offset + 1] = rgb[1]; pixels[offset + 2] = rgb[2];
-          pixels[offset + 3] = Math.round(255 * composed.opacity * zoomFactor);
+          pixels[offset + 3] = Math.round(255 * displayOpacity(composed.opacity) * zoomFactor);
         }
         context.putImageData(image, 0, 0);
         output.save();

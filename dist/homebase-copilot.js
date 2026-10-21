@@ -302,7 +302,7 @@ function bootHomeBaseShell(){
   '</div></div>'+
   '<div class="hb-menu-view" data-menu-view="map" hidden><div class="hb-submenu-head"><button type="button" data-menu-back aria-label="Back">‹</button><div><small>MAP & DISPLAY</small><b>Home & Map Preferences</b></div></div><div class="hb-list-menu hb-submenu-list">'+
    '<button type="button" data-menu-panel="heat"><span><b>Heat Map</b><small>Colors, palette and visibility</small></span><i>›</i></button>'+
-   '<button type="button" data-control="layerBtn"><span><b>Street / Satellite</b><small>Switch the base map layer</small></span><i>›</i></button>'+
+   '<button type="button" data-control="layerBtn"><span><b>Layers</b><small>Adjust heat map colors and visibility</small></span><i>›</i></button>'+
    '<button type="button" data-menu-panel="panels"><span><b>Information panels</b><small>Open all panels together over your map</small></span><i>›</i></button>'+
   '</div><div class="hb-submenu-block"><h3>CUSTOMIZE HOME</h3><p>Choose what stays visible over the map.</p><div id="hbModuleList" class="hb-module-list"></div></div></div>'+
   '<div class="hb-menu-view" data-menu-view="heat" hidden><div class="hb-submenu-head"><button type="button" data-menu-back="map" aria-label="Back">‹</button><div><small>HOME & MAP</small><b>Heat Map</b></div></div>'+
@@ -496,6 +496,7 @@ function bootHomeBaseShell(){
  function showMenuView(name='main'){if(name==='panels'){openHomePanels();return}drawer.querySelectorAll('[data-menu-view]').forEach(view=>{view.hidden=view.dataset.menuView!==name});if(name==='heat'||name==='map')syncHeatMenu();if(name==='driving')syncDrivingPreferences();const scroll=drawer.querySelector('.hb-menu-scroll');if(scroll)scroll.scrollTop=0}
  async function syncMenuIdentity(){const profile=read('homeBaseDriverProfile',{})||{},nameNode=drawer.querySelector('#hbMenuDriverName'),initialNode=drawer.querySelector('#hbMenuDriverInitial');let name=profile.name||profile.driverName||'Driver';try{const user=await window.HomeBaseAccounts?.backend?.getUser?.();name=profile.name||profile.driverName||user?.user_metadata?.full_name||user?.user_metadata?.name||user?.email?.split('@')[0]||name}catch{}if(nameNode)nameNode.textContent=name;if(initialNode)initialNode.textContent=String(name||'D').trim().charAt(0).toUpperCase()||'D'}
  function openMenu(){closeHomePanels();showMenuView('main');syncMenuIdentity();drawer.inert=false;backdrop.hidden=false;drawer.classList.add('open');backdrop.classList.add('open');drawer.setAttribute('aria-hidden','false');menuButton.setAttribute('aria-expanded','true');syncHomeHud()}
+ document.addEventListener('homebase:open-layers',()=>{openMenu();showMenuView('heat');drawer.querySelector('#hbMenuClose')?.focus()});
  function closeMenu(){drawer.classList.remove('open');drawer.inert=true;backdrop.classList.remove('open');backdrop.hidden=true;drawer.setAttribute('aria-hidden','true');menuButton.setAttribute('aria-expanded','false');syncHomeHud()}
  function syncHomeHeatButton(){
   const button=homeControls.querySelector('[data-home-target="heatToggle"]');if(!button)return;

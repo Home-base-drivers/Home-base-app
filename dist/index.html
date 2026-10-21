@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Home Base">
-  <meta name="homebase-build" content="v281">
+  <meta name="homebase-build" content="v282">
   <meta name="description" content="Home Base connects local driver platforms, earnings forecasts, events and a GPS-based 12-hour route in one app.">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icon-192.png">
@@ -217,7 +217,7 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="baltimore-market.js?v=73"></script>
 <script src="homebase-metros.js?v=1"></script>
-<script src="homebase-heat.js?v=110"></script>
+<script src="homebase-heat.js?v=111"></script>
 <script src="homebase-global-heat.js?v=3"></script>
 <link rel="stylesheet" href="homebase-earnings.css?v=110">
 <link rel="stylesheet" href="homebase-growth.css?v=113">
@@ -239,7 +239,7 @@
 <script src="homebase-internal-ai.js?v=3"></script>
 <script src="homebase-plans.js?v=3"></script>
 <script src="homebase-agent-client.js?v=8"></script>
-<script src="homebase-copilot.js?v=48"></script>
+<script src="homebase-copilot.js?v=49"></script>
 <script src="homebase-live-assistant.js?v=7"></script>
 <script src="homebase-chat.js?v=5"></script>
 <script>
@@ -288,9 +288,9 @@ function setBaseLayer(mode){
   app.classList.remove('map-reference');
   app.classList.toggle('dark',baseMode==='dark');
   const button=$('#layerBtn');
-  button.setAttribute('aria-pressed',String(baseMode!=='dark'));
-  button.setAttribute('aria-label',labels[baseMode]+' active. Tap to change map base.');
-  const small=button.querySelector('small');if(small)small.textContent=shortLabels[baseMode];
+  button.removeAttribute('aria-pressed');
+  button.setAttribute('aria-label','Open map layers settings');
+  const small=button.querySelector('small');if(small)small.textContent='LAYERS';
   try{localStorage.setItem('homeBaseBaseMapMode',baseMode)}catch{}
 }
 setBaseLayer(initialBaseMap);
@@ -763,7 +763,7 @@ renderSupport=function(message=''){baseRenderSupportV35(message);enhanceSupport(
 ['navMap','navEarn','navAlerts','navProfile','navSupport'].forEach(id=>$('#'+id)?.addEventListener('click',()=>{if(readProductPrefs().localAnalytics)hbTrack('navigation',{tab:id.replace('nav','').toLowerCase()})}));
 setTimeout(()=>showHomeBaseOnboarding(false),650);
 $('#installBtn').addEventListener('click',requestHomeScreenInstall);
-$('#layerBtn').addEventListener('click',()=>{const on=app.classList.contains('heat-hidden');app.classList.toggle('heat-hidden',!on);$('#heatToggle').setAttribute('aria-pressed',String(on));$('#heatToggle').textContent=`HEAT · ${on?'ON':'OFF'}`;$('#layerBtn').setAttribute('aria-pressed',String(on));try{localStorage.setItem('homeBaseHeatVisible',String(on))}catch{};if(on){globalHeatExplorer?.changed();renderDemandGrid(activeDemandSources,0,selectedForecastTime)}show(['◉',on?'Heat map on':'Heat map off',on?'Live demand overlay is visible on the current map area.':'Demand overlay hidden.','HEAT · Tap to toggle'])});
+$('#layerBtn').addEventListener('click',()=>document.dispatchEvent(new CustomEvent('homebase:open-layers')));
 $('#heatToggle').setAttribute('aria-pressed',String(initialHeatVisible));$('#heatToggle').textContent=`HEAT · ${initialHeatVisible?'ON':'OFF'}`;$('#heatToggle').setAttribute('aria-label',initialHeatVisible?'Hide demand heat map':'Show demand heat map');
 $('#heatToggle').addEventListener('click',()=>{const on=app.classList.contains('heat-hidden');app.classList.toggle('heat-hidden',!on);$('#heatToggle').setAttribute('aria-pressed',String(on));$('#heatToggle').textContent=`HEAT · ${on?'ON':'OFF'}`;$('#heatToggle').setAttribute('aria-label',on?'Hide demand heat map':'Show demand heat map');try{localStorage.setItem('homeBaseHeatVisible',String(on))}catch{}});
 function updatePaletteButton(){const name=heatPaletteNames[heatPaletteIndex];$('#paletteToggle').textContent=`COLORS · ${name.toUpperCase()}`;$('#paletteToggle').setAttribute('aria-label',`Heat colors: ${name}. Change heat map colors.`)}
@@ -1381,7 +1381,7 @@ setInterval(()=>{updateClimateAdvisory();const selected=$('[data-hour][aria-pres
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){schoolSearchAt=0;if(currentLocation)refreshSchoolEvents(...currentLocation);if(Date.now()-lastAutoGpsRefresh>300000){if(demoLocale)refreshLiveDemandLayer();else autoRefreshGps()}}});
 window.addEventListener('homebase-calendar-identity',()=>{schoolSearchAt=0;schoolSearchKey='';schoolEventRows=[];if(currentLocation)refreshSchoolEvents(...currentLocation);});
 window.addEventListener('load',()=>{schoolSearchAt=0;if(currentLocation)refreshSchoolEvents(...currentLocation);},{once:true});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>{const replacingWorker=!!navigator.serviceWorker.controller;navigator.serviceWorker.register('sw.js?v=281',{updateViaCache:'none'}).then(r=>{r.update();navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!replacingWorker)return;if(!sessionStorage.getItem('hb-release-reload-v281')){sessionStorage.setItem('hb-release-reload-v281','1');location.reload()}})}).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';})});
+if('serviceWorker' in navigator)window.addEventListener('load',()=>{const replacingWorker=!!navigator.serviceWorker.controller;navigator.serviceWorker.register('sw.js?v=282',{updateViaCache:'none'}).then(r=>{r.update();navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!replacingWorker)return;if(!sessionStorage.getItem('hb-release-reload-v282')){sessionStorage.setItem('hb-release-reload-v282','1');location.reload()}})}).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';})});
 </script>
 <script src="homebase-live.js?v=39"></script>
 </body>
