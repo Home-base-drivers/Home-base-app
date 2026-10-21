@@ -50,7 +50,7 @@ test('recovered Sep 11 - Oct 8 originals are dated, hashed and never earlier tha
  const src=require('node:fs').readFileSync(new URL('../dist/homebase-demand-history.js',import.meta.url),'utf8');
  for(const id of ['uber-baltimore-20260911-0755','uber-baltimore-20260911-1709','uber-baltimore-20260925-1502','uber-baltimore-20261006-1611','uber-baltimore-20261006-1641','uber-baltimore-20261008-1435','uber-baltimore-20261008-2016'])assert.ok(src.includes('"id": "'+id+'"'),id);
  // Ambiguous originals (IMG_3066, IMG_3274, IMG_3362/3363) are ledger-only, not dated history.
- for(const f of ['IMG_3066','IMG_3274','IMG_3362','IMG_3363'])assert.ok(!src.includes('"name": "'+f),f);
+ for(const f of ['IMG_3362','IMG_3363'])assert.ok(!src.includes('"name": "'+f),f);
  assert.ok(!/"captured_at": "2026-0[1-8]-/.test(src)&&!/"captured_at": "2026-09-(0\d|10)T/.test(src));
 });
 test('Oct 8 2:35 PM +$11 and 3:26 PM +$6.25 stay distinct; Oct 6 4:41 cooling is wide-view context, not calm',()=>{
@@ -72,4 +72,10 @@ test('promotions are never stored as surge',()=>{
  const src=require('node:fs').readFileSync(new URL('../dist/homebase-demand-history.js',import.meta.url),'utf8');
  assert.ok(!/"metric_type": "promotion"/.test(src));
  assert.ok(src.includes('active hour')&&/promotion is not stored as surge|promotion and is not stored as surge|Active-hour promotion excluded/.test(src));
+});
+test('owner rule: light map theme is daytime; estimated dates count at half weight',()=>{
+ const src=require('node:fs').readFileSync(new URL('../dist/homebase-demand-history.js',import.meta.url),'utf8');
+ assert.ok(/"id": "uber-baltimore-20261001-1608".{0,1500}?"timestamp_confidence": "high"/.test(src));
+ assert.ok(/"id": "uber-baltimore-20260918-1457".{0,1500}?"timestamp_confidence": "low"/.test(src));
+ assert.ok(H.forecastFor('Pikesville',new Date('2026-10-23T14:57:00-04:00'),true).distinctDates>=1);
 });
