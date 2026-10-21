@@ -1,6 +1,6 @@
 # Surge evidence ledger
 
-How Home Base's screenshot-derived surge history maps to original files. Updated October 21, 2026 (v282).
+How Home Base's screenshot-derived surge history maps to original files. Updated October 21, 2026 (v284).
 
 Originals stay private with the owners. This repository stores only the surge fields, file names and SHA-256 hashes. It never stores the images, notification backgrounds, passenger details or trip addresses.
 
@@ -33,7 +33,7 @@ Most originals are re-encoded JPEGs without EXIF data, so the method is recorded
 
 Upload times are kept separate and are never used as capture times.
 
-## Observed Uber maps imported in v282
+## Observed Uber maps imported in v284
 
 | Capture (America/New_York) | Files | Confidence | Record |
 |---|---|---|---|
@@ -63,7 +63,7 @@ Upload times are kept separate and are never used as capture times.
 - **IMG_3602:** added the missing +$6.75 and +$2.25 badges.
 - **IMG_3604 (Morgan State):** added the "24m ago" $6 notification as a time window, plus four average-surge notices kept as context.
 
-**Already stored before v282 and unchanged:** IMG_3461–3467, 3476/3477, 3545–3549, 3609/3610, 3624/3625, 3632–3634, 3637–3643.
+**Already stored before v284 and unchanged:** IMG_3461–3467, 3476/3477, 3545–3549, 3609/3610, 3624/3625, 3632–3634, 3637–3643.
 
 ## Awaiting date or AM/PM review (not used for prediction)
 

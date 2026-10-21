@@ -32,7 +32,7 @@ test('heat palette includes green, amber, red, and magenta demand levels', () =>
 
 test('the heat map exposes distinct persistent color patterns without changing demand strength', () => {
   const classic = heat.colorAt(.7);
-  assert.deepEqual(heat.paletteNames, ['classic', 'purple_blue_white', 'ocean', 'sunset', 'ember', 'mint', 'ice', 'aurora', 'violet_rose', 'blue_gold', 'coral_sand', 'teal_lime', 'royal_ice', 'custom', 'monochrome']);
+  assert.deepEqual(heat.paletteNames, ['classic', 'purple_blue_white', 'ocean', 'sunset', 'ember', 'mint', 'ice', 'aurora', 'violet_rose', 'blue_gold', 'coral_sand', 'teal_lime', 'royal_ice', 'custom', 'monochrome', 'city_heat']);
   assert.equal(heat.setPalette('ocean'), 'ocean');
   assert.notDeepEqual(heat.colorAt(.7), classic);
   assert.equal(heat.getPalette(), 'ocean');

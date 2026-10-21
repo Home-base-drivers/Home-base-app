@@ -20,7 +20,8 @@
     teal_lime: [[0,[7,78,89]],[.25,[13,128,123]],[.5,[42,184,146]],[.75,[151,223,121]],[1,[237,255,168]]],
     royal_ice: [[0,[39,43,115]],[.25,[78,84,175]],[.5,[141,147,230]],[.75,[197,211,248]],[1,[248,250,255]]],
     custom: [[0,[104,56,196]],[.5,[31,146,255]],[1,[255,255,255]]],
-    monochrome: [[0,[43,54,63]],[.2,[70,84,94]],[.42,[107,122,132]],[.64,[151,166,176]],[.82,[205,216,223]],[1,[255,255,255]]]
+    monochrome: [[0,[43,54,63]],[.2,[70,84,94]],[.42,[107,122,132]],[.64,[151,166,176]],[.82,[205,216,223]],[1,[255,255,255]]],
+    city_heat: [[0,[48,68,127]],[.18,[66,87,165]],[.38,[94,76,153]],[.55,[141,63,116]],[.74,[187,54,80]],[1,[222,49,55]]]
   };
   let activePalette = 'classic';
   const RADII_KM = {
@@ -194,6 +195,12 @@
     return clamp(Math.pow(intensity, .78), .025, 1);
   }
 
+  // Display-only gain: keep evidence, palette levels and geographic coverage
+  // unchanged while making the Home overlay denser above the dark street map.
+  function displayOpacity(value) {
+    return 1 - Math.pow(1 - clamp(Number(value) || 0, 0, 1), 1.65);
+  }
+
   function compositeOpacity(value) {
     // Keep locally scored demand legible above the dark basemap. Opacity still
     // falls to zero with the measured field, so this does not manufacture a
@@ -206,6 +213,13 @@
   }
 
   function sourceInfluenceLimitKm(source){return ['school','k12'].includes(source.cat)&&!source.eventStart? .4:Infinity;}
+
+  // Broader interpolation for modeled neighborhood context, not for live
+  // surge/event evidence. Routine schools stay confined to their own block.
+  function displayFootprintKm(source, evidence) {
+    const compactSchool=['school','k12'].includes(source.cat)&&!source.eventStart;
+    return sourceFootprintKm(source)*(evidence==='modeled'&&!compactSchool?1.4:1);
+  }
 
   function sourceFootprintKm(source) {
     const tags = source.tags || {};
@@ -444,7 +458,7 @@
           const evidence=currentEvidence(source,this._when);
           if ((!strength&&evidence!=='current') || !Number.isFinite(source.lat) || !Number.isFinite(source.lon)) return null;
           const center = map.latLngToContainerPoint([source.lat, source.lon]);
-          const zoom = map.getZoom(), baseKm = sourceFootprintKm(source)*(evidence==='modeled'?.65:1), km = baseKm, north = map.latLngToContainerPoint([source.lat + km / 111.32, source.lon]);
+          const km = displayFootprintKm(source,evidence), north = map.latLngToContainerPoint([source.lat + km / 111.32, source.lon]);
           const radius = Math.max(1.25, Math.abs(center.y - north.y));
           const angle = stableAngle(source, index);
           let rx = radius * (.62 + (index % 5) * .055);
@@ -500,11 +514,11 @@
         const worldX=px=>(layerZero.x+pixelOrigin.x+px)/zoomScale,worldY=py=>(layerZero.y+pixelOrigin.y+py)/zoomScale;
         const centerLat=map.getCenter().lat,pxPerKm=256*zoomScale/(40075*Math.max(.2,Math.cos(centerLat*Math.PI/180)));
         // One world pixel at zoom 0 is ~120 km here; noise features are ~1.3 km.
-        const noiseFreq=95,warpPx=.85*pxPerKm;
+        const noiseFreq=95,warpPx=.35*pxPerKm;
         const warpX=new Float32Array(gridWidth*gridHeight),warpY=new Float32Array(warpX.length),texture=new Float32Array(warpX.length);
         for(let y=0;y<gridHeight;y++){const wy=worldY(gridTop+(y+.5)*sample)*noiseFreq;for(let x=0;x<gridWidth;x++){const wx=worldX(gridLeft+(x+.5)*sample)*noiseFreq,i=y*gridWidth+x;
           warpX[i]=(fractalNoise(wx*.4+31.7,wy*.4-12.4)-.5)*2*warpPx+(valueNoise(wx*1.4+5.5,wy*1.4+2.2)-.5)*.6*pxPerKm;warpY[i]=(fractalNoise(wx*.4-8.3,wy*.4+44.1)-.5)*2*warpPx+(valueNoise(wx*1.4-6.6,wy*1.4-1.9)-.5)*.6*pxPerKm;
-          texture[i]=.58+.62*fractalNoise(wx*1.6+3.1,wy*1.6-7.7);}}
+          texture[i]=.86+.2*fractalNoise(wx*1.6+3.1,wy*1.6-7.7);}}
         sources.forEach(source => {
           const radius = Math.max(source.rx, source.ry) * 3.1;
           const left = Math.max(0, Math.floor((source.center.x - radius - gridLeft) / sample));
@@ -552,7 +566,7 @@
         });
 
         // Melt overlapping sources into one layered surface with no seams.
-        const blurCells=clamp(Math.round(.16*pxPerKm/sample),1,6);
+        const blurCells=clamp(Math.round(.28*pxPerKm/sample),1,8);
         [field,shadeField,backgroundField,backgroundShade,historyField,eventField,surgeField].forEach(data=>{boxBlur(data,gridWidth,gridHeight,blurCells);boxBlur(data,gridWidth,gridHeight,blurCells);});
         const paint = document.createElement('canvas');
         paint.width = gridWidth; paint.height = gridHeight;
@@ -562,7 +576,7 @@
           if(!composed.opacity)continue;
           const rgb=colorAt(composed.level),offset=i*4;
           pixels[offset] = rgb[0]; pixels[offset + 1] = rgb[1]; pixels[offset + 2] = rgb[2];
-          pixels[offset + 3] = Math.round(255 * composed.opacity * zoomFactor);
+          pixels[offset + 3] = Math.round(255 * displayOpacity(composed.opacity) * zoomFactor);
         }
         context.putImageData(image, 0, 0);
         output.save();
@@ -575,5 +589,5 @@
     return new HeatLayer();
   }
 
-  return { fractalNoise, boxBlur, historicalPriorForSource, composeFields, composePixel, currentEvidence, evidenceLevel, evidenceOpacity, colorAt, setPalette, getCustomColors, setCustomColors, getPalette: () => activePalette, paletteNames: Object.keys(PALETTES), sourceStrength, areaIntensity, sourceShade, compositeLevel, compositeOpacity, sourceRadiusKm, sourceFootprintKm, sourceInfluenceLimitKm, anchoredGridOrigin, createLayer };
+  return { displayFootprintKm, fractalNoise, boxBlur, historicalPriorForSource, composeFields, composePixel, currentEvidence, evidenceLevel, evidenceOpacity, colorAt, setPalette, getCustomColors, setCustomColors, getPalette: () => activePalette, paletteNames: Object.keys(PALETTES), sourceStrength, areaIntensity, sourceShade, compositeLevel, compositeOpacity, sourceRadiusKm, sourceFootprintKm, sourceInfluenceLimitKm, anchoredGridOrigin, createLayer };
 });

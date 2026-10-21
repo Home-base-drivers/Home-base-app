@@ -38,7 +38,7 @@ test('Custom previews a draft, applies the actual map palette, and restores it o
  ui.custom.listeners.click();assert.equal(ui.editor.hidden,false);
  const colors=['#123456','#abcdef','#fedcba'];
  ui.inputs.forEach((input,index)=>{input.value=colors[index];input.listeners.input()});
- assert.equal(context.HomeBaseHeat.getPalette(),'classic','editing is a preview until Apply');
+ assert.equal(context.HomeBaseHeat.getPalette(),'city_heat','editing is a preview until Apply');
  assert.equal(context.renders.length,0);
  assert.ok(ui.preview.style.background.includes(colors.join(',')));
  ui.apply.listeners.click();
