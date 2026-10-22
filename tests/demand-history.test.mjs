@@ -45,13 +45,15 @@ test('weekday morning Empower wave is a frequent, recent pattern; older single s
  const later=H.forecastFor('Mondawmin',new Date('2026-12-17T07:00:00-05:00'),true);
  assert.ok(later.strength<m.strength*.6);
 });
-test('recovered Sep 11 - Oct 8 originals are dated, hashed and never earlier than the earliest verified capture',()=>{
+test('recovered Aug 28 - Oct 8 originals are dated, hashed and never earlier than the earliest verified capture',()=>{
  const rows=H.screenshotRecords?H.screenshotRecords():null;
  const src=require('node:fs').readFileSync(new URL('../dist/homebase-demand-history.js',import.meta.url),'utf8');
  for(const id of ['uber-baltimore-20260911-0755','uber-baltimore-20260911-1709','uber-baltimore-20260925-1502','uber-baltimore-20261006-1611','uber-baltimore-20261006-1641','uber-baltimore-20261008-1435','uber-baltimore-20261008-2016'])assert.ok(src.includes('"id": "'+id+'"'),id);
  // Ambiguous originals (IMG_3066, IMG_3274, IMG_3362/3363) are ledger-only, not dated history.
  for(const f of ['IMG_3362','IMG_3363'])assert.ok(!src.includes('"name": "'+f),f);
- assert.ok(!/"captured_at": "2026-0[1-8]-/.test(src)&&!/"captured_at": "2026-09-(0\d|10)T/.test(src));
+ // Earliest verified capture is Aug 28, 2026 4:38 PM (OneDrive camera-roll file 20260828_203826000_iOS.png, v285).
+ assert.ok(src.includes('"id": "uber-baltimore-20260828-1638"'));
+ assert.ok(!/"captured_at": "2026-0[1-7]-/.test(src)&&!/"captured_at": "2026-08-([01]\d|2[0-7])T/.test(src));
 });
 test('Oct 8 2:35 PM +$11 and 3:26 PM +$6.25 stay distinct; Oct 6 4:41 cooling is wide-view context, not calm',()=>{
  const at=(a,t)=>H.forecastFor(a,new Date(t),true);
