@@ -1,6 +1,6 @@
 # Surge evidence ledger
 
-How Home Base's screenshot-derived surge history maps to original files. Updated October 21, 2026 (v284).
+How Home Base's screenshot-derived surge history maps to original files. Updated October 21, 2026 (v285).
 
 Originals stay private with the owners. This repository stores only the surge fields, file names and SHA-256 hashes. It never stores the images, notification backgrounds, passenger details or trip addresses.
 
@@ -89,3 +89,79 @@ Upload times are kept separate and are never used as capture times.
 - July 28 – September 10: no originals located.
 - September 12–24 and 26: no dated Uber maps besides the estimated Sep 18 capture.
 - Any Empower notifications before October 7.
+
+## OneDrive camera-roll sync imported in v285 (Oct 21)
+
+Source: the owner's OneDrive Photos after the phone camera roll finished syncing. 759 phone screenshots dated Jul 28 – Oct 21 were reviewed; 465 are Uber or Empower. Records already in the 193-image zip (34 Uber maps, matched within 5 minutes) and Empower alerts already stored were skipped. Capture times come from each file's UTC name (`YYYYMMDD_HHMMSS000_iOS.png`) converted to Eastern, and match the phone clock shown in the image.
+
+| Capture (America/New_York) | Record | Areas |
+|---|---|---|
+| Fri Aug 28, 4:38 PM | `uber-baltimore-20260828-1638` | 4 |
+| Sat Sep 12, 9:19 PM | `uber-baltimore-20260912-2119` | 11 |
+| Mon Sep 21, 11:35 PM | `uber-baltimore-20260921-2335` | 8 |
+| Tue Sep 22, 2:34 PM | `uber-baltimore-20260922-1434` | 9 |
+| Wed Sep 23, 7:05 AM | `uber-baltimore-20260923-0705` | 12 |
+| Wed Sep 23, 9:23 PM | `uber-baltimore-20260923-2123` | 3 |
+| Thu Sep 24, 7:33 AM | `uber-baltimore-20260924-0733` | 10 |
+| Sat Sep 26, 6:27 AM | `uber-baltimore-20260926-0627` | 10 |
+| Sun Sep 27, 11:20 AM | `uber-baltimore-20260927-1120` | 3 |
+| Sun Sep 27, 11:34 PM | `uber-baltimore-20260927-2334` | 4 |
+| Tue Sep 29, 7:12 PM | `uber-baltimore-20260929-1912` | 4 |
+| Wed Sep 30, 11:17 AM | `uber-baltimore-20260930-1117` | 3 |
+| Wed Sep 30, 10:39 PM | `uber-baltimore-20260930-2239` | 6 |
+| Sat Oct 3, 9:25 PM | `uber-baltimore-20261003-2125` | 2 |
+| Sun Oct 4, 10:18 AM | `uber-baltimore-20261004-1018` | 7 |
+| Sun Oct 4, 5:34 PM | `uber-baltimore-20261004-1734` | 1 |
+| Thu Oct 8, 4:17 PM | `uber-baltimore-20261008-1617` | 4 |
+| Thu Oct 8, 4:42 PM | `empower-baltimore-20261008-1642-downtown` | 1 |
+| Thu Oct 8, 4:49 PM | `empower-baltimore-20261008-1649-downtown` | 1 |
+| Thu Oct 8, 10:19 PM | `empower-baltimore-20261008-2219-downtown` | 1 |
+| Fri Oct 9, 6:45 AM | `empower-baltimore-20261009-0645-mondawmin-frankford-broadway` | 3 |
+| Fri Oct 9, 7:45 AM | `empower-baltimore-20261009-0745-union-broadway-rosemont-mondawmin-frankford` | 5 |
+| Fri Oct 9, 2:57 PM | `uber-baltimore-20261009-1457` | 12 |
+| Sat Oct 10, 3:28 PM | `uber-baltimore-20261010-1528` | 1 |
+| Sat Oct 10, 4:33 PM | `uber-baltimore-20261010-1633` | 4 |
+| Sat Oct 10, 7:48 PM | `uber-baltimore-20261010-1948` | 1 |
+| Sat Oct 10, 9:11 PM | `uber-baltimore-20261010-2111` | 2 |
+| Sat Oct 10, 10:18 PM | `uber-baltimore-20261010-2218` | 23 |
+| Sat Oct 10, 10:19 PM | `uber-baltimore-20261010-2219` | 5 |
+| Sun Oct 11, 12:35 PM | `uber-baltimore-20261011-1235` | 6 |
+| Tue Oct 13, 7:31 AM | `empower-baltimore-20261013-0731-frankford` | 1 |
+| Tue Oct 13, 7:35 AM | `empower-baltimore-20261013-0735-belair-edison` | 1 |
+| Tue Oct 13, 7:45 AM | `empower-baltimore-20261013-0745-mondawmin` | 1 |
+| Tue Oct 13, 7:49 AM | `empower-baltimore-20261013-0749-mount-broadway` | 2 |
+| Tue Oct 13, 7:52 AM | `empower-baltimore-20261013-0752-mondawmin` | 1 |
+| Tue Oct 13, 7:55 AM | `empower-baltimore-20261013-0755-mount-broadway` | 2 |
+| Tue Oct 13, 8:56 AM | `empower-baltimore-20261013-0856-mount` | 1 |
+| Tue Oct 13, 4:44 PM | `empower-baltimore-20261013-1644-mount-downtown` | 2 |
+| Tue Oct 13, 4:49 PM | `empower-baltimore-20261013-1649-downtown` | 1 |
+| Tue Oct 13, 7:55 PM | `uber-baltimore-20261013-1955` | 4 |
+| Tue Oct 13, 8:18 PM | `uber-baltimore-20261013-2018` | 4 |
+| Tue Oct 13, 8:36 PM | `uber-baltimore-20261013-2036` | 1 |
+| Tue Oct 13, 8:49 PM | `uber-baltimore-20261013-2049` | 1 |
+| Tue Oct 13, 11:10 PM | `uber-baltimore-20261013-2310` | 2 |
+| Tue Oct 13, 11:11 PM | `uber-baltimore-20261013-2311` | 4 |
+| Wed Oct 14, 8:19 AM | `uber-baltimore-20261014-0819` | 10 |
+| Wed Oct 14, 8:22 AM | `uber-baltimore-20261014-0822` | 7 |
+| Wed Oct 14, 8:24 AM | `uber-baltimore-20261014-0824` | 3 |
+| Wed Oct 14, 8:26 AM | `uber-baltimore-20261014-0826` | 6 |
+| Wed Oct 14, 8:28 AM | `uber-baltimore-20261014-0828` | 2 |
+| Wed Oct 14, 8:34 AM | `uber-baltimore-20261014-0834` | 1 |
+| Wed Oct 14, 8:41 AM | `uber-baltimore-20261014-0841` | 4 |
+| Wed Oct 14, 8:43 AM | `uber-baltimore-20261014-0843` | 3 |
+| Wed Oct 14, 2:46 PM | `uber-baltimore-20261014-1446` | 9 |
+| Wed Oct 14, 5:23 PM | `uber-baltimore-20261014-1723` | 5 |
+| Wed Oct 14, 5:26 PM | `uber-baltimore-20261014-1726` | 6 |
+| Wed Oct 14, 5:27 PM | `uber-baltimore-20261014-1727` | 5 |
+| Wed Oct 14, 5:51 PM | `uber-baltimore-20261014-1751` | 3 |
+| Thu Oct 15, 8:38 AM | `uber-baltimore-20261015-0838` | 1 |
+| Thu Oct 15, 8:53 AM | `uber-baltimore-20261015-0853` | 5 |
+| Thu Oct 15, 3:00 PM | `uber-baltimore-20261015-1500` | 9 |
+
+**Resolved:** IMG_3362/3363 (phone clock 10:39) are OneDrive files `20261001_023915000_iOS.png` and `20261001_023927000_iOS.png`, i.e. **Wed Sep 30, 10:39 PM**. Stored as `uber-baltimore-20260930-2239`.
+
+**Earliest verified Uber surge capture is now Fri Aug 28, 2026, 4:38 PM** (`20260828_203826000_iOS.png`). No Uber or Empower screenshot dated Jul 28 – Aug 27 exists in OneDrive.
+
+**Not demand evidence (skipped):** Home Base app screens, Uber earnings/trip-activity screens (64), Empower earnings screens (6), a Miami Home Base map, and a New Jersey (Mahwah/Ramsey) map.
+
+**Still missing after OneDrive:** Sep 1–10 and Sep 13–20 have no Uber maps; Empower notifications before Oct 7 were not captured.
