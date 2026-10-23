@@ -149,9 +149,9 @@ async function publicPage(url, request) {
   if (key && cache.has(key)) return cache.get(key);
   const task = (async () => {
     const response = await request(url, { signal: AbortSignal.timeout(15_000), headers: { Accept: 'text/html', 'User-Agent': USER_AGENT } });
-    if (!response.ok) throw Error('Public calendar unavailable');
+    if (!response.ok) throw Error(`http_${response.status}`);
     const html = await response.text();
-    if (!/<html|application\/ld\+json/i.test(html) && !/^\s*[\[{]/.test(html)) throw Error('Invalid public calendar');
+    if (!/<html|application\/ld\+json/i.test(html) && !/^\s*[\[{]/.test(html)) throw Error('not_html');
     return html;
   })();
   if (key) cache.set(key, task);
@@ -162,24 +162,24 @@ export async function publicEventCalendars(market, now = Date.now(), request = f
   const sources = market.publicCalendars || [];
   if (!sources.length) return { status: 'not_supported', events: [], sources: [] };
   const results = await Promise.all(sources.map(async source => {
-    let url = source.url, loaded = 0, error = false, truncated = false;
+    let url = source.url, loaded = 0, error = false, truncated = false, reason = '';
     const events = [], seenPages = new Set();
     for (let page = 0; url && page < Math.min(6, source.maxPages || 1); page++) {
       if (seenPages.has(url)) break;
       seenPages.add(url);
       try {
         const html = await publicPage(url, request), records = [...structuredEvents(html),...publishedVenueEvents(html,source)];
-        if (!records.length) throw Error('No machine-readable public calendar');
+        if (!records.length) throw Error('no_event_data');
         loaded++;
         events.push(...records.map(event => normalizePublicEvent(event, market, { ...source, url }, now)).filter(Boolean));
         // Stop once dated listings have passed the forecast horizon; do not crawl an entire city catalogue.
         const dated = records.map(e => zonedEventTime(e.startDate, market.timeZone)).filter(Boolean).map(Date.parse);
         if (dated.length && Math.min(...dated) > now + 36 * HOUR) { url = null; break; }
         url = source.maxPages > 1 ? nextPublicPage(html, url) : null;
-      } catch { error = true; break; }
+      } catch (e) { error = true; reason = e?.name === 'TimeoutError' ? 'timeout' : /^(http_\d+|not_html|no_event_data)$/.test(e?.message) ? e.message : 'network_error'; break; }
     }
     truncated = !!url || !!source.nextOnly;
-    return { events, source: { name: source.name, url: source.url, status: error ? loaded ? 'partial' : 'unavailable' : 'active', fetchedAt: loaded ? new Date(now).toISOString() : null, pages: loaded, eventCount: events.length, truncated } };
+    return { events, source: { name: source.name, url: source.url, status: error ? loaded ? 'partial' : 'unavailable' : 'active', fetchedAt: loaded ? new Date(now).toISOString() : null, pages: loaded, eventCount: events.length, truncated, ...(reason ? { reason } : {}) } };
   }));
   const events = [...new Map(results.flatMap(r => r.events).map(e => [publicData.eventIdentity(e), e])).values()].sort((a, b) => a.eventStart.localeCompare(b.eventStart));
   const succeeded = results.filter(r => r.source.status === 'active').length;

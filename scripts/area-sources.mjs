@@ -13,7 +13,7 @@ import { createRequire } from 'node:module';
 
 const ROOT = new URL('../', import.meta.url);
 const require = createRequire(import.meta.url);
-const COLUMNS = ['market_id', 'market_name', 'source_type', 'source_name', 'url', 'needs_key', 'lat', 'lon', 'status', 'items', 'checked_at'];
+const COLUMNS = ['market_id', 'market_name', 'source_type', 'source_name', 'url', 'needs_key', 'lat', 'lon', 'status', 'items', 'checked_at', 'note'];
 
 function km(a, b) {
   const r = n => n * Math.PI / 180, h = Math.sin(r(b.lat - a.lat) / 2) ** 2 + Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * Math.sin(r(b.lon - a.lon) / 2) ** 2;
@@ -35,13 +35,13 @@ export function areaSourceRows(config, sites, snapshot = null) {
   for (const market of config.markets) {
     const live = snapshot?.markets?.find(m => m.id === market.id) || null;
     const base = { market_id: market.id, market_name: market.name };
-    const add = (row, status = {}) => rows.push({ ...base, needs_key: 'no', lat: '', lon: '', status: '', items: '', checked_at: '', ...row, ...(snapshot ? status : {}) });
+    const add = (row, status = {}) => rows.push({ ...base, needs_key: 'no', lat: '', lon: '', status: '', items: '', checked_at: '', note: '', ...row, ...(snapshot ? status : {}) });
     const feed = (f, items) => f ? { status: f.status || f.calendarStatus || 'unknown', items, checked_at: f.fetchedAt || '' } : { status: 'missing' };
 
     for (const cal of market.publicCalendars || []) {
       const s = live?.publicRecords?.sources?.find(x => x.name === cal.name);
       add({ source_type: 'event_calendar', source_name: cal.name, url: cal.url, lat: (cal.venue || cal.venues?.[0])?.lat ?? '', lon: (cal.venue || cal.venues?.[0])?.lon ?? '' },
-        s ? { status: s.status, items: s.eventCount ?? '', checked_at: s.fetchedAt || '' } : { status: 'not_reported' });
+        s ? { status: s.status, items: s.eventCount ?? '', checked_at: s.fetchedAt || '', note: s.reason || '' } : { status: 'not_reported' });
     }
     const sports = live?.publicSports;
     for (const v of market.sportsVenues || []) {
