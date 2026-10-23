@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Home Base">
-  <meta name="homebase-build" content="v286">
+  <meta name="homebase-build" content="v287">
   <meta name="description" content="Home Base connects local driver platforms, earnings forecasts, events and a GPS-based 12-hour route in one app.">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icon-192.png">
@@ -1177,6 +1177,12 @@ function applySiteStatus(sources){
     const i=out.findIndex(v=>v&&v.cat==='medical'&&distanceKm([v.lat,v.lon],[site.lat,site.lon])<=.5);
     if(i>=0)out[i]={...out[i],tags:{...(out[i].tags||{}),...shift}};else out.push({name:site.name,cat:'medical',lat:site.lat,lon:site.lon,tags:{amenity:'hospital',source:'Verified site list',...shift}});
   }
+  // Malls with published hours: closing time is route evidence (shoppers and staff leaving).
+  for(const site of employerSites.filter(s=>s.status==='open'&&s.kind==='mall'&&s.openingHours)){
+    const hours={shop:'mall',opening_hours:site.openingHours,employerSite:true,sourceUrl:site.hoursSource};
+    const i=out.findIndex(v=>v&&v.cat==='shopping'&&distanceKm([v.lat,v.lon],[site.lat,site.lon])<=.5);
+    if(i>=0)out[i]={...out[i],tags:{...(out[i].tags||{}),...hours}};else out.push({name:site.name,cat:'shopping',lat:site.lat,lon:site.lon,tags:{source:'Verified site list',...hours}});
+  }
   return out;
 }
 // Published bell times replace the 8 AM / 2:30 PM defaults for mapped schools
@@ -1383,7 +1389,7 @@ function recheckDemandSources(){if(document.visibilityState!=='visible')return;s
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')recheckDemandSources()});window.addEventListener('pageshow',e=>{if(e.persisted)recheckDemandSources()});window.addEventListener('online',recheckDemandSources);
 window.addEventListener('homebase-calendar-identity',()=>{schoolSearchAt=0;schoolSearchKey='';schoolEventRows=[];if(currentLocation)refreshSchoolEvents(...currentLocation);});
 window.addEventListener('load',()=>{schoolSearchAt=0;if(currentLocation)refreshSchoolEvents(...currentLocation);},{once:true});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>{const replacingWorker=!!navigator.serviceWorker.controller;navigator.serviceWorker.register('sw.js?v=286',{updateViaCache:'none'}).then(r=>{r.update();navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!replacingWorker)return;if(!sessionStorage.getItem('hb-release-reload-v286')){sessionStorage.setItem('hb-release-reload-v286','1');location.reload()}})}).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';})});
+if('serviceWorker' in navigator)window.addEventListener('load',()=>{const replacingWorker=!!navigator.serviceWorker.controller;navigator.serviceWorker.register('sw.js?v=287',{updateViaCache:'none'}).then(r=>{r.update();navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!replacingWorker)return;if(!sessionStorage.getItem('hb-release-reload-v287')){sessionStorage.setItem('hb-release-reload-v287','1');location.reload()}})}).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';})});
 </script>
 <script src="homebase-live.js?v=39"></script>
 </body>

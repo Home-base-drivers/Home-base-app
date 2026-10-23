@@ -401,6 +401,275 @@
       "coordinateSource": "U.S. Census Bureau geocoder",
       "sourceUrl": "https://warehouse.ninja/locations/amazon/SMD1/",
       "note": "Jessup/Elkridge warehouse corridor. Driver trips to and from Dorsey Run Rd at 6-7 AM Oct 12 and +$7-10 bonuses nearby at 11:37 PM Oct 12; shift times not published."
+    },
+    {
+      "id": "hackensack-umc",
+      "name": "Hackensack University Medical Center",
+      "kind": "hospital",
+      "status": "open",
+      "address": "30 Prospect Ave, Hackensack, NJ",
+      "lat": 40.88417,
+      "lon": -74.0575,
+      "coordinateSource": "https://en.wikipedia.org/wiki/Hackensack_University_Medical_Center",
+      "shiftEnds": [
+        7.5,
+        19.5
+      ],
+      "shiftWeight": 4,
+      "shiftSource": "https://jobs.hopkinsmedicine.org/job/99365/patient-care-tech-i-nelson-7-nursing-rot-36-nursing-support-patient-care-us-md-baltimore-johns-hopkins-hospital/",
+      "shiftNote": "Approximate: 12-hour 7am-7pm / 7pm-7am hospital handoff (Johns Hopkins postings); not published for this site."
+    },
+    {
+      "id": "st-josephs-paterson",
+      "name": "St. Joseph's University Medical Center",
+      "kind": "hospital",
+      "status": "open",
+      "address": "703 Main St, Paterson, NJ",
+      "lat": 40.902964,
+      "lon": -74.165912,
+      "coordinateSource": "https://www.skydb.net/building/759352460/st-joseph-s-hospital-and-medical-center/ (secondary source)",
+      "shiftEnds": [
+        7.5,
+        19.5
+      ],
+      "shiftWeight": 4,
+      "shiftSource": "https://jobs.hopkinsmedicine.org/job/99365/patient-care-tech-i-nelson-7-nursing-rot-36-nursing-support-patient-care-us-md-baltimore-johns-hopkins-hospital/",
+      "shiftNote": "Approximate: 12-hour 7am-7pm / 7pm-7am hospital handoff (Johns Hopkins postings); not published for this site."
+    },
+    {
+      "id": "holy-name-teaneck",
+      "name": "Holy Name Medical Center",
+      "kind": "hospital",
+      "status": "open",
+      "address": "718 Teaneck Rd, Teaneck, NJ",
+      "lat": 40.8819,
+      "lon": -74.0091,
+      "coordinateSource": "https://latitude.to/articles-by-country/us/united-states/112270/holy-name-medical-center (secondary source)",
+      "shiftEnds": [
+        7.5,
+        19.5
+      ],
+      "shiftWeight": 4,
+      "shiftSource": "https://jobs.hopkinsmedicine.org/job/99365/patient-care-tech-i-nelson-7-nursing-rot-36-nursing-support-patient-care-us-md-baltimore-johns-hopkins-hospital/",
+      "shiftNote": "Approximate: 12-hour 7am-7pm / 7pm-7am hospital handoff (Johns Hopkins postings); not published for this site."
+    },
+    {
+      "id": "englewood-hospital",
+      "name": "Englewood Hospital",
+      "kind": "hospital",
+      "status": "open",
+      "address": "350 Engle St, Englewood, NJ",
+      "lat": 40.9049,
+      "lon": -73.9671,
+      "coordinateSource": "https://en.wikipedia.org/wiki/Englewood_Hospital_and_Medical_Center",
+      "shiftEnds": [
+        7.5,
+        19.5
+      ],
+      "shiftWeight": 4,
+      "shiftSource": "https://jobs.hopkinsmedicine.org/job/99365/patient-care-tech-i-nelson-7-nursing-rot-36-nursing-support-patient-care-us-md-baltimore-johns-hopkins-hospital/",
+      "shiftNote": "Approximate: 12-hour 7am-7pm / 7pm-7am hospital handoff (Johns Hopkins postings); not published for this site."
+    },
+    {
+      "id": "newark-beth-israel",
+      "name": "Newark Beth Israel Medical Center",
+      "kind": "hospital",
+      "status": "open",
+      "address": "201 Lyons Ave, Newark, NJ",
+      "lat": 40.709831,
+      "lon": -74.212512,
+      "coordinateSource": "https://en.wikipedia.org/wiki/Newark_Beth_Israel_Medical_Center",
+      "shiftEnds": [
+        7.5,
+        19.5
+      ],
+      "shiftWeight": 4,
+      "shiftSource": "https://jobs.hopkinsmedicine.org/job/99365/patient-care-tech-i-nelson-7-nursing-rot-36-nursing-support-patient-care-us-md-baltimore-johns-hopkins-hospital/",
+      "shiftNote": "Approximate: 12-hour 7am-7pm / 7pm-7am hospital handoff (Johns Hopkins postings); not published for this site."
+    },
+    {
+      "id": "university-hospital-newark",
+      "name": "University Hospital (Newark)",
+      "kind": "hospital",
+      "status": "open",
+      "address": "150 Bergen St, Newark, NJ",
+      "lat": 40.7403,
+      "lon": -74.1902,
+      "coordinateSource": "https://en.wikipedia.org/wiki/University_Hospital_(Newark,_New_Jersey)",
+      "shiftEnds": [
+        7.5,
+        19.5
+      ],
+      "shiftWeight": 4,
+      "shiftSource": "https://jobs.hopkinsmedicine.org/job/99365/patient-care-tech-i-nelson-7-nursing-rot-36-nursing-support-patient-care-us-md-baltimore-johns-hopkins-hospital/",
+      "shiftNote": "Approximate: 12-hour 7am-7pm / 7pm-7am hospital handoff (Johns Hopkins postings); not published for this site."
+    },
+    {
+      "id": "jersey-city-medical-center",
+      "name": "Jersey City Medical Center",
+      "kind": "hospital",
+      "status": "open",
+      "address": "355 Grand St, Jersey City, NJ",
+      "lat": 40.71611,
+      "lon": -74.05028,
+      "coordinateSource": "https://en.wikipedia.org/wiki/Jersey_City_Medical_Center",
+      "shiftEnds": [
+        7.5,
+        19.5
+      ],
+      "shiftWeight": 4,
+      "shiftSource": "https://jobs.hopkinsmedicine.org/job/99365/patient-care-tech-i-nelson-7-nursing-rot-36-nursing-support-patient-care-us-md-baltimore-johns-hopkins-hospital/",
+      "shiftNote": "Approximate: 12-hour 7am-7pm / 7pm-7am hospital handoff (Johns Hopkins postings); not published for this site."
+    },
+    {
+      "id": "nyp-columbia",
+      "name": "NewYork-Presbyterian/Columbia University Irving Medical Center",
+      "kind": "hospital",
+      "status": "open",
+      "address": "622 W 168th St, New York, NY",
+      "lat": 40.841194,
+      "lon": -73.940806,
+      "coordinateSource": "https://en.wikipedia.org/wiki/Columbia_University_Irving_Medical_Center",
+      "shiftEnds": [
+        7.5,
+        19.5
+      ],
+      "shiftWeight": 4,
+      "shiftSource": "https://jobs.hopkinsmedicine.org/job/99365/patient-care-tech-i-nelson-7-nursing-rot-36-nursing-support-patient-care-us-md-baltimore-johns-hopkins-hospital/",
+      "shiftNote": "Approximate: 12-hour 7am-7pm / 7pm-7am hospital handoff (Johns Hopkins postings); not published for this site."
+    },
+    {
+      "id": "mount-sinai-manhattan",
+      "name": "The Mount Sinai Hospital",
+      "kind": "hospital",
+      "status": "open",
+      "address": "1468 Madison Ave, New York, NY",
+      "lat": 40.790066,
+      "lon": -73.953249,
+      "coordinateSource": "https://en.wikipedia.org/wiki/Mount_Sinai_Hospital_(Manhattan)",
+      "shiftEnds": [
+        7.5,
+        19.5
+      ],
+      "shiftWeight": 4,
+      "shiftSource": "https://jobs.hopkinsmedicine.org/job/99365/patient-care-tech-i-nelson-7-nursing-rot-36-nursing-support-patient-care-us-md-baltimore-johns-hopkins-hospital/",
+      "shiftNote": "Approximate: 12-hour 7am-7pm / 7pm-7am hospital handoff (Johns Hopkins postings); not published for this site."
+    },
+    {
+      "id": "nyu-langone-tisch",
+      "name": "NYU Langone Tisch Hospital",
+      "kind": "hospital",
+      "status": "open",
+      "address": "550 First Ave, New York, NY",
+      "lat": 40.7419694,
+      "lon": -73.9740333,
+      "coordinateSource": "https://en.wikipedia.org/wiki/NYU_Langone_Health",
+      "shiftEnds": [
+        7.5,
+        19.5
+      ],
+      "shiftWeight": 4,
+      "shiftSource": "https://jobs.hopkinsmedicine.org/job/99365/patient-care-tech-i-nelson-7-nursing-rot-36-nursing-support-patient-care-us-md-baltimore-johns-hopkins-hospital/",
+      "shiftNote": "Approximate: 12-hour 7am-7pm / 7pm-7am hospital handoff (Johns Hopkins postings); not published for this site."
+    },
+    {
+      "id": "bellevue",
+      "name": "Bellevue Hospital",
+      "kind": "hospital",
+      "status": "open",
+      "address": "462 First Ave, New York, NY",
+      "lat": 40.7393,
+      "lon": -73.9753,
+      "coordinateSource": "https://en.wikipedia.org/wiki/Bellevue_Hospital",
+      "shiftEnds": [
+        7.5,
+        19.5
+      ],
+      "shiftWeight": 4,
+      "shiftSource": "https://jobs.hopkinsmedicine.org/job/99365/patient-care-tech-i-nelson-7-nursing-rot-36-nursing-support-patient-care-us-md-baltimore-johns-hopkins-hospital/",
+      "shiftNote": "Approximate: 12-hour 7am-7pm / 7pm-7am hospital handoff (Johns Hopkins postings); not published for this site."
+    },
+    {
+      "id": "montefiore-moses",
+      "name": "Montefiore Medical Center (Moses campus)",
+      "kind": "hospital",
+      "status": "open",
+      "address": "111 E 210th St, Bronx, NY",
+      "lat": 40.880375,
+      "lon": -73.879075,
+      "coordinateSource": "https://en.wikipedia.org/wiki/Montefiore_Einstein_Medical_Center",
+      "shiftEnds": [
+        7.5,
+        19.5
+      ],
+      "shiftWeight": 4,
+      "shiftSource": "https://jobs.hopkinsmedicine.org/job/99365/patient-care-tech-i-nelson-7-nursing-rot-36-nursing-support-patient-care-us-md-baltimore-johns-hopkins-hospital/",
+      "shiftNote": "Approximate: 12-hour 7am-7pm / 7pm-7am hospital handoff (Johns Hopkins postings); not published for this site."
+    },
+    {
+      "id": "garden-state-plaza",
+      "name": "Westfield Garden State Plaza",
+      "kind": "mall",
+      "status": "open",
+      "address": "One Garden State Plaza, Paramus, NJ",
+      "lat": 40.91896,
+      "lon": -74.07639,
+      "coordinateSource": "https://en.wikipedia.org/wiki/Garden_State_Plaza",
+      "openingHours": "Mo-Th 10:00-21:00; Fr-Sa 10:00-21:30; Su off",
+      "hoursSource": "https://www.lego.com/en-us/stores/store/westfield-garden-state-plaza",
+      "hoursNote": "Closing times from a tenant listing; Sunday closed under Bergen County blue laws. Only the closing time is used."
+    },
+    {
+      "id": "paramus-park",
+      "name": "Paramus Park",
+      "kind": "mall",
+      "status": "open",
+      "address": "700 Paramus Park, Paramus, NJ",
+      "lat": 40.957656,
+      "lon": -74.070214,
+      "coordinateSource": "https://en.wikipedia.org/wiki/Paramus_Park",
+      "openingHours": "Mo-Sa 10:00-21:00; Su off",
+      "hoursSource": "https://www.macys.com/stores/nj/paramus/paramus-park_10.html",
+      "hoursNote": "Closing times from a tenant listing; Sunday closed under Bergen County blue laws. Only the closing time is used."
+    },
+    {
+      "id": "willowbrook-mall",
+      "name": "Willowbrook Mall",
+      "kind": "mall",
+      "status": "open",
+      "address": "1400 Willowbrook Mall, Wayne, NJ",
+      "lat": 40.889,
+      "lon": -74.26,
+      "coordinateSource": "https://en.wikipedia.org/wiki/Willowbrook_Mall_(New_Jersey)",
+      "openingHours": "Mo-Th 10:00-20:00; Fr-Sa 10:00-21:00; Su 11:00-19:00",
+      "hoursSource": "https://www.willowbrook-mall.com/en/visit/",
+      "hoursNote": "Official hours (Passaic County, open Sundays). Only the closing time is used."
+    },
+    {
+      "id": "jersey-gardens",
+      "name": "The Mills at Jersey Gardens",
+      "kind": "mall",
+      "status": "open",
+      "address": "651 Kapkowski Rd, Elizabeth, NJ",
+      "lat": 40.660046,
+      "lon": -74.174049,
+      "coordinateSource": "https://www.latlong.net/place/the-mills-at-jersey-gardens-nj-usa-33205.html",
+      "openingHours": "Mo-Sa 10:00-21:00; Su 11:00-19:00",
+      "hoursSource": "https://www.simon.com/mall/the-mills-at-jersey-gardens/hours",
+      "hoursNote": "Official closing times. Only the closing time is used."
+    },
+    {
+      "id": "newport-centre",
+      "name": "Newport Centre",
+      "kind": "mall",
+      "status": "open",
+      "address": "30 Mall Dr W, Jersey City, NJ",
+      "lat": 40.72694,
+      "lon": -74.03778,
+      "coordinateSource": "https://en.wikipedia.org/wiki/Newport_Centre_(shopping_mall)",
+      "openingHours": "Mo-Th 11:00-20:00; Fr 11:00-21:00; Sa 10:00-21:00; Su 11:00-19:00",
+      "hoursSource": "https://www.simon.com/mall/newport-centre/hours",
+      "hoursNote": "Official hours. Only the closing time is used."
     }
   ]
 }
