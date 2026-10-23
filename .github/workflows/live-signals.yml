@@ -64,12 +64,14 @@ jobs:
           out="$RUNNER_TEMP/signals"
           mkdir -p "$out"
           cp dist/provider-signals.json "$out/"
+          # Every area's source list with live status, item counts and check times.
+          node scripts/area-sources.mjs --status dist/provider-signals.json "$out/area-sources-status.csv"
           printf '%s\n' 'Machine-owned live data branch. Written by .github/workflows/live-signals.yml; do not edit by hand.' > "$out/README.md"
           cd "$out"
           git init -q -b signals
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add provider-signals.json README.md
+          git add provider-signals.json area-sources-status.csv README.md
           git commit -q -m "data: live demand signals $(date -u +%Y-%m-%dT%H:%MZ)"
           # A single replaced commit keeps the data branch small; it never touches main.
           git push -q --force "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/signals

@@ -1177,6 +1177,12 @@ function applySiteStatus(sources){
     const i=out.findIndex(v=>v&&v.cat==='medical'&&distanceKm([v.lat,v.lon],[site.lat,site.lon])<=.5);
     if(i>=0)out[i]={...out[i],tags:{...(out[i].tags||{}),...shift}};else out.push({name:site.name,cat:'medical',lat:site.lat,lon:site.lon,tags:{amenity:'hospital',source:'Verified site list',...shift}});
   }
+  // Malls with published hours: closing time is route evidence (shoppers and staff leaving).
+  for(const site of employerSites.filter(s=>s.status==='open'&&s.kind==='mall'&&s.openingHours)){
+    const hours={shop:'mall',opening_hours:site.openingHours,employerSite:true,sourceUrl:site.hoursSource};
+    const i=out.findIndex(v=>v&&v.cat==='shopping'&&distanceKm([v.lat,v.lon],[site.lat,site.lon])<=.5);
+    if(i>=0)out[i]={...out[i],tags:{...(out[i].tags||{}),...hours}};else out.push({name:site.name,cat:'shopping',lat:site.lat,lon:site.lon,tags:{source:'Verified site list',...hours}});
+  }
   return out;
 }
 // Published bell times replace the 8 AM / 2:30 PM defaults for mapped schools
