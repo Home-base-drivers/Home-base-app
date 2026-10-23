@@ -513,6 +513,38 @@
           "name": "Ticketmaster New York public calendar",
           "url": "https://www.ticketmaster.com/discover/new-york-city",
           "maxPages": 6
+        },
+        {
+          "name": "NJPAC events",
+          "url": "https://www.njpac.org/events/",
+          "classification": "performing arts",
+          "venues": [
+            {
+              "name": "New Jersey Performing Arts Center",
+              "lat": 40.7401467,
+              "lon": -74.1679199,
+              "coordinateSource": "https://en.wikipedia.org/wiki/New_Jersey_Performing_Arts_Center"
+            },
+            {
+              "name": "NJPAC",
+              "lat": 40.7401467,
+              "lon": -74.1679199,
+              "coordinateSource": "https://en.wikipedia.org/wiki/New_Jersey_Performing_Arts_Center"
+            }
+          ]
+        },
+        {
+          "name": "Prudential Center events",
+          "url": "https://www.prucenter.com/events",
+          "classification": "arena",
+          "venues": [
+            {
+              "name": "Prudential Center",
+              "lat": 40.73361,
+              "lon": -74.17111,
+              "coordinateSource": "https://en.wikipedia.org/wiki/Prudential_Center"
+            }
+          ]
         }
       ],
       "sportsVenues": [
@@ -600,6 +632,70 @@
           "name": "Ticketmaster New York public calendar",
           "url": "https://www.ticketmaster.com/discover/new-york-city",
           "maxPages": 6
+        },
+        {
+          "name": "MSG Entertainment calendar (MSG, Radio City, Beacon)",
+          "url": "https://www.msg.com/calendar",
+          "classification": "arena",
+          "venues": [
+            {
+              "name": "Madison Square Garden",
+              "lat": 40.75056,
+              "lon": -73.99361,
+              "coordinateSource": "https://en.wikipedia.org/wiki/Madison_Square_Garden"
+            },
+            {
+              "name": "Radio City Music Hall",
+              "lat": 40.75972,
+              "lon": -73.97917,
+              "coordinateSource": "https://en.wikipedia.org/wiki/Radio_City_Music_Hall"
+            },
+            {
+              "name": "Beacon Theatre",
+              "lat": 40.78056,
+              "lon": -73.98111,
+              "coordinateSource": "https://en.wikipedia.org/wiki/Beacon_Theatre_(New_York_City)"
+            }
+          ]
+        },
+        {
+          "name": "Barclays Center events",
+          "url": "https://www.barclayscenter.com/events",
+          "classification": "arena",
+          "venues": [
+            {
+              "name": "Barclays Center",
+              "lat": 40.6826611,
+              "lon": -73.975225,
+              "coordinateSource": "https://en.wikipedia.org/wiki/Barclays_Center"
+            }
+          ]
+        },
+        {
+          "name": "UBS Arena events",
+          "url": "https://www.ubsarena.com/events",
+          "classification": "arena",
+          "venues": [
+            {
+              "name": "UBS Arena",
+              "lat": 40.71179,
+              "lon": -73.72604,
+              "coordinateSource": "https://en.wikipedia.org/wiki/UBS_Arena"
+            }
+          ]
+        },
+        {
+          "name": "Terminal 5 shows (Bowery Presents)",
+          "url": "https://www.bowerypresents.com/shows/terminal-5",
+          "classification": "concert",
+          "venues": [
+            {
+              "name": "Terminal 5",
+              "lat": 40.76965,
+              "lon": -73.99275,
+              "coordinateSource": "https://en.wikipedia.org/wiki/Terminal_5_(venue)"
+            }
+          ]
         }
       ],
       "sportsVenues": [

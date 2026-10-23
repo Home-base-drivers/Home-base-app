@@ -40,7 +40,7 @@ export function areaSourceRows(config, sites, snapshot = null) {
 
     for (const cal of market.publicCalendars || []) {
       const s = live?.publicRecords?.sources?.find(x => x.name === cal.name);
-      add({ source_type: 'event_calendar', source_name: cal.name, url: cal.url, lat: cal.venue?.lat ?? '', lon: cal.venue?.lon ?? '' },
+      add({ source_type: 'event_calendar', source_name: cal.name, url: cal.url, lat: (cal.venue || cal.venues?.[0])?.lat ?? '', lon: (cal.venue || cal.venues?.[0])?.lon ?? '' },
         s ? { status: s.status, items: s.eventCount ?? '', checked_at: s.fetchedAt || '' } : { status: 'not_reported' });
     }
     const sports = live?.publicSports;
