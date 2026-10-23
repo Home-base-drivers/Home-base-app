@@ -165,3 +165,10 @@ Source: the owner's OneDrive Photos after the phone camera roll finished syncing
 **Not demand evidence (skipped):** Home Base app screens, Uber earnings/trip-activity screens (64), Empower earnings screens (6), a Miami Home Base map, and a New Jersey (Mahwah/Ramsey) map.
 
 **Still missing after OneDrive:** Sep 1–10 and Sep 13–20 have no Uber maps; Empower notifications before Oct 7 were not captured.
+
+## October 21–22 Empower alerts (v286)
+
+Lock-screen captures taken Thu Oct 22, 9:12–9:14 PM (EXIF), so "Yesterday" is Wed Oct 21.
+
+- **Wed Oct 21:** exact times for the morning wave (Rosemont $5–7, Mondawmin $5, Mt. Vernon $5, 7:27–7:58 AM), Downtown $5 at 3:30 PM, Towson $5 at 3:42 PM, Downtown $6 at 6:11 PM, plus 22 average-surge notices. The earlier "3h ago" Oct 21 window is kept but marked superseded, so those alerts are not counted twice.
+- **Thu Oct 22:** the largest Empower morning wave on record, 6:38–8:42 AM: Broadway E. $10 (6:59), Belair-Edison $10 (7:53), Frankford $10 (7:56), Rosemont $8 (7:36), Mondawmin and Union Sq. $6. Afternoon: Downtown $5 (1:47, 4:00, 4:05 PM), Broadway E. $5 (3:51, 3:56 PM), Charles Village $6 (4:39 PM). The overnight average reached $4 (3:42, 4:14, 4:52 AM) and $5 at 6:52 AM.

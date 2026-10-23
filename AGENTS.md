@@ -29,6 +29,21 @@ work has equal priority. Preserve both owners' changes.
 7. Never force-push, bypass hooks, or retry a rejected update with stale file
    contents. Wait for your own validation/deployment to finish and verify the result.
 
+## Demand data contract (heat, events, route)
+
+Design work on the heat map (palette, blur, footprint, layout, controls) changes
+how data is drawn, never what data exists. Do not delete, reorder or rewrite
+stored records in `dist/homebase-demand-history.js`, remove sources from
+`config/provider-markets.json`, or change the data-module script tags in
+`dist/index.html` as part of a design change. History is append-only: corrections
+are added as patches that keep the original record id.
+
+`tests/demand-data-integrity.test.mjs` enforces this. It fails when a stored
+surge record disappears, when history stops feeding heat or route evidence, when
+the published snapshot stops yielding events, places or bells, when a market has
+no keyless event source, or when the app stops re-checking sources on open. After
+adding records, run `npm run history:manifest` and commit the updated manifest.
+
 ## Before you start
 
 Read [docs/AGENT_ENVIRONMENT.md](docs/AGENT_ENVIRONMENT.md). It covers the
