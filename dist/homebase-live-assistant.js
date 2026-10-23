@@ -92,7 +92,7 @@ async function startLive({question=''}={}){
   if(attempt!==generation||error?.code==='live_cancelled')return;
   const reason=window.HomeBaseAgentClient?.describeError?.(error)||String(error?.message||'GPT Live could not connect.');
   // No plan or no minutes left: keep talking on the phone for free.
-  if(error?.code==='plan_required'||error?.code==='voice_minutes_used_up'){await stop(reason,'failed');window.HomeBaseInternalAI?.refreshEntitlement?.();return deviceVoice(reason);}
+  if(error?.code==='plan_required'||error?.code==='voice_minutes_used_up'||error?.code==='live_unavailable'){await stop(reason,'failed');window.HomeBaseInternalAI?.refreshEntitlement?.();return deviceVoice(reason);}
   await stop('GPT Live unavailable · '+reason+' Tap to retry, or use Ask Homebase chat.','failed');
  }
 }

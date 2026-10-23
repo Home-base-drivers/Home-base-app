@@ -6,7 +6,7 @@
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const PLANS=[
   {id:'free',name:'Free',price:'$0',features:['Built-in AI on your phone: earnings, goal pace, offer checks','Daily briefing, weekly report, "keep driving?" advice','Screenshots → trips, and your own trip CSV','Heat map, 12-hour route, events, phone voice']},
-  {id:'plus',name:'Plus',price:'$19.99/mo',features:['Everything in Free','GPT answers any question, by text or voice','GPT voice replies','120 GPT Live dispatcher minutes a month']},
+  {id:'plus',name:'Plus',price:'$19.99/mo',features:['Everything in Free','Home Base AI (Claude) answers any question, by text or voice','Spoken replies, plus photo and web lookups','120 GPT Live dispatcher minutes a month']},
   {id:'pro',name:'Pro',price:'$39.99/mo',features:['Everything in Plus','260 GPT Live minutes a month','For drivers who talk to dispatch all shift']}
  ];
  let status=null,busy=false,message='';

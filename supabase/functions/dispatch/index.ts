@@ -7,13 +7,21 @@ import {makeLiveSessionCreator} from './live.mjs';
 import {makeHomeBaseAgent} from './agent.mjs';
 import {withAllowedOrigin} from './cors.mjs';
 const engine=(globalThis as any).HomeBaseDispatch;
-const parseLanguage=makeLanguageParser({engine,apiKey:Deno.env.get('OPENAI_API_KEY'),model:Deno.env.get('OPENAI_COPILOT_MODEL')});
-const translateLanguage=makeLanguageTranslator({apiKey:Deno.env.get('OPENAI_API_KEY'),model:Deno.env.get('OPENAI_COPILOT_MODEL')});
-const synthesizeVoice=makeVoiceSynthesizer({apiKey:Deno.env.get('OPENAI_API_KEY'),model:Deno.env.get('OPENAI_TTS_MODEL')||'gpt-4o-mini-tts'});
-const createLiveSession=makeLiveSessionCreator({apiKey:Deno.env.get('OPENAI_API_KEY'),liveModel:Deno.env.get('OPENAI_LIVE_MODEL')||'gpt-live-1',backendModel:Deno.env.get('OPENAI_LIVE_BACKEND_MODEL')||'gpt-6-luna'});
+// Text intelligence runs on Claude when ANTHROPIC_API_KEY is set (AI_PROVIDER=openai forces OpenAI).
+// GPT voice and GPT Live stay OpenAI-only and switch on only when OPENAI_API_KEY is set; without it
+// spoken replies use the phone's own voice and the conversation still uses Home Base AI answers.
+const openaiKey=Deno.env.get('OPENAI_API_KEY'),claudeKey=Deno.env.get('ANTHROPIC_API_KEY');
+const provider=Deno.env.get('AI_PROVIDER')==='openai'||!claudeKey?'openai':'anthropic';
+const textKey=provider==='anthropic'?claudeKey:openaiKey;
+const claudeModel=Deno.env.get('CLAUDE_MODEL')||'claude-sonnet-5-5',claudeFastModel=Deno.env.get('CLAUDE_FAST_MODEL')||'claude-haiku-5-5';
+const fastModel=provider==='anthropic'?claudeFastModel:Deno.env.get('OPENAI_COPILOT_MODEL');
+const parseLanguage=makeLanguageParser({engine,provider,apiKey:textKey,model:fastModel});
+const translateLanguage=makeLanguageTranslator({provider,apiKey:textKey,model:fastModel});
+const synthesizeVoice=makeVoiceSynthesizer({apiKey:openaiKey,model:Deno.env.get('OPENAI_TTS_MODEL')||'gpt-4o-mini-tts'});
+const createLiveSession=openaiKey?makeLiveSessionCreator({apiKey:openaiKey,liveModel:Deno.env.get('OPENAI_LIVE_MODEL')||'gpt-live-1',backendModel:Deno.env.get('OPENAI_LIVE_BACKEND_MODEL')||'gpt-6-luna'}):null;
 Deno.serve(withAllowedOrigin(async(request:Request)=>{
  const client=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_ANON_KEY')!,{global:{headers:{Authorization:request.headers.get('Authorization')||''}},auth:{persistSession:false,autoRefreshToken:false}});
- const agent=makeHomeBaseAgent({apiKey:Deno.env.get('OPENAI_API_KEY'),model:Deno.env.get('OPENAI_AGENT_MODEL')||Deno.env.get('OPENAI_LIVE_BACKEND_MODEL')||'gpt-6-luna',
+ const agent=makeHomeBaseAgent({provider,apiKey:textKey,fastModel:claudeFastModel,model:provider==='anthropic'?claudeModel:Deno.env.get('OPENAI_AGENT_MODEL')||Deno.env.get('OPENAI_LIVE_BACKEND_MODEL')||'gpt-6-luna',
   loadMemory:async(userId:string)=>{const {data,error}=await client.from('homebase_agent_memory').select('memory_key,memory_type,content,confidence,source,learned_at').eq('user_id',userId).eq('active',true).order('learned_at',{ascending:false}).limit(100);if(error)throw error;return data||[];},
   loadTurns:async(userId:string,conversationId:string)=>{const {data,error}=await client.from('homebase_agent_turns').select('role,content,created_at').eq('user_id',userId).eq('conversation_id',conversationId).order('created_at',{ascending:false}).limit(60);if(error)throw error;return(data||[]).reverse();},
   saveTurn:async(userId:string,conversationId:string,role:string,content:string,context:any)=>{const {error}=await client.from('homebase_agent_turns').insert({user_id:userId,conversation_id:conversationId,role,content,context});if(error)throw error;},
