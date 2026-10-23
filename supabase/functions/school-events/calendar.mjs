@@ -1148,6 +1148,72 @@ var provider_markets_default = {
           url: "https://www.ticketmaster.com/discover/new-york-city",
           maxPages: 6
         }
+      ],
+      sportsVenues: [
+        {
+          name: "MetLife Stadium",
+          match: "metlife stadium",
+          lat: 40.81361,
+          lon: -74.07444,
+          source: "Wikipedia venue coordinates (Oct 22, 2026)",
+          city: "East Rutherford"
+        },
+        {
+          name: "Prudential Center",
+          match: "prudential center",
+          lat: 40.73361,
+          lon: -74.17111,
+          source: "Wikipedia venue coordinates (Oct 22, 2026)",
+          city: "Newark"
+        },
+        {
+          name: "Sports Illustrated Stadium",
+          match: "sports illustrated stadium",
+          lat: 40.73667,
+          lon: -74.15028,
+          source: "Wikipedia venue coordinates (Oct 22, 2026)",
+          city: "Harrison"
+        },
+        {
+          name: "Madison Square Garden",
+          match: "madison square garden",
+          lat: 40.75056,
+          lon: -73.99361,
+          source: "Wikipedia venue coordinates (Oct 22, 2026)",
+          city: "New York"
+        },
+        {
+          name: "Barclays Center",
+          match: "barclays center",
+          lat: 40.68266,
+          lon: -73.97523,
+          source: "Wikipedia venue coordinates (Oct 22, 2026)",
+          city: "Brooklyn"
+        },
+        {
+          name: "Yankee Stadium",
+          match: "yankee stadium",
+          lat: 40.82917,
+          lon: -73.92639,
+          source: "Wikipedia venue coordinates (Oct 22, 2026)",
+          city: "Bronx"
+        },
+        {
+          name: "Citi Field",
+          match: "citi field",
+          lat: 40.75694,
+          lon: -73.84583,
+          source: "Wikipedia venue coordinates (Oct 22, 2026)",
+          city: "Flushing"
+        },
+        {
+          name: "UBS Arena",
+          match: "ubs arena",
+          lat: 40.71179,
+          lon: -73.72604,
+          source: "Wikipedia venue coordinates (Oct 22, 2026)",
+          city: "Elmont"
+        }
       ]
     },
     {
@@ -1168,6 +1234,72 @@ var provider_markets_default = {
           name: "Ticketmaster New York public calendar",
           url: "https://www.ticketmaster.com/discover/new-york-city",
           maxPages: 6
+        }
+      ],
+      sportsVenues: [
+        {
+          name: "MetLife Stadium",
+          match: "metlife stadium",
+          lat: 40.81361,
+          lon: -74.07444,
+          source: "Wikipedia venue coordinates (Oct 22, 2026)",
+          city: "East Rutherford"
+        },
+        {
+          name: "Prudential Center",
+          match: "prudential center",
+          lat: 40.73361,
+          lon: -74.17111,
+          source: "Wikipedia venue coordinates (Oct 22, 2026)",
+          city: "Newark"
+        },
+        {
+          name: "Sports Illustrated Stadium",
+          match: "sports illustrated stadium",
+          lat: 40.73667,
+          lon: -74.15028,
+          source: "Wikipedia venue coordinates (Oct 22, 2026)",
+          city: "Harrison"
+        },
+        {
+          name: "Madison Square Garden",
+          match: "madison square garden",
+          lat: 40.75056,
+          lon: -73.99361,
+          source: "Wikipedia venue coordinates (Oct 22, 2026)",
+          city: "New York"
+        },
+        {
+          name: "Barclays Center",
+          match: "barclays center",
+          lat: 40.68266,
+          lon: -73.97523,
+          source: "Wikipedia venue coordinates (Oct 22, 2026)",
+          city: "Brooklyn"
+        },
+        {
+          name: "Yankee Stadium",
+          match: "yankee stadium",
+          lat: 40.82917,
+          lon: -73.92639,
+          source: "Wikipedia venue coordinates (Oct 22, 2026)",
+          city: "Bronx"
+        },
+        {
+          name: "Citi Field",
+          match: "citi field",
+          lat: 40.75694,
+          lon: -73.84583,
+          source: "Wikipedia venue coordinates (Oct 22, 2026)",
+          city: "Flushing"
+        },
+        {
+          name: "UBS Arena",
+          match: "ubs arena",
+          lat: 40.71179,
+          lon: -73.72604,
+          source: "Wikipedia venue coordinates (Oct 22, 2026)",
+          city: "Elmont"
         }
       ]
     },
