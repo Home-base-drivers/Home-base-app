@@ -3,13 +3,13 @@ import {failureDetails} from './errors.mjs';
 export function makeDispatchHandler({engine,authenticate,loadState,loadTrips,parseLanguage,translateLanguage,synthesizeVoice,createLiveSession,agent,entitlements=null,reportFailure=details=>console.error(JSON.stringify({event:'homebase_dispatch_failure',...details}))}) {
  const headers={'Content-Type':'application/json','Access-Control-Allow-Origin':'https://home-base-drivers.github.io','Access-Control-Allow-Headers':'authorization,apikey,content-type,x-client-info','Access-Control-Allow-Methods':'POST,OPTIONS'};
  const response=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{...headers,'Cache-Control':'no-store'}});
- const failure=(error,operation)=>{const details=failureDetails(error),requestId=globalThis.crypto?.randomUUID?.()||'unavailable';reportFailure({operation,request_id:requestId,...details});const status=PAYWALL.has(details.code)?402:details.code==='ai_not_configured'?503:details.code==='ai_timeout'?504:details.code==='ai_provider_error'?502:400;return response({error:error?.message||'Home Base AI is unavailable.',...details,request_id:requestId},status)};
+ const failure=(error,operation)=>{const details=failureDetails(error),requestId=globalThis.crypto?.randomUUID?.()||'unavailable';reportFailure({operation,request_id:requestId,...details});const status=PAYWALL.has(details.code)?402:['ai_not_configured','ai_no_credit'].includes(details.code)?503:details.code==='ai_timeout'?504:details.code==='ai_provider_error'?502:400;return response({error:error?.message||'Home Base AI is unavailable.',...details,request_id:requestId},status)};
  // Plans are enforced here, not on the phone. Free drivers use the built-in AI;
  // GPT answers, GPT voice and GPT Live minutes need Plus or Pro.
  const PAYWALL=new Set(['plan_required','voice_minutes_used_up']);
  const PAID_OPERATIONS=new Set(['agent','agent-result','chat','translate','voice','live-session']);
  const planError=error=>{const m=String(error?.message||'');const code=[...PAYWALL].find(c=>m.includes(c));if(!code)return error;
-  return Object.assign(Error(code==='plan_required'?'GPT answers and GPT Live voice are part of Home Base Plus. The built-in AI is free.':'This month\'s GPT Live minutes are used. Voice continues with the built-in AI, or add minutes.'),{code});};
+  return Object.assign(Error(code==='plan_required'?'Home Base AI answers and live voice are part of Home Base Plus. The built-in AI is free.':'This month\'s GPT Live minutes are used. Voice continues with the built-in AI, or add minutes.'),{code});};
  return async request=>{
   if(request.method==='OPTIONS')return new Response(null,{status:204,headers});
   if(request.method!=='POST')return response({error:'POST required'},405);
@@ -29,7 +29,7 @@ export function makeDispatchHandler({engine,authenticate,loadState,loadTrips,par
     const allowance=await entitlements.allowance();if(!['plus','pro'].includes(allowance?.plan))throw planError(Error('plan_required'));
    }
    if(payload.operation==='live-session'){
-    if(!createLiveSession)return response({configured:false,error:'GPT Live is not configured on the Home Base server.'},503);
+    if(!createLiveSession)return response({configured:false,code:'live_unavailable',error:'Live voice uses your phone\'s voice with Home Base AI answers.'},503);
     // Open the metered session first; it refuses free plans and used-up months.
     let meter=null;if(entitlements){try{meter=await entitlements.start();}catch(e){throw planError(e);}}
     let live;try{live=await createLiveSession({sdp:payload.sdp,locale:payload.locale,voice:payload.voice,style:payload.style,history:payload.history,context:payload.context});}

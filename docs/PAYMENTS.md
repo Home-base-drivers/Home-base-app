@@ -61,3 +61,11 @@ Stripe webhooks never change them (result `owner plan kept`). Owners test with a
 - TEST price ids: Plus `price_1URORTPUPsL5jNFlYw7Jjoa0`, Pro `price_1URORlPUPsL5jNFlOGRVAw4O`,
   minutes `price_1UROS4PUPsL5jNFlR5t8BIsj`.
 - Open: Supabase secrets, end-to-end test purchase, live mode, `BILLING_ENABLED`.
+
+## AI provider (v288)
+Paid text intelligence (Ask Home Base chat, spoken questions, command understanding, translation,
+driver memory) runs on **Claude** when the Edge Function secret `ANTHROPIC_API_KEY` is set.
+Defaults: `CLAUDE_MODEL=claude-sonnet-5-5` (answers, web search, photos), `CLAUDE_FAST_MODEL=claude-haiku-5-5`
+(understanding, translation, memory). `AI_PROVIDER=openai` switches back. Claude has no realtime
+voice: without `OPENAI_API_KEY`, spoken replies use the phone's voice and "live voice" becomes the
+phone-voice conversation with Claude answers. GPT Live and the minutes pack need OpenAI.

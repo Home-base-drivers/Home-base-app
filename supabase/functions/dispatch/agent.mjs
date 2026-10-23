@@ -1,4 +1,5 @@
 import {providerFailure} from './errors.mjs';
+import {callClaude,claudeJson,claudeMessages,claudeTools,claudeImage,textOf,sourcesOf,toolCalls,WEB_SEARCH} from './claude.mjs';
 const PROJECT_KNOWLEDGE=`
 HOME BASE PRODUCT BRAIN
 Home Base is an AI intelligence layer above rideshare driver platforms, not merely a heat map.
@@ -41,7 +42,7 @@ function cleanAttachments(attachments){
 }
 function errorWithCode(message,code){return Object.assign(new Error(message),{code})}
 
-export function makeHomeBaseAgent({apiKey,model='gpt-6-luna',fetchImpl=fetch,loadMemory,loadTurns,saveTurn,upsertMemories,timeoutMs=60000}={}){
+export function makeHomeBaseAgent({provider='openai',apiKey,model='gpt-6-luna',fastModel,fetchImpl=fetch,loadMemory,loadTurns,saveTurn,upsertMemories,timeoutMs=60000}={}){
  return async({userId,utterance,context={},conversationId='default',capabilities=[],actionResults=[],channel='voice',attachments=[]}={})=>{
   if(!apiKey)throw errorWithCode('Home Base AI is not configured.','ai_not_configured');
   if(!userId)throw errorWithCode('Sign in first.','sign_in');
@@ -51,7 +52,7 @@ export function makeHomeBaseAgent({apiKey,model='gpt-6-luna',fetchImpl=fetch,loa
   const typed=channel==='chat';
   const memories=await loadMemory(userId);
   const turns=await loadTurns(userId,conversationId);
-  const instructions=`You are Home Base Copilot, a persistent learning AI dispatcher and a full general-purpose assistant (the same breadth as ChatGPT). You are the primary intelligence, not a command parser. Use the project brain below as durable product knowledge.
+  const instructions=`You are Home Base Copilot, a persistent learning AI dispatcher and a full general-purpose assistant. You are the primary intelligence, not a command parser. Use the project brain below as durable product knowledge.
 
 ${PROJECT_KNOWLEDGE}
 
@@ -73,12 +74,35 @@ Behavior:
 - For general knowledge questions, answer normally. Driving advice is optional unless relevant.
 - Learn from outcomes and explicit preferences, but do not treat one observation as a permanent truth. Prefer repeated evidence.
 - Never self-modify code or security rules. Learning means updating driver memory and future recommendations.
-${typed?'- This message was TYPED in the Home Base chat screen. Reply like ChatGPT: complete and well organized, using short Markdown (bold, bullet lists, numbered steps, small tables) when it helps. The driver is not reading while moving.':'- This message was SPOKEN. Your reply will be read aloud: no Markdown, no lists, no links or URLs, no emoji. If the driver is moving, lead with the decision in two or three short sentences; give more only when parked or asked.'}
+${typed?'- This message was TYPED in the Home Base chat screen. Reply like a capable assistant: complete and well organized, using short Markdown (bold, bullet lists, numbered steps, small tables) when it helps. The driver is not reading while moving.':'- This message was SPOKEN. Your reply will be read aloud: no Markdown, no lists, no links or URLs, no emoji. If the driver is moving, lead with the decision in two or three short sentences; give more only when parked or asked.'}
 - Sound like a capable human dispatcher, not a radio parody.`;
   const verifiedResults=Array.isArray(actionResults)?actionResults.slice(0,8):[];
   const text=(utterance.trim()||'What does this photo show, and what should I do about it?')+(verifiedResults.length?'\n\nVERIFIED HOME BASE ACTION RESULTS:\n'+safe(verifiedResults,5000):'');
   const userContent=images.length?[{type:'input_text',text},...images]:text;
   const input=[...turns.slice(-40).map(t=>({role:t.role==='assistant'?'assistant':'user',content:String(t.content||'')})).filter(t=>t.content),{role:'user',content:userContent}];
+  if(provider==='anthropic'){
+   const tools=[WEB_SEARCH,...claudeTools(ACTION_TOOLS.filter(t=>!Array.isArray(capabilities)||!capabilities.length||capabilities.includes(t.name)))];
+   const content=images.length?[{type:'text',text},...images.map(i=>claudeImage(i.image_url)).filter(Boolean)]:text;
+   const messages=[...claudeMessages(turns.slice(-40).map(t=>({role:t.role,content:String(t.content||'')}))),{role:'user',content}];
+   if(messages.length>1&&messages[messages.length-2].role==='user'){const prev=messages.splice(messages.length-2,1)[0];messages[messages.length-1].content=typeof content==='string'?prev.content+'\n\n'+content:[{type:'text',text:prev.content},...content];}
+   const message=await callClaude({apiKey,fetchImpl,timeoutMs,stage:'agent',model,max_tokens:typed?2048:700,system:instructions,messages,tools});
+   const actions=toolCalls(message),sources=sourcesOf(message);
+   let answer=textOf(message);
+   if(actions.length)return{answer:answer||'Executing the requested Home Base action.',actions,provider:'Claude',agent:true,execution:'action_required'};
+   if(!answer)throw errorWithCode('Home Base AI returned no answer.','ai_empty');
+   if(typed&&sources.length)answer+='\n\n**Sources:** '+sources.map(s=>'['+String(s.title).replace(/[\[\]]/g,'')+']('+s.url+')').join(' · ');
+   const savedUtterance=(utterance.trim()||'(photo)')+(images.length&&utterance.trim()?' [photo attached]':'');
+   await saveTurn(userId,conversationId,'user',savedUtterance,context);
+   await saveTurn(userId,conversationId,'assistant',answer,{channel});
+   try{
+    const learned=await claudeJson({apiKey,fetchImpl,timeoutMs:9000,stage:'memory',model:fastModel||model,maxTokens:500,name:'save_memories',
+     system:'Extract only durable driver-specific information that should improve future Home Base recommendations: explicit preferences, goals, constraints, repeated lessons, stable facts, or strategies. Do not save transient weather, one-time locations, secrets, passwords, exact home address, health data, or guesses. Return an empty list when nothing qualifies.',
+     user:'Driver said: '+savedUtterance+'\nHome Base answered: '+answer.slice(0,3000),
+     schema:{type:'object',required:['memories'],properties:{memories:{type:'array',maxItems:5,items:{type:'object',required:['key','type','summary','confidence'],properties:{key:{type:'string'},type:{type:'string',enum:['preference','goal','constraint','lesson','fact','strategy']},summary:{type:'string'},confidence:{type:'number'}}}}}}});
+    if(Array.isArray(learned.memories)&&learned.memories.length)await upsertMemories(userId,learned.memories);
+   }catch{}
+   return{answer,sources,provider:'Claude',agent:true,channel,conversationId,execution:verifiedResults.length?'verified_action_result':'advisory'};
+  }
   let response;
   try{response=await fetchImpl('https://api.openai.com/v1/responses',{method:'POST',signal:AbortSignal.timeout(timeoutMs),headers:{Authorization:'Bearer '+apiKey,'Content-Type':'application/json'},body:JSON.stringify({model,store:false,instructions,input,reasoning:{effort:typed?'medium':'low'},tools:[{type:'web_search'},...ACTION_TOOLS.filter(t=>!Array.isArray(capabilities)||!capabilities.length||capabilities.includes(t.name))],tool_choice:'auto',max_output_tokens:typed?4000:1400})});}
   catch(error){if(error?.name==='TimeoutError'||error?.name==='AbortError')throw errorWithCode('Home Base AI took too long to answer.','ai_timeout');throw error;}
