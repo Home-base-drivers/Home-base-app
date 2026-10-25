@@ -195,3 +195,5 @@ Every upload was matched by EXIF capture time and file contents (112 files, 107 
 - **Skipped on purpose (13):** 11 Uber earnings screens (passenger streets), 2 fuel receipts; plus one Home Base app screen.
 - **Result:** every other distinct image maps to a stored record.
 - **Later upload:** Fri Oct 23 9:34–9:35 PM Uber views outside Baltimore — Elkton east +$7, Easton and St. Michaels +$7.50, Cambridge +$1.50, Princess Anne +$3.25 (3 records). The 11 Empower lock screens in the same upload are byte-identical to the Thu Oct 22 9:12–9:14 PM captures already stored in v286.
+- **Sun Oct 25 11:56 AM Empower capture:** Mt. Vernon $5 at about 11:11 AM; exact Sunday-morning averages 6:48 AM $4, 6:51 $5, 6:55 $3, 6:58 $2.
+- **Earnings:** trip pay from the Oct 23–25 Uber Earnings Activity screens is stored in the private earnings database (not in this public repo).
