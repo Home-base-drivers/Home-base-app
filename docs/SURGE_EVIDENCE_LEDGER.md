@@ -186,3 +186,11 @@ Lock-screen and Uber captures Sun Oct 25, 1:57–2:02 AM and 7:09–8:16 AM (EXI
 - **Fourth upload — Uber:** Fri 10:33 PM Annapolis +$1.75; 10:46 PM small bonuses (Lansdowne +$2.50, Sparks +$2.25); Sat 12:51–12:53 AM western Howard +$6.75, Shady Side +$6.50, Millersville +$5.25, Annapolis +$5, Indian Head +$1.75; 2:55 AM shading only; 8:39 AM Cockeysville +$2.50; 9:18 AM shading only.
 - **Already stored:** the Sat 9:21 AM Empower lock screens show Thu Oct 22 alerts (Frankford, Rosemont, Mondawmin, Downtown, Broadway E.) recorded in v286.
 - **Skipped:** Uber earnings/trip screens (private trip addresses) and two fuel receipts (payment details).
+
+### Upload audit (Oct 25)
+
+Every upload was matched by EXIF capture time and file contents (112 files, 107 distinct images; 5 byte-identical repeats).
+- **Fixed:** Fri Oct 23 10:32:58–10:33:25 PM had the same clock times as three Sat Oct 24 captures and had been treated as repeats. EXIF dates and pixels differ, so they are now stored as `uber-baltimore-20261023-2232` (Cockeysville +$7, Timonium east +$6.50, Columbia +$5.75, Cheswolde +$5.50).
+- **Added:** Sat 3:17 AM shading (`uber-baltimore-20261024-0317`), Sun 8:26 AM shading, and the Sun 10:36–10:46 AM purple wave (East Baltimore +$9.75, Annapolis west +$8, Towson +$7.75, Overlea +$7).
+- **Skipped on purpose (13):** 11 Uber earnings screens (passenger streets), 2 fuel receipts; plus one Home Base app screen.
+- **Result:** every other distinct image maps to a stored record.
