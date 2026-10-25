@@ -172,3 +172,12 @@ Lock-screen captures taken Thu Oct 22, 9:12–9:14 PM (EXIF), so "Yesterday" is 
 
 - **Wed Oct 21:** exact times for the morning wave (Rosemont $5–7, Mondawmin $5, Mt. Vernon $5, 7:27–7:58 AM), Downtown $5 at 3:30 PM, Towson $5 at 3:42 PM, Downtown $6 at 6:11 PM, plus 22 average-surge notices. The earlier "3h ago" Oct 21 window is kept but marked superseded, so those alerts are not counted twice.
 - **Thu Oct 22:** the largest Empower morning wave on record, 6:38–8:42 AM: Broadway E. $10 (6:59), Belair-Edison $10 (7:53), Frankford $10 (7:56), Rosemont $8 (7:36), Mondawmin and Union Sq. $6. Afternoon: Downtown $5 (1:47, 4:00, 4:05 PM), Broadway E. $5 (3:51, 3:56 PM), Charles Village $6 (4:39 PM). The overnight average reached $4 (3:42, 4:14, 4:52 AM) and $5 at 6:52 AM.
+
+## October 24–25 bar close and Sunday morning (v289)
+
+Lock-screen and Uber captures Sun Oct 25, 1:57–2:02 AM and 7:09–8:16 AM (EXIF). "Yesterday" on the 2:02 AM capture is Sat Oct 24.
+
+- **Empower bar close, Sun 12:03–2:27 AM:** 29 alerts across Federal Hill, Camden Yards, Fells Point and Downtown. Peak at 1:53–2:00 AM: Camden Yards $24, Federal Hill $21, Downtown $11; Fells Point $8–11 from 1:16 to 2:10 AM. Alerts from 1:03 to 1:50 AM use relative ages (±1 minute); the eight "1h ago" alerts (12:03–1:02 AM) are one low-confidence record.
+- **Uber bar close, 1:59–2:01 AM:** purple across the city and east side. Cockeysville +$15, Park Heights +$14, Pigtown +$9, Highlandtown +$8.75, Hamilton/Belair-Edison +$8.25, Edgemere and Curtis Bay +$7.50, Brooklyn Park +$7; Annapolis/Broadneck +$2–4.25; western Howard +$2–5.75. One record (`uber-baltimore-20261025-0200`).
+- **Sunday morning:** Uber red shading at 7:09 and 8:12 AM (north county, west side, east side, BWI), stored as shading only. Empower citywide average stayed $1 Saturday evening, then built to $5 around 6:15–7:15 AM Sunday.
+- **Skipped:** Uber earnings/trip screens (private trip addresses).
