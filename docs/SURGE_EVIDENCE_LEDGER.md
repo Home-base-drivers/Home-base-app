@@ -194,3 +194,4 @@ Every upload was matched by EXIF capture time and file contents (112 files, 107 
 - **Added:** Sat 3:17 AM shading (`uber-baltimore-20261024-0317`), Sun 8:26 AM shading, and the Sun 10:36–10:46 AM purple wave (East Baltimore +$9.75, Annapolis west +$8, Towson +$7.75, Overlea +$7).
 - **Skipped on purpose (13):** 11 Uber earnings screens (passenger streets), 2 fuel receipts; plus one Home Base app screen.
 - **Result:** every other distinct image maps to a stored record.
+- **Later upload:** Fri Oct 23 9:34–9:35 PM Uber views outside Baltimore — Elkton east +$7, Easton and St. Michaels +$7.50, Cambridge +$1.50, Princess Anne +$3.25 (3 records). The 11 Empower lock screens in the same upload are byte-identical to the Thu Oct 22 9:12–9:14 PM captures already stored in v286.
