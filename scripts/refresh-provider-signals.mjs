@@ -1,6 +1,8 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
-import { publicRecords } from './public-records.mjs';
+import { publicRecords, storedOrFreshRecords } from './public-records.mjs';
+import marketAreas from '../dist/baltimore-market.js';
+import serviceAreas from '../dist/homebase-service-areas.js';
 import { publicPlaces } from './public-places.mjs';
 import { publicSportsProvider } from './public-sports.mjs';
 import { publicAlertsProvider } from './public-alerts.mjs';
@@ -57,7 +59,7 @@ export function normalizeTicketmasterEvent(event, now = NOW) {
   if (venue?.location?.latitude == null || venue?.location?.longitude == null || !Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180 || !start || !Number.isFinite(Date.parse(start))) return null;
   const startMs = Date.parse(start);
   const end = event?.dates?.end?.dateTime || null;
-  if (startMs < now.getTime() - 6 * 60 * 60_000 || startMs > now.getTime() + 36 * 60 * 60_000) return null;
+  if (startMs < now.getTime() - 6 * 60 * 60_000 || startMs > now.getTime() + 72 * 60 * 60_000) return null;
   const name = String(event?.name || '').trim();
   if (!name || publicData.isTicketAddon(name)) return null;
   return {
@@ -149,7 +151,7 @@ export async function ticketmasterProvider(market, request = boundedFetch, now =
   const key = process.env.TICKETMASTER_API_KEY;
   if (!key) return { status: 'not_configured', fetchedAt: null, events: [] };
   const url = new URL('https://app.ticketmaster.com/discovery/v2/events.json');
-  const start = new Date(now.getTime() - 6 * 60 * 60_000), end = new Date(now.getTime() + 36 * 60 * 60_000);
+  const start = new Date(now.getTime() - 6 * 60 * 60_000), end = new Date(now.getTime() + 72 * 60 * 60_000);
   url.search = new URLSearchParams({
     apikey: key,
     latlong: `${market.center.lat},${market.center.lon}`,
@@ -310,13 +312,21 @@ async function main() {
   const markets = await Promise.all(config.markets.map(async market => {
     const old = previous.markets?.find((entry) => entry.id === market.id);
     const [uber, ticketmaster, booking, flightaware, records, places] = await Promise.all([
-      uberProvider(market), ticketmasterProvider(market), bookingProvider(market), flightAwareProvider(market), publicRecords(market, NOW.getTime()), publicPlaces(market, NOW.getTime(), old?.publicPlaces)
+      uberProvider(market), ticketmasterProvider(market), bookingProvider(market), flightAwareProvider(market), storedOrFreshRecords(market, old?.publicRecords, NOW.getTime()), publicPlaces(market, NOW.getTime(), old?.publicPlaces)
     ]);
     const [sportsFeed, alerts, schoolBells] = await Promise.all([
       publicSportsProvider(market, old?.publicSports, NOW.getTime(), fetch, places.places || []),
       publicAlertsProvider(market, NOW.getTime()),
       market.bellTimes === 'bcpss' ? bcpssBellRegistry(old?.schoolBells, NOW.getTime()).catch(() => old?.schoolBells || { status: 'unavailable', schools: [] }) : Promise.resolve(undefined)
     ]);
+    // Keep only events inside the market's rideshare service area (DMV for Baltimore/DC, Florida for Miami).
+    // The rideshare market (config/rideshare-markets.json) decides the workable area; the DMV ring
+    // is the fallback when a configured search market has no rideshare-market entry.
+    const center = [market.center.lat, market.center.lon], rideshare = serviceAreas.byId(market.id) || serviceAreas.byName(market.name) || serviceAreas.nearest(center[0], center[1]);
+    const inArea = e => !Number.isFinite(Number(e?.lat)) || (rideshare ? serviceAreas.workable(rideshare, [Number(e.lat), Number(e.lon)]) : marketAreas.inDriverServiceArea(center, [Number(e.lat), Number(e.lon)]));
+    if (Array.isArray(records.events)) records.events = records.events.filter(inArea);
+    if (Array.isArray(sportsFeed.events)) sportsFeed.events = sportsFeed.events.filter(inArea);
+    if (Array.isArray(ticketmaster.events)) ticketmaster.events = ticketmaster.events.filter(inArea);
     const calendar = retainRecent(old, { ...records, status: records.calendarStatus }, 'publicRecords', 24 * 60 * 60_000);
     return {
       id: market.id, name: market.name, center: market.center, radiusKm: market.radiusKm, countryCode: market.countryCode, timeZone: market.timeZone,

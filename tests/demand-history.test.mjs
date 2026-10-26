@@ -15,11 +15,13 @@ test('historical recurrence fades continuously within one hour of its neighborho
  // Recovered Sep 25 - Oct 2 afternoons extend Towson's weekday pattern; strength still falls away from the peak.
  const half=H.forecastFor('Towson',future('16:26'),true).strength;
  assert.ok(peak>half&&half>0);
- assert.equal(H.forecastFor('Towson',future('13:30'),true).strength,0); // Oct 14 2:40 PM Towson adds a faint 2:26 PM reference; 1:30 PM stays clear.
+ // Patterns are a fixed weekly table, so later captures (Oct 14+) also inform this Wednesday; 1:30 PM stays at most a faint reference.
+ assert.ok(H.forecastFor('Towson',future('13:30'),true).strength<.01);
  assert.equal(H.forecastFor('Unrelated neighborhood',future('15:26'),true).strength,0);
  // Weekday patterns carry across weekdays (Oct 8 Thu + Oct 9 Fri), never into the weekend.
  assert.ok(H.forecastFor('Towson',new Date('2026-10-14T15:16:00-04:00'),true).distinctDates>=2);
- assert.equal(H.forecastFor('Towson',new Date('2026-10-17T15:26:00-04:00'),true).strength,0);
+ // Only an actual Saturday sighting (Oct 24) counts on Saturday, as a faint single-date reference.
+ const sat=H.forecastFor('Towson',new Date('2026-10-17T15:26:00-04:00'),true);assert.ok(sat.distinctDates<=1&&sat.strength<.01);
 });
 test('historical windows fade correctly across local midnight, retaining one independent night',()=>{
  const sample={name:'Unique midnight area',surgeMultiplier:1.8,sampledAt:'2026-10-08T23:50:00-04:00'};
@@ -41,9 +43,10 @@ test('Empower layers over Uber: combined pattern is never weaker than the Uber p
 test('weekday morning Empower wave is a frequent, recent pattern; older single sightings stay faint',()=>{
  const m=H.forecastFor('Mondawmin',new Date('2026-10-22T07:00:00-04:00'),true);
  assert.ok(m.distinctDates>=5&&m.strength>=.3);
- // The same dates weigh less once they are two months old.
+ // Known values: the same weekday and time reads the same in later weeks until new surge data
+ // arrives (ages run from the newest stored observation, not the clock).
  const later=H.forecastFor('Mondawmin',new Date('2026-12-17T07:00:00-05:00'),true);
- assert.ok(later.strength<m.strength*.6);
+ assert.equal(later.strength,m.strength);
 });
 test('recovered Aug 28 - Oct 8 originals are dated, hashed and never earlier than the earliest verified capture',()=>{
  const rows=H.screenshotRecords?H.screenshotRecords():null;

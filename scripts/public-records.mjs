@@ -22,12 +22,29 @@ export async function publicRecords(market,now=Date.now(),request=fetch){
   // Include yesterday: an evening performance can matter after midnight.
   const start=new Date(now-86400000).toISOString().slice(0,10);
   const [campusResults,calendar,weather,schools]=await Promise.all([
-    Promise.all(campuses.map(async source=>{try{const p=await get(source.origin+'/api/2/events?start='+start+'&days=3&pp=100');return{events:normalizeCampusEvents(p,now,source),source:{name:source.name+' public calendar',url:source.origin,status:'active',pages:1,eventCount:normalizeCampusEvents(p,now,source).length,truncated:Number(p.page?.total)>100}}}catch{return{events:[],source:{name:source.name+' public calendar',url:source.origin,status:'unavailable',pages:0,eventCount:0}}}})),
+    Promise.all(campuses.map(async source=>{try{const p=await get(source.origin+'/api/2/events?start='+start+'&days=4&pp=100');return{events:normalizeCampusEvents(p,now,source),source:{name:source.name+' public calendar',url:source.origin,status:'active',pages:1,eventCount:normalizeCampusEvents(p,now,source).length,truncated:Number(p.page?.total)>100}}}catch{return{events:[],source:{name:source.name+' public calendar',url:source.origin,status:'unavailable',pages:0,eventCount:0}}}})),
     venueCalendars(market,market.publicCalendars||[],now,request),
-    get('https://api.weather.gov/points/39.2904,-76.6122').then(p=>{const url=p.properties?.forecastHourly;if(typeof url!=='string'||!url.startsWith('https://api.weather.gov/'))throw Error('Invalid forecast URL');return get(url);}).then(normalizeWeather).then(value=>({status:'active',value}),()=>({status:'unavailable',value:[]})),
+    baltimoreWeather(get),
     scheduledSchoolCalendars(market,now,request)
   ]);
   const sources=[...campusResults.map(c=>c.source),...(calendar.sources||[]),...schools.sources],loaded=sources.filter(s=>s.status==='active').length;
   const calendarStatus=loaded===sources.length?'active':sources.some(s=>s.pages)?'partial':'unavailable';
   return{status:calendarStatus!=='unavailable'||weather.status==='active'?'active':'unavailable',fetchedAt:new Date(now).toISOString(),calendarStatus:schools.schoolCount?'partial':calendarStatus,weatherStatus:weather.status,calendarTruncated:sources.some(s=>s.truncated)||schools.schoolCount>schools.checkedCount,sources,events:[...new Map([...campusResults.flatMap(c=>c.events),...calendar.events,...schools.events].map(e=>[publicData.eventIdentity(e),e])).values()],schoolContext:[...schools.context,...calendar.context],schoolCoverage:{schoolCount:schools.schoolCount,checkedCount:schools.checkedCount,discoveryStatus:schools.discoveryStatus,exhaustive:false},weather:weather.value};
+}
+
+const HOUR_MS=3600000;
+async function baltimoreWeather(get){return get('https://api.weather.gov/points/39.2904,-76.6122').then(p=>{const url=p.properties?.forecastHourly;if(typeof url!=='string'||!url.startsWith('https://api.weather.gov/'))throw Error('Invalid forecast URL');return get(url);}).then(normalizeWeather).then(value=>({status:'active',value}),()=>({status:'unavailable',value:[]}));}
+// Day key in the market's time zone; a stored calendar is reused for the rest of that day.
+export function marketDay(market,now=Date.now()){try{return new Date(now).toLocaleDateString('en-CA',{timeZone:market.timeZone||'America/New_York'})}catch{return new Date(now).toISOString().slice(0,10)}}
+/* Event store. Venue, campus and school calendars are checked once per market day for the
+   next three days; dated games and concerts may be canceled but do not otherwise move, so
+   later refreshes that day reuse the stored records instead of re-crawling every calendar.
+   Only past events are dropped. Weather (hourly) is still refreshed on every run. */
+export async function storedOrFreshRecords(market,old,now=Date.now(),request=fetch){
+  const day=marketDay(market,now),stored=old&&old.storeDay===day&&Array.isArray(old.events)&&old.calendarStatus!=='unavailable';
+  if(!stored)return{...await publicRecords(market,now,request),storeDay:day,storeCheckedAt:new Date(now).toISOString()};
+  const live=e=>{const start=Date.parse(e.eventStart),end=Date.parse(e.eventEnd||'');return Number.isFinite(end)?end>now-90*60000:start>now-6*HOUR_MS;};
+  let weather={status:old.weatherStatus||'not_supported',value:old.weather||[]};
+  if(/baltimore/i.test(market.name)){const get=async url=>{const r=await request(url,{signal:AbortSignal.timeout(12000),headers:{Accept:'application/json','User-Agent':'HomeBase public event context (github.com/Home-base-drivers/Home-base-app)'}});if(!r.ok)throw Error('Public source unavailable');return r.json();};weather=await baltimoreWeather(get);}
+  return{...old,events:old.events.filter(live),weather:weather.value,weatherStatus:weather.status,storeReused:true,fetchedAt:new Date(now).toISOString()};
 }

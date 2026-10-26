@@ -1,6 +1,8 @@
 // Ingest published JSON-LD, not search snippets or inferred recurring shows.
 import publicData from '../dist/homebase-public-data.js';
 const HOUR = 3_600_000;
+// Three days ahead: a dated game or concert is stored once and only rechecked daily for cancellation.
+export const EVENT_HORIZON = 72 * HOUR;
 const USER_AGENT = 'HomeBase public event context (+https://github.com/Home-base-drivers/Home-base-app)';
 const cache = new Map();
 
@@ -117,7 +119,7 @@ export function normalizePublicEvent(event, market, source, now = Date.now()) {
   if (!start) return null;
   const reportedEnd = zonedEventTime(event.endDate, market.timeZone);
   const end = reportedEnd && Date.parse(reportedEnd) > Date.parse(start) ? reportedEnd : null;
-  if ((end ? Date.parse(end) < now - 90 * 60_000 : Date.parse(start) < now - 6 * HOUR) || Date.parse(start) > now + 36 * HOUR) return null;
+  if ((end ? Date.parse(end) < now - 90 * 60_000 : Date.parse(start) < now - 6 * HOUR) || Date.parse(start) > now + EVENT_HORIZON) return null;
   const venue = [event.location].flat().find(place => place && typeof place === 'object');
   const geo = venue?.geo;
   const known = (source.venues || []).find(place => place.name.toLowerCase() === String(venue?.name || '').toLowerCase());
@@ -174,7 +176,7 @@ export async function publicEventCalendars(market, now = Date.now(), request = f
         events.push(...records.map(event => normalizePublicEvent(event, market, { ...source, url }, now)).filter(Boolean));
         // Stop once dated listings have passed the forecast horizon; do not crawl an entire city catalogue.
         const dated = records.map(e => zonedEventTime(e.startDate, market.timeZone)).filter(Boolean).map(Date.parse);
-        if (dated.length && Math.min(...dated) > now + 36 * HOUR) { url = null; break; }
+        if (dated.length && Math.min(...dated) > now + EVENT_HORIZON) { url = null; break; }
         url = source.maxPages > 1 ? nextPublicPage(html, url) : null;
       } catch (e) { error = true; reason = e?.name === 'TimeoutError' ? 'timeout' : /^(http_\d+|not_html|no_event_data)$/.test(e?.message) ? e.message : 'network_error'; break; }
     }

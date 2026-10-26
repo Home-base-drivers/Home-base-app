@@ -16,6 +16,14 @@
     {sport:'basketball',league:'womens-college-basketball',label:'NCAA women’s basketball',finalPeriod:4},
     {sport:'football',league:'college-football',label:'College football',finalPeriod:4}
   ];
+
+  // Known pro and college venues from config/provider-markets.json (sportsVenues),
+  // so a game is placed at its real venue and never matched to a same-named local place.
+  // [match tokens, name, city, lat, lon]
+  const VENUES=[["m t bank stadium","M&T Bank Stadium","Baltimore",39.278,-76.6227],["cfg bank arena","CFG Bank Arena","Baltimore",39.28861,-76.61889],["camden yards","Oriole Park at Camden Yards","Baltimore",39.2838,-76.6217],["secu arena","SECU Arena","Towson",39.387361,-76.617083],["chesapeake employers insurance arena","Chesapeake Employers Insurance Arena","Baltimore",39.2523419,-76.707431],["navy marine corps memorial stadium","Navy-Marine Corps Memorial Stadium","Annapolis",38.985,-76.507],["secu stadium","SECU Stadium","College Park",38.99028,-76.94722],["xfinity center","Xfinity Center","College Park",38.99528,-76.94139],["metlife stadium","MetLife Stadium","East Rutherford",40.81361,-74.07444],["prudential center","Prudential Center","Newark",40.73361,-74.17111],["sports illustrated stadium","Sports Illustrated Stadium","Harrison",40.73667,-74.15028],["madison square garden","Madison Square Garden","New York",40.75056,-73.99361],["barclays center","Barclays Center","Brooklyn",40.68266,-73.97523],["yankee stadium","Yankee Stadium","Bronx",40.82917,-73.92639],["citi field","Citi Field","Flushing",40.75694,-73.84583],["ubs arena","UBS Arena","Elmont",40.71179,-73.72604],["capital one arena","Capital One Arena","Washington",38.89806,-77.02083],["audi field","Audi Field","Washington",38.868411,-77.012869],["northwest stadium","Northwest Stadium","Landover",38.90778,-76.86444],["kaseya center","Kaseya Center","Miami",25.7814,-80.187],["loandepot park","loanDepot park","Miami",25.7781,-80.2197],["hard rock stadium","Hard Rock Stadium","Miami Gardens",25.958,-80.2389]]
+  const token=v=>String(v||'').toLowerCase().replace(/&/g,' ').replace(/[^a-z0-9]+/g,' ').trim()
+  function venuePlace(venue){const name=token(venue);if(!name)return null;const hit=VENUES.find(v=>name.includes(v[0]));return hit?{name:hit[1],city:hit[2],lat:hit[3],lon:hit[4]}:null}
+
   const CANCELLED=/postpon|cancel|suspend|delay|forfeit/i;
   function espnUrl(entry,date){return 'https://site.api.espn.com/apis/site/v2/sports/'+entry.sport+'/'+entry.league+'/scoreboard?dates='+date;}
   function mlbUrl(date){return 'https://statsapi.mlb.com/api/v1/schedule?sportId=1&date='+date+'&hydrate=venue(location),linescore';}
@@ -29,6 +37,13 @@
   function scoreboardDates(now=new Date(),timeZone,separator=''){
     const today=ymd(now,timeZone,separator),earlier=ymd(new Date(now.getTime()-4*HOUR),timeZone,separator);
     return earlier===today?[today]:[earlier,today];
+  }
+  // Today plus the next two days (and the late-night tail of yesterday): games are stored
+  // once per day for three days ahead instead of being re-fetched on every refresh.
+  function upcomingDates(now=new Date(),timeZone,separator='',days=3){
+    const out=new Set(scoreboardDates(now,timeZone,separator));
+    for(let d=1;d<days;d++)out.add(ymd(new Date(now.getTime()+d*24*HOUR),timeZone,separator));
+    return [...out];
   }
   function minuteOf(clock){const m=/^(\d{1,3})/.exec(String(clock||''));return m?Number(m[1]):NaN;}
   function espnGame(event,entry,observedAt=Date.now()){
@@ -117,5 +132,5 @@
     const team=WATCH_PARTY_TEAMS.find(t=>t.league===row.league&&away===t.team&&home!==t.team);
     return team?team.districts.map(([name,lat,lon])=>({name,lat,lon,team:team.label})):[];
   }
-  return{ESPN_LEAGUES,WATCH_PARTY_TEAMS,watchParties,espnUrl,mlbUrl,scoreboardDates,espnGame,mlbGame,trackGame,trackAll,relevant,mergeObservations,describe};
+  return{upcomingDates,VENUES,venuePlace,ESPN_LEAGUES,WATCH_PARTY_TEAMS,watchParties,espnUrl,mlbUrl,scoreboardDates,espnGame,mlbGame,trackGame,trackAll,relevant,mergeObservations,describe};
 });
