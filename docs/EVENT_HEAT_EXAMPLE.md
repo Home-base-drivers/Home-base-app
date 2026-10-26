@@ -17,6 +17,8 @@ The Uber "Event" pin on the 2:41 PM and 5:56 PM maps sits next to the stadiums. 
 | 6:39 PM | +149 min | City fading (Inner Harbor +$4.75) |
 | 8:50 PM | After | Shading only |
 
+**Empower confirms the same window** (exact lock-screen times): Fed Hill and Camden Yards $5 from 4:06 PM, as fans left early. Then Camden Yards $8 at 4:29 PM, and Fed Hill/Camden $5–7 again from 5:37 to 5:51 PM. Nothing came after 5:51 PM. Both apps agree: demand around the stadium started just before the final whistle and ran for about 1 h 45 min.
+
 Before kickoff and during the game, demand was modest. The heat came after the game: it peaked 20–100 minutes after the final whistle, about 3–5 km around the stadium, and lasted about 2.5 hours.
 
 ## How Home Base now displays event heat
