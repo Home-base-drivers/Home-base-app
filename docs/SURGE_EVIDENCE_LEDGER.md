@@ -203,3 +203,9 @@ Every upload was matched by EXIF capture time and file contents (112 files, 107 
   - Sunday game let-out, all exact times and linked to the game: Fed Hill/Camden Yards/Union Sq. $5–8 from 4:06 to 5:51 PM, peaking with Camden Yards $8 at 4:29.
   - Sunday night: Downtown $6 at 10:42 PM and $5 at 11:10 PM.
   - Monday morning wave, 5:52–8:52 AM, timed by bucket order with low timestamp confidence: Rosemont up to **$17** (with $13 and $11), Mondawmin $5–7, Broadway E. $5–7, Frankford $5–6, Belair-Edison $5, Union Sq. $5–6.
+
+## Weighting update (v290)
+
+- **"1h ago" alerts count fully.** An alert shown only as "1h/2h/3h ago" belongs to that hour's surge window. It now matches any minute in the hour at full weight, instead of half weight pinned to one estimated minute. Records whose date itself is estimated still count at half weight.
+- **Bigger dollars weigh more.** Each date keeps its largest amount. Amounts up to $8 are neutral, scaling to 1.6× at $18 or more. Because the boost multiplies the date-count cap, big amounts repeated on different days build the strongest patterns. The pattern ceiling rises from 0.45 to 0.72 so the boost can show.
+- **Effect next Monday:** Rosemont at 7:30 AM rises 0.37 → 0.42 (its $17, $13 and $11 days). Mondawmin and Broadway East have mostly $5–7 days, so they are unchanged.

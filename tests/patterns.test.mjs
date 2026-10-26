@@ -134,3 +134,13 @@ test('site status tags a mapped hospital or adds the verified one', () => {
   assert.equal(out.filter(s => /Greater Baltimore/.test(s.name)).length, 0, 'no duplicate when mapped');
   assert.ok(out.some(s => s.name === 'Johns Hopkins Hospital' && s.tags.shiftEnds));
 });
+
+test('bigger dollar amounts repeated on different days build a stronger pattern', () => {
+  const small = { lat: 42.36, lon: -71.06 }, big = { lat: 42.40, lon: -71.12 };
+  for (const d of ['2026-10-05', '2026-10-06', '2026-10-07', '2026-10-08', '2026-10-09']) { log(d, '07:30', 6, small); log(d, '07:30', 17, big); }
+  const s = history.forecastAt(small.lat, small.lon, new Date(at('2026-10-12', '07:30')));
+  const b = history.forecastAt(big.lat, big.lon, new Date(at('2026-10-12', '07:30')));
+  assert.equal(s.distinctDates, 5); assert.equal(b.distinctDates, 5);
+  assert.ok(b.strength > s.strength * 1.4, `$17 repeats (${b.strength}) should clearly outweigh $6 repeats (${s.strength})`);
+  assert.ok(b.strength <= .72);
+});
