@@ -7,12 +7,16 @@ import { readFile, writeFile } from 'node:fs/promises';
 const ROOT = new URL('../', import.meta.url);
 export async function build() {
   const config = JSON.parse(await readFile(new URL('config/rideshare-markets.json', ROOT), 'utf8'));
+  const areas = JSON.parse(await readFile(new URL('config/market-areas.json', ROOT), 'utf8')).markets;
+  const areaRows = Object.fromEntries(Object.entries(areas).map(([id, a]) => [id, { counties: a.counties || [], neighbors: a.intercityNeighbors || [] }]));
   const rows = config.markets.map(m => [m.id, m.name, m.country, m.region || '', +m.center[0].toFixed(4), +m.center[1].toFixed(4), m.radiusMi, (m.pickupStates || []).join(' '), Object.keys(m.platforms || {}).filter(k => m.platforms[k]).join(' '), (m.aliases || []).join('|')]);
   const js = `/* Rideshare service areas. Generated from config/rideshare-markets.json by
    scripts/build-service-areas.mjs; do not edit by hand.
    Row: [id, name, country, state/region, lat, lon, working radius (mi), pickup states (US), apps, aliases]. */
 (function(root,factory){const api=factory(root);if(typeof module==='object'&&module.exports)module.exports=api;else root.HomeBaseServiceAreas=api;})(typeof globalThis!=='undefined'?globalThis:this,function(root){
   const ROWS=${JSON.stringify(rows)};
+  // Known workable areas (county FIPS) and intercity neighbors, from config/market-areas.json.
+  const AREAS=${JSON.stringify(areaRows)};
   const MILES=new Set(['US','GB','LR','MM','PR','GU','VI','AS','MP']);
   const MARKETS=ROWS.map(([id,name,country,region,lat,lon,radiusMi,states,apps,aliases])=>({id,name,country,region,center:[lat,lon],radiusMi,radiusKm:radiusMi*1.609344,pickupStates:states?states.split(' '):[],platforms:apps?apps.split(' '):[],aliases:aliases?aliases.split('|'):[],units:MILES.has(country)?'mi':'km'}));
   const BY_ID=new Map(MARKETS.map(m=>[m.id,m]));
@@ -36,7 +40,7 @@ export async function build() {
     const c=R.countryAt(point[0],point[1]);return !c||c===market.country;
   }
   function label(market){return market?market.name+(market.region?', '+market.region:market.country&&market.country!=='US'?', '+market.country:''):'';}
-  return{MARKETS,byId:id=>BY_ID.get(id)||null,byName,nearest,driverMarket,workable,label};
+  return{MARKETS,AREAS,byId:id=>BY_ID.get(id)||null,byName,nearest,driverMarket,workable,label};
 });
 `;
   return js;

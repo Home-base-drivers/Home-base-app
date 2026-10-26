@@ -1,0 +1,14 @@
+{
+ "notes": "Workable areas inside a rideshare market, as county FIPS codes (US Census). Uber and Lyft do not publish these; they come from the driver's own app (Uber Driver > Preferences > Preferred areas). Drivers confirm or change them in Home Base onboarding (Workable area). Markets not listed default to their home-state counties within the working radius.",
+ "markets": {
+  "baltimore": {
+   "counties": ["24510", "24005", "24025", "24027", "24003", "24013", "24021", "24043", "24009", "24017", "24037"],
+   "intercityNeighbors": ["washington-dc"],
+   "source": "Uber Driver app, Preferences > 'Choose your preferred areas', Baltimore market (screenshot shared by the owner, Oct 26 2026): Baltimore City and County, Harford (Bel Air), Howard, Anne Arundel, Carroll, Frederick and Washington County, Calvert, Charles and St. Mary's. Montgomery and Prince George's belong to the Washington market; Cecil and the Eastern Shore are outside it. County edges were read from the map, so confirm in the app."
+  },
+  "washington-dc": {
+   "intercityNeighbors": ["baltimore"],
+   "source": "No preferred-area screenshot yet; defaults to DC, Maryland and Virginia counties within the working radius until the driver confirms their areas."
+  }
+ }
+}

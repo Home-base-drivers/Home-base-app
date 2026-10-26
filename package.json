@@ -17,7 +17,8 @@
     "history:manifest": "node -e \"const r=require('./tests/fixtures/load-history.cjs')(),o=r.reduce((n,x)=>n+(x.area_observations||[]).length,0),old=require('./tests/fixtures/demand-history-manifest.json'),ids=[...new Set([...old.ids,...r.map(x=>x.id)])].sort();require('fs').writeFileSync('tests/fixtures/demand-history-manifest.json',JSON.stringify({note:old.note,minimumObservations:Math.max(o,old.minimumObservations),ids}))\"",
     "area:sources": "node scripts/area-sources.mjs",
     "build:regions": "node scripts/build-regions.cjs",
-    "build:service-areas": "node scripts/build-service-areas.mjs"
+    "build:service-areas": "node scripts/build-service-areas.mjs",
+    "build:counties": "node scripts/build-counties.cjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.117.2"

@@ -153,3 +153,13 @@ Confidence mix: **371 high, 125 medium, 12 low.**
 - **Indonesia, Philippines, Vietnam, Malaysia:** Grab/Gojek flags for secondary cities are medium because grab.com blocks crawling.
 - **Not modelled:** local leaders such as BiTaksi/iTaksi (Turkey), itTaxi (Italy), Maxim (Russia/SEA), Bykea (Pakistan), Yassir (Algeria), LINE MAN (Thailand), JoyRide (Philippines), Little (Kenya). Add them if the app needs them.
 - **Blocked URLs** (could not be fetched): uber.com/global/en/cities/ (the uber.com/cities mirror was used instead), most uber.com per-country pages not listed above, grab.com/*/locations (robots), and the full indrive.com/cities list.
+
+## Workable area (preferred-area counties + Intercity)
+Uber and Lyft don't publish which counties each market's preferred areas cover, so a market radius alone over-reaches (Baltimore's radius touches Cecil County, York PA and Wilmington DE). Each driver now confirms their own area:
+
+- **Onboarding and Profile › Workable area** lists the counties around the chosen market, grouped by state (US Census shapes in `dist/regions/counties-XX.json`, built by `npm run build:counties`).
+- **Uber screenshot:** "Read my preferred-areas screenshot" sends the image of *Uber Driver › Preferences › Preferred areas* to the Home Base AI, which lists the checked area names; they're matched to counties ("Bel Air – Harford County" → Harford; "Baltimore" → Baltimore City and County). This needs sign-in. Without it, drivers can type the names or tick the boxes.
+- **Intercity off:** events, heat and route stops must fall inside the chosen counties.
+- **Intercity on:** the rest of the market, plus the intercity neighbour markets in `config/market-areas.json`, also count. For Baltimore that's Washington DC (DC, Montgomery, Prince George's and Northern Virginia). PA and DE still never count.
+- **Defaults:** `config/market-areas.json` holds known areas. Baltimore's 11 counties come from the owner's screenshot (Washington, Frederick, Carroll, Baltimore County and City, Harford, Howard, Anne Arundel, Calvert, Charles, St. Mary's). County edges were read off the map, so drivers should confirm them. Other US markets default to home-state counties inside the working radius until the driver confirms.
+- **Saved:** on the device only, under `homeBaseWorkArea`. If there's no saved area for the current market, the app falls back to the market rule.
