@@ -215,7 +215,7 @@
   <section class="panel" id="installPanel" role="dialog" aria-modal="true" aria-labelledby="installTitle"><div class="panel-head"><h2 id="installTitle">Home Base</h2><button type="button" class="panel-hide" id="hidePanel" aria-label="Hide this panel">Hide</button></div><div id="installCopy"></div><button class="close" id="closePanel">Done</button></section>
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-<script src="baltimore-market.js?v=73"></script>
+<script src="baltimore-market.js?v=74"></script>
 <script src="homebase-metros.js?v=1"></script>
 <script src="homebase-heat.js?v=113"></script>
 <script src="homebase-global-heat.js?v=3"></script>
@@ -323,7 +323,7 @@ function marketTime(when,options={hour:'numeric',minute:'2-digit'}){return when.
 function marketDateTime(value){const when=new Date(value);if(!Number.isFinite(when.getTime()))return 'Date unavailable';return when.toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:marketTimeZone||undefined})+' · '+marketTime(when)}
 
 let locationMode="current",locationRequestId=0;
-let currentLocation=null,selectedDestination=null;
+let currentLocation=null,selectedDestination=null,currentCountryCode='US';
 let currentApps=[],availableApps=[],selectedAppNames=[];
 const appProfiles={
   us:[{name:'Uber',base:30,state:'PRIMARY CHECK'},{name:'Lyft',base:27,state:'BACKUP CHECK'}],
@@ -361,7 +361,7 @@ function confirmedBonusRows(payload){const markets=Array.isArray(payload&&payloa
 async function refreshLiveBonuses(){clearBonusMarkers();const btn=$('#bonusToggle');if(!btn||btn.getAttribute('aria-pressed')!=='true')return;try{const rows=confirmedBonusRows(await getPublicSnapshot());for(const row of rows){const color=bonusColor(row.provider),label='+'+new Intl.NumberFormat(undefined,{style:'currency',currency:currentMoney&&currentMoney.code||'USD',maximumFractionDigits:2}).format(row.amount);const icon=L.divIcon({className:'',html:'<div class="live-bonus-label" style="--bonus:'+color+'" title="'+safeText(row.provider)+' confirmed live bonus">'+safeText(label)+'</div>',iconSize:[68,30],iconAnchor:[34,15]});const marker=L.marker([row.lat,row.lon],{icon,zIndexOffset:950}).addTo(liveMap);bonusMapLayers.push(marker)}}catch(e){console.warn('Live bonus feed unavailable',e)}}
 function setupBonusToggle(){const btn=$('#bonusToggle');if(!btn)return;btn.addEventListener('click',()=>{const on=btn.getAttribute('aria-pressed')!=='true';btn.setAttribute('aria-pressed',String(on));btn.setAttribute('aria-label',on?'Hide confirmed live driver bonuses':'Show confirmed live driver bonuses');if(on)refreshLiveBonuses();else clearBonusMarkers()});setInterval(()=>{if(btn.getAttribute('aria-pressed')==='true')refreshLiveBonuses()},60000)}
 function personalizedBase(name){if(!earningsProfile||!earningsProfile.platforms)return null;const key=Object.keys(earningsProfile.platforms).find(k=>k.toLowerCase()===name.toLowerCase()),rate=key&&earningsProfile.platforms[key].rate;return Number.isFinite(rate)&&rate>0?rate:null}
-function configurePlatforms(locale){availableApps=appsForLocale(locale);currentMoney=moneyForLocale(locale);const key='homeBaseCompareApps:'+String(locale.countryCode||'US').toUpperCase();let saved=[];try{saved=JSON.parse(localStorage.getItem(key)||'[]')}catch{}selectedAppNames=Array.isArray(saved)?availableApps.filter(item=>saved.includes(item.name)).map(item=>item.name).slice(0,3):[];if(!selectedAppNames.length)selectedAppNames=availableApps.slice(0,Math.min(3,availableApps.length)).map(item=>item.name);const row=$('#compareSourceRow');if(row){row.innerHTML=availableApps.map(item=>'<button class="compare-source" type="button" data-compare-app="'+safeText(item.name)+'" aria-pressed="'+(selectedAppNames.includes(item.name)?'true':'false')+'">'+safeText(item.name)+'</button>').join('');row.querySelectorAll('[data-compare-app]').forEach(button=>button.addEventListener('click',()=>{const name=button.dataset.compareApp;if(selectedAppNames.includes(name)){selectedAppNames=selectedAppNames.filter(item=>item!==name)}else{if(selectedAppNames.length>=3)selectedAppNames.shift();selectedAppNames.push(name)}try{localStorage.setItem(key,JSON.stringify(selectedAppNames))}catch{}configurePlatforms(locale)}))}currentApps=availableApps.filter(item=>selectedAppNames.includes(item.name));$$('[data-slot]').forEach((button,i)=>{const item=currentApps[i];button.hidden=!item;if(!item)return;$('#app'+i+'Badge').textContent=item.name.slice(0,1).toUpperCase();$('#app'+i+'Name').textContent=item.name.toUpperCase();$('#app'+i+'State').textContent='FORECAST · '+item.state;button.setAttribute('aria-pressed',String(i===0));const online=button.querySelector('[data-online-slot]');if(online)online.setAttribute('aria-label','Open '+item.name+' driver app to go online')});$('#bestPlatform').textContent=currentApps.length?currentApps[0].name+' first':'Select an app';$('#forecastNote').textContent=earningsProfile?locale.name+' · '+currentMoney.code+' · personalized with '+earningsProfile.filename:locale.name+' · '+currentMoney.code+currentMoney.suffix+(globalThis.HB_DEV?' · modeled from local time, weather, events and public venue data':' · estimate');updateEarnings()}
+function configurePlatforms(locale){currentCountryCode=String(locale?.countryCode||'US').toUpperCase();availableApps=appsForLocale(locale);currentMoney=moneyForLocale(locale);const key='homeBaseCompareApps:'+String(locale.countryCode||'US').toUpperCase();let saved=[];try{saved=JSON.parse(localStorage.getItem(key)||'[]')}catch{}selectedAppNames=Array.isArray(saved)?availableApps.filter(item=>saved.includes(item.name)).map(item=>item.name).slice(0,3):[];if(!selectedAppNames.length)selectedAppNames=availableApps.slice(0,Math.min(3,availableApps.length)).map(item=>item.name);const row=$('#compareSourceRow');if(row){row.innerHTML=availableApps.map(item=>'<button class="compare-source" type="button" data-compare-app="'+safeText(item.name)+'" aria-pressed="'+(selectedAppNames.includes(item.name)?'true':'false')+'">'+safeText(item.name)+'</button>').join('');row.querySelectorAll('[data-compare-app]').forEach(button=>button.addEventListener('click',()=>{const name=button.dataset.compareApp;if(selectedAppNames.includes(name)){selectedAppNames=selectedAppNames.filter(item=>item!==name)}else{if(selectedAppNames.length>=3)selectedAppNames.shift();selectedAppNames.push(name)}try{localStorage.setItem(key,JSON.stringify(selectedAppNames))}catch{}configurePlatforms(locale)}))}currentApps=availableApps.filter(item=>selectedAppNames.includes(item.name));$$('[data-slot]').forEach((button,i)=>{const item=currentApps[i];button.hidden=!item;if(!item)return;$('#app'+i+'Badge').textContent=item.name.slice(0,1).toUpperCase();$('#app'+i+'Name').textContent=item.name.toUpperCase();$('#app'+i+'State').textContent='FORECAST · '+item.state;button.setAttribute('aria-pressed',String(i===0));const online=button.querySelector('[data-online-slot]');if(online)online.setAttribute('aria-label','Open '+item.name+' driver app to go online')});$('#bestPlatform').textContent=currentApps.length?currentApps[0].name+' first':'Select an app';$('#forecastNote').textContent=earningsProfile?locale.name+' · '+currentMoney.code+' · personalized with '+earningsProfile.filename:locale.name+' · '+currentMoney.code+currentMoney.suffix+(globalThis.HB_DEV?' · modeled from local time, weather, events and public venue data':' · estimate');updateEarnings()}
 function demandMultiplier(when){const mp=marketParts(when),h=mp.hour+when.getMinutes()/60,day=mp.day,weekend=day===0||day===6;let m=1;if(day===0){/* Provisional Sunday shape: morning strongest; retain an evening floor for ordinary rides, then layer dated games/events separately. */if(h<6)m=1.03;else if(h<12)m=1.16;else if(h<17)m=.98;else if(h<21)m=1.08;else m=1.13}else if(day===6){if(h<7)m=1.18;else if(h<11)m=.82;else if(h<17)m=.96;else if(h<21)m=1.14;else m=1.3}else{if(h<5)m=.9;else if(h<9)m=1.16;else if(h<13.5)m=.82;else if(h<16.5)m=1.08;else if(h<20)m=1.24;else if(h<23)m=1.12;else m=1.18}if(currentRainChance>=50)m+=.1;if(currentEventCount)m+=.08;m*=surgeTrend==='heating'?1.1:surgeTrend==='cooling'?.92:1;return Math.max(.72,Math.min(1.45,m))}
 function updateEarnings(when=selectedForecastTime){selectedForecastTime=when;const m=demandMultiplier(when);currentApps.forEach((item,i)=>{const personal=personalizedBase(item.name),base=personal||item.base,mid=Math.round(base*m),low=Math.round(mid*.84),high=Math.round(mid*1.17);$(`#app${i}Earn`).textContent=`≈ ${currentMoney.symbol}${mid}/hr`;$(`#app${i}Range`).textContent=`${currentMoney.symbol}${low}–${high} ${personal?'personalized':'gross forecast'}`})}
 configurePlatforms({name:'Baltimore',countryCode:'US'});setupBonusToggle();
@@ -571,7 +571,7 @@ function renderDemandCoach(){
  const score=Number(stop.score)||0,km=currentLocation?distanceKm(currentLocation,[stop.lat,stop.lon]):Infinity,provider=!!(stop.tags&&(stop.tags.providerSignal||stop.tags.providerEvent)),event=!!(stop.tags&&(stop.tags.liveEvent||stop.eventStart));
  const wait=score<4,move=score>=12&&km>2.5;action.textContent=wait?'WAIT':move?'MOVE':'STAY NEARBY';
  title.textContent=wait?'Demand looks quiet nearby':stop.name.split(' · ')[0]+' · '+marketTime(stop.when);
- reason.textContent=wait?(globalThis.HB_DEV?'The next few hours have a weak modeled signal. Recheck after the next event or weather update.':'Quiet stretch ahead. Check back after the next event or weather change.'):(move?'Head toward ':'Stay near ')+stop.name.split(' · ')[0]+'. '+(Number.isFinite(km)?km.toFixed(1)+' km away. ':'')+(globalThis.HB_DEV?'Signal: ':'')+demandReason(stop.cat,marketParts(stop.when).hour)+'.';
+ reason.textContent=wait?(globalThis.HB_DEV?'The next few hours have a weak modeled signal. Recheck after the next event or weather update.':'Quiet stretch ahead. Check back after the next event or weather change.'):(move?'Head toward ':'Stay near ')+stop.name.split(' · ')[0]+'. '+(Number.isFinite(km)?distanceLabel(km)+' away. ':'')+(globalThis.HB_DEV?'Signal: ':'')+demandReason(stop.cat,marketParts(stop.when).hour)+'.';
  const feeds=['Uber '+(providerStatuses.uber||'unknown'),'Ticketmaster '+(providerStatuses.ticketmaster||'unknown'),'FlightAware '+(providerStatuses.flightaware||'unknown')].join(' · ');
  const pretty=s=>({active:'connected',stale:'stale',not_configured:'not set up',rate_limited:'rate limited',unavailable:'unavailable',error:'unavailable'}[s]||s),feedText=['Uber '+pretty(providerStatuses.uber||'unknown'),'Ticketmaster '+pretty(providerStatuses.ticketmaster||'unknown'),'FlightAware '+pretty(providerStatuses.flightaware||'unknown')].join(' · ');
  meta.textContent=!globalThis.HB_DEV?(publicSignalsRefreshedAt?'Updated '+marketTime(publicSignalsRefreshedAt):''):(provider?'Provider signal · proxy':event?'Medium · dated public event':'Lower · modeled public signals')+' · '+(publicSignalsRefreshedAt?'Model refreshed '+marketTime(publicSignalsRefreshedAt):'Waiting for public data refresh')+' · '+(providerSnapshotAt?'Provider snapshot '+marketTime(providerSnapshotAt):'Provider snapshot unavailable')+' · Feeds: '+feedText;
@@ -968,13 +968,28 @@ function trackObservedGames(games){
   return rows;
 }
 function scoreboardKey(id){const m=/^(mlb|espn:[^:]+):/.exec(String(id||''));return m?m[1]==='mlb'?'mlb':m[1].slice(5):''}
+// Event store: every league's schedule is checked once per market day for the next three
+// days. Later full refreshes that day reuse the stored games (no network); only today's
+// scoreboards for leagues with a nearby game live or about to start are re-polled for
+// score, final and cancellation, and those observations update the stored games.
+function marketDayKey(now=new Date()){try{return now.toLocaleDateString('en-CA',{timeZone:marketTimeZone||undefined})}catch{return now.toISOString().slice(0,10)}}
+function storedGames(){try{const s=JSON.parse(localStorage.getItem('homeBaseEventStore')||'null');return s&&Array.isArray(s.rows)?s:null}catch{return null}}
+function currentStoredGames(store,now=Date.now()){
+  const latest=new Map(gameObservations().map(r=>[r.id,r]));
+  return store.rows.map(r=>latest.get(r.id)||r).filter(r=>{const start=Date.parse(r.eventStart),end=Date.parse(r.eventEnd||'');return Number.isFinite(end)?end>now-3*3600000:start>now-6*3600000&&start<now+72*3600000});
+}
 async function fetchScoreboardGames(keys){
-  const now=new Date(),zone=marketTimeZone||undefined,wanted=key=>!keys||keys.includes(key),games=[],jobs=[];
-  if(wanted('mlb'))for(const date of HomeBaseSports.scoreboardDates(now,zone,'-'))jobs.push(fetchJSON(HomeBaseSports.mlbUrl(date),4000).then(data=>{for(const day of data.dates||[])for(const game of day.games||[])games.push(HomeBaseSports.mlbGame(game))}));
-  for(const entry of HomeBaseSports.ESPN_LEAGUES)if(wanted(entry.league))for(const date of HomeBaseSports.scoreboardDates(now,zone))jobs.push(fetchJSON(HomeBaseSports.espnUrl(entry,date),4000).then(data=>{for(const event of data.events||[])games.push(HomeBaseSports.espnGame(event,entry))}));
+  const now=new Date(),zone=marketTimeZone||undefined,wanted=key=>!keys||keys.includes(key),games=[],jobs=[],today=marketDayKey(now),store=storedGames();
+  if(!keys&&store&&store.day===today)return currentStoredGames(store,now.getTime());
+  const days=keys?HomeBaseSports.scoreboardDates(now,zone):HomeBaseSports.upcomingDates(now,zone),mlbDays=keys?HomeBaseSports.scoreboardDates(now,zone,'-'):HomeBaseSports.upcomingDates(now,zone,'-');
+  if(wanted('mlb'))for(const date of mlbDays)jobs.push(fetchJSON(HomeBaseSports.mlbUrl(date),4000).then(data=>{for(const day of data.dates||[])for(const game of day.games||[])games.push(HomeBaseSports.mlbGame(game))}));
+  for(const entry of HomeBaseSports.ESPN_LEAGUES)if(wanted(entry.league))for(const date of days)jobs.push(fetchJSON(HomeBaseSports.espnUrl(entry,date),4000).then(data=>{for(const event of data.events||[])games.push(HomeBaseSports.espnGame(event,entry))}));
   const settled=await Promise.allSettled(jobs);
-  if(!settled.some(result=>result.status==='fulfilled'))throw Error('Public scoreboards unavailable');
-  return trackObservedGames(games.filter(Boolean));
+  if(!settled.some(result=>result.status==='fulfilled')){if(store)return currentStoredGames(store,now.getTime());throw Error('Public scoreboards unavailable');}
+  const rows=trackObservedGames(games.filter(Boolean));
+  if(!keys){try{localStorage.setItem('homeBaseEventStore',JSON.stringify({day:today,checkedAt:now.toISOString(),rows:rows.slice(0,600)}))}catch{}}
+  else if(store){const fresh=new Map(rows.map(r=>[r.id,r]));store.rows=store.rows.map(r=>fresh.get(r.id)||r);try{localStorage.setItem('homeBaseEventStore',JSON.stringify(store))}catch{}}
+  return keys?rows:currentStoredGames({rows},now.getTime());
 }
 function scoreboardGames(keys){
   const id=keys?keys.join(','):'*';
@@ -1085,8 +1100,13 @@ async function loadProviderSignals(lat,lon,market){
     renderFeedSignal();renderDemandCoach();return{events}
   }catch{publicCalendarCoverage={status:'unavailable',sourceCount:0};renderFeedSignal();renderDemandCoach();return null}
 }
-// Events stay local: a big venue counts within 110 km of the driver, anything else within 80 km.
-function eventNearDriver(event){if(!currentLocation)return true;const km=distanceKm(currentLocation,[Number(event.lat),Number(event.lon)]);return km<=(HomeBaseRoutePolicy.eventSize(event).major?110:80)}
+// Events stay local: inside the driver's rideshare service area (e.g. DMV for Baltimore, not
+// Pennsylvania or Delaware; Florida for Miami) and within 68 mi (110 km) for a big venue or
+// 50 mi (80 km) otherwise.
+function eventNearDriver(event){if(!currentLocation)return true;const point=[Number(event.lat),Number(event.lon)];if(typeof HomeBaseMarket!=='undefined'&&HomeBaseMarket.inDriverServiceArea&&!HomeBaseMarket.inDriverServiceArea(currentLocation,point))return false;const km=distanceKm(currentLocation,point);return km<=(HomeBaseRoutePolicy.eventSize(event).major?110:80)}
+// Distances read in miles where drivers use miles (US, UK, Liberia, Myanmar), kilometres elsewhere.
+function usesMiles(){const c=String(currentCountryCode||'US').toUpperCase();return ['US','GB','LR','MM','PR','VI','GU'].includes(c)}
+function distanceLabel(km){return usesMiles()?(km/1.609344).toFixed(1)+' mi':km.toFixed(1)+' km'}
 function rideRelevantEvent(event){
   if(HomeBasePublicData.isTicketAddon(event?.name)||!event?.eventStart||!Number.isFinite(new Date(event.eventStart).getTime())||!Number.isFinite(Number(event.lat))||!Number.isFinite(Number(event.lon)))return false;
   if(typeof eventNearDriver==='function'&&!eventNearDriver(event))return false;
@@ -1221,6 +1241,8 @@ function showWholeRoute(){
 }
 (function addWholeRouteButton(){const title=document.getElementById('routePlanTitle');if(!title||typeof title.insertAdjacentElement!=='function'||document.getElementById('wholeRouteBtn'))return;const b=document.createElement('button');b.type='button';b.id='wholeRouteBtn';b.className='hb-whole-route';b.textContent='Show whole route';b.setAttribute('aria-label','Show the whole route on the map');b.style.cssText='margin-left:8px;padding:4px 10px;border-radius:999px;border:1px solid rgba(91,198,232,.6);background:transparent;color:inherit;font:inherit;font-size:12px;cursor:pointer';b.addEventListener('click',e=>{e.stopPropagation();showWholeRoute();});title.insertAdjacentElement('afterend',b);})();
 function buildRoute(venues,lat,lon,market,publicHeatSources=venues){
+  // Only places inside the driver's rideshare service area can become route stops or heat.
+  if(typeof HomeBaseMarket!=='undefined'&&HomeBaseMarket.inDriverServiceArea){const inArea=v=>!Number.isFinite(Number(v?.lat))||HomeBaseMarket.inDriverServiceArea([lat,lon],[Number(v.lat),Number(v.lon)]);venues=(venues||[]).filter(inArea);publicHeatSources=(publicHeatSources||[]).filter(inArea);}
   // Past history that makes a place a verified hot spot at a given time: surge seen there
   // on 2+ different days around that time (screenshots, driver logs, provider samples).
   const routeHistoryAt=(v,when)=>{
@@ -1393,6 +1415,9 @@ async function refreshLiveDemandLayer(){
 }
 if(!demoLocale)setTimeout(autoRefreshGps,150);
 setInterval(()=>{updateClimateAdvisory();const selected=$('[data-hour][aria-pressed="true"]');if(selected&&selected.dataset.hour==='0')applyTimeForecast(0,new Date());refreshLiveDemandLayer()},300000);
+// Living map: between the 5-minute data refreshes, the heat advances to the current time every
+// 2 minutes from stored patterns and dated events (no network needed), like a live provider map.
+setInterval(()=>{if(document.visibilityState!=='visible')return;const selected=$('[data-hour][aria-pressed="true"]');if(!selected||selected.dataset.hour!=='0'||!activeDemandSources?.length)return;const now=new Date();selectedForecastTime=now;renderDemandGrid(activeDemandSources,0,now);updateCityPulse(now)},120000);
 // Every time the app is opened or comes back online, re-check all demand sources (events, route, heat, surge history).
 function recheckDemandSources(){if(document.visibilityState!=='visible')return;schoolSearchAt=0;if(!demoLocale&&Date.now()-lastAutoGpsRefresh>300000)autoRefreshGps();else refreshLiveDemandLayer();}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')recheckDemandSources()});window.addEventListener('pageshow',e=>{if(e.persisted)recheckDemandSources()});window.addEventListener('online',recheckDemandSources);

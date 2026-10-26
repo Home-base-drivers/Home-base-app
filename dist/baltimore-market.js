@@ -41,5 +41,35 @@
     return Number.isFinite(lat) && Number.isFinite(lon) && pointInRing(lon, lat);
   }
 
-  return { BALTIMORE_MARKET_RING, HOME_REGION_RING, pointInRing, isBaltimorePoint, isHomeRegionPoint };
+
+  // Rideshare service areas, [lon, lat] rings simplified to roughly a few km. Events and
+  // routes only count where the driver can actually take trips: the Baltimore and
+  // Washington markets share the DMV area (Maryland, DC and Northern Virginia) but not
+  // Pennsylvania (north of the Mason-Dixon line), Delaware or West Virginia; Miami covers
+  // Florida only. Markets without a ring fall back to the distance limit alone.
+  const SERVICE_AREAS = {
+    dmv: { name: 'Maryland, DC and Northern Virginia', ring: [
+      [-79.477, 39.7216], [-75.788, 39.7216], [-75.6936, 38.4602], [-75.0491, 38.4512], [-75.03, 38.32], [-75.12, 38.15],
+      [-75.242, 38.0275], [-75.624, 37.9118], [-76.05, 37.95], [-76.25, 38.3], [-77.0, 38.3],
+      [-77.9, 38.3], [-77.83, 39.13], [-77.73, 39.32], [-77.82, 39.60], [-78.18, 39.70],
+      [-78.45, 39.62], [-78.76, 39.64], [-79.07, 39.47], [-79.487, 39.195], [-79.477, 39.7216]
+    ] },
+    florida: { name: 'Florida', ring: [
+      [-87.6, 31.0], [-85.0, 31.0], [-84.86, 30.7], [-82.2, 30.57], [-81.45, 30.71], [-80.0, 26.5],
+      [-79.95, 25.0], [-81.2, 24.4], [-82.2, 24.5], [-81.8, 25.8], [-82.9, 27.5], [-82.8, 28.5],
+      [-83.7, 29.9], [-85.3, 29.6], [-87.6, 30.3], [-87.6, 31.0]
+    ] }
+  };
+  function serviceAreaAt(lat, lon) {
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+    for (const [id, area] of Object.entries(SERVICE_AREAS)) if (pointInRing(lon, lat, area.ring)) return { id, name: area.name, ring: area.ring };
+    return null;
+  }
+  // True when `point` is where a driver at `driver` can take trips (same service area).
+  function inDriverServiceArea(driver, point) {
+    const area = serviceAreaAt(driver[0], driver[1]);
+    return !area || pointInRing(point[1], point[0], area.ring);
+  }
+
+  return { SERVICE_AREAS, serviceAreaAt, inDriverServiceArea, BALTIMORE_MARKET_RING, HOME_REGION_RING, pointInRing, isBaltimorePoint, isHomeRegionPoint };
 });

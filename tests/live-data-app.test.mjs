@@ -22,7 +22,7 @@ test('app scoreboard loader places nearby games, tracks endings and re-polls onl
     knownBaltimoreVenue: name => /m.t bank stadium/i.test(name) ? { lat: 39.278, lon: -76.6227, name: 'M&T Bank Stadium' } : null,
     isGreaterBaltimoreLocation: () => true, distanceKm: () => 1, marketTime: d => d.toISOString() };
   vm.createContext(ctx);
-  vm.runInContext(['gameObservations', 'trackObservedGames', 'scoreboardKey', 'fetchScoreboardGames', 'scoreboardGames', 'scoreboardEvent', 'activeScoreboardKeys', 'loadScoreboardEvents'].map(extract).join('\n') + '\nlet scoreboardRequest=null,scoreboardRequestAt=0,scoreboardRequestKeys="";', ctx);
+  vm.runInContext(['gameObservations', 'trackObservedGames', 'scoreboardKey', 'marketDayKey', 'storedGames', 'currentStoredGames', 'fetchScoreboardGames', 'scoreboardGames', 'scoreboardEvent', 'activeScoreboardKeys', 'loadScoreboardEvents'].map(extract).join('\n') + '\nlet scoreboardRequest=null,scoreboardRequestAt=0,scoreboardRequestKeys="";', ctx);
   const live = await ctx.loadScoreboardEvents(39.29, -76.61, 'Baltimore', []);
   assert.equal(live.length, 1); assert.equal(live[0].tags.gameClosing, true); assert.equal(live[0].tags.scoreboardKey, 'nfl'); assert.equal(live[0].eventEnd, null);
   assert.equal(policy.eventPhase(live[0], new Date()), 'closing');
@@ -38,6 +38,12 @@ test('app scoreboard loader places nearby games, tracks endings and re-polls onl
   assert.equal(final[0].eventState, 'Departure'); assert.ok(final[0].eventEnd instanceof Date);
   assert.ok(Math.abs(final[0].eventEnd.getTime() - (Date.now() - 5 * MIN)) < 2000, 'end is the midpoint of the observation window');
   assert.equal(policy.eventPhase(final[0], new Date()), 'exit');
+  // The three-day schedule was stored on the first full check; another full refresh the
+  // same day reuses it without any network request.
+  calls = []; ctx.scoreboardRequest = null;
+  const again = await ctx.fetchScoreboardGames();
+  assert.equal(calls.length, 0); assert.ok(again.some(r => r.id === 'espn:nfl:401'));
+  assert.equal(JSON.parse(ctx.localStorage.getItem('homeBaseEventStore')).day, ctx.marketDayKey());
 });
 
 test('app weather inputs use hourly intensity and active NWS alerts, with the event multiplier kept', () => {

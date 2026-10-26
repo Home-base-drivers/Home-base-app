@@ -36,3 +36,15 @@ test('sports icons match the league',()=>{
   assert.equal(ctx.sportEmoji({tags:{league:'MLB'}}),'⚾');
   assert.equal(ctx.sportEmoji({tags:{league:'MLS'}}),'⚽');
 });
+
+test('events count only inside the driver\'s rideshare service area',()=>{
+  const M=require('../dist/baltimore-market.js'),baltimore=[39.29,-76.61],miami=[25.77,-80.19];
+  for(const p of [[38.898,-77.021],[38.978,-76.49],[39.64,-77.72],[38.95,-77.45],[38.336,-75.085]])assert.ok(M.inDriverServiceArea(baltimore,p),'DMV '+p);
+  for(const p of [[39.90,-75.17],[39.96,-76.73],[39.74,-75.55],[39.68,-75.75],[39.46,-77.96]])assert.ok(!M.inDriverServiceArea(baltimore,p),'outside DMV '+p);
+  assert.ok(M.inDriverServiceArea(miami,[27.95,-82.46]));assert.ok(!M.inDriverServiceArea(miami,[25.04,-77.35]));
+  assert.match(html,/HomeBaseMarket\.inDriverServiceArea\(currentLocation,point\)/);
+});
+test('distances read in miles in the US',()=>{
+  const c={currentCountryCode:'US'};vm.createContext(c);vm.runInContext(html.match(/function usesMiles\([^\n]*/)[0]+'\n'+html.match(/function distanceLabel\([^\n]*/)[0],c);
+  assert.equal(c.distanceLabel(16.09344),'10.0 mi');c.currentCountryCode='FR';assert.equal(c.distanceLabel(10),'10.0 km');
+});

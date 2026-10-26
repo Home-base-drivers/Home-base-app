@@ -130,8 +130,9 @@
   function historyBoost(prior){return prior<=.08?{level:prior>0?.04:0,opacity:prior>0?.035:0}:{level:.04+(prior-.08)*.75,opacity:.035+(prior-.08)*.8};}
   function composePixel(value,weightedShade,evidence={},history=0){
     // Fresh evidence wins even when it reports no surge.
-    const prior=evidence.current>.12?0:clamp(Number(history)||0,0,.45),boost=historyBoost(prior),pattern=prior>.08;
-    if(value<.018)return pattern?{level:.32+(prior-.08)*1.0,opacity:Math.min(.5,.14+(prior-.08)*1.0)}:{level:.32,opacity:prior>.006?Math.min(.14,compositeOpacity(prior)):0};
+    // Established patterns (surge repeated on several dates at this time) read hot on their own.
+    const prior=evidence.current>.12?0:clamp(Number(history)||0,0,.72),boost=historyBoost(prior),pattern=prior>.08;
+    if(value<.018)return pattern?{level:Math.min(.9,.32+(prior-.08)*1.1),opacity:Math.min(.62,.14+(prior-.08)*1.15)}:{level:.32,opacity:prior>.006?Math.min(.14,compositeOpacity(prior)):0};
     const {we,ws}=evidenceWeights(evidence),capBase=pattern?.7:.57,levelCap=capBase+(Math.max(capBase,.78)-capBase)*we+(1-Math.max(capBase,.78))*ws;
     return {level:Math.min(evidenceLevel(value,weightedShade,evidence)+boost.level,levelCap),opacity:Math.min(evidenceOpacity(value,evidence)+boost.opacity,evidence.current>.12?.8:pattern?.6:.38)};
   }
@@ -473,6 +474,9 @@
         const zoomFactor = 1;
         const historyApi=globalThis.HomeBaseDemandHistory;
         const history=historyApi?sourceData.filter(s=>!(s.tags&&(s.tags.providerSignal||s.tags.providerEvent||s.tags.liveEvent))).map(s=>{const strength=historicalPriorForSource(s,this._when,historyApi);return strength>0?{...s,eventStart:null,eventEnd:null,tags:{historicalPrior:strength}}:null;}).filter(Boolean):[];
+        // Per-place history copies only feed the strongest value per spot, so merge copies that
+        // sit within ~400 m into one source (same look, far fewer pixel passes).
+        {const cells=new Map();for(const h of history){const k=Math.round(h.lat/.004)+':'+Math.round(h.lon/.004),old=cells.get(k);if(!old||h.tags.historicalPrior>old.tags.historicalPrior)cells.set(k,h);}history.length=0;history.push(...cells.values());}
         // Coordinate patterns render even where no mapped place sits under them.
         if(historyApi?.patternSources)history.push(...historyApi.patternSources(this._when));
         const sources = [...sourceData,...history].map((source, index) => {
@@ -503,7 +507,7 @@
             ry = ry * .58 + areaRy * .42;
           }
           return {
-            center, strength, angle, rx, ry, influenceLimit:sourceInfluenceLimitKm(source)*radius/km, evidence:currentEvidence(source,this._when),
+            center, strength, angle, rx, ry, influenceLimit:sourceInfluenceLimitKm(source)*radius/km, evidence:currentEvidence(source,this._when), recurring:!!(source.tags&&source.tags.recurringPattern),
             blockShape: (source.heatAreaType === 'label' || source.heatAreaType === 'neighborhood') && Array.isArray(bounds),
             shade: sourceShade(strength),
             detailOpacity: source.tags && (source.tags.providerSignal || source.tags.providerEvent || source.tags.liveEvent) ? .76 :
@@ -525,6 +529,11 @@
         if (maxX < 0 || maxY < 0 || minX > size.x || minY > size.y) return;
         minX = clamp(minX, 0, size.x); minY = clamp(minY, 0, size.y);
         maxX = clamp(maxX, 0, size.x); maxY = clamp(maxY, 0, size.y);
+        // Many sources at street zoom each span the whole screen (hundreds of millions of pixel
+        // steps, multi-second freezes). Accumulate on a coarser grid then, keeping the blur at the
+        // same on-screen radius; the smoothed result looks the same at a fraction of the work.
+        const baseSample = sample, viewCells = ((maxX - minX) / sample) * ((maxY - minY) / sample);
+        sample *= clamp(Math.sqrt(sources.length * viewCells / 2.5e7), 1, 3);
         const geographicAnchor = map.latLngToContainerPoint([0, 0]);
         const gridLeft = anchoredGridOrigin(minX, geographicAnchor.x, sample);
         const gridTop = anchoredGridOrigin(minY, geographicAnchor.y, sample);
@@ -576,7 +585,9 @@
               const contribution = source.strength * profile * texture[cell] * source.detailOpacity;
               const offset = y * gridWidth + x;
               if(isCurrent&&profile>currentField[offset])currentField[offset]=profile;
-              if(isHistory){if(contribution>historyField[offset])historyField[offset]=contribution;continue;}
+              // Distinct recurring-pattern locations stack (more surge history in an area reads
+              // hotter); per-place copies of the same pattern only take the strongest value.
+              if(isHistory){historyField[offset]=source.recurring?1-(1-historyField[offset])*(1-Math.min(.95,contribution)):Math.max(historyField[offset],contribution);continue;}
               if(isEvent&&profile*source.shade>eventField[offset])eventField[offset]=profile*source.shade;
               if(isSurge&&profile*source.shade>surgeField[offset])surgeField[offset]=profile*source.shade;
               if(isModeled){
@@ -595,7 +606,7 @@
         });
 
         // Melt overlapping sources into one layered surface with no seams.
-        const blurCells=clamp(Math.round(.28*pxPerKm/sample),1,8);
+        const blurCells=clamp(Math.round(Math.min(.28*pxPerKm,8*baseSample)/sample),1,8);
         [field,shadeField,backgroundField,backgroundShade,historyField,eventField,surgeField].forEach(data=>{boxBlur(data,gridWidth,gridHeight,blurCells);boxBlur(data,gridWidth,gridHeight,blurCells);});
         const paint = document.createElement('canvas');
         paint.width = gridWidth; paint.height = gridHeight;

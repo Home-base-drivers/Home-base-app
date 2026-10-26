@@ -103,6 +103,19 @@
   function local(date){const k=Math.floor(+date/60000);let v=localCache.get(k);if(v)return v;const p=Object.fromEntries(LOCAL.formatToParts(date).map(x=>[x.type,x.value]));v={day:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(p.weekday),minute:(Number(p.hour)%24)*60+Number(p.minute)};if(localCache.size>50000)localCache.clear();localCache.set(k,v);return v;}
   function nightKey(stamp){const k=Math.floor((stamp-4*3600000)/3600000);let v=nightCache.get(k);if(v)return v;v=new Date(k*3600000).toLocaleDateString('en-CA',{timeZone:'America/New_York'});if(nightCache.size>20000)nightCache.clear();nightCache.set(k,v);return v;}
   function historyChanged(){dataVersion++;memo.clear();}
+  /* Pattern table: a place's surge value for each weekday and 5-minute slot is computed once
+     and kept (also across app launches, keyed to the stored history), then simply applied.
+     It is recalculated only when new surge data changes the history. */
+  function slotKey(when){const l=local(new Date(when));return l.day+':'+Math.floor(l.minute/5);}
+  let tableLoadedFor='',saveTimer=null;
+  function loadTable(){const sig=rowIndex().signature;if(tableLoadedFor===sig)return;tableLoadedFor=sig;
+    try{const saved=JSON.parse(globalThis.localStorage?.getItem('homeBasePatternTable')||'null');if(saved&&saved.signature===sig&&saved.entries)for(const [k,v] of saved.entries)if(!memo.has(k))memo.set(k,unpack(v));}catch{}}
+  // Compact storage: [dates, observed dates, band, share, confidence, uber, empower].
+  const r4=v=>Math.round((Number(v)||0)*1e4)/1e4;
+  function pack(v){return [v.distinctDates||0,v.observedDates||0,v.band||null,r4(v.share),r4(v.confidence),r4(v.platforms?.uber),r4(v.platforms?.empower)];}
+  function unpack(a){return Array.isArray(a)?{distinctDates:a[0],observedDates:a[1],band:a[2],share:a[3],confidence:a[4],platforms:{uber:a[5],empower:a[6]}}:a;}
+  function remember(key,value){if(memo.size>30000)memo.clear();memo.set(key,value);
+    if(!globalThis.localStorage||saveTimer)return;saveTimer=setTimeout(()=>{saveTimer=null;try{globalThis.localStorage.setItem('homeBasePatternTable',JSON.stringify({signature:rowIndex().signature,entries:[...memo.entries()].slice(-6000).map(([k,v])=>[k,pack(v)])}))}catch{}},3000);}
   const weekday=d=>d>=1&&d<=5;
   // Full weight within 15 minutes of the observed time, fading to zero at 45.
   // Route planning (opts.route) looks wider: full weight within an hour, fading to
@@ -141,6 +154,10 @@
         if(Number.isFinite(lo)&&Number.isFinite(hi)&&hi>lo&&hi-lo<=65*60000)for(let t=lo;t<=hi;t+=5*60000)stamps.push(t);else if(Number.isFinite(at))stamps.push(at);}
       rowIndexCache.push({row,stamps:(stamps.length?stamps:[capture]).map(t=>({t,loc:local(new Date(t))}))});
     }
+    // Ages are measured from the newest stored observation, not the clock, so a place's
+    // value at a weekday and time is fixed until new surge data arrives.
+    rowIndexCache.dataNow=Math.max(0,...rowIndexCache.flatMap(e=>e.stamps.map(s=>s.t)));
+    rowIndexCache.signature='pt3|'+screenshotBenchmarks.length+'|'+rowIndexCache.dataNow+'|'+(screenshotBenchmarks.at(-1)?.id||'');
     // 15-minute time-of-day slots per platform, so a lookup only visits rows near its clock time.
     rowIndexCache.slots={};
     for(const entry of rowIndexCache){const type=entry.row.record_type,slots=rowIndexCache.slots[type]||(rowIndexCache.slots[type]=Array.from({length:96},()=>[]));
@@ -155,11 +172,12 @@
     return seen;
   }
   function recurrenceForPlatform(matchItem,target,opts,recordType){
+    loadTable();
     const targetLocal=local(target),dates=new Map();
     for(const entry of candidates(recordType,targetLocal,opts)){
       const row=entry.row;
       let stamp=NaN,tw=0;for(const s of entry.stamps){const w=timeWeight(s.loc,targetLocal,opts);if(w>tw){tw=w;stamp=s.t;}}
-      const age=+target-stamp;if(!tw||!Number.isFinite(stamp)||age<0||age>120*86400000)continue;
+      if(!tw||!Number.isFinite(stamp))continue;
       for(const item of row.area_observations||[]){
         const proximity=matchItem(item);if(!(proximity>0)||!(item.band in BANDS))continue;
         const calm=!(BANDS[item.band]>0);
@@ -180,7 +198,11 @@
         else if(Number.isFinite(usd)&&usd>(old.usd||0))old.usd=usd;
       }
     }
-    const all=[...dates.values()].map(d=>({...d,recency:Math.exp(-(+target-d.stamp)/86400000/45)})),positive=all.filter(d=>d.value>0);
+    /* Residual, near-permanent patterns: each date fades slowly (e^-age/90 days from the newest
+       data), and once surge has repeated on 3+ different dates at this place and time every
+       date keeps at least 35% weight, so an established hot spot always shows at that time. */
+    const dataNow=rowIndex().dataNow||+target,raw=[...dates.values()],repeats=raw.filter(d=>d.value>0).length,floor=repeats>=3?.35:0;
+    const all=raw.map(d=>({...d,recency:Math.max(floor,Math.exp(-Math.max(0,dataNow-d.stamp)/86400000/90))})),positive=all.filter(d=>d.value>0);
     if(!positive.length)return{distinctDates:0,observedDates:all.length,band:null,confidence:0,share:0,effectiveDates:0};
     const latest=positive.sort((a,b)=>b.stamp-a.stamp)[0];
     // Bigger dollar amounts weigh more: $8 or less is neutral, rising to 1.6x at $18+.
@@ -211,14 +233,14 @@
   // Named Baltimore neighborhoods (older captures carry names only).
   function recurrenceFor(areaName,when,isBaltimore,opts){
     if(!isBaltimore)return{distinctDates:0,band:null,confidence:0};
-    const key='n|'+areaName+'|'+Math.floor(+new Date(when)/60000)+'|'+(opts?.route?1:0);if(memo.has(key))return memo.get(key);
-    const out=recurrence(nameMatcher(areaName),when,opts);if(memo.size>20000)memo.clear();memo.set(key,out);return out;
+    loadTable();const key='n|'+areaName+'|'+slotKey(when)+'|'+(opts?.route?1:0);if(memo.has(key))return memo.get(key);
+    const out=recurrence(nameMatcher(areaName),when,opts);remember(key,out);return out;
   }
   // Any location: captures that carry coordinates, within their area radius.
   function recurrenceAt(lat,lon,when,opts){
     if(!Number.isFinite(lat)||!Number.isFinite(lon))return{distinctDates:0,band:null,confidence:0};
-    const key='a|'+lat.toFixed(4)+','+lon.toFixed(4)+'|'+Math.floor(+new Date(when)/60000)+'|'+(opts?.route?1:0);if(memo.has(key))return memo.get(key);
-    const out=recurrence(item=>{if(!Number.isFinite(item.lat)||!Number.isFinite(item.lon))return 0;const r=Number(item.radiusKm)||1.6,d=distanceKm([lat,lon],[item.lat,item.lon]);return d>=r?0:1-d/r;},when,opts);if(memo.size>20000)memo.clear();memo.set(key,out);return out;
+    loadTable();const key='a|'+lat.toFixed(4)+','+lon.toFixed(4)+'|'+slotKey(when)+'|'+(opts?.route?1:0);if(memo.has(key))return memo.get(key);
+    const out=recurrence(item=>{if(!Number.isFinite(item.lat)||!Number.isFinite(item.lon))return 0;const r=Number(item.radiusKm)||1.6,d=distanceKm([lat,lon],[item.lat,item.lon]);return d>=r?0:1-d/r;},when,opts);remember(key,out);return out;
   }
   // One pattern point per observed location, for the heat layer anywhere.
   function patternSources(when){

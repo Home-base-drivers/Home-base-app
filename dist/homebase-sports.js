@@ -38,6 +38,13 @@
     const today=ymd(now,timeZone,separator),earlier=ymd(new Date(now.getTime()-4*HOUR),timeZone,separator);
     return earlier===today?[today]:[earlier,today];
   }
+  // Today plus the next two days (and the late-night tail of yesterday): games are stored
+  // once per day for three days ahead instead of being re-fetched on every refresh.
+  function upcomingDates(now=new Date(),timeZone,separator='',days=3){
+    const out=new Set(scoreboardDates(now,timeZone,separator));
+    for(let d=1;d<days;d++)out.add(ymd(new Date(now.getTime()+d*24*HOUR),timeZone,separator));
+    return [...out];
+  }
   function minuteOf(clock){const m=/^(\d{1,3})/.exec(String(clock||''));return m?Number(m[1]):NaN;}
   function espnGame(event,entry,observedAt=Date.now()){
     const competition=event&&Array.isArray(event.competitions)?event.competitions[0]:null,type=event?.status?.type||competition?.status?.type||{};
@@ -125,5 +132,5 @@
     const team=WATCH_PARTY_TEAMS.find(t=>t.league===row.league&&away===t.team&&home!==t.team);
     return team?team.districts.map(([name,lat,lon])=>({name,lat,lon,team:team.label})):[];
   }
-  return{VENUES,venuePlace,ESPN_LEAGUES,WATCH_PARTY_TEAMS,watchParties,espnUrl,mlbUrl,scoreboardDates,espnGame,mlbGame,trackGame,trackAll,relevant,mergeObservations,describe};
+  return{upcomingDates,VENUES,venuePlace,ESPN_LEAGUES,WATCH_PARTY_TEAMS,watchParties,espnUrl,mlbUrl,scoreboardDates,espnGame,mlbGame,trackGame,trackAll,relevant,mergeObservations,describe};
 });
