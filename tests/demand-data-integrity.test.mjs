@@ -77,3 +77,12 @@ test('all demand sources are re-checked every time the app is opened or comes ba
   assert.match(html,/addEventListener\('online',recheckDemandSources\)/);
   assert.match(html,/setTimeout\(autoRefreshGps,150\)/,'first-open refresh removed');
 });
+
+test('alerts shown only as "1h ago" count for their whole hour at full weight',()=>{
+  // Monday Oct 26: Rosemont $17 arrived "1h ago" on a 9:52 AM capture (7:52-8:52 AM).
+  const row=History.observationRows().find(r=>r.id.startsWith('empower-baltimore-20261026-')&&r.area_observations.some(o=>o.shown_usd===17));
+  assert.ok(row,'Rosemont $17 record');
+  assert.equal(row.notifications[0].earliest,'2026-10-26T07:52:00-04:00');
+  const early=History.forecastAt(39.3065,-76.653,new Date('2026-11-02T07:55:00-05:00')),late=History.forecastAt(39.3065,-76.653,new Date('2026-11-02T08:45:00-05:00'));
+  assert.ok(early.strength>0&&late.strength>0,'both ends of the hour see the pattern');
+});

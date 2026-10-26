@@ -199,3 +199,13 @@ Every upload was matched by EXIF capture time and file contents (112 files, 107 
 - **Earnings:** trip pay from the Oct 23–25 Uber Earnings Activity screens is stored in the private earnings database (not in this public repo).
 - **Sun Oct 25 afternoon/evening (9 Uber records):** 1:50 PM northwest (Owings Mills +$6.50, Cockeysville +$6.25); 2:41 PM Monkton +$7.75, Butler +$7.50; 4:28 PM west side and harbor (Allendale/Edmondson +$16, Arbutus +$11, Inner Harbor +$9.50); 4:56 PM Inner Harbor +$10, White Marsh +$9.50; 5:08 PM BWI +$2.75; 5:56 PM downtown all purple with an Uber "Event" pin (Federal Hill/stadiums +$14, Westport +$10); 6:07 PM Inner Harbor +$9.25; 6:39 PM Annapolis +$14; 8:50 PM shading only.
 - **Event link:** the Oct 25 2:41 PM–8:50 PM Uber records are linked to Bengals at Ravens (M&T Bank Stadium, 1:00 PM kickoff). That game calibrates the stadium let-out profile; see `docs/EVENT_HEAT_EXAMPLE.md`.
+- **Mon Oct 26 9:52 AM Empower capture:**
+  - Sunday game let-out, all exact times and linked to the game: Fed Hill/Camden Yards/Union Sq. $5–8 from 4:06 to 5:51 PM, peaking with Camden Yards $8 at 4:29.
+  - Sunday night: Downtown $6 at 10:42 PM and $5 at 11:10 PM.
+  - Monday morning wave, 5:52–8:52 AM, timed by bucket order with low timestamp confidence: Rosemont up to **$17** (with $13 and $11), Mondawmin $5–7, Broadway E. $5–7, Frankford $5–6, Belair-Edison $5, Union Sq. $5–6.
+
+## Weighting update (v290)
+
+- **"1h ago" alerts count fully.** An alert shown only as "1h/2h/3h ago" belongs to that hour's surge window. It now matches any minute in the hour at full weight, instead of half weight pinned to one estimated minute. Records whose date itself is estimated still count at half weight.
+- **Bigger dollars weigh more.** Each date keeps its largest amount. Amounts up to $8 are neutral, scaling to 1.6× at $18 or more. Because the boost multiplies the date-count cap, big amounts repeated on different days build the strongest patterns. The pattern ceiling rises from 0.45 to 0.72 so the boost can show.
+- **Effect next Monday:** Rosemont at 7:30 AM rises 0.37 → 0.42 (its $17, $13 and $11 days). Mondawmin and Broadway East have mostly $5–7 days, so they are unchanged.
