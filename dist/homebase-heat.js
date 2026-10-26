@@ -72,6 +72,25 @@
     const named=Math.max(...[source.heatAreaName,source.name].filter(Boolean).map(name=>historyApi.forecastFor(name,when,true).strength),0);
     return Math.max(named,historyApi.forecastAt?historyApi.forecastAt(Number(source.lat),Number(source.lon),when).strength:0);
   }
+// Event let-out profile, calibrated on Ravens vs. Bengals at M&T Bank Stadium,
+// Sun Oct 25 2026 (1:00 PM kickoff, final about 4:10 PM): Uber bonuses peaked
+// across downtown, the harbor and the west side 20-100 minutes after the final
+// whistle (+$9.50 to +$16), were still +$9.25 at 6:07 PM and faded by 6:39 PM.
+// Large venues therefore keep a longer, wider departure window than small ones.
+  const LET_OUT={stadium:{exitMinutes:150,peakFrom:10,peakTo:100,footprintKm:3.5},arena:{exitMinutes:90,peakFrom:5,peakTo:60,footprintKm:2.25},venue:{exitMinutes:60,peakFrom:0,peakTo:60,footprintKm:0}};
+  function venueClass(source){
+    const text=(String(source.venue||'')+' '+String(source.name||'')).toLowerCase().replace(/&/g,' ').replace(/\s+/g,' '),count=Number(source.expectedAttendance);
+    if(/m t bank stadium|camden yards|oriole park|metlife stadium|yankee stadium|citi field|nationals park|northwest stadium|fedex field|lincoln financial field|citizens bank park/.test(text)||count>=30000)return 'stadium';
+    if(/cfg bank arena|capital one arena|madison square garden|barclays center|prudential center|ubs arena|wells fargo center|\barena\b/.test(text)||count>=8000)return 'arena';
+    return 'venue';
+  }
+  function letOutProfile(source){return {venueClass:venueClass(source),...LET_OUT[venueClass(source)]};}
+  // 0..1 departure strength at `when`; 0 outside the window.
+  function letOutStrength(source,when){
+    const end=Date.parse(source.eventEnd||''),time=+new Date(when);if(!Number.isFinite(end)||source.eventEndEstimated||!Number.isFinite(time))return 0;
+    const p=letOutProfile(source),min=(time-end)/60000;if(min<0||min>=p.exitMinutes)return 0;
+    if(min<p.peakFrom)return .6+.4*min/p.peakFrom;if(min<=p.peakTo)return 1;return Math.max(0,1-(min-p.peakTo)/(p.exitMinutes-p.peakTo));
+  }
   function currentEvidence(source, when, now = Date.now()) {
     const tags=source.tags||{},time=+new Date(when);
     if(tags.historicalPrior)return 'history';
@@ -83,7 +102,7 @@
     if((tags.providerEvent||tags.liveEvent||tags.publicCalendar||source.verifiedEvent===true)&&Number.isFinite(start)&&!source.allDay&&!source.virtual&&!source.private&&!tags.allDay&&!tags.virtual&&!tags.private&&!/cancel|postpon|completed|post$/i.test(source.eventState||source.status||'')){
       const fetched=Date.parse(source.fetchedAt||tags.sourceFetchedAt||tags.fetchedAt||'');
       if(Number.isFinite(fetched)&&(now-fetched>24*3600000||fetched>now+5*60000))return 'modeled';
-      if(time>=start-60*60000&&time<=start||Number.isFinite(end)&&end>start&&!source.eventEndEstimated&&time>=end&&time<end+60*60000)return 'event';
+      if(time>=start-60*60000&&time<=start||Number.isFinite(end)&&end>start&&!source.eventEndEstimated&&time>=end&&time<end+letOutProfile(source).exitMinutes*60000)return 'event';
     }
     return 'modeled';
   }
@@ -216,9 +235,12 @@
 
   // Broader interpolation for modeled neighborhood context, not for live
   // surge/event evidence. Routine schools stay confined to their own block.
-  function displayFootprintKm(source, evidence) {
+  function displayFootprintKm(source, evidence, when) {
     const compactSchool=['school','k12'].includes(source.cat)&&!source.eventStart;
-    return sourceFootprintKm(source)*(evidence==='modeled'&&!compactSchool?1.4:1);
+    const base=sourceFootprintKm(source)*(evidence==='modeled'&&!compactSchool?1.4:1);
+    // A big crowd leaving spreads across surrounding neighborhoods, not just the gate.
+    if(evidence==='event'&&when!=null&&letOutStrength(source,when)>0)return Math.max(base,letOutProfile(source).footprintKm*Math.max(.7,letOutStrength(source,when)));
+    return base;
   }
 
   function sourceFootprintKm(source) {
@@ -458,7 +480,7 @@
           const evidence=currentEvidence(source,this._when);
           if ((!strength&&evidence!=='current') || !Number.isFinite(source.lat) || !Number.isFinite(source.lon)) return null;
           const center = map.latLngToContainerPoint([source.lat, source.lon]);
-          const km = displayFootprintKm(source,evidence), north = map.latLngToContainerPoint([source.lat + km / 111.32, source.lon]);
+          const km = displayFootprintKm(source,evidence,this._when), north = map.latLngToContainerPoint([source.lat + km / 111.32, source.lon]);
           const radius = Math.max(1.25, Math.abs(center.y - north.y));
           const angle = stableAngle(source, index);
           let rx = radius * (.62 + (index % 5) * .055);
@@ -589,5 +611,5 @@
     return new HeatLayer();
   }
 
-  return { displayFootprintKm, fractalNoise, boxBlur, historicalPriorForSource, composeFields, composePixel, currentEvidence, evidenceLevel, evidenceOpacity, colorAt, setPalette, getCustomColors, setCustomColors, getPalette: () => activePalette, paletteNames: Object.keys(PALETTES), sourceStrength, areaIntensity, sourceShade, compositeLevel, compositeOpacity, sourceRadiusKm, sourceFootprintKm, sourceInfluenceLimitKm, anchoredGridOrigin, createLayer };
+  return { letOutProfile, letOutStrength, displayFootprintKm, fractalNoise, boxBlur, historicalPriorForSource, composeFields, composePixel, currentEvidence, evidenceLevel, evidenceOpacity, colorAt, setPalette, getCustomColors, setCustomColors, getPalette: () => activePalette, paletteNames: Object.keys(PALETTES), sourceStrength, areaIntensity, sourceShade, compositeLevel, compositeOpacity, sourceRadiusKm, sourceFootprintKm, sourceInfluenceLimitKm, anchoredGridOrigin, createLayer };
 });
