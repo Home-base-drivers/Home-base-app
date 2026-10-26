@@ -312,7 +312,9 @@ async function main() {
   // Scheduled Pages builds must retain the last deployed snapshot, rather than
   // only the snapshot committed with the release, when a public source fails.
   // The live data branch is usually newest; Pages holds the hourly release copy.
-  for (const url of [LIVE_SIGNALS_URL, 'https://home-base-drivers.github.io/Home-base-app/provider-signals.json']) {
+  // Cache-busted: idle markets carry their last data forward, so a CDN-cached older
+  // copy must never replace newer data.
+  for (const url of [`${LIVE_SIGNALS_URL}?t=${NOW.getTime()}`, `https://home-base-drivers.github.io/Home-base-app/provider-signals.json?t=${NOW.getTime()}`]) {
     try {
       const deployed = await readJson(await boundedFetch(url, { headers: { Accept: 'application/json' } }));
       if (Array.isArray(deployed?.markets) && Date.parse(deployed.generatedAt) > Date.parse(previous.generatedAt || '1970-01-01')) previous = deployed;
