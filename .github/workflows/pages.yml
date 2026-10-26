@@ -63,6 +63,7 @@ jobs:
           # The release bundles the newest live snapshot (signals branch) as the offline
           # copy. Feed calls happen only in live-signals.yml, for markets with drivers.
           HOMEBASE_MARKETS: none
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TICKETMASTER_API_KEY: ${{ secrets.TICKETMASTER_API_KEY }}
           UBER_ACCESS_TOKEN: ${{ secrets.UBER_ACCESS_TOKEN }}
           UBER_CLIENT_ID: ${{ secrets.UBER_CLIENT_ID }}

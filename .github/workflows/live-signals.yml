@@ -85,6 +85,8 @@ jobs:
         run: node scripts/refresh-provider-signals.mjs
         env:
           HOMEBASE_MARKETS: ${{ steps.pick.outputs.markets }}
+          # Read-only use: fetch the current signals branch file for carry-forward.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TICKETMASTER_API_KEY: ${{ secrets.TICKETMASTER_API_KEY }}
           UBER_ACCESS_TOKEN: ${{ secrets.UBER_ACCESS_TOKEN }}
           UBER_CLIENT_ID: ${{ secrets.UBER_CLIENT_ID }}

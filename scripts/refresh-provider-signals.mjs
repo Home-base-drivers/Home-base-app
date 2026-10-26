@@ -314,9 +314,13 @@ async function main() {
   // The live data branch is usually newest; Pages holds the hourly release copy.
   // Cache-busted: idle markets carry their last data forward, so a CDN-cached older
   // copy must never replace newer data.
-  for (const url of [`${LIVE_SIGNALS_URL}?t=${NOW.getTime()}`, `https://home-base-drivers.github.io/Home-base-app/provider-signals.json?t=${NOW.getTime()}`]) {
+  // In Actions, the contents API reads the signals branch directly; raw.githubusercontent
+  // can lag a few minutes behind a force-push even when cache-busted.
+  const sources = [[`${LIVE_SIGNALS_URL}?t=${NOW.getTime()}`, { Accept: 'application/json' }], [`https://home-base-drivers.github.io/Home-base-app/provider-signals.json?t=${NOW.getTime()}`, { Accept: 'application/json' }]];
+  if (process.env.GITHUB_TOKEN && process.env.GITHUB_REPOSITORY) sources.unshift([`https://api.github.com/repos/${process.env.GITHUB_REPOSITORY}/contents/provider-signals.json?ref=signals`, { Accept: 'application/vnd.github.raw', Authorization: `Bearer ${process.env.GITHUB_TOKEN}`, 'X-GitHub-Api-Version': '2022-11-28' }]);
+  for (const [url, headers] of sources) {
     try {
-      const deployed = await readJson(await boundedFetch(url, { headers: { Accept: 'application/json' } }));
+      const deployed = await readJson(await boundedFetch(url, { headers }));
       if (Array.isArray(deployed?.markets) && Date.parse(deployed.generatedAt) > Date.parse(previous.generatedAt || '1970-01-01')) previous = deployed;
     } catch { /* Local/committed verified data is still available offline. */ }
   }
