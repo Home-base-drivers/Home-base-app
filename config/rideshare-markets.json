@@ -1,0 +1,140 @@
+{
+ "generated": "2026-10-26",
+ "notes": "Provisional list from the configured search markets; replaced by the researched Uber/Lyft/global list.",
+ "markets": [
+  {
+   "id": "baltimore",
+   "name": "Baltimore",
+   "country": "US",
+   "region": "MD",
+   "center": [
+    39.2904,
+    -76.6122
+   ],
+   "radiusMi": 50,
+   "pickupStates": [
+    "MD",
+    "DC",
+    "VA"
+   ],
+   "platforms": {
+    "uber": true,
+    "lyft": true
+   },
+   "sources": [
+    "provisional: owner-confirmed DMV rule (Oct 26 2026); full list pending research"
+   ],
+   "confidence": "provisional"
+  },
+  {
+   "id": "north-jersey",
+   "name": "North Jersey",
+   "country": "US",
+   "region": "NJ",
+   "center": [
+    40.94454,
+    -74.07542
+   ],
+   "radiusMi": 50,
+   "pickupStates": [
+    "NJ"
+   ],
+   "platforms": {
+    "uber": true,
+    "lyft": true
+   },
+   "sources": [
+    "provisional: owner-confirmed DMV rule (Oct 26 2026); full list pending research"
+   ],
+   "confidence": "provisional"
+  },
+  {
+   "id": "new-york",
+   "name": "New York",
+   "country": "US",
+   "region": "NY",
+   "center": [
+    40.758,
+    -73.9855
+   ],
+   "radiusMi": 50,
+   "pickupStates": [
+    "NY"
+   ],
+   "platforms": {
+    "uber": true,
+    "lyft": true
+   },
+   "sources": [
+    "provisional: owner-confirmed DMV rule (Oct 26 2026); full list pending research"
+   ],
+   "confidence": "provisional"
+  },
+  {
+   "id": "london",
+   "name": "London",
+   "country": "GB",
+   "region": "",
+   "center": [
+    51.5074,
+    -0.1278
+   ],
+   "radiusMi": 50,
+   "pickupStates": [],
+   "platforms": {
+    "uber": true,
+    "lyft": false
+   },
+   "sources": [
+    "provisional: owner-confirmed DMV rule (Oct 26 2026); full list pending research"
+   ],
+   "confidence": "provisional"
+  },
+  {
+   "id": "washington-dc",
+   "name": "Washington",
+   "country": "US",
+   "region": "DC",
+   "center": [
+    38.9072,
+    -77.0369
+   ],
+   "radiusMi": 50,
+   "pickupStates": [
+    "DC",
+    "MD",
+    "VA"
+   ],
+   "platforms": {
+    "uber": true,
+    "lyft": true
+   },
+   "sources": [
+    "provisional: owner-confirmed DMV rule (Oct 26 2026); full list pending research"
+   ],
+   "confidence": "provisional"
+  },
+  {
+   "id": "miami",
+   "name": "Miami",
+   "country": "US",
+   "region": "FL",
+   "center": [
+    25.7743,
+    -80.1937
+   ],
+   "radiusMi": 50,
+   "pickupStates": [
+    "FL"
+   ],
+   "platforms": {
+    "uber": true,
+    "lyft": true
+   },
+   "sources": [
+    "provisional: owner-confirmed DMV rule (Oct 26 2026); full list pending research"
+   ],
+   "confidence": "provisional"
+  }
+ ]
+}

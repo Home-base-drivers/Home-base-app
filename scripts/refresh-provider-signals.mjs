@@ -2,6 +2,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { publicRecords, storedOrFreshRecords } from './public-records.mjs';
 import marketAreas from '../dist/baltimore-market.js';
+import serviceAreas from '../dist/homebase-service-areas.js';
 import { publicPlaces } from './public-places.mjs';
 import { publicSportsProvider } from './public-sports.mjs';
 import { publicAlertsProvider } from './public-alerts.mjs';
@@ -319,7 +320,10 @@ async function main() {
       market.bellTimes === 'bcpss' ? bcpssBellRegistry(old?.schoolBells, NOW.getTime()).catch(() => old?.schoolBells || { status: 'unavailable', schools: [] }) : Promise.resolve(undefined)
     ]);
     // Keep only events inside the market's rideshare service area (DMV for Baltimore/DC, Florida for Miami).
-    const center = [market.center.lat, market.center.lon], inArea = e => !Number.isFinite(Number(e?.lat)) || marketAreas.inDriverServiceArea(center, [Number(e.lat), Number(e.lon)]);
+    // The rideshare market (config/rideshare-markets.json) decides the workable area; the DMV ring
+    // is the fallback when a configured search market has no rideshare-market entry.
+    const center = [market.center.lat, market.center.lon], rideshare = serviceAreas.byId(market.id) || serviceAreas.byName(market.name) || serviceAreas.nearest(center[0], center[1]);
+    const inArea = e => !Number.isFinite(Number(e?.lat)) || (rideshare ? serviceAreas.workable(rideshare, [Number(e.lat), Number(e.lon)]) : marketAreas.inDriverServiceArea(center, [Number(e.lat), Number(e.lon)]));
     if (Array.isArray(records.events)) records.events = records.events.filter(inArea);
     if (Array.isArray(sportsFeed.events)) sportsFeed.events = sportsFeed.events.filter(inArea);
     if (Array.isArray(ticketmaster.events)) ticketmaster.events = ticketmaster.events.filter(inArea);

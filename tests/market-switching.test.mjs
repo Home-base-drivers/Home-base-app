@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
 import metros from '../dist/homebase-metros.js';
 
 const html = await readFile(new URL('../dist/index.html', import.meta.url), 'utf8');
@@ -15,16 +17,16 @@ test('position decides the metro even when the saved market says otherwise', () 
   assert.equal(metros.anchorsFor(25.7743, -80.1937, 'Baltimore').length >= 10, true);
 });
 
-test('the market picker offers Miami on both screens that show it', () => {
-  const lists = html.match(/\['Baltimore','Washington, DC'[^\]]*\]/g) || [];
-  assert.ok(lists.length >= 2, 'launch and settings pickers should both exist');
-  for (const list of lists) assert.match(list, /'Miami'/);
+test('every market picker searches the full rideshare market list', () => {
+  assert.ok((html.match(/list="homeBaseMarketList"/g) || []).length >= 3, 'launch, profile and settings pickers');
+  const areas = require('../dist/homebase-service-areas.js');
+  assert.ok(areas.byName('Miami') && areas.byName('Baltimore') && areas.byName('London'));
 });
 
-// marketPreset is stored and used to mark the selected option; it is not read
-// to change behaviour. If that ever changes, this test should be revisited
-// rather than silently allowing a saved label to override a live GPS fix.
-test('the saved market preset is not wired into demand behaviour', () => {
-  const uses = html.match(/marketPreset/g) || [];
-  assert.ok(uses.length <= 4, `marketPreset is referenced ${uses.length} times; check it still only persists the picker`);
+// The selected market now decides the driver's working area (radius, pickup states/country,
+// units). Saving it in settings writes the profile market that the app reads.
+test('the selected market sets the working area', () => {
+  assert.match(html, /function currentServiceMarket\(\)/);
+  assert.match(html, /HomeBaseServiceAreas\.driverMarket\(sel,/);
+  assert.match(html, /market:saved\.marketPreset/);
 });
