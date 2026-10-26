@@ -19,3 +19,12 @@ test('status rows report each calendar and venue with its item count',async()=>{
   assert.equal(rows.find(r=>r.source_name==='UBS Arena').items,1);
   assert.equal(rows.find(r=>r.source_type==='event_calendar'&&/Ticketmaster/.test(r.source_name)).status,'unavailable');
 });
+
+test('a failed calendar reports why it failed, and the status CSV carries the reason', async () => {
+  const { publicEventCalendars } = await import('../scripts/public-events.mjs');
+  const market = { id: 'x', center: { lat: 40.7, lon: -74 }, radiusKm: 30, timeZone: 'America/New_York',
+    publicCalendars: [{ name: 'Blocked', url: 'https://blocked.example/' }, { name: 'Plain', url: 'https://plain.example/' }] };
+  const request = async url => url.includes('blocked') ? new Response('', { status: 403 }) : new Response('<html><body>No data</body></html>', { status: 200 });
+  const result = await publicEventCalendars(market, Date.now(), request);
+  assert.deepEqual(result.sources.map(s => s.reason), ['http_403', 'no_event_data']);
+});
