@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Home Base">
-  <meta name="homebase-build" content="v290">
+  <meta name="homebase-build" content="v291">
   <meta name="description" content="Home Base connects local driver platforms, earnings forecasts, events and a GPS-based 12-hour route in one app.">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icon-192.png">
@@ -223,8 +223,8 @@
 <link rel="stylesheet" href="homebase-growth.css?v=113">
 <script src="homebase-earnings.js?v=117"></script>
 <script src="homebase-demand-history.js?v=148"></script>
-<script src="homebase-route-policy.js?v=14"></script>
-<script src="homebase-public-data.js?v=5"></script>
+<script src="homebase-route-policy.js?v=15"></script>
+<script src="homebase-public-data.js?v=6"></script>
 <script src="homebase-sports.js?v=2"></script>
 <script src="homebase-weather.js?v=1"></script>
 <script src="homebase-school-events.js?v=4"></script>
@@ -810,7 +810,7 @@ function demandEvidence(source,when=new Date()){
   }else if(Number.isFinite(Number(tags.uberSurgeMultiplier))){
     parts.push('Provider price proxy: '+Number(tags.uberSurgeMultiplier).toFixed(2)+'× sampled '+(tags.providerSampledAt?marketTime(new Date(tags.providerSampledAt)):'at an unknown time')+'; it is not a trip/request count.');
   }else if(source&&(HomeBaseRoutePolicy.warehouse(source)||HomeBaseRoutePolicy.workerWeight(source,{day:marketParts(when).day,hour:h+when.getMinutes()/60})>0)){
-    parts.push('Worker pickup signal: '+name+'; '+(HomeBaseRoutePolicy.warehouse(source)?'modeled shift changes near 3 PM and 11 PM (observed Sparrows Point bonuses peaked 3:13–3:16 PM on Oct 9); site shift times are not published':(source.tags?.shiftEnds?'modeled staff departures 6:45–8:15 AM/PM after 12-hour shift handoffs (approximate; Johns Hopkins postings list 7am–7pm / 7pm–7am shifts, site times not published)':'modeled pickup within one hour of its mapped closing time; opening-hours exceptions unconfirmed'))+'. Not live ride requests.');
+    parts.push('Worker pickup signal: '+name+'; '+(HomeBaseRoutePolicy.warehouse(source)?(HomeBaseRoutePolicy.amazonSite(source)?'Amazon shift changes seen by our drivers at 7 AM, 3 PM, 7 PM, 11 PM and 1 AM (staggered positions and overtime; Sparrows Point bonuses peaked 3:13–3:16 PM on Oct 9); Amazon does not publish site shift times':'modeled shift changes near 3 PM and 11 PM; site shift times are not published'):(source.tags?.shiftEnds?'modeled staff departures 6:45–8:15 AM/PM after 12-hour shift handoffs (approximate; Johns Hopkins postings list 7am–7pm / 7pm–7am shifts, site times not published)':'modeled pickup within one hour of its mapped closing time; opening-hours exceptions unconfirmed'))+'. Not live ride requests.');
   }else if(source&&['nightlife'].includes(source.cat)){
     parts.push('Nightlife signal: '+name+'; Home Base applies the '+(h>=21||h<3?'late-night':'evening buildup')+' time window to this mapped venue.');
   }else if(source&&['transit'].includes(source.cat)){
@@ -838,7 +838,7 @@ function driverEvidence(source,when=new Date()){
     text=name+(venue&&!name.includes(venue)?' at '+venue:'')+' · '+(phase==='exit'?'crowd leaving now':phase==='closing'?'ending now':phase==='arrival'?'crowd arriving':phase==='underway'||phase==='live'?'underway':'starts '+marketTime(source.eventStart))+'.'+(impact.attendance?' About '+Math.round(impact.attendance).toLocaleString('en-US')+' expected.':'');}
   else if(tags.airportActivity)text=(tags.arrivals||0)+' flight arrivals at '+(venue||name)+' this hour.';
   else if(Number.isFinite(Number(tags.uberSurgeMultiplier)))text=Number(tags.uberSurgeMultiplier)>1?'Surge pricing here right now ('+Number(tags.uberSurgeMultiplier).toFixed(1)+'×).':'Prices normal here right now.';
-  else if(source&&HomeBaseRoutePolicy.warehouse(source))text=name+' · shift change around 3 PM and 11 PM.';
+  else if(source&&HomeBaseRoutePolicy.warehouse(source))text=name+(HomeBaseRoutePolicy.amazonSite(source)?' · Amazon shift change (7 AM, 3 PM, 7 PM, 11 PM, 1 AM)'+(tags.siteUnconfirmed?'; site use unconfirmed.':'.'):' · shift change around 3 PM and 11 PM.');
   else if(source&&tags.shiftEnds)text=name+' · hospital shift change around 7 AM and 7 PM.';
   else if(source&&HomeBaseRoutePolicy.workerWeight(source,{day:marketParts(when).day,hour:h+when.getMinutes()/60})>0)text=name+' · closing time crowd.';
   else if(source&&source.cat==='nightlife')text=name+' · '+(h>=21||h<3?'late-night crowd':'evening crowd building')+'.';
@@ -1041,6 +1041,7 @@ async function loadProviderSignals(lat,lon,market){
   try{
     const payload=await getPublicSnapshot(),matches=HomeBasePublicData.matchingMarkets(payload,lat,lon),match=matches[0];
     publicCalendarCoverage=HomeBasePublicData.calendarCoverage(payload,lat,lon);
+    if(!demoLocale)HomeBasePublicData.reportActivity(globalThis.HomeBaseConfig,payload,lat,lon).catch(()=>null);
     const generated=Date.parse(payload.generatedAt||'');if(Number.isFinite(generated))providerSnapshotAt=new Date(generated);
     if(!match){renderFeedSignal();renderDemandCoach();return{events:[]}}
     providerStatuses={uber:match.uber&&match.uber.status||'unknown',ticketmaster:match.ticketmaster&&match.ticketmaster.status||'unknown',flightaware:match.flightaware&&match.flightaware.status||'unknown'};providerFeedTimes={uber:match.uber?.fetchedAt||null,ticketmaster:match.ticketmaster?.fetchedAt||null,flightaware:match.flightaware?.fetchedAt||null,public_calendar:match.publicRecords?.fetchedAt||null,public_weather:match.publicRecords?.fetchedAt||null};renderFeedSignal();
@@ -1080,7 +1081,8 @@ async function loadProviderSignals(lat,lon,market){
   }catch{publicCalendarCoverage={status:'unavailable',sourceCount:0};renderFeedSignal();renderDemandCoach();return null}
 }
 function rideRelevantEvent(event){
-  if(HomeBasePublicData.isTicketAddon(event?.name)||!event?.eventStart||!Number.isFinite(new Date(event.eventStart).getTime())||!Number.isFinite(Number(event.lat))||!Number.isFinite(Number(event.lon)))return false;
+  // Timed-entry attractions (museum slots) are not crowd let-outs.
+  if(event?.timedEntry||event?.tags?.timedEntry||HomeBasePublicData.isTicketAddon(event?.name)||!event?.eventStart||!Number.isFinite(new Date(event.eventStart).getTime())||!Number.isFinite(Number(event.lat))||!Number.isFinite(Number(event.lon)))return false;
   const now=Date.now(),start=new Date(event.eventStart).getTime(),end=event.eventEnd?new Date(event.eventEnd).getTime():NaN;
   const activeNow=Number.isFinite(end)&&end>start&&start<=now&&end+90*60000>now;
   if(!activeNow&&(start<now-6*3600000||start>now+12*3600000))return false;
@@ -1088,7 +1090,7 @@ function rideRelevantEvent(event){
   if(/webinar|virtual|online.only|exhibition|gallery|workshop|seminar|office.hours|club.meeting|campus.tour/.test(text))return false;
   return /sports|concert|festival|convention|conference|football|basketball|baseball|hockey|soccer|stadium|arena|theatre|theater|comedy|performing|music|graduation|commencement|fairground|homecoming|prom\b|tailgate|bonfire|reunion|family.weekend|parents.weekend|gala|party|social|community|screening/.test(text)||event.tags?.source==='public sports feed'||!!(event.tags?.liveEvent&&!event.tags?.providerEvent);
 }
-async function loadTodayEvents(lat,lon,market,venues){refreshSchoolEvents(lat,lon);const results=await Promise.allSettled([loadTodaySports(lat,lon,market,venues),loadEspnEvents(lat,lon,market,venues),loadProviderSignals(lat,lon,market)]),byKey=new Map(),events=[];const add=event=>{const key=HomeBasePublicData.eventIdentity(event),prev=byKey.get(key);if(!prev){byKey.set(key,event);events.push(event)}else if(typeof HomeBaseSports!=='undefined'&&prev.tags?.observedAt&&event.tags?.observedAt){const merged=HomeBaseSports.mergeObservations(prev,event);byKey.set(key,merged);events[events.indexOf(prev)]=merged}};results.forEach((result,index)=>{if(result.status!=='fulfilled')return;const values=index===2?(result.value&&result.value.events||[]):result.value||[];values.filter(rideRelevantEvent).forEach(add)});schoolEventRows.filter(rideRelevantEvent).forEach(add);return events.sort((a,b)=>a.eventStart-b.eventStart)}
+async function loadTodayEvents(lat,lon,market,venues){refreshSchoolEvents(lat,lon);const results=await Promise.allSettled([loadTodaySports(lat,lon,market,venues),loadEspnEvents(lat,lon,market,venues),loadProviderSignals(lat,lon,market)]),byKey=new Map(),events=[];const add=event=>{const key=HomeBasePublicData.eventIdentity(event),prev=byKey.get(key);if(!prev){byKey.set(key,event);events.push(event)}else if(typeof HomeBaseSports!=='undefined'&&prev.tags?.observedAt&&event.tags?.observedAt){const merged=HomeBaseSports.mergeObservations(prev,event);byKey.set(key,merged);events[events.indexOf(prev)]=merged}};results.forEach((result,index)=>{if(result.status!=='fulfilled')return;const values=index===2?(result.value&&result.value.events||[]):result.value||[];values.filter(rideRelevantEvent).forEach(add)});schoolEventRows.filter(rideRelevantEvent).forEach(add);return HomeBasePublicData.consolidateEvents(events).filter(rideRelevantEvent)}
 async function refreshSchoolEvents(lat,lon){
   const key=lat.toFixed(2)+','+lon.toFixed(2),changed=key!==schoolSearchKey;
   if(!changed&&Date.now()-schoolSearchAt<30*60000)return;
@@ -1101,7 +1103,7 @@ async function refreshSchoolEvents(lat,lon){
     rows.push(...result.events||[]);dates.push(...result.context||[]);coverageSources.push(...result.sources||[]);
     schoolEventRows=HomeBaseSchoolEvents.mapEvents(rows);schoolDateContext=[...new Map(dates.map(e=>[e.id,e])).values()];
     schoolCoverage={status:result.status,registryStatus:result.registryStatus,checkedCount:result.checkedCount,schoolCount:result.schoolCount,sources:[...new Map(coverageSources.map(s=>[s.url,s])).values()]};
-    const seen=new Set(),events=[...currentEventData.filter(e=>!e.tags?.schoolEvent),...schoolEventRows].filter(rideRelevantEvent).filter(e=>{const id=HomeBasePublicData.eventIdentity(e);if(seen.has(id))return false;seen.add(id);return true;});
+    const events=HomeBasePublicData.consolidateEvents([...currentEventData.filter(e=>!e.tags?.schoolEvent),...schoolEventRows].filter(rideRelevantEvent));
     if(activeDemandSources.length){activeDemandSources=mergeDemandSources(activeDemandSources.filter(e=>!e.tags?.schoolEvent),schoolEventRows.filter(rideRelevantEvent));const hour=Number(document.querySelector('[data-hour][aria-pressed="true"]')?.dataset.hour)||0;buildRoute(activeDemandSources,lat,lon,currentMarketName,activeDemandSources);applyTimeForecast(hour);}
     renderEvents(events);renderDemandCoach();
     const next=result.nextCursor;if(next!==null&&(!Number.isInteger(next)||next<=cursor))throw Error('Invalid calendar continuation');cursor=next;
@@ -1126,7 +1128,7 @@ function fallbackDemandSources(lat,lon,market){
 }
 function mergeDemandSources(baseline,verified){
   const merged=[],seen=new Set();
-  [...baseline,...verified].forEach(source=>{if(!Number.isFinite(source.lat)||!Number.isFinite(source.lon))return;const key=source.eventStart?HomeBasePublicData.eventIdentity(source):`${Number(source.lat).toFixed(4)}:${Number(source.lon).toFixed(4)}:${eventToken(source.name).slice(0,32)}`;if(seen.has(key))return;seen.add(key);merged.push(source)});
+  [...baseline,...verified].forEach(source=>{if(!Number.isFinite(source.lat)||!Number.isFinite(source.lon))return;const key=source.eventStart?HomeBasePublicData.eventIdentity(source):`${Number(source.lat).toFixed(4)}:${Number(source.lon).toFixed(4)}:${eventToken(source.name).slice(0,32)}`;if(seen.has(key)||source.eventStart&&merged.some(m=>m.eventStart&&HomeBasePublicData.sameEvent(m,source)))return;seen.add(key);merged.push(source)});
   return merged
 }
 function drawRoutePath(path){routeStrokeLayers.forEach(layer=>liveMap.removeLayer(layer));routeLayers=routeLayers.filter(layer=>!routeStrokeLayers.includes(layer));const casing=L.polyline(path,{color:'#00111e',weight:6.2,opacity:.92,interactive:false,lineCap:'round',lineJoin:'round',smoothFactor:.55,className:'homebase-route-reveal'}).addTo(liveMap),bloom=L.polyline(path,{color:'#006fff',weight:4.4,opacity:.28,interactive:false,lineCap:'round',lineJoin:'round',smoothFactor:.55,className:'homebase-route-bloom homebase-route-reveal'}).addTo(liveMap),route=L.polyline(path,{color:'#14baff',weight:2.75,opacity:.98,interactive:false,lineCap:'round',lineJoin:'round',smoothFactor:.55,className:'homebase-route-clean homebase-route-reveal'}).addTo(liveMap),core=L.polyline(path,{color:'#dffbff',weight:.8,opacity:.78,interactive:false,lineCap:'round',lineJoin:'round',smoothFactor:.55,className:'homebase-route-core homebase-route-reveal'}).addTo(liveMap),flow=L.polyline(path,{color:'#bff6ff',weight:1.9,opacity:.88,interactive:false,lineCap:'round',lineJoin:'round',smoothFactor:.55,dashArray:'9 25',className:'homebase-route-flow'}).addTo(liveMap);routeStrokeLayers=[casing,bloom,route,core,flow];routeLayers.push(...routeStrokeLayers)}
@@ -1169,8 +1171,17 @@ function logSurgeHere(){
 // open fulfillment center with no mapped warehouse within 1 km is added.
 function applySiteStatus(sources){
   if(!employerSites.length||!Array.isArray(sources))return sources;
-  const closed=employerSites.filter(s=>s.status==='closed'),out=sources.map(source=>source&&HomeBaseRoutePolicy.warehouse(source)&&closed.some(c=>distanceKm([source.lat,source.lon],[c.lat,c.lon])<=.4)?{...source,tags:{...(source.tags||{}),siteClosed:true,closedSite:closed.find(c=>distanceKm([source.lat,source.lon],[c.lat,c.lon])<=.4).name}}:source);
-  for(const site of employerSites.filter(s=>s.status==='open'&&s.kind==='fulfillment_center'))if(!out.some(v=>v&&HomeBaseRoutePolicy.warehouse(v)&&distanceKm([v.lat,v.lon],[site.lat,site.lon])<=1))out.push({name:site.name,cat:'warehouse',lat:site.lat,lon:site.lon,tags:{industrial:'warehouse',operator:'Amazon',employerSite:true,source:'Verified site list',sourceUrl:site.sourceUrl}});
+  const closed=employerSites.filter(s=>s.status==='closed'&&Number.isFinite(s.lat)&&Number.isFinite(s.lon)),out=sources.map(source=>source&&HomeBaseRoutePolicy.warehouse(source)&&closed.some(c=>distanceKm([source.lat,source.lon],[c.lat,c.lon])<=.4)?{...source,tags:{...(source.tags||{}),siteClosed:true,closedSite:closed.find(c=>distanceKm([source.lat,source.lon],[c.lat,c.lon])<=.4).name}}:source);
+  // Every open Amazon building (fulfillment, sortation, delivery station, air hub...)
+  // carries the observed shift windows; a mapped warehouse at the site gets the tags.
+  // 'unverified' Amazon sites (old facility list, use unconfirmed) add smaller heat
+  // only; they are not route destinations until surge history confirms them.
+  for(const site of employerSites.filter(s=>Number.isFinite(s.lat)&&Number.isFinite(s.lon)&&(s.status==='open'&&(s.operator==='Amazon'||s.kind==='fulfillment_center')||s.status==='unverified'&&s.operator==='Amazon'))){
+    const verified=site.status==='open',shift={industrial:'warehouse',operator:'Amazon',...(verified?{employerSite:true}:{siteUnconfirmed:true}),siteKind:site.kind,...(Array.isArray(site.shiftTimes)?{shiftTimes:site.shiftTimes}:{}),source:'Verified site list',sourceUrl:site.sourceUrl};
+    const open=v=>v&&HomeBaseRoutePolicy.warehouse(v)&&!v.tags?.siteClosed&&!v.tags?.siteKind,km=v=>distanceKm([v.lat,v.lon],[site.lat,site.lon]);
+    let i=out.findIndex(v=>open(v)&&HomeBaseRoutePolicy.amazonSite(v)&&km(v)<=(site.kind==='delivery_station'?.4:1));if(i<0)i=out.findIndex(v=>open(v)&&km(v)<=.3);
+    if(i>=0)out[i]={...out[i],tags:{...(out[i].tags||{}),...shift}};else out.push({name:site.name,cat:'warehouse',lat:site.lat,lon:site.lon,tags:shift});
+  }
   // Hospitals: put the approximate handoff window on the mapped hospital, or add the verified site.
   for(const site of employerSites.filter(s=>s.status==='open'&&s.kind==='hospital'&&Array.isArray(s.shiftEnds))){
     const shift={shiftEnds:site.shiftEnds,shiftWeight:site.shiftWeight,shiftNote:site.shiftNote,employerSite:true,sourceUrl:site.shiftSource};
@@ -1378,6 +1389,7 @@ async function refreshLiveDemandLayer(){
   const refreshed=new Set(scoreboard?keys:[]),publicEvents=currentEventData.filter(event=>!(provider&&event.tags&&event.tags.providerEvent)&&!refreshed.has(event.tags?.scoreboardKey)),byKey=new Map(),events=[];
   const add=event=>{const key=HomeBasePublicData.eventIdentity(event),prev=byKey.get(key);if(!prev){byKey.set(key,event);events.push(event)}else if(prev.tags?.observedAt&&event.tags?.observedAt){const merged=HomeBaseSports.mergeObservations(prev,event);byKey.set(key,merged);events[events.indexOf(prev)]=merged}};
   [...(scoreboard||[]),...publicEvents,...(provider?.events||[]),...schoolEventRows].filter(rideRelevantEvent).forEach(add);
+  const consolidated=HomeBasePublicData.consolidateEvents(events).filter(rideRelevantEvent);events.length=0;events.push(...consolidated);
   const publicSources=activeDemandSources.filter(source=>!(provider&&source.tags&&(source.tags.providerSignal||source.tags.providerEvent))&&!refreshed.has(source.tags?.scoreboardKey));
   activeDemandSources=mergeDemandSources(publicSources,[...events,...providerUberPoints,...providerFlightPoints]);
   buildRoute(activeDemandSources,lat,lon,currentMarketName,activeDemandSources);applyTimeForecast(selectedHour);document.querySelectorAll('[data-hour]').forEach(button=>button.setAttribute('aria-pressed',String(Number(button.dataset.hour)===selectedHour)));renderDemandCoach();renderEvents(events);$('#updated').textContent=provider?`Demand refreshed · ${marketTime(new Date())}`:'Feed unavailable · destination timing rechecked locally';
@@ -1389,7 +1401,7 @@ function recheckDemandSources(){if(document.visibilityState!=='visible')return;s
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')recheckDemandSources()});window.addEventListener('pageshow',e=>{if(e.persisted)recheckDemandSources()});window.addEventListener('online',recheckDemandSources);
 window.addEventListener('homebase-calendar-identity',()=>{schoolSearchAt=0;schoolSearchKey='';schoolEventRows=[];if(currentLocation)refreshSchoolEvents(...currentLocation);});
 window.addEventListener('load',()=>{schoolSearchAt=0;if(currentLocation)refreshSchoolEvents(...currentLocation);},{once:true});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>{const replacingWorker=!!navigator.serviceWorker.controller;navigator.serviceWorker.register('sw.js?v=290',{updateViaCache:'none'}).then(r=>{r.update();navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!replacingWorker)return;if(!sessionStorage.getItem('hb-release-reload-v290')){sessionStorage.setItem('hb-release-reload-v290','1');location.reload()}})}).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';})});
+if('serviceWorker' in navigator)window.addEventListener('load',()=>{const replacingWorker=!!navigator.serviceWorker.controller;navigator.serviceWorker.register('sw.js?v=291',{updateViaCache:'none'}).then(r=>{r.update();navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!replacingWorker)return;if(!sessionStorage.getItem('hb-release-reload-v291')){sessionStorage.setItem('hb-release-reload-v291','1');location.reload()}})}).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';})});
 </script>
 <script src="homebase-live.js?v=39"></script>
 </body>

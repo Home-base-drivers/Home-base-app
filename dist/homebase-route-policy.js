@@ -78,6 +78,8 @@
     const m=/^(\d{1,2}):(\d{2})$/.exec(String(value||''));
     return m&&+m[1]<24&&+m[2]<60?+m[1]+(+m[2])/60:null;
   }
+  const AMAZON_SHIFTS=[1,7,15,19,23];
+  function amazonSite(source){const t=source.tags||{};return /amazon/i.test(t.operator||'')||/amazon/i.test(source.name||'');}
   function warehouse(source){
     const t=source.tags||{};
     return source.cat==='warehouse'||t.industrial==='warehouse'||t.building==='warehouse'||/amazon/i.test(t.operator||'')&&t.shop!=='supermarket'||/amazon.*(warehouse|fulfil|fulfill|distribution|sortation|delivery station)/i.test(source.name||'');
@@ -112,7 +114,14 @@
     // departures peak just after the handoff and fade over about 45 minutes.
     const ends=source.tags?.shiftEnds;
     if(Array.isArray(ends)&&ends.length){const w=Number(source.tags.shiftWeight)||4;return Math.max(...ends.map(e=>{const d=Math.min(Math.abs(hour-e),24-Math.abs(hour-e));return w*Math.max(0,1-d/.75);}),0);}
-    if(warehouse(source))return Math.max(...[15,23].map(shift=>8*Math.max(0,1-Math.min(Math.abs(hour-shift),24-Math.abs(hour-shift)))),0);
+    if(warehouse(source)){
+      const t=source.tags||{},custom=Array.isArray(t.shiftTimes)&&t.shiftTimes.length?t.shiftTimes:null;
+      // Amazon sites: shift changes seen by our drivers at 7 AM, 3 PM, 7 PM, 11 PM and
+      // 1 AM at the same buildings (staggered positions and overtime). Other mapped
+      // warehouses keep the generic 3 PM / 11 PM model. Delivery stations are smaller.
+      const shifts=custom||(amazonSite(source)?AMAZON_SHIFTS:[15,23]),scale=(t.siteKind==='delivery_station'?.6:1)*(t.siteUnconfirmed?.5:1);
+      return Math.max(...shifts.map(shift=>8*scale*Math.max(0,1-Math.min(Math.abs(hour-shift),24-Math.abs(hour-shift)))),0);
+    }
     if(source.cat!=='shopping'||!(source.tags?.shop==='mall'||/\bmall\b|shopping cent(er|re)/i.test(source.name||'')||source.mallClosingHour!=null||source.tags?.mallClosingHour!=null))return 0;
     const closes=[...mallClosingHours(source,parts.day),...mallClosingHours(source,(parts.day+6)%7).filter(h=>h>=24).map(h=>h-24)];
     return Math.max(...closes.map(close=>8*Math.max(0,1-Math.abs(hour-close))),0);
@@ -208,5 +217,5 @@
     if(near.some(e=>isHome(e.lat,e.lon)&&crowdTier(e)!=='local'))return near;
     return [...near,...(events||[]).filter(e=>far(e)&&awayEligible(e))];
   }
-  return {letOutProfile,letOutStrength,venueClass,crowdTier,awayEligible,routeEvents,eventSize,eventImpact,eventPhase,liveSignal,schoolStage,schoolWeight,warehouse,workerWeight,mallClosingHours,fallbackEligible,generalEvidence,candidatesForHour,selectRanked};
+  return {letOutProfile,letOutStrength,venueClass,crowdTier,awayEligible,routeEvents,eventSize,eventImpact,eventPhase,liveSignal,schoolStage,schoolWeight,warehouse,amazonSite,AMAZON_SHIFTS,workerWeight,mallClosingHours,fallbackEligible,generalEvidence,candidatesForHour,selectRanked};
 });

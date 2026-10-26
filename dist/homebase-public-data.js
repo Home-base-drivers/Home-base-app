@@ -44,7 +44,7 @@
         rows.push({...e,lat:Number(e.lat),lon:Number(e.lon),eventStart:new Date(start),eventEnd:Number.isFinite(end)&&end>start?new Date(end):null});
       }
     }
-    return rows.sort((a,b)=>a.eventStart-b.eventStart);
+    return consolidateEvents(rows);
   }
   function placesForLocation(payload,lat,lon,radiusKm=20,now=Date.now()){
     const rows=[],seen=new Set();
@@ -83,5 +83,76 @@
     for(const s of schools||[]){const km=distance([Number(source.lat),Number(source.lon)],[Number(s.lat),Number(s.lon)]);if(km>.4||km>=bestKm)continue;if(!nameTokens(s.name).some(t=>tokens.has(t)))continue;best=s;bestKm=km;}
     return best;
   }
-  return{LIVE_SIGNALS_URL,newestSnapshot,loadSnapshot,alertsForLocation,bellTimesForLocation,bellMatch,matchingMarkets,eventsForLocation,placesForLocation,calendarCoverage,isTicketAddon,eventIdentity};
+  // One real-world event can arrive as several listings: the same show under two
+  // titles ("Chicago" / "Chicago - The Musical"), two venue spellings ("Broadway
+  // Theatre" / "Broadway Theatre-New York"), neighboring markets' feeds, or a
+  // doors/show pair an hour apart. Timed-entry attractions (museum slots every
+  // 30 minutes) are one all-day listing, not a crowd let-out.
+  const TITLE_STOP=/^(the|a|an|and|of|at|in|with|live|tour|show|musical|presents?|new|york|ny|nyc|tickets?)$/;
+  function titleText(name){return String(name||'').split(' · ')[0].toLowerCase().replace(/&/g,' and ').replace(/\([^)]*\)/g,' ').replace(/[–—]/g,'-');}
+  function titleCore(name){const t=titleText(name).split(/\s+-\s+|:\s+|\s+\|\s+/)[0];return t.replace(/\bthe musical\b/g,' ').replace(/[^a-z0-9]+/g,' ').trim().replace(/^the\s+/,'');}
+  function titleTokens(name){return new Set(titleText(name).replace(/[^a-z0-9]+/g,' ').split(' ').filter(t=>t.length>1&&!TITLE_STOP.test(t)));}
+  function venueKey(v){return String(v||'').toLowerCase().replace(/powered by.*$/,'').replace(/\btheatre\b/g,'theater').replace(/[-,]\s*(new york|ny|nyc|baltimore|md|washington|dc)\s*$/,'').replace(/[^a-z0-9]/g,'');}
+  function startOf(e){const t=e?.eventStart instanceof Date?e.eventStart.getTime():Date.parse(e?.eventStart||'');return t;}
+  function sportsEvent(e){return /sport|baseball|football|basketball|hockey|soccer/i.test([e.eventType,e.classification,e.genre].join(' '))||e.tags?.source==='public sports feed'||!!e.league;}
+  function sameVenue(a,b){const va=venueKey(a.venue),vb=venueKey(b.venue);if(va&&vb&&(va===vb||va.length>4&&vb.length>4&&(va.includes(vb)||vb.includes(va))))return true;return point(a)&&point(b)&&distance([Number(a.lat),Number(a.lon)],[Number(b.lat),Number(b.lon)])<=.35&&(!va||!vb||va.slice(0,6)===vb.slice(0,6));}
+  function sameTitle(a,b){
+    const ca=titleCore(a.name),cb=titleCore(b.name);if(ca&&ca===cb)return true;
+    const ta=titleTokens(a.name),tb=titleTokens(b.name);if(!ta.size||!tb.size)return false;
+    let shared=0;for(const t of ta)if(tb.has(t))shared++;
+    const small=Math.min(ta.size,tb.size);
+    // All words of the shorter title appear in the longer one, or most words overlap.
+    if(shared===small&&(small>=2||[...ta].some(t=>t.length>=4&&tb.has(t))))return true;
+    return shared/(ta.size+tb.size-shared)>=.6;
+  }
+  function sameEvent(a,b){
+    const sa=startOf(a),sb=startOf(b);if(!Number.isFinite(sa)||!Number.isFinite(sb)||!sameVenue(a,b))return false;
+    const gap=Math.abs(sa-sb);
+    if(sportsEvent(a)&&sportsEvent(b))return gap<=90*60000;
+    return sameTitle(a,b)&&gap<=75*60000;
+  }
+  function richness(e){return(e.tags?.liveEvent?8:0)+(e.eventEnd?4:0)+(Number(e.expectedAttendance)>0?2:0)+(e.url?1:0);}
+  function timedEntryText(e){return /\b(museum|exhibit(ion)?|immersive|experience|gallery|timed entry|general admission entry)\b/i.test([e.name,e.venue].join(' '))&&!/\b(gala|concert|party|benefit|fundraiser|live music)\b/i.test(e.name||'');}
+  function localDay(t){return new Date(t-5*HOUR).toISOString().slice(0,10);}
+  function consolidateEvents(events){
+    const rows=(events||[]).filter(Boolean).slice().sort((a,b)=>startOf(a)-startOf(b)),groups=[];
+    for(const e of rows){const g=groups.find(g=>g.items.some(x=>sameEvent(x,e)));if(g)g.items.push(e);else groups.push({items:[e]});}
+    let merged=groups.map(g=>{
+      const best=g.items.slice().sort((a,b)=>richness(b)-richness(a))[0];
+      if(g.items.length===1)return best;
+      const sources=[...new Set(g.items.map(x=>x.source||x.tags?.source).filter(Boolean))];
+      const first=g.items.reduce((m,x)=>startOf(x)<startOf(m)?x:m,best);
+      return{...best,eventStart:first.eventStart,mergedListings:g.items.length,...(sources.length?{mergedSources:sources}:{}),alsoListedAs:[...new Set(g.items.map(x=>String(x.name||'').split(' · ')[0]).filter(n=>n!==String(best.name||'').split(' · ')[0]))]};
+    });
+    // Timed-entry venues: 4+ listings in a day packed an hour or less apart (or a
+    // museum/exhibit listing) collapse into one all-day row flagged timedEntry.
+    const byVenue=new Map();
+    merged.forEach((e,i)=>{const k=(venueKey(e.venue)||(point(e)?Number(e.lat).toFixed(3)+':'+Number(e.lon).toFixed(3):'?'))+'|'+localDay(startOf(e));if(!byVenue.has(k))byVenue.set(k,[]);byVenue.get(k).push(i);});
+    const drop=new Set();
+    for(const idx of byVenue.values()){
+      const items=idx.map(i=>merged[i]).filter(e=>!sportsEvent(e));if(!items.length)continue;
+      const starts=items.map(startOf).sort((a,b)=>a-b),gaps=starts.slice(1).map((t,i)=>t-starts[i]).sort((a,b)=>a-b);
+      const packed=items.length>=4&&gaps[Math.floor(gaps.length/2)]<=60*60000;
+      if(!packed&&!items.every(timedEntryText))continue;
+      const keep=idx.find(i=>!sportsEvent(merged[i])),first=merged[keep],lastStart=starts[starts.length-1];
+      merged[keep]={...first,eventStart:first.eventStart instanceof Date?new Date(starts[0]):new Date(starts[0]).toISOString(),eventEnd:first.eventStart instanceof Date?new Date(lastStart+HOUR):new Date(lastStart+HOUR).toISOString(),timedEntry:true,timedSlots:items.length,tags:{...(first.tags||{}),timedEntry:true}};
+      for(const i of idx)if(i!==keep&&!sportsEvent(merged[i]))drop.add(i);
+    }
+    merged=merged.filter((_,i)=>!drop.has(i));
+    return merged.sort((a,b)=>startOf(a)-startOf(b));
+  }
+  // Markets whose data this driver's screen uses: the one they are in plus neighbors
+  // whose events reach them (same +70 km rule as eventsForLocation).
+  function activeMarketIds(payload,lat,lon){return(payload?.markets||[]).filter(m=>point(m.center)&&distance([lat,lon],[Number(m.center.lat),Number(m.center.lon)])<=Number(m.radiusKm||0)+70).sort((a,b)=>distance([lat,lon],[a.center.lat,a.center.lon])-distance([lat,lon],[b.center.lat,b.center.lon])).map(m=>m.id);}
+  // Tell the server which markets have a driver right now (market ids only), at most
+  // every 10 minutes per set, so live feeds are refreshed only where drivers are.
+  let lastActivity={key:'',at:0};
+  async function reportActivity(config,payload,lat,lon,request=globalThis.fetch,now=Date.now(),force=false){
+    const ids=activeMarketIds(payload,lat,lon),key=ids.join(',');
+    if(!ids.length||!/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(config?.supabaseUrl||'')||!config?.supabasePublishableKey||typeof request!=='function')return null;
+    if(!force&&key===lastActivity.key&&now-lastActivity.at<10*60000)return null;
+    lastActivity={key,at:now};
+    try{const r=await request(config.supabaseUrl+'/functions/v1/market-activity',{method:'POST',headers:{apikey:config.supabasePublishableKey,'Content-Type':'application/json'},body:JSON.stringify({markets:ids}),keepalive:true});return r&&r.ok?await r.json():null;}catch{return null;}
+  }
+  return{LIVE_SIGNALS_URL,reportActivity,activeMarketIds,newestSnapshot,loadSnapshot,alertsForLocation,bellTimesForLocation,bellMatch,matchingMarkets,eventsForLocation,placesForLocation,calendarCoverage,isTicketAddon,eventIdentity,consolidateEvents,sameEvent};
 });

@@ -1,65 +1,371 @@
 {
-  "purpose": "Verified large shift-change sites. Open fulfillment centers use the modeled warehouse windows (about 3 PM and 11 PM; site shift times are not published). Hospitals use an approximate 12-hour handoff window (7 AM / 7 PM; departures modeled 6:45-8:15) taken from Johns Hopkins Hospital job postings; site-specific times are not published. Office campuses, industrial sites, delivery stations and malls are recorded for observation analysis only; their surge timing is learned from repeated observations. Closed sites switch off any mapped warehouse within 400 m.",
+  "purpose": "Verified large shift-change sites. Amazon sites (operator Amazon) use the shift changes our drivers observed at the same buildings: 7 AM, 3 PM, 7 PM, 11 PM and 1 AM (staggered positions and overtime; Amazon does not publish site shift times). 'open' Amazon sites are route destinations at those times; 'unverified' ones (from a 2022 Amazon facility code sheet, current use unconfirmed) only add smaller heat until surge history confirms them; 'closed' sites switch off any mapped warehouse within 400 m. Sites without coordinates are geocoded on the next live refresh (U.S. Census Bureau geocoder). Hospitals use an approximate 12-hour handoff window (7 AM / 7 PM; departures modeled 6:45-8:15) taken from Johns Hopkins Hospital job postings; site-specific times are not published. Office campuses, industrial sites and malls are recorded for observation analysis only; their surge timing is learned from repeated observations.",
   "sites": [
     {
       "id": "amazon-tradepoint-atlantic",
-      "name": "Amazon fulfillment center (Tradepoint Atlantic)",
+      "name": "Amazon fulfillment center (Tradepoint Atlantic #1)",
+      "operator": "Amazon",
       "kind": "fulfillment_center",
       "status": "open",
+      "code": "BFN1 / DCA6",
       "address": "6001 Bethlehem Blvd, Sparrows Point, MD 21219",
       "lat": 39.218639,
       "lon": -76.490111,
-      "locationPrecision": "Tradepoint Atlantic site centroid (Wikipedia); the building is within the site",
+      "coordinateSource": "https://en.wikipedia.org/wiki/Tradepoint_Atlantic",
       "sourceUrl": "https://hiring.amazon.com/jobDetail/en-US/Fulfillment-Center-Warehouse-Associate/Sparrows-Point/a0R4U00000E0Vo2UAF",
-      "coordinateSource": "https://en.wikipedia.org/wiki/Tradepoint_Atlantic"
+      "moreSources": [
+        "https://myamazonguy.com/wp-content/uploads/2022/06/Amazon-Fulfillment-Centers-_-Warehouse-Codes-Sheet.pdf"
+      ],
+      "note": "855K SF building, opened 2018, 1,500+ associates. A hiring.amazon.com posting lists the work address as '6001 Bethlehem Blvd 1S32'. The 2022 code sheet lists codes BFN1 and DCA6 at this address; the facility's primary FC code is not confirmed. It is not MTN1, which is in Wilmington DE."
+    },
+    {
+      "id": "amazon-tradepoint-large-item",
+      "name": "Amazon fulfillment center (Tradepoint Atlantic #2, large items)",
+      "operator": "Amazon",
+      "kind": "fulfillment_center",
+      "status": "open",
+      "code": "DCA1 / VHND (unconfirmed mapping)",
+      "address": "1700 Sparrows Point Blvd, Sparrows Point, MD 21219 (address mapping unverified)",
+      "lat": null,
+      "lon": null,
+      "coordinateSource": "geocoded on refresh (U.S. Census Bureau geocoder)",
+      "sourceUrl": "https://baltimorefishbowl.com/stories/amazon-just-opened-its-second-sparrows-point-fulfillment-center/",
+      "moreSources": [
+        "https://www.tradeandindustrydev.com/region/maryland/news/md-amazon-fulfillment-center-open-baltimore-co-500-16605.md"
+      ],
+      "note": "Second Tradepoint Atlantic FC. It opened in Aug 2020 for larger items (bulk paper, patio furniture, sports equipment) with about 1M SF, growing to 1.4M SF, and 500+ jobs. The building is confirmed, but its street address is not: the code sheet and warehouse.ninja list DCA1 (FC) and VHND at 1700 Sparrows Point Blvd, which is probably this building.",
+      "addressNote": "Street address unconfirmed; the building is inside Tradepoint Atlantic."
+    },
+    {
+      "id": "amazon-finishing-mill",
+      "name": "Amazon site (Finishing Mill Rd, Sparrows Point)",
+      "operator": "Amazon",
+      "kind": "fulfillment_center",
+      "status": "unverified",
+      "code": "MTN3 / MTN6",
+      "address": "1701 Finishing Mill Rd, Sparrows Point, MD 21219",
+      "lat": null,
+      "lon": null,
+      "coordinateSource": "geocoded on refresh (U.S. Census Bureau geocoder)",
+      "sourceUrl": "https://myamazonguy.com/wp-content/uploads/2022/06/Amazon-Fulfillment-Centers-_-Warehouse-Codes-Sheet.pdf",
+      "note": "Comes only from the 2022 code sheet. It may be a separate Tradepoint building or another address for FC #2. Type and status are unconfirmed."
     },
     {
       "id": "amazon-broening-hwy",
-      "name": "Amazon fulfillment center (Broening Hwy)",
+      "name": "Amazon fulfillment center BWI2 (Broening Hwy)",
+      "operator": "Amazon",
       "kind": "fulfillment_center",
       "status": "open",
+      "code": "BWI2",
       "address": "2010 Broening Hwy, Baltimore, MD 21224",
       "lat": 39.268968303069,
       "lon": -76.54321874842,
       "coordinateSource": "U.S. Census Bureau geocoder",
-      "sourceUrl": "https://www.baltimoremagazine.com/2013/10/23/amazon-to-open-massive-fulfillment-center-in-baltimore",
-      "note": "Former GM site near Broening Hwy, about 1 million sq ft and 1,000+ jobs at opening; street address as commonly listed, current headcount not published."
+      "sourceUrl": "https://myamazonguy.com/wp-content/uploads/2022/06/Amazon-Fulfillment-Centers-_-Warehouse-Codes-Sheet.pdf",
+      "moreSources": [
+        "https://wiki.dronebotworkshop.com/wiki/bwi2-amazon-fulfillment-center.html"
+      ],
+      "note": "A 2022 code sheet lists BWI2 as an FC and BWI0 (Small Sortable) at the same address. No closure appears in the MD WARN logs for 2023-2026. Large site with about 1,000+ jobs at opening."
+    },
+    {
+      "id": "amazon-holabird-5501",
+      "name": "Amazon sort center BWI5 (Holabird Ave)",
+      "operator": "Amazon",
+      "kind": "sortation_center",
+      "status": "open",
+      "code": "BWI5 (also TMD1/UMD1)",
+      "address": "5501 Holabird Ave, Baltimore, MD 21224",
+      "lat": 39.271821,
+      "lon": -76.547055,
+      "coordinateSource": "warehouse.ninja TMD1 page (https://warehouse.ninja/locations/amazon/tmd1/)",
+      "sourceUrl": "https://hiring.amazon.com/jobDetail/en-US/Amazon-Locker-Customer-Service-Associate/Gainesville/JOB-US-0000012797",
+      "moreSources": [
+        "https://technical.ly/startups/amazon-occupy-second-baltimore-warehouse-links/"
+      ],
+      "note": "345K SF, permitted 2014. A hiring.amazon.com sort-center posting lists the work address as '5501 Holabird Ave 1560'. The code sheet labels BWI5 as SC."
+    },
+    {
+      "id": "amazon-holabird-5300",
+      "name": "Amazon site (5300 Holabird Ave)",
+      "operator": "Amazon",
+      "kind": "sortation_center",
+      "status": "unverified",
+      "code": "MTN5",
+      "address": "5300 Holabird Ave, Baltimore, MD 21224",
+      "lat": null,
+      "lon": null,
+      "coordinateSource": "geocoded on refresh (U.S. Census Bureau geocoder)",
+      "sourceUrl": "https://myamazonguy.com/wp-content/uploads/2022/06/Amazon-Fulfillment-Centers-_-Warehouse-Codes-Sheet.pdf",
+      "note": "Comes only from the 2022 code sheet, with no type label. A 2020 Patch article says Amazon had TWO sortation centers in Baltimore City, and this could be the second one. Not confirmed."
     },
     {
       "id": "amazon-van-deman",
       "name": "Amazon delivery station (Van Deman St)",
+      "operator": "Amazon",
       "kind": "delivery_station",
       "status": "open",
       "address": "2100 Van Deman St, Baltimore, MD 21224",
       "lat": 39.2675420503,
       "lon": -76.535802985232,
+      "coordinateSource": "U.S. Census Bureau geocoder",
       "sourceUrl": "https://press.aboutamazon.com/news-releases/news-release-details/amazon-opens-two-new-central-maryland-delivery-stations",
-      "coordinateSource": "U.S. Census Bureau geocoder"
+      "note": "72K SF, opened Sept 2021 as the first delivery station in Baltimore City. Facility code unknown. No closure notice found."
     },
     {
       "id": "amazon-preston-gateway",
       "name": "Amazon delivery station (Preston Gateway, Hanover)",
+      "operator": "Amazon",
       "kind": "delivery_station",
-      "status": "unverified",
+      "status": "open",
       "address": "7226 Preston Gateway Dr, Hanover, MD 21076",
       "lat": 39.18301241912,
       "lon": -76.713398552231,
-      "sourceUrl": "https://press.aboutamazon.com/news-releases/news-release-details/amazon-opens-two-new-central-maryland-delivery-stations",
       "coordinateSource": "U.S. Census Bureau geocoder",
-      "statusNote": "Bisnow (Aug 2022) reported an Amazon-owned Hanover delivery station closing Oct 25, 2022 without naming the address; this site may be that one.",
-      "statusSource": "https://www.bisnow.com/news/baltimore/industrial/amazon-to-lay-off-353-workers-shutter-2-baltimore-facilities-114607"
+      "sourceUrl": "https://press.aboutamazon.com/news-releases/news-release-details/amazon-opens-two-new-central-maryland-delivery-stations",
+      "moreSources": [
+        "https://layofftracker.us/layoff-tracker/amazon-hanover-md-oct-2022-layoffs/i4TvpW"
+      ],
+      "note": "194K SF, opened Sept 2021 as Amazon's 3rd delivery station in Hanover. The Oct 2022 Hanover closure was a different building (7458 New Ridge Rd, per the WARN notice), so this station was NOT the one closed. Facility code unknown."
+    },
+    {
+      "id": "amazon-dorsey-rd",
+      "name": "Amazon delivery station DBA8 (Dorsey Rd, Hanover)",
+      "operator": "Amazon",
+      "kind": "delivery_station",
+      "status": "unverified",
+      "code": "DBA8",
+      "address": "7021 Dorsey Rd, Hanover, MD 21076",
+      "lat": null,
+      "lon": null,
+      "coordinateSource": "geocoded on refresh (U.S. Census Bureau geocoder)",
+      "sourceUrl": "https://myamazonguy.com/wp-content/uploads/2022/06/Amazon-Fulfillment-Centers-_-Warehouse-Codes-Sheet.pdf",
+      "note": "Listed in the 2022 code sheet (D-prefix suggests a delivery station). Probably one of the earlier Hanover stations. Current status not confirmed."
+    },
+    {
+      "id": "amazon-new-ridge-closed",
+      "name": "Former Amazon delivery station (New Ridge Rd, Hanover)",
+      "operator": "Amazon",
+      "kind": "delivery_station",
+      "status": "closed",
+      "address": "7458 New Ridge Rd, Hanover, MD 21076",
+      "lat": null,
+      "lon": null,
+      "coordinateSource": "geocoded on refresh (U.S. Census Bureau geocoder)",
+      "sourceUrl": "https://layofftracker.us/layoff-tracker/amazon-hanover-md-oct-2022-layoffs/i4TvpW",
+      "moreSources": [
+        "https://commercialobserver.com/2022/09/amazon-closing-two-baltimore-area-warehouses-in-wider-industrial-pullback"
+      ],
+      "note": "Closed Oct 25, 2022, with 190 layoffs. The 154K SF building is part of the Techwood @ BWI park that Amazon bought in Mar 2020 for $90.5M; other buildings in that park may still be Amazon-owned, use unknown.",
+      "closedOn": "2022-10-25"
     },
     {
       "id": "amazon-kelso-closed",
       "name": "Former Amazon delivery station (Kelso Dr, Essex)",
+      "operator": "Amazon",
       "kind": "delivery_station",
       "status": "closed",
-      "closedOn": "2022-10-25",
       "address": "8411 Kelso Dr, Essex, MD 21221",
       "lat": 39.326385655988,
       "lon": -76.487148512864,
+      "coordinateSource": "U.S. Census Bureau geocoder",
       "sourceUrl": "https://www.bisnow.com/news/baltimore/industrial/amazon-to-lay-off-353-workers-shutter-2-baltimore-facilities-114607",
-      "coordinateSource": "U.S. Census Bureau geocoder"
+      "note": "Closed Oct 25, 2022, with 163 layoffs. 272.5K SF.",
+      "closedOn": "2022-10-25"
+    },
+    {
+      "id": "amazon-smd1-dorsey-run",
+      "name": "Amazon SMD1 (Dorsey Run Rd, Elkridge)",
+      "operator": "Amazon",
+      "kind": "delivery_station",
+      "status": "unverified",
+      "code": "SMD1",
+      "address": "7200 Dorsey Run Rd, Elkridge, MD 21075",
+      "lat": 39.178143761232,
+      "lon": -76.755438790637,
+      "coordinateSource": "U.S. Census Bureau geocoder",
+      "sourceUrl": "https://warehouse.ninja/locations/amazon/SMD1/",
+      "moreSources": [
+        "https://myamazonguy.com/wp-content/uploads/2022/06/Amazon-Fulfillment-Centers-_-Warehouse-Codes-Sheet.pdf"
+      ],
+      "note": "Listed on warehouse.ninja and the 2022 code sheet. An S-prefix usually means a Sub-Same-Day site, so this may be a same-day fulfillment or delivery hybrid. Type and current status not confirmed."
+    },
+    {
+      "id": "amazon-solley-rd",
+      "name": "Amazon delivery station DLD1 (Solley Rd, Glen Burnie)",
+      "operator": "Amazon",
+      "kind": "delivery_station",
+      "status": "unverified",
+      "code": "DLD1",
+      "address": "7659 Solley Rd, Glen Burnie, MD 21060",
+      "lat": null,
+      "lon": null,
+      "coordinateSource": "geocoded on refresh (U.S. Census Bureau geocoder)",
+      "sourceUrl": "https://www.connectcre.com/stories/gll-real-estate-partners-secures-340k-sf-lease-with-amazon-near-baltimore/",
+      "moreSources": [
+        "https://myamazonguy.com/wp-content/uploads/2022/06/Amazon-Fulfillment-Centers-_-Warehouse-Codes-Sheet.pdf"
+      ],
+      "note": "340K SF lease reported Oct 2020, plus an adjacent parking parcel. Amazon announced a Glen Burnie last-mile station in July 2020. Likely operating, but current status not confirmed."
+    },
+    {
+      "id": "amazon-aberdeen-sort",
+      "name": "Amazon sort center (Aberdeen)",
+      "operator": "Amazon",
+      "kind": "sortation_center",
+      "status": "open",
+      "code": "MTN2 / MTN7",
+      "address": "913 Old Philadelphia Rd, Aberdeen, MD 21001",
+      "lat": null,
+      "lon": null,
+      "coordinateSource": "geocoded on refresh (U.S. Census Bureau geocoder)",
+      "sourceUrl": "https://hiring.amazon.com/jobDetail/en-US/Amazon-Sortation-Center-Warehouse-Associate/Aberdeen/a0R4U00000GJJAiUAP",
+      "moreSources": [
+        "https://patch.com/maryland/across-md/amazon-opens-third-sort-center-harford-county-maryland"
+      ],
+      "note": "About 300K SF former Pier 1 DC, opened Nov 2020 with 1,000+ jobs. A hiring.amazon.com sort-center posting lists '913 Old Philadelphia Road 3G12'. About 46 km from downtown."
+    },
+    {
+      "id": "amazon-edgewood-fulfillment-dr",
+      "name": "Amazon delivery station DMD4 (Edgewood)",
+      "operator": "Amazon",
+      "kind": "delivery_station",
+      "status": "open",
+      "code": "DMD4",
+      "address": "102 Fulfillment Dr, Edgewood, MD 21040",
+      "lat": null,
+      "lon": null,
+      "coordinateSource": "geocoded on refresh (U.S. Census Bureau geocoder)",
+      "sourceUrl": "https://myamazonguy.com/wp-content/uploads/2022/06/Amazon-Fulfillment-Centers-_-Warehouse-Codes-Sheet.pdf",
+      "moreSources": [
+        "https://warehouse.ninja/lists/delivery/amazon-dsps/trafalgar-logistics-network-llc"
+      ],
+      "note": "Edgewood last-mile station announced July 2020 and reported opened by early 2021 (Bisnow). An Amazon DSP lists 102 Fulfillment Dr as its base, which suggests the station is active."
+    },
+    {
+      "id": "amazon-edgewood-lakeside",
+      "name": "Amazon site DMD2 (Lakeside Blvd, Edgewood)",
+      "operator": "Amazon",
+      "kind": "delivery_station",
+      "status": "unverified",
+      "code": "DMD2",
+      "address": "2203 Lakeside Blvd, Edgewood, MD 21040",
+      "lat": null,
+      "lon": null,
+      "coordinateSource": "geocoded on refresh (U.S. Census Bureau geocoder)",
+      "sourceUrl": "https://myamazonguy.com/wp-content/uploads/2022/06/Amazon-Fulfillment-Centers-_-Warehouse-Codes-Sheet.pdf",
+      "note": "Comes only from the 2022 code sheet. May be an earlier or temporary Edgewood station. Status not confirmed."
+    },
+    {
+      "id": "amazon-nottingham",
+      "name": "Amazon site MTN9 (Nottingham / White Marsh)",
+      "operator": "Amazon",
+      "kind": "sortation_center",
+      "status": "unverified",
+      "code": "MTN9",
+      "address": "5300 Nottingham Dr, Nottingham (White Marsh), MD 21236",
+      "lat": null,
+      "lon": null,
+      "coordinateSource": "geocoded on refresh (U.S. Census Bureau geocoder)",
+      "sourceUrl": "https://myamazonguy.com/wp-content/uploads/2022/06/Amazon-Fulfillment-Centers-_-Warehouse-Codes-Sheet.pdf",
+      "moreSources": [
+        "https://patch.com/maryland/across-md/amazon-opens-third-sort-center-harford-county-maryland"
+      ],
+      "note": "The 2022 code sheet labels MTN9 here as 'FC'. A Nov 2020 Patch article mentions Amazon hiring for a 'White Marsh sort center'. Type and status not confirmed."
+    },
+    {
+      "id": "amazon-north-point",
+      "name": "Amazon site HBA3 (North Point Rd)",
+      "operator": "Amazon",
+      "kind": "delivery_station",
+      "status": "unverified",
+      "code": "HBA3",
+      "address": "817 N Point Rd, Baltimore, MD 21237",
+      "lat": null,
+      "lon": null,
+      "coordinateSource": "geocoded on refresh (U.S. Census Bureau geocoder)",
+      "sourceUrl": "https://myamazonguy.com/wp-content/uploads/2022/06/Amazon-Fulfillment-Centers-_-Warehouse-Codes-Sheet.pdf",
+      "note": "Comes only from the 2022 code sheet. Facility type unknown (H-prefix); 'delivery_station' is a placeholder. The street name may be North Point Blvd/Rd. Treat as low confidence."
+    },
+    {
+      "id": "amazon-air-bwi",
+      "name": "Amazon Air hub (BWI Airport)",
+      "operator": "Amazon",
+      "kind": "air_hub",
+      "status": "open",
+      "code": "KBWI",
+      "address": null,
+      "lat": null,
+      "lon": null,
+      "sourceUrl": "https://www.wmar2news.com/news/local-news/governor-hogan-tours-one-of-the-busiest-amazon-air-facilities-in-the-world",
+      "moreSources": [
+        "https://technical.ly/startups/pinnacle-logistics-1600-layoffs-amazon-job-offers-prime-air-bwi-airport.md"
+      ],
+      "note": "About 200K SF, $36M Amazon Air hub at BWI, opened around late 2019 to 2020. Called one of Amazon Air's top 5 busiest sites (June 2021), with 1,200+ jobs. Pinnacle Logistics staff (about 1,600) moved to Amazon in Apr 2020. The 2022 code sheet gives '27350 Mathison Way, Baltimore 21240' for KBWI, which could not be verified. Air-hub shifts usually follow flight banks, mostly overnight.",
+      "addressNote": "No verified street address; not placed on the map until coordinates are confirmed."
+    },
+    {
+      "id": "amazon-lanham",
+      "name": "Amazon delivery station DLD7 (Lanham)",
+      "operator": "Amazon",
+      "kind": "delivery_station",
+      "status": "open",
+      "code": "DLD7",
+      "address": "10100 Willowdale Rd, Lanham, MD 20706",
+      "lat": null,
+      "lon": null,
+      "coordinateSource": "geocoded on refresh (U.S. Census Bureau geocoder)",
+      "sourceUrl": "https://smnewsnet.com/archives/486921/amazon-delivers-more-than-just-packages-to-prince-georges-county/",
+      "moreSources": [
+        "https://warehouse.ninja/locations/amazon/dld7"
+      ],
+      "note": "90K SF, launched Feb 2021. About 42 km from downtown Baltimore, near the edge of the radius."
+    },
+    {
+      "id": "amazon-upper-marlboro",
+      "name": "Amazon delivery station DMD9 (Upper Marlboro)",
+      "operator": "Amazon",
+      "kind": "delivery_station",
+      "status": "open",
+      "code": "DMD9",
+      "address": "1000 Prince George's Blvd, Upper Marlboro, MD 20774",
+      "lat": null,
+      "lon": null,
+      "coordinateSource": "geocoded on refresh (U.S. Census Bureau geocoder)",
+      "sourceUrl": "https://warehouse.ninja/locations/amazon/DMD9/",
+      "moreSources": [
+        "https://fox5dc.com/news/amazons-delivery-station-plan-for-prince-georges-county-moves-forward-despite-opposition"
+      ],
+      "note": "Approved by the PG County Council Oct 2020 and reported operating Nov 2021 (Patch). The MD Supreme Court ruled for Amazon in a 2023 neighbor dispute. About 49 km away, near the edge of the radius. 'Open' is based on 2021-2023 reporting."
+    },
+    {
+      "id": "amazon-rockville",
+      "name": "Amazon delivery station DDC2 (Rockville)",
+      "operator": "Amazon",
+      "kind": "delivery_station",
+      "status": "unverified",
+      "code": "DDC2",
+      "address": "861 E Gude Dr, Rockville, MD 20850",
+      "lat": null,
+      "lon": null,
+      "coordinateSource": "geocoded on refresh (U.S. Census Bureau geocoder)",
+      "sourceUrl": "https://warehouse.ninja/locations/amazon/DDC2/",
+      "moreSources": [
+        "https://myamazonguy.com/wp-content/uploads/2022/06/Amazon-Fulfillment-Centers-_-Warehouse-Codes-Sheet.pdf"
+      ],
+      "note": "About 51 km away, at the edge of the radius. Listed as a delivery station; current status not confirmed."
+    },
+    {
+      "id": "amazon-silver-spring",
+      "name": "Amazon site SDC2 (Silver Spring)",
+      "operator": "Amazon",
+      "kind": "delivery_station",
+      "status": "unverified",
+      "code": "SDC2",
+      "address": "2 University Blvd W, Silver Spring, MD 20901",
+      "lat": null,
+      "lon": null,
+      "coordinateSource": "geocoded on refresh (U.S. Census Bureau geocoder)",
+      "sourceUrl": "https://myamazonguy.com/wp-content/uploads/2022/06/Amazon-Fulfillment-Centers-_-Warehouse-Codes-Sheet.pdf",
+      "note": "Comes only from the 2022 code sheet; S-prefix (sub-same-day?). About 45 km away. Type and status unknown."
     },
     {
       "id": "mondawmin-mall",
@@ -391,18 +697,6 @@
       "note": "Workforce and shift hours not published; observation-only."
     },
     {
-      "id": "amazon-smd1-dorsey-run",
-      "name": "Amazon warehouse SMD1 (Dorsey Run Rd)",
-      "kind": "warehouse",
-      "status": "open",
-      "address": "7200 Dorsey Run Rd, Elkridge, MD 21075",
-      "lat": 39.178143761232,
-      "lon": -76.755438790637,
-      "coordinateSource": "U.S. Census Bureau geocoder",
-      "sourceUrl": "https://warehouse.ninja/locations/amazon/SMD1/",
-      "note": "Jessup/Elkridge warehouse corridor. Driver trips to and from Dorsey Run Rd at 6-7 AM Oct 12 and +$7-10 bonuses nearby at 11:37 PM Oct 12; shift times not published."
-    },
-    {
       "id": "hackensack-umc",
       "name": "Hackensack University Medical Center",
       "kind": "hospital",
@@ -671,5 +965,13 @@
       "hoursSource": "https://www.simon.com/mall/newport-centre/hours",
       "hoursNote": "Official hours. Only the closing time is used."
     }
-  ]
+  ],
+  "amazonShiftTimes": [
+    1,
+    7,
+    15,
+    19,
+    23
+  ],
+  "amazonShiftSource": "Founder driver observation: shift changes at 3, 11 and 7 plus 1 AM at the same Amazon locations; Sparrows Point bonuses peaked 3:13-3:16 PM on Oct 9, 2026."
 }

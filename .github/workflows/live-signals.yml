@@ -3,12 +3,20 @@ name: Refresh live demand signals
 # Data-only refresh. It never changes main or the deployed app code: each run
 # rebuilds provider-signals.json from public sources and connected provider
 # feeds, then replaces the single commit on the machine-owned `signals` branch.
-# The app reads that file directly, so drivers see ~10-minute-old data instead
-# of waiting for the hourly Pages release.
+# Only markets with a driver in the app in the last 2 hours are refreshed
+# (market-activity table); other markets keep their last data and make no feed
+# calls, and a pass with no active market stops before doing anything. A driver
+# opening the app in a stale market starts a run through the market-activity
+# Edge Function (workflow_dispatch with `markets`).
 on:
   schedule:
     - cron: '4-59/10 * * * *'
   workflow_dispatch:
+    inputs:
+      markets:
+        description: 'Comma list of market ids, or "all" (empty = markets with active drivers)'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -23,21 +31,50 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 9
     steps:
+      - name: Pick markets with active drivers
+        id: pick
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
+          REQUESTED: ${{ github.event.inputs.markets }}
+        run: |
+          set -u
+          requested="$(printf '%s' "${REQUESTED:-}" | tr -cd 'a-z0-9,_-')"
+          if [ "${REQUESTED:-}" = "all" ]; then echo "markets=all" >> "$GITHUB_OUTPUT"; exit 0; fi
+          active=""
+          if [ -n "${SUPABASE_URL:-}" ] && [ -n "${SUPABASE_PUBLISHABLE_KEY:-}" ]; then
+            if body="$(curl -sf --max-time 15 -X POST "$SUPABASE_URL/rest/v1/rpc/active_markets" -H "apikey: $SUPABASE_PUBLISHABLE_KEY" -H 'Content-Type: application/json' -d '{"p_minutes":120}')"; then
+              active="$(printf '%s' "$body" | tr -d '[]" ' | tr -cd 'a-z0-9,_-')"
+            else
+              # Activity list unreachable: refresh everything rather than go dark.
+              echo "markets=all" >> "$GITHUB_OUTPUT"; exit 0
+            fi
+          else
+            echo "markets=all" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          markets="$(printf '%s,%s' "$requested" "$active" | tr ',' '\n' | grep -v '^$' | sort -u | paste -sd, -)"
+          if [ -z "$markets" ]; then echo "No drivers active in any market; skipping (no feed calls)."; fi
+          echo "markets=$markets" >> "$GITHUB_OUTPUT"
       - name: Check out current main
+        if: steps.pick.outputs.markets != ''
         uses: actions/checkout@v4
         with:
           ref: main
           persist-credentials: false
       - name: Set up Node
+        if: steps.pick.outputs.markets != ''
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
       - name: Install
+        if: steps.pick.outputs.markets != ''
         run: npm ci --ignore-scripts
       - name: Refresh public and provider signals
+        if: steps.pick.outputs.markets != ''
         run: node scripts/refresh-provider-signals.mjs
         env:
+          HOMEBASE_MARKETS: ${{ steps.pick.outputs.markets }}
           TICKETMASTER_API_KEY: ${{ secrets.TICKETMASTER_API_KEY }}
           UBER_ACCESS_TOKEN: ${{ secrets.UBER_ACCESS_TOKEN }}
           UBER_CLIENT_ID: ${{ secrets.UBER_CLIENT_ID }}
@@ -47,6 +84,7 @@ jobs:
           BOOKING_AFFILIATE_ID: ${{ secrets.BOOKING_AFFILIATE_ID }}
           FLIGHTAWARE_API_KEY: ${{ secrets.FLIGHTAWARE_API_KEY }}
       - name: Validate snapshot before publishing
+        if: steps.pick.outputs.markets != ''
         run: node scripts/validate-signals.mjs dist/provider-signals.json
         env:
           TICKETMASTER_API_KEY: ${{ secrets.TICKETMASTER_API_KEY }}
@@ -57,6 +95,7 @@ jobs:
           BOOKING_AFFILIATE_ID: ${{ secrets.BOOKING_AFFILIATE_ID }}
           FLIGHTAWARE_API_KEY: ${{ secrets.FLIGHTAWARE_API_KEY }}
       - name: Publish to the signals branch
+        if: steps.pick.outputs.markets != ''
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
