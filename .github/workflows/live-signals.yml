@@ -42,16 +42,26 @@ jobs:
           requested="$(printf '%s' "${REQUESTED:-}" | tr -cd 'a-z0-9,_-')"
           if [ "${REQUESTED:-}" = "all" ]; then echo "markets=all" >> "$GITHUB_OUTPUT"; exit 0; fi
           active=""
+          # Repository variables are scoped to the Pages environment; the same public
+          # browser values are in dist/homebase-config.js.
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_PUBLISHABLE_KEY:-}" ]; then
+            cfg="$(curl -sf --max-time 15 "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/main/dist/homebase-config.js" || true)"
+            SUPABASE_URL="$(printf '%s' "$cfg" | grep -o "https://[a-z0-9-]*\.supabase\.co" | head -1)"
+            SUPABASE_PUBLISHABLE_KEY="$(printf '%s' "$cfg" | grep -o "sb_publishable_[A-Za-z0-9_-]*" | head -1)"
+          fi
           if [ -n "${SUPABASE_URL:-}" ] && [ -n "${SUPABASE_PUBLISHABLE_KEY:-}" ]; then
             if body="$(curl -sf --max-time 15 -X POST "$SUPABASE_URL/rest/v1/rpc/active_markets" -H "apikey: $SUPABASE_PUBLISHABLE_KEY" -H 'Content-Type: application/json' -d '{"p_minutes":120}')"; then
               active="$(printf '%s' "$body" | tr -d '[]" ' | tr -cd 'a-z0-9,_-')"
             else
               # Activity list unreachable: refresh everything rather than go dark.
+              echo "Active-market list unreachable; refreshing all markets."
               echo "markets=all" >> "$GITHUB_OUTPUT"; exit 0
             fi
           else
+            echo "Supabase address unavailable; refreshing all markets."
             echo "markets=all" >> "$GITHUB_OUTPUT"; exit 0
           fi
+          echo "Active markets: ${active:-none}; requested: ${requested:-none}" 
           markets="$(printf '%s,%s' "$requested" "$active" | tr ',' '\n' | grep -v '^$' | sort -u | paste -sd, -)"
           if [ -z "$markets" ]; then echo "No drivers active in any market; skipping (no feed calls)."; fi
           echo "markets=$markets" >> "$GITHUB_OUTPUT"
