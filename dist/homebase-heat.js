@@ -293,11 +293,12 @@
         this._canvas.style.cssText = 'position:absolute;pointer-events:none;image-rendering:auto;opacity:1;visibility:visible;';
         map.getPane('heatPane').appendChild(this._canvas);
         map.on('moveend zoomend resize', this._schedule, this);
+        map.on('movestart zoomstart', this._startInteraction, this);map.on('moveend zoomend', this._endInteraction, this);
         this._schedule();
       },
       onRemove(map) {
-        cancelAnimationFrame(this._frame);
-        map.off('moveend zoomend resize', this._schedule, this);
+        cancelAnimationFrame(this._frame);clearTimeout(this._timer);
+        map.off('moveend zoomend resize', this._schedule, this);map.off('movestart zoomstart', this._startInteraction, this);map.off('moveend zoomend', this._endInteraction, this);
         this._canvas.remove();
         this._canvas = null;
       },
@@ -309,9 +310,13 @@
         this._schedule();
         return this;
       },
+      _startInteraction() { this._interacting = true; },
+      _endInteraction() { this._interacting = false; },
       _schedule() {
-        cancelAnimationFrame(this._frame);
-        this._frame = requestAnimationFrame(() => this._draw());
+        // Startup and refreshes call setData several times in a row; one draw ~120 ms after the
+        // last call keeps the main thread free for pan and pinch-zoom instead of redrawing each time.
+        cancelAnimationFrame(this._frame);clearTimeout(this._timer);
+        this._timer = setTimeout(() => { this._frame = requestAnimationFrame(() => { if (this._interacting) return this._schedule(); this._draw(); }); }, 120);
       },
       _draw() {
         const map = this._map, canvas = this._canvas;
@@ -548,11 +553,13 @@
           const top = Math.max(0, Math.floor((source.center.y - radius - gridTop) / sample));
           const bottom = Math.min(gridHeight - 1, Math.ceil((source.center.y + radius - gridTop) / sample));
           const cos = Math.cos(source.angle), sin = Math.sin(source.angle);
+          // Evidence flags are fixed per source; testing them once keeps the pixel loop allocation-free.
+          const ev=source.evidence,isCurrent=ev==='event'||ev==='current'||ev==='surge'||ev==='activity',isHistory=ev==='history',isEvent=ev==='event'||ev==='activity',isSurge=ev==='surge',isModeled=ev==='modeled',limit2=source.influenceLimit*source.influenceLimit;
           for (let y = top; y <= bottom; y++) for (let x = left; x <= right; x++) {
             const cell = y * gridWidth + x;
             const px = gridLeft + (x + .5) * sample + warpX[cell], py = gridTop + (y + .5) * sample + warpY[cell];
             const dx = px - source.center.x, dy = py - source.center.y;
-            if(dx*dx+dy*dy>source.influenceLimit*source.influenceLimit)continue;
+            if(dx*dx+dy*dy>limit2)continue;
             const rx = (dx * cos + dy * sin) / source.rx, ry = (-dx * sin + dy * cos) / source.ry;
             // Two close, asymmetrical lobes keep the interpolation geographic
             // but avoid the artificial bullseye/ring effect of a single radial
@@ -568,11 +575,11 @@
               .14 * Math.exp(-shoulderB * 1.2);
               const contribution = source.strength * profile * texture[cell] * source.detailOpacity;
               const offset = y * gridWidth + x;
-              if(['event','current','surge','activity'].includes(source.evidence))currentField[offset]=Math.max(currentField[offset],profile);
-              if(source.evidence==='history'){historyField[offset]=Math.max(historyField[offset],contribution);continue;}
-              if(source.evidence==='event'||source.evidence==='activity')eventField[offset]=Math.max(eventField[offset],profile*source.shade);
-              if(source.evidence==='surge')surgeField[offset]=Math.max(surgeField[offset],profile*source.shade);
-              if(source.evidence==='modeled'){
+              if(isCurrent&&profile>currentField[offset])currentField[offset]=profile;
+              if(isHistory){if(contribution>historyField[offset])historyField[offset]=contribution;continue;}
+              if(isEvent&&profile*source.shade>eventField[offset])eventField[offset]=profile*source.shade;
+              if(isSurge&&profile*source.shade>surgeField[offset])surgeField[offset]=profile*source.shade;
+              if(isModeled){
                 if(contribution>backgroundField[offset]){backgroundField[offset]=contribution;backgroundShade[offset]=contribution*source.shade;}
                 continue;
               }

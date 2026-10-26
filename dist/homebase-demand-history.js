@@ -97,7 +97,12 @@
      dates cap at 0.08, three at 0.2, four at 0.32, five or more at 0.45. */
   const BANDS={calm:0,none:0,moderate:1,elevated:2,high:3,very_high:4};
   const LOCAL=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',weekday:'short',hour:'numeric',minute:'numeric',hour12:false});
-  function local(date){const p=Object.fromEntries(LOCAL.formatToParts(date).map(x=>[x.type,x.value]));return{day:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(p.weekday),minute:(Number(p.hour)%24)*60+Number(p.minute)};}
+  // Intl formatting is slow; history lookups run thousands of times per map draw,
+  // so local times are cached per minute and per-row data is indexed once per change.
+  const localCache=new Map(),nightCache=new Map(),memo=new Map();let dataVersion=0,indexVersion=-1,rowIndexCache=[];
+  function local(date){const k=Math.floor(+date/60000);let v=localCache.get(k);if(v)return v;const p=Object.fromEntries(LOCAL.formatToParts(date).map(x=>[x.type,x.value]));v={day:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(p.weekday),minute:(Number(p.hour)%24)*60+Number(p.minute)};if(localCache.size>50000)localCache.clear();localCache.set(k,v);return v;}
+  function nightKey(stamp){const k=Math.floor((stamp-4*3600000)/3600000);let v=nightCache.get(k);if(v)return v;v=new Date(k*3600000).toLocaleDateString('en-CA',{timeZone:'America/New_York'});if(nightCache.size>20000)nightCache.clear();nightCache.set(k,v);return v;}
+  function historyChanged(){dataVersion++;memo.clear();}
   const weekday=d=>d>=1&&d<=5;
   // Full weight within 15 minutes of the observed time, fading to zero at 45.
   // Route planning (opts.route) looks wider: full weight within an hour, fading to
@@ -124,17 +129,36 @@
     for(let i=1;i<PATTERN_CAPS.length;i++){const[x1,y1]=PATTERN_CAPS[i-1],[x2,y2]=PATTERN_CAPS[i];if(effective<=x2)return y1+(y2-y1)*(effective-x1)/(x2-x1);}
     return .45;
   }
-  function recurrenceForPlatform(matchItem,target,opts,recordType){
-    const targetLocal=local(target),dates=new Map();
+  function rowIndex(){
+    if(indexVersion===dataVersion)return rowIndexCache;
+    rowIndexCache=[];
     for(const row of screenshotBenchmarks){
-      if(row.record_type!==recordType)continue;
       const capture=captureTime(row);if(!Number.isFinite(capture))continue;
       // Timed notifications (Empower) pin the observation to each alert minute.
       // An alert shown only as "1h ago" belongs to that whole hour: it is the same surge
       // window, so any minute inside it counts at full time weight.
       const stamps=[];for(const n of row.notifications||[]){const at=Date.parse(n.at),lo=Date.parse(n.earliest),hi=Date.parse(n.latest);
         if(Number.isFinite(lo)&&Number.isFinite(hi)&&hi>lo&&hi-lo<=65*60000)for(let t=lo;t<=hi;t+=5*60000)stamps.push(t);else if(Number.isFinite(at))stamps.push(at);}
-      let stamp=NaN,tw=0;for(const t of stamps.length?stamps:[capture]){const w=timeWeight(local(new Date(t)),targetLocal,opts);if(w>tw){tw=w;stamp=t;}}
+      rowIndexCache.push({row,stamps:(stamps.length?stamps:[capture]).map(t=>({t,loc:local(new Date(t))}))});
+    }
+    // 15-minute time-of-day slots per platform, so a lookup only visits rows near its clock time.
+    rowIndexCache.slots={};
+    for(const entry of rowIndexCache){const type=entry.row.record_type,slots=rowIndexCache.slots[type]||(rowIndexCache.slots[type]=Array.from({length:96},()=>[]));
+      for(const slot of new Set(entry.stamps.map(s=>Math.floor(s.loc.minute/15))))slots[slot].push(entry);}
+    indexVersion=dataVersion;return rowIndexCache;
+  }
+  function candidates(recordType,targetLocal,opts){
+    const index=rowIndex(),slots=index.slots[recordType];if(!slots)return[];
+    // timeWeight reaches 45 minutes (2 hours for routes); scan one extra slot each side.
+    const reach=opts?.route?9:4,center=Math.floor(targetLocal.minute/15),seen=new Set();
+    for(let d=-reach;d<=reach;d++)for(const entry of slots[(center+d+96)%96])seen.add(entry);
+    return seen;
+  }
+  function recurrenceForPlatform(matchItem,target,opts,recordType){
+    const targetLocal=local(target),dates=new Map();
+    for(const entry of candidates(recordType,targetLocal,opts)){
+      const row=entry.row;
+      let stamp=NaN,tw=0;for(const s of entry.stamps){const w=timeWeight(s.loc,targetLocal,opts);if(w>tw){tw=w;stamp=s.t;}}
       const age=+target-stamp;if(!tw||!Number.isFinite(stamp)||age<0||age>120*86400000)continue;
       for(const item of row.area_observations||[]){
         const proximity=matchItem(item);if(!(proximity>0)||!(item.band in BANDS))continue;
@@ -150,7 +174,7 @@
         const estimated=row.timestamp_confidence==='low'&&!/^relative_age/.test(String(row.timestamp_method||''));
         const weight=tw*proximity*calmWeight*(estimated?.5:1),value=shadingOnly?Math.min(BANDS[item.band],BANDS.elevated)/4:BANDS[item.band]/4;
         // One overnight cluster remains one independent night across midnight.
-        const key=new Date(stamp-4*3600000).toLocaleDateString('en-CA',{timeZone:'America/New_York'}),old=dates.get(key);
+        const key=nightKey(stamp),old=dates.get(key);
         const usd=Number(item.shown_usd);
         if(!old||weight>old.weight||weight===old.weight&&value>old.value)dates.set(key,{weight,value,band:item.band,stamp,usd:Math.max(Number.isFinite(usd)?usd:0,old?.usd||0)});
         else if(Number.isFinite(usd)&&usd>(old.usd||0))old.usd=usd;
@@ -187,12 +211,14 @@
   // Named Baltimore neighborhoods (older captures carry names only).
   function recurrenceFor(areaName,when,isBaltimore,opts){
     if(!isBaltimore)return{distinctDates:0,band:null,confidence:0};
-    return recurrence(nameMatcher(areaName),when,opts);
+    const key='n|'+areaName+'|'+Math.floor(+new Date(when)/60000)+'|'+(opts?.route?1:0);if(memo.has(key))return memo.get(key);
+    const out=recurrence(nameMatcher(areaName),when,opts);if(memo.size>20000)memo.clear();memo.set(key,out);return out;
   }
   // Any location: captures that carry coordinates, within their area radius.
   function recurrenceAt(lat,lon,when,opts){
     if(!Number.isFinite(lat)||!Number.isFinite(lon))return{distinctDates:0,band:null,confidence:0};
-    return recurrence(item=>{if(!Number.isFinite(item.lat)||!Number.isFinite(item.lon))return 0;const r=Number(item.radiusKm)||1.6,d=distanceKm([lat,lon],[item.lat,item.lon]);return d>=r?0:1-d/r;},when,opts);
+    const key='a|'+lat.toFixed(4)+','+lon.toFixed(4)+'|'+Math.floor(+new Date(when)/60000)+'|'+(opts?.route?1:0);if(memo.has(key))return memo.get(key);
+    const out=recurrence(item=>{if(!Number.isFinite(item.lat)||!Number.isFinite(item.lon))return 0;const r=Number(item.radiusKm)||1.6,d=distanceKm([lat,lon],[item.lat,item.lon]);return d>=r?0:1-d/r;},when,opts);if(memo.size>20000)memo.clear();memo.set(key,out);return out;
   }
   // One pattern point per observed location, for the heat layer anywhere.
   function patternSources(when){
@@ -207,9 +233,9 @@
     const local=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',hour:'numeric',hour12:false}).format(new Date(captured)),id='live-'+platform.toLowerCase()+':'+name+':'+new Date(captured).toISOString();
     if(screenshotBenchmarks.some(row=>row.id===id))return false;
     const row={id,record_type:platform.toLowerCase()+'_reference',source:platform+' authorized pricing feed',observed_at:new Date(now).toISOString(),captured_at:new Date(captured).toISOString(),capture_hour_local:Number(local)%24,market:String(sample.market||'Local market'),area_observations:[{area:name,band:multiplier>=1.8?'very_high':multiplier>1.3?'high':multiplier>1?'elevated':'calm',...(Number.isFinite(Number(sample.lat))&&Number.isFinite(Number(sample.lon))?{lat:Number(sample.lat),lon:Number(sample.lon),radiusKm:1.6}:{})}],price_multiplier:multiplier,visual_summary:'Observed platform pricing proxy; not ride counts or a guaranteed bonus.',capture_note:'Repeated samples on one local date count once for recurrence.'};
-    screenshotBenchmarks.push(row);
+    screenshotBenchmarks.push(row);historyChanged();
     const keep=screenshotBenchmarks.filter(row=>now-Date.parse(row.captured_at||row.observed_at)<=120*86400000).slice(-2000);
-    screenshotBenchmarks.splice(0,screenshotBenchmarks.length,...keep);
+    screenshotBenchmarks.splice(0,screenshotBenchmarks.length,...keep);historyChanged();
     try{localStorage.setItem('homeBaseDemandBenchmarks',JSON.stringify(keep));}catch{}
     return true;
   }
@@ -229,9 +255,9 @@
     const band=usd===0?'calm':usd>=6?'very_high':usd>=3.5?'high':usd>=1.5?'elevated':'moderate';
     const row={id:'driver-log:'+platform.toLowerCase()+':'+lat.toFixed(4)+':'+lon.toFixed(4)+':'+new Date(at).toISOString(),record_type:platform==='Empower'?'empower_reference':'uber_reference',source:'Driver-logged '+platform+' bonus',provenance:'USER-REPORTED',observed_at:new Date(now).toISOString(),captured_at:new Date(at).toISOString(),capture_hour_local:hour,market:String(obs.market||'Local market').slice(0,60),area_observations:[{area:String(obs.area||'Driver location').slice(0,80),band,lat,lon,radiusKm:1.2,shown_usd:usd}]};
     if(screenshotBenchmarks.some(r=>r.id===row.id))return false;
-    screenshotBenchmarks.push(row);
+    screenshotBenchmarks.push(row);historyChanged();
     const keep=screenshotBenchmarks.filter(r=>now-Date.parse(r.captured_at||r.observed_at)<=120*86400000).slice(-2000);
-    screenshotBenchmarks.splice(0,screenshotBenchmarks.length,...keep);
+    screenshotBenchmarks.splice(0,screenshotBenchmarks.length,...keep);historyChanged();
     try{localStorage.setItem('homeBaseDemandBenchmarks',JSON.stringify(keep));}catch{}
     return true;
   }
