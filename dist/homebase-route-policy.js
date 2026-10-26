@@ -9,6 +9,25 @@
     const size=count===0?0:Math.max(.4,Math.min(2.4,.35+.55*Math.log10(1+count/100)));
     return {attendance:count,basis,scale:count===0?0:.6*(1-confidence)+size*confidence,label:(basis==='reported'?'Reported attendance: ':'Published attendance estimate: ')+Math.round(count).toLocaleString('en-US')+' · ride demand is modeled'};
   }
+// Event let-out profile, calibrated on Ravens vs. Bengals at M&T Bank Stadium,
+// Sun Oct 25 2026 (1:00 PM kickoff, final about 4:10 PM): Uber bonuses peaked
+// across downtown, the harbor and the west side 20-100 minutes after the final
+// whistle (+$9.50 to +$16), were still +$9.25 at 6:07 PM and faded by 6:39 PM.
+// Large venues therefore keep a longer, wider departure window than small ones.
+  const LET_OUT={stadium:{exitMinutes:150,peakFrom:10,peakTo:100,footprintKm:3.5},arena:{exitMinutes:90,peakFrom:5,peakTo:60,footprintKm:2.25},venue:{exitMinutes:60,peakFrom:0,peakTo:60,footprintKm:0}};
+  function venueClass(source){
+    const text=(String(source.venue||'')+' '+String(source.name||'')).toLowerCase().replace(/&/g,' ').replace(/\s+/g,' '),count=Number(source.expectedAttendance);
+    if(/m t bank stadium|camden yards|oriole park|metlife stadium|yankee stadium|citi field|nationals park|northwest stadium|fedex field|lincoln financial field|citizens bank park/.test(text)||count>=30000)return 'stadium';
+    if(/cfg bank arena|capital one arena|madison square garden|barclays center|prudential center|ubs arena|wells fargo center|\barena\b/.test(text)||count>=8000)return 'arena';
+    return 'venue';
+  }
+  function letOutProfile(source){return {venueClass:venueClass(source),...LET_OUT[venueClass(source)]};}
+  // 0..1 departure strength at `when`; 0 outside the window.
+  function letOutStrength(source,when){
+    const end=Date.parse(source.eventEnd||''),time=+new Date(when);if(!Number.isFinite(end)||source.eventEndEstimated||!Number.isFinite(time))return 0;
+    const p=letOutProfile(source),min=(time-end)/60000;if(min<0||min>=p.exitMinutes)return 0;
+    if(min<p.peakFrom)return .6+.4*min/p.peakFrom;if(min<=p.peakTo)return 1;return Math.max(0,1-(min-p.peakTo)/(p.exitMinutes-p.peakTo));
+  }
   function eventPhase(source,when,now=new Date()){
     const tags=source.tags||{},start=stamp(source.eventStart),time=stamp(when);
     if(!Number.isFinite(start)||!Number.isFinite(time)||!(tags.providerEvent||tags.liveEvent||tags.publicCalendar||source.verifiedEvent===true))return null;
@@ -17,7 +36,7 @@
     // Ride activity follows arrivals and departures, not the whole event.
     if(time>=start-60*60000&&time<start)return 'arrival';
     if(time===start)return 'start';
-    if(Number.isFinite(end)&&end>start&&time>=end&&time<end+60*60000)return 'exit';
+    if(Number.isFinite(end)&&end>start&&time>=end&&time<end+letOutProfile(source).exitMinutes*60000)return 'exit';
     // A scoreboard observed in its final period is a live, not modeled, cue.
     // It applies only near the observation; later hours cannot reuse it.
     const observed=stamp(tags.observedAt);
@@ -189,5 +208,5 @@
     if(near.some(e=>isHome(e.lat,e.lon)&&crowdTier(e)!=='local'))return near;
     return [...near,...(events||[]).filter(e=>far(e)&&awayEligible(e))];
   }
-  return {crowdTier,awayEligible,routeEvents,eventSize,eventImpact,eventPhase,liveSignal,schoolStage,schoolWeight,warehouse,workerWeight,mallClosingHours,fallbackEligible,generalEvidence,candidatesForHour,selectRanked};
+  return {letOutProfile,letOutStrength,venueClass,crowdTier,awayEligible,routeEvents,eventSize,eventImpact,eventPhase,liveSignal,schoolStage,schoolWeight,warehouse,workerWeight,mallClosingHours,fallbackEligible,generalEvidence,candidatesForHour,selectRanked};
 });

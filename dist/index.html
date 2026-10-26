@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Home Base">
-  <meta name="homebase-build" content="v288">
+  <meta name="homebase-build" content="v289">
   <meta name="description" content="Home Base connects local driver platforms, earnings forecasts, events and a GPS-based 12-hour route in one app.">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icon-192.png">
@@ -851,7 +851,7 @@ function driverEvidence(source,when=new Date()){
   return text;
 }
 function hourWeight(cat,h,when=new Date()){const night=h>=21||h<3,day=marketParts(when).day,weekday=day>=1&&day<=5,cooling=surgeTrend==='cooling';if(cat==='school'||cat==='k12')return HomeBaseRoutePolicy.schoolWeight({cat},{day,hour:h},when);if(cat==='university')return h>=7&&h<22?(h>=16?6:4):1;if(cat==='nightlife')return(night?12:h>=18?7:1)-(cooling?1:0);if(cat==='event')return 0;if(cat==='restaurant')return((h>=11&&h<14)||(h>=17&&h<22)?9:2)+(cooling?1:0);if(cat==='transit')return((h>=5&&h<10)||(h>=15.5&&h<20)||h>=22?10:4)+(cooling?1:0);if(cat==='hotel')return(h<9||h>=20)?7:3;if(cat==='attraction')return h>=10&&h<18?7:1;if(cat==='shopping')return h>=10&&h<21?6:1;if(cat==='medical')return(h>=6&&h<9)||(h>=14&&h<17)||(h>=22)?7:3;if(cat==='neighborhood'){/* Sunday morning prior; dated events add their own arrival/exit peaks. */if(day===0)return h>=6&&h<12?7:h>=12&&h<17?4:h>=17&&h<21?5:3;return weekday&&h>=13&&h<19?7:(h>=6&&h<9)||(h>=16&&h<20)?5:3;}return 2}
-function eventTimeWeight(v,when){const phase=HomeBaseRoutePolicy.eventPhase(v,when);return ({arrival:12,start:11,underway:0,exit:16,live:11,closing:14})[phase]||0}
+function eventTimeWeight(v,when){const phase=HomeBaseRoutePolicy.eventPhase(v,when);if(phase==='exit')return 16*Math.max(.35,HomeBaseRoutePolicy.letOutStrength(v,when));return ({arrival:12,start:11,underway:0,live:11,closing:14})[phase]||0}
 function eventScale(v){if(v.tags?.schoolEvent&&v.classification==='high_school')return /homecoming|prom|graduation|commencement|football/i.test(v.name)? .85:.55;if(v.tags&&v.tags.publicCalendar&&v.eventType==='campus'&&!/concert|perform|festival|gala|homecoming|football/i.test(v.name+' '+v.classification))return .2;const name=eventToken(`${v.venue||''} ${v.name||''}`);if(/m t bank stadium|camden yards/.test(name))return 1.35;if(/cfg bank arena|capital one arena/.test(name))return 1.2;if(/nationals park|northwest stadium/.test(name))return 1.35;if(/audi field/.test(name))return 1.1;if(/convention center|pier six|rams head/.test(name))return 1.05;return 1}
 function weatherInputs(source,when=new Date()){const t=when instanceof Date?when.getTime():Date.parse(when);return HomeBaseWeather.demandBoost((source||{}).cat,HomeBaseWeather.nearest(hourlyRainForecast,t),HomeBaseWeather.activeAlerts(activeWeatherAlerts,t),currentRainChance)}
 function rainDemandBoost(source,when=new Date()){const boost=weatherInputs(source,when).boost;return source&&source.eventStart?boost*1.35:boost}
@@ -1389,7 +1389,7 @@ function recheckDemandSources(){if(document.visibilityState!=='visible')return;s
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')recheckDemandSources()});window.addEventListener('pageshow',e=>{if(e.persisted)recheckDemandSources()});window.addEventListener('online',recheckDemandSources);
 window.addEventListener('homebase-calendar-identity',()=>{schoolSearchAt=0;schoolSearchKey='';schoolEventRows=[];if(currentLocation)refreshSchoolEvents(...currentLocation);});
 window.addEventListener('load',()=>{schoolSearchAt=0;if(currentLocation)refreshSchoolEvents(...currentLocation);},{once:true});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>{const replacingWorker=!!navigator.serviceWorker.controller;navigator.serviceWorker.register('sw.js?v=288',{updateViaCache:'none'}).then(r=>{r.update();navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!replacingWorker)return;if(!sessionStorage.getItem('hb-release-reload-v288')){sessionStorage.setItem('hb-release-reload-v288','1');location.reload()}})}).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';})});
+if('serviceWorker' in navigator)window.addEventListener('load',()=>{const replacingWorker=!!navigator.serviceWorker.controller;navigator.serviceWorker.register('sw.js?v=289',{updateViaCache:'none'}).then(r=>{r.update();navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!replacingWorker)return;if(!sessionStorage.getItem('hb-release-reload-v289')){sessionStorage.setItem('hb-release-reload-v289','1');location.reload()}})}).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';})});
 </script>
 <script src="homebase-live.js?v=39"></script>
 </body>

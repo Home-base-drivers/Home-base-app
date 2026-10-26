@@ -172,3 +172,30 @@ Lock-screen captures taken Thu Oct 22, 9:12–9:14 PM (EXIF), so "Yesterday" is 
 
 - **Wed Oct 21:** exact times for the morning wave (Rosemont $5–7, Mondawmin $5, Mt. Vernon $5, 7:27–7:58 AM), Downtown $5 at 3:30 PM, Towson $5 at 3:42 PM, Downtown $6 at 6:11 PM, plus 22 average-surge notices. The earlier "3h ago" Oct 21 window is kept but marked superseded, so those alerts are not counted twice.
 - **Thu Oct 22:** the largest Empower morning wave on record, 6:38–8:42 AM: Broadway E. $10 (6:59), Belair-Edison $10 (7:53), Frankford $10 (7:56), Rosemont $8 (7:36), Mondawmin and Union Sq. $6. Afternoon: Downtown $5 (1:47, 4:00, 4:05 PM), Broadway E. $5 (3:51, 3:56 PM), Charles Village $6 (4:39 PM). The overnight average reached $4 (3:42, 4:14, 4:52 AM) and $5 at 6:52 AM.
+
+## October 24–25 bar close and Sunday morning (v289)
+
+Lock-screen and Uber captures Sun Oct 25, 1:57–2:02 AM and 7:09–8:16 AM (EXIF). "Yesterday" on the 2:02 AM capture is Sat Oct 24.
+
+- **Empower bar close, Sun 12:03–2:27 AM:** 29 alerts across Federal Hill, Camden Yards, Fells Point and Downtown. Peak at 1:53–2:00 AM: Camden Yards $24, Federal Hill $21, Downtown $11; Fells Point $8–11 from 1:16 to 2:10 AM. Alerts from 1:03 to 1:50 AM use relative ages (±1 minute); the eight "1h ago" alerts (12:03–1:02 AM) are one low-confidence record.
+- **Uber bar close, 1:59–2:01 AM:** purple across the city and east side. Cockeysville +$15, Park Heights +$14, Pigtown +$9, Highlandtown +$8.75, Hamilton/Belair-Edison +$8.25, Edgemere and Curtis Bay +$7.50, Brooklyn Park +$7; Annapolis/Broadneck +$2–4.25; western Howard +$2–5.75. One record (`uber-baltimore-20261025-0200`).
+- **Sunday morning:** Uber red shading at 7:09 and 8:12 AM (north county, west side, east side, BWI), stored as shading only. Empower citywide average stayed $1 Saturday evening, then built to $5 around 6:15–7:15 AM Sunday.
+- **Second upload, Sat 10:33 PM – Sun 1:52 AM (8 Uber records):** Sat 10:33 PM Southern Maryland (Waldorf/St. Charles up to +$6.25, Indian Head +$4.75); 10:34 PM west side (Park Heights +$5, Woodlawn +$4.50); 10:53 PM Annapolis +$15 with Edgewater/Crofton/Annapolis Neck +$5–5.75. Bar-close build: 1:07 AM shading only, 1:41 AM Annapolis +$15, Cockeysville +$12, Pigtown +$9.25, Overlea +$8.25; 1:51 AM Cockeysville +$15, Annapolis Neck +$12, Allendale/Edmondson +$11, Belair-Edison +$7.75, Towson +$7.25.
+- **Third upload, Sat Oct 24 daytime/evening (7 Uber records):** 10:55 AM and 11:03 AM light maps (BWI +$1, Reisterstown +$2.25, shading); 3:18 and 4:06 PM red shading citywide; 5:42–5:47 PM purple downtown/Pigtown/harbor (Pigtown +$4.25), Annapolis +$3–3.75, an unidentified Uber "Event" pin near 33rd St/Hillen Rd; 5:55 PM small bonuses (BWI +$2, Annapolis +$2.75, Westminster +$1.50); 10:32–10:33 PM White Marsh +$6.25, Perry Hall +$5.25, Edgewater/Mayo +$5.25.
+- **Fourth upload — Fri Oct 23 Empower (lock screens Sat 9:19–9:21 AM):** Towson **$19** at 12:44 and 12:49 AM (Thursday-night bar close); morning wave Belair-Edison $11 (6:45), Mondawmin $5–6 (6:42–7:25), Broadway E. $5 (7:40, 7:47); afternoon Broadway E. $5–6 (2:03, 2:08, 3:49), Charles Village $6 (3:25), Mt. Vernon $5 (3:39, 4:00), Downtown $5–6 (3:42, 4:13, 4:18), Towson $5 (4:27). Sat Oct 24 Downtown $5–6 at 12:32, 12:37 and 2:11 AM. Citywide averages Thu evening – Sat morning stored as unlocated context.
+- **Fourth upload — Uber:** Fri 10:33 PM Annapolis +$1.75; 10:46 PM small bonuses (Lansdowne +$2.50, Sparks +$2.25); Sat 12:51–12:53 AM western Howard +$6.75, Shady Side +$6.50, Millersville +$5.25, Annapolis +$5, Indian Head +$1.75; 2:55 AM shading only; 8:39 AM Cockeysville +$2.50; 9:18 AM shading only.
+- **Already stored:** the Sat 9:21 AM Empower lock screens show Thu Oct 22 alerts (Frankford, Rosemont, Mondawmin, Downtown, Broadway E.) recorded in v286.
+- **Skipped:** Uber earnings/trip screens (private trip addresses) and two fuel receipts (payment details).
+
+### Upload audit (Oct 25)
+
+Every upload was matched by EXIF capture time and file contents (112 files, 107 distinct images; 5 byte-identical repeats).
+- **Fixed:** Fri Oct 23 10:32:58–10:33:25 PM had the same clock times as three Sat Oct 24 captures and had been treated as repeats. EXIF dates and pixels differ, so they are now stored as `uber-baltimore-20261023-2232` (Cockeysville +$7, Timonium east +$6.50, Columbia +$5.75, Cheswolde +$5.50).
+- **Added:** Sat 3:17 AM shading (`uber-baltimore-20261024-0317`), Sun 8:26 AM shading, and the Sun 10:36–10:46 AM purple wave (East Baltimore +$9.75, Annapolis west +$8, Towson +$7.75, Overlea +$7).
+- **Skipped on purpose (13):** 11 Uber earnings screens (passenger streets), 2 fuel receipts; plus one Home Base app screen.
+- **Result:** every other distinct image maps to a stored record.
+- **Later upload:** Fri Oct 23 9:34–9:35 PM Uber views outside Baltimore — Elkton east +$7, Easton and St. Michaels +$7.50, Cambridge +$1.50, Princess Anne +$3.25 (3 records). The 11 Empower lock screens in the same upload are byte-identical to the Thu Oct 22 9:12–9:14 PM captures already stored in v286.
+- **Sun Oct 25 11:56 AM Empower capture:** Mt. Vernon $5 at about 11:11 AM; exact Sunday-morning averages 6:48 AM $4, 6:51 $5, 6:55 $3, 6:58 $2.
+- **Earnings:** trip pay from the Oct 23–25 Uber Earnings Activity screens is stored in the private earnings database (not in this public repo).
+- **Sun Oct 25 afternoon/evening (9 Uber records):** 1:50 PM northwest (Owings Mills +$6.50, Cockeysville +$6.25); 2:41 PM Monkton +$7.75, Butler +$7.50; 4:28 PM west side and harbor (Allendale/Edmondson +$16, Arbutus +$11, Inner Harbor +$9.50); 4:56 PM Inner Harbor +$10, White Marsh +$9.50; 5:08 PM BWI +$2.75; 5:56 PM downtown all purple with an Uber "Event" pin (Federal Hill/stadiums +$14, Westport +$10); 6:07 PM Inner Harbor +$9.25; 6:39 PM Annapolis +$14; 8:50 PM shading only.
+- **Event link:** the Oct 25 2:41 PM–8:50 PM Uber records are linked to Bengals at Ravens (M&T Bank Stadium, 1:00 PM kickoff). That game calibrates the stadium let-out profile; see `docs/EVENT_HEAT_EXAMPLE.md`.
