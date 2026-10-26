@@ -37,9 +37,22 @@ https://home-base-driver-live.chrisbrouard7.chatgpt.site
 
 ## Provider data feeds
 
-`.github/workflows/live-signals.yml` refreshes the demand snapshot about every
-10 minutes and publishes only sanitized results to the machine-owned `signals`
-branch. The app loads that file directly (falling back to the copy bundled with
+`.github/workflows/live-signals.yml` refreshes the demand snapshot only for
+markets with a driver in the app in the last 2 hours, and publishes only
+sanitized results to the machine-owned `signals` branch. The app reports which
+markets it is using (market ids only, at most every 10 minutes) to the
+`market-activity` Edge Function; markets nobody is using keep their last data
+and make no Ticketmaster, Uber, FlightAware or Booking calls, and a pass with
+no active market stops before checkout. With a `GITHUB_DISPATCH_TOKEN` secret
+(fine-grained token, Actions read/write on this repository) saved in Supabase, a
+driver opening the app in a market not refreshed in 30 minutes starts a run at
+once (at most one run per 10 minutes overall); without it, the next scheduled
+pass picks the market up. Scheduled events, venue lists, school bells and shift
+sites are slow-changing; the live part for each driver is their location and
+time, matched on the phone against past surge history. Duplicate listings of one
+event (title or venue spelling variants, neighboring markets, doors/show pairs)
+are merged into one, and timed-entry attractions (museum slots) are dropped as
+demand. The Pages release copies the newest live snapshot without calling feeds. The app loads that file directly (falling back to the copy bundled with
 each release), so drivers are not limited by the hourly Pages release in
 `.github/workflows/pages.yml`. The live refresh never changes `main` or the
 deployed app, and the update guard does not wait on it.
@@ -87,6 +100,10 @@ peak from 10 minutes before to 15 minutes after, mostly gone by +75 minutes.
 nearby bells and shift sites on every refresh (`surgeCirculation` in the
 snapshot, reference only). Verified shift sites live in
 `config/employer-sites.json`; closed sites switch off mapped warehouses nearby.
+Every Amazon building in the Baltimore catchment (fulfillment, sortation, delivery
+stations, air hub) is listed with the shift changes drivers observed at the same
+buildings: 7 AM, 3 PM, 7 PM, 11 PM and 1 AM. Unconfirmed sites add smaller heat
+only; sites listed by address are geocoded on the next live refresh.
 Hospitals carry an approximate 12-hour handoff window (staff departures
 6:45-8:15 AM and PM; Johns Hopkins postings list 7am-7pm / 7pm-7am shifts,
 site-specific times are not published). Large office campuses (SSA/CMS

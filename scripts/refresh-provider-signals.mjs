@@ -7,11 +7,13 @@ import { publicAlertsProvider } from './public-alerts.mjs';
 import { bcpssBellRegistry } from './school-bells.mjs';
 import { watchAreaChecks } from './watch-areas.mjs';
 import { circulation } from './surge-circulation.mjs';
+import { resolveSiteCoordinates } from './geocode-sites.mjs';
 import demandHistory from '../dist/homebase-demand-history.js';
 import publicData from '../dist/homebase-public-data.js';
 
 const ROOT = new URL('../', import.meta.url);
-const EMPLOYER_SITES = JSON.parse(await readFile(new URL('config/employer-sites.json', ROOT), 'utf8')).sites;
+const CONFIG_SITES = JSON.parse(await readFile(new URL('config/employer-sites.json', ROOT), 'utf8')).sites;
+let EMPLOYER_SITES = CONFIG_SITES;
 const CONFIG_URL = new URL('config/provider-markets.json', ROOT);
 const OUTPUT_URL = new URL('dist/provider-signals.json', ROOT);
 const NOW = new Date();
@@ -168,7 +170,7 @@ export async function ticketmasterProvider(market, request = boundedFetch, now =
       events.push(...(data?._embedded?.events || []).map(event => normalizeTicketmasterEvent(event, now)).filter(Boolean).filter(event => haversineKm(market.center, event) <= market.radiusKm));
       totalPages = Number(data.page?.totalPages) || 1; pages++;
     } while (pages < totalPages && pages < 5);
-    return { status: 'active', fetchedAt: now.toISOString(), events: [...new Map(events.map(e => [e.id, e])).values()], truncated: pages < totalPages };
+    return { status: 'active', fetchedAt: now.toISOString(), events: publicData.consolidateEvents([...new Map(events.map(e => [e.id, e])).values()]), truncated: pages < totalPages };
   } catch (error) { return { status: safeStatus(error), fetchedAt: now.toISOString(), events: [] }; }
 }
 
@@ -285,6 +287,15 @@ async function flightAwareProvider(market) {
   }
 }
 
+// HOMEBASE_MARKETS is a comma list of market ids with active drivers (from the
+// market-activity table), or "all". Unset means all, for local and manual runs.
+export function selectMarkets(markets, value) {
+  const raw = String(value ?? 'all').trim().toLowerCase();
+  const ids = new Set(markets.map(m => m.id));
+  if (!raw || raw === 'all') return ids;
+  return new Set(raw.split(',').map(s => s.trim()).filter(id => ids.has(id)));
+}
+
 export function retainRecent(previous, current, key, maxAgeMs = 25 * 60_000) {
   if (['active','partial'].includes(current.status)) return current;
   const old = previous?.[key];
@@ -307,8 +318,12 @@ async function main() {
       if (Array.isArray(deployed?.markets) && Date.parse(deployed.generatedAt) > Date.parse(previous.generatedAt || '1970-01-01')) previous = deployed;
     } catch { /* Local/committed verified data is still available offline. */ }
   }
+  const selected = selectMarkets(config.markets, process.env.HOMEBASE_MARKETS);
+  try { EMPLOYER_SITES = await resolveSiteCoordinates(CONFIG_SITES, previous); } catch { /* sites without coordinates stay off the map */ }
   const markets = await Promise.all(config.markets.map(async market => {
     const old = previous.markets?.find((entry) => entry.id === market.id);
+    // No driver in this market recently: keep its last data and make no feed calls.
+    if (!selected.has(market.id) && old) return { ...old, idle: true, employerSites: { source: 'config/employer-sites.json', sites: EMPLOYER_SITES.filter(site => Number.isFinite(site.lat) && Number.isFinite(site.lon) && haversineKm(market.center, site) <= market.radiusKm) } };
     const [uber, ticketmaster, booking, flightaware, records, places] = await Promise.all([
       uberProvider(market), ticketmasterProvider(market), bookingProvider(market), flightAwareProvider(market), publicRecords(market, NOW.getTime()), publicPlaces(market, NOW.getTime(), old?.publicPlaces)
     ]);
@@ -329,27 +344,30 @@ async function main() {
       publicSports: sportsFeed,
       weatherAlerts: retainRecent(old, alerts, 'weatherAlerts', 30 * 60_000),
       ...(schoolBells ? { schoolBells } : {}),
-      employerSites: { source: 'config/employer-sites.json', sites: EMPLOYER_SITES.filter(site => haversineKm(market.center, site) <= market.radiusKm) }
+      employerSites: { source: 'config/employer-sites.json', sites: EMPLOYER_SITES.filter(site => Number.isFinite(site.lat) && Number.isFinite(site.lon) && haversineKm(market.center, site) <= market.radiusKm) }
     };
   }));
+  const refreshed = markets.filter(m => !m.idle);
   // Reference-only checks of areas drivers reported as busy. They never feed heat.
-  const watchAreas = await watchAreaChecks(markets, NOW.getTime()).catch(() => null);
+  const watchAreas = refreshed.length ? await watchAreaChecks(refreshed, NOW.getTime()).catch(() => previous.watchAreas || null) : previous.watchAreas || null;
   // Reference analysis of observed surge timing vs. published bells and shift sites.
   const baltimore = markets.find(m => m.id === 'baltimore');
-  let surgeCirculation = null;
-  try { surgeCirculation = { referenceOnly: true, episodes: circulation(demandHistory.observationRows(), { schools: baltimore?.schoolBells?.schools || [], sites: baltimore?.employerSites?.sites || [] }).filter(e => NOW.getTime() - Date.parse(e.date + 'T12:00:00Z') <= 120 * 86_400_000) }; } catch { /* analysis is optional */ }
+  let surgeCirculation = baltimore?.idle ? previous.surgeCirculation || null : null;
+  if (!baltimore?.idle) try { surgeCirculation = { referenceOnly: true, episodes: circulation(demandHistory.observationRows(), { schools: baltimore?.schoolBells?.schools || [], sites: baltimore?.employerSites?.sites || [] }).filter(e => NOW.getTime() - Date.parse(e.date + 'T12:00:00Z') <= 120 * 86_400_000) }; } catch { /* analysis is optional */ }
   const output = {
     schemaVersion: 4,
     generatedAt: NOW.toISOString(),
     refreshTargetSeconds: 600,
     calendarMaxAgeSeconds: 86400,
     expiresAt: new Date(NOW.getTime() + 25 * 60_000).toISOString(),
+    refreshedMarkets: refreshed.map(m => m.id),
     markets,
     ...(watchAreas ? { watchAreas } : {}),
     ...(surgeCirculation ? { surgeCirculation } : {})
   };
   await writeFile(OUTPUT_URL, `${JSON.stringify(output)}\n`);
   for (const market of markets) {
+    if (market.idle) { console.log(`${market.name}: no active drivers, kept data from ${market.ticketmaster?.fetchedAt || 'earlier'} (no feed calls)`); continue; }
     console.log(`${market.name}: Uber ${market.uber.status}, Ticketmaster ${market.ticketmaster.status} (${market.ticketmaster.events.length}), public calendar ${market.publicRecords.calendarStatus} (${market.publicRecords.events.length}), places ${market.publicPlaces.status} (${market.publicPlaces.places.length}), sports ${market.publicSports.status} (${market.publicSports.events.length}), weather alerts ${market.weatherAlerts.status} (${market.weatherAlerts.alerts.length}), Booking.com ${market.booking.status}, FlightAware ${market.flightaware.status}`);
   }
 }

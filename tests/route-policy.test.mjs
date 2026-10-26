@@ -108,3 +108,12 @@ test('shipped scorer does not resurrect expired event, school or warehouse activ
  const warehouse={cat:'warehouse',name:'Warehouse',tags:{publicVenue:true}};
  assert.ok(score(warehouse,'15:00')>0);assert.equal(score(warehouse,'16:00'),0);
 });
+test('Amazon sites use the driver-observed 7 AM, 3 PM, 7 PM, 11 PM and 1 AM shift changes',()=>{
+ const amazon={cat:'warehouse',name:'Amazon fulfillment center',tags:{operator:'Amazon'}},generic={cat:'warehouse',name:'Distribution warehouse',tags:{industrial:'warehouse'}};
+ for(const hour of [1,7,15,19,23])assert.equal(P.workerWeight(amazon,{day:2,hour}),8);
+ for(const hour of [4,10,12,17,21])assert.equal(P.workerWeight(amazon,{day:2,hour}),0);
+ assert.equal(P.workerWeight(generic,{day:2,hour:7}),0);assert.equal(P.workerWeight(generic,{day:2,hour:15}),8);
+ const station={...amazon,tags:{operator:'Amazon',siteKind:'delivery_station'}};
+ assert.ok(P.workerWeight(station,{day:2,hour:7})<P.workerWeight(amazon,{day:2,hour:7}));
+ assert.equal(P.workerWeight({...amazon,tags:{operator:'Amazon',siteClosed:true}},{day:2,hour:15}),0);
+});

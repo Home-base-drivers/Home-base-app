@@ -181,7 +181,7 @@ export async function publicEventCalendars(market, now = Date.now(), request = f
     truncated = !!url || !!source.nextOnly;
     return { events, source: { name: source.name, url: source.url, status: error ? loaded ? 'partial' : 'unavailable' : 'active', fetchedAt: loaded ? new Date(now).toISOString() : null, pages: loaded, eventCount: events.length, truncated, ...(reason ? { reason } : {}) } };
   }));
-  const events = [...new Map(results.flatMap(r => r.events).map(e => [publicData.eventIdentity(e), e])).values()].sort((a, b) => a.eventStart.localeCompare(b.eventStart));
+  const events = publicData.consolidateEvents([...new Map(results.flatMap(r => r.events).map(e => [publicData.eventIdentity(e), e])).values()]);
   const succeeded = results.filter(r => r.source.status === 'active').length;
   return { status: succeeded === sources.length ? 'active' : results.some(r => r.source.pages) ? 'partial' : 'unavailable', fetchedAt: new Date(now).toISOString(), events, sources: results.map(r => r.source), truncated: results.some(r => r.source.truncated) };
 }
