@@ -145,9 +145,18 @@
     let box=null;for(const item of row.area_observations||[])if(Number.isFinite(item.lat)&&Number.isFinite(item.lon)){const r=(Number(item.radiusKm)||1.6)/111;box=box?[Math.min(box[0],item.lat-r),Math.max(box[1],item.lat+r),Math.min(box[2],item.lon-r*1.4),Math.max(box[3],item.lon+r*1.4)]:[item.lat-r,item.lat+r,item.lon-r*1.4,item.lon+r*1.4];}
     f={capture,times,box,items:row.area_observations};ROW_FACTS.set(row,f);return f;
   }
+  // Spatial index: coordinate lookups read only records whose mapped areas touch the
+  // ~5 km cell around the point, so cost stays flat as history keeps growing.
+  const CELL=.05;let spatial=null,spatialRows=-1;
+  function rowsNear(point){
+    if(!spatial||spatialRows!==screenshotBenchmarks.length){spatial=new Map();spatialRows=screenshotBenchmarks.length;
+      for(const row of screenshotBenchmarks){if(!(row.area_observations||[]).length)continue;const b=rowFacts(row).box;if(!b)continue;
+        for(let a=Math.floor(b[0]/CELL);a<=Math.floor(b[1]/CELL);a++)for(let o=Math.floor(b[2]/CELL);o<=Math.floor(b[3]/CELL);o++){const k=a+':'+o;let list=spatial.get(k);if(!list)spatial.set(k,list=[]);list.push(row);}}}
+    return spatial.get(Math.floor(point[0]/CELL)+':'+Math.floor(point[1]/CELL))||[];
+  }
   function recurrenceForPlatform(matchItem,target,opts,recordType,point){
     const targetLocal=local(target),dates=new Map();
-    for(const row of screenshotBenchmarks){
+    for(const row of point?rowsNear(point):screenshotBenchmarks){
       if(row.record_type!==recordType||!(row.area_observations||[]).length)continue;
       const facts=rowFacts(row);if(!Number.isFinite(facts.capture))continue;
       // Coordinate lookups skip records with no mapped area near the point.
