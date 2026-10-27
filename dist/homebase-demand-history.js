@@ -128,17 +128,31 @@
     for(let i=1;i<PATTERN_CAPS.length;i++){const[x1,y1]=PATTERN_CAPS[i-1],[x2,y2]=PATTERN_CAPS[i];if(effective<=x2)return y1+(y2-y1)*(effective-x1)/(x2-x1);}
     return .45;
   }
-  function recurrenceForPlatform(matchItem,target,opts,recordType){
+  // Per-record time facts (alert minutes, their local clock and date key, and the
+  // area of its mapped observations) are computed once: converting times through
+  // Intl on every lookup froze the app once history passed ~500 records.
+  const ROW_FACTS=new WeakMap();
+  const DATE_KEY=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'});
+  function rowFacts(row){
+    let f=ROW_FACTS.get(row);if(f&&f.items===row.area_observations)return f;
+    const capture=captureTime(row),stamps=[];
+    // Timed notifications (Empower) pin the observation to each alert minute.
+    // An alert shown only as "1h ago" belongs to that whole hour: it is the same surge
+    // window, so any minute inside it counts at full time weight.
+    for(const n of row.notifications||[]){const at=Date.parse(n.at),lo=Date.parse(n.earliest),hi=Date.parse(n.latest);
+      if(Number.isFinite(lo)&&Number.isFinite(hi)&&hi>lo&&hi-lo<=65*60000)for(let t=lo;t<=hi;t+=5*60000)stamps.push(t);else if(Number.isFinite(at))stamps.push(at);}
+    const times=(stamps.length?stamps:Number.isFinite(capture)?[capture]:[]).map(t=>({t,local:local(new Date(t)),key:DATE_KEY.format(new Date(t-4*3600000))}));
+    let box=null;for(const item of row.area_observations||[])if(Number.isFinite(item.lat)&&Number.isFinite(item.lon)){const r=(Number(item.radiusKm)||1.6)/111;box=box?[Math.min(box[0],item.lat-r),Math.max(box[1],item.lat+r),Math.min(box[2],item.lon-r*1.4),Math.max(box[3],item.lon+r*1.4)]:[item.lat-r,item.lat+r,item.lon-r*1.4,item.lon+r*1.4];}
+    f={capture,times,box,items:row.area_observations};ROW_FACTS.set(row,f);return f;
+  }
+  function recurrenceForPlatform(matchItem,target,opts,recordType,point){
     const targetLocal=local(target),dates=new Map();
     for(const row of screenshotBenchmarks){
-      if(row.record_type!==recordType)continue;
-      const capture=captureTime(row);if(!Number.isFinite(capture))continue;
-      // Timed notifications (Empower) pin the observation to each alert minute.
-      // An alert shown only as "1h ago" belongs to that whole hour: it is the same surge
-      // window, so any minute inside it counts at full time weight.
-      const stamps=[];for(const n of row.notifications||[]){const at=Date.parse(n.at),lo=Date.parse(n.earliest),hi=Date.parse(n.latest);
-        if(Number.isFinite(lo)&&Number.isFinite(hi)&&hi>lo&&hi-lo<=65*60000)for(let t=lo;t<=hi;t+=5*60000)stamps.push(t);else if(Number.isFinite(at))stamps.push(at);}
-      let stamp=NaN,tw=0;for(const t of stamps.length?stamps:[capture]){const w=timeWeight(local(new Date(t)),targetLocal,opts);if(w>tw){tw=w;stamp=t;}}
+      if(row.record_type!==recordType||!(row.area_observations||[]).length)continue;
+      const facts=rowFacts(row);if(!Number.isFinite(facts.capture))continue;
+      // Coordinate lookups skip records with no mapped area near the point.
+      if(point&&(!facts.box||point[0]<facts.box[0]||point[0]>facts.box[1]||point[1]<facts.box[2]||point[1]>facts.box[3]))continue;
+      let stamp=NaN,tw=0,dateKey='';for(const x of facts.times){const w=timeWeight(x.local,targetLocal,opts);if(w>tw){tw=w;stamp=x.t;dateKey=x.key;}}
       const age=+target-stamp;if(!tw||!Number.isFinite(stamp)||age<0||age>120*86400000)continue;
       for(const item of row.area_observations||[]){
         const proximity=matchItem(item);if(!(proximity>0)||!(item.band in BANDS))continue;
@@ -154,7 +168,7 @@
         const estimated=row.timestamp_confidence==='low'&&!/^relative_age/.test(String(row.timestamp_method||''));
         const weight=tw*proximity*calmWeight*(estimated?.5:1),value=shadingOnly?Math.min(BANDS[item.band],BANDS.elevated)/4:BANDS[item.band]/4;
         // One overnight cluster remains one independent night across midnight.
-        const key=new Date(stamp-4*3600000).toLocaleDateString('en-CA',{timeZone:'America/New_York'}),old=dates.get(key);
+        const key=dateKey,old=dates.get(key);
         const usd=Number(item.shown_usd);
         if(!old||weight>old.weight||weight===old.weight&&value>old.value)dates.set(key,{weight,value,band:item.band,stamp,usd:Math.max(Number.isFinite(usd)?usd:0,old?.usd||0)});
         else if(Number.isFinite(usd)&&usd>(old.usd||0))old.usd=usd;
@@ -177,12 +191,20 @@
      pattern and they are layered: the combined strength is never lower than
      either platform alone, and one platform's calm reading never erases the
      other's heat. */
-  function recurrence(matchItem,when,opts){
+  // Same question, same answer: the heat map and the 12-hour route ask about the
+  // same places and minutes many times per refresh.
+  const RECURRENCE_MEMO=new Map();let memoRows=-1;
+  function recurrence(matchItem,when,opts,memoKey,point){
     const target=when instanceof Date?when:new Date(when);if(!Number.isFinite(+target))return{distinctDates:0,observedDates:0,band:null,confidence:0,share:0};
-    const uber=recurrenceForPlatform(matchItem,target,opts,'uber_reference'),empower=recurrenceForPlatform(matchItem,target,opts,'empower_reference');
+    if(memoRows!==screenshotBenchmarks.length){RECURRENCE_MEMO.clear();memoRows=screenshotBenchmarks.length;}
+    const key=memoKey?memoKey+'|'+Math.floor(+target/60000)+'|'+(opts?.route?1:0):null;
+    if(key&&RECURRENCE_MEMO.has(key))return RECURRENCE_MEMO.get(key);
+    const uber=recurrenceForPlatform(matchItem,target,opts,'uber_reference',point),empower=recurrenceForPlatform(matchItem,target,opts,'empower_reference',point);
     const lead=empower.confidence>uber.confidence?empower:uber;
-    return{distinctDates:Math.max(uber.distinctDates,empower.distinctDates),observedDates:uber.observedDates+empower.observedDates,band:lead.band,share:lead.share,
+    const result={distinctDates:Math.max(uber.distinctDates,empower.distinctDates),observedDates:uber.observedDates+empower.observedDates,band:lead.band,share:lead.share,
       confidence:1-(1-uber.confidence)*(1-empower.confidence),platforms:{uber:uber.confidence,empower:empower.confidence}};
+    if(key){if(RECURRENCE_MEMO.size>20000)RECURRENCE_MEMO.clear();RECURRENCE_MEMO.set(key,result);}
+    return result;
   }
   function nameMatcher(areaName){
     const name=String(areaName||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
@@ -191,12 +213,12 @@
   // Named Baltimore neighborhoods (older captures carry names only).
   function recurrenceFor(areaName,when,isBaltimore,opts){
     if(!isBaltimore)return{distinctDates:0,band:null,confidence:0};
-    return recurrence(nameMatcher(areaName),when,opts);
+    return recurrence(nameMatcher(areaName),when,opts,'n:'+String(areaName||'').toLowerCase());
   }
   // Any location: captures that carry coordinates, within their area radius.
   function recurrenceAt(lat,lon,when,opts){
     if(!Number.isFinite(lat)||!Number.isFinite(lon))return{distinctDates:0,band:null,confidence:0};
-    return recurrence(item=>{if(!Number.isFinite(item.lat)||!Number.isFinite(item.lon))return 0;const r=Number(item.radiusKm)||1.6,d=distanceKm([lat,lon],[item.lat,item.lon]);return d>=r?0:1-d/r;},when,opts);
+    return recurrence(item=>{if(!Number.isFinite(item.lat)||!Number.isFinite(item.lon))return 0;const r=Number(item.radiusKm)||1.6,d=distanceKm([lat,lon],[item.lat,item.lon]);return d>=r?0:1-d/r;},when,opts,'p:'+lat.toFixed(4)+','+lon.toFixed(4),[lat,lon]);
   }
   // One pattern point per observed location, for the heat layer anywhere.
   function patternSources(when){

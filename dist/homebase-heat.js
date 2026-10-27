@@ -331,7 +331,9 @@
 
         // Render a finer geographic field at neighborhood zooms so adjacent
         // demand surfaces melt together instead of reading as chunky tiles.
-        const sample = map.getZoom() < 9 ? 2.25 : map.getZoom() < 11 ? 1.6 : 1.15;
+        // Coarser cells when zoomed in: the heat is blurred over ~1/4 km anyway, and a
+        // 1-pixel grid at street zoom took 1-2 s per zoom step (several on a phone).
+        const zoomNow=map.getZoom(),sample = zoomNow < 9 ? 2.25 : zoomNow < 11 ? 1.6 : zoomNow < 12 ? 2 : zoomNow < 13 ? 2.5 : 3;
         const seen = new Set(), sources = [];
         [...this._sources, ...this._areas.flatMap(area => area.sources || [])].forEach(source => {
           const key = `${Number(source.lat).toFixed(5)}:${Number(source.lon).toFixed(5)}:${source.name || ''}`;
@@ -548,32 +550,36 @@
           const top = Math.max(0, Math.floor((source.center.y - radius - gridTop) / sample));
           const bottom = Math.min(gridHeight - 1, Math.ceil((source.center.y + radius - gridTop) / sample));
           const cos = Math.cos(source.angle), sin = Math.sin(source.angle);
+          // Evidence flags are fixed per source; testing them per cell (with a new array
+          // each time) made every zoom step stall on phones.
+          const ev=source.evidence,isCurrent=ev==='event'||ev==='current'||ev==='surge'||ev==='activity',isHistory=ev==='history',isEventish=ev==='event'||ev==='activity',isSurge=ev==='surge',isModeled=ev==='modeled';
+          const limit2=source.influenceLimit*source.influenceLimit,strengthOpacity=source.strength*source.detailOpacity,skew=source.skew,shade=source.shade;
           for (let y = top; y <= bottom; y++) for (let x = left; x <= right; x++) {
             const cell = y * gridWidth + x;
             const px = gridLeft + (x + .5) * sample + warpX[cell], py = gridTop + (y + .5) * sample + warpY[cell];
             const dx = px - source.center.x, dy = py - source.center.y;
-            if(dx*dx+dy*dy>source.influenceLimit*source.influenceLimit)continue;
+            if(dx*dx+dy*dy>limit2)continue;
             const rx = (dx * cos + dy * sin) / source.rx, ry = (-dx * sin + dy * cos) / source.ry;
             // Two close, asymmetrical lobes keep the interpolation geographic
             // but avoid the artificial bullseye/ring effect of a single radial
             // gradient. Real nearby venue points then overlap into block-scale
             // shade changes across the same neighborhood.
             const primary = rx * rx + ry * ry;
-            const shoulderA = (rx - .48) ** 2 / 1.18 + (ry + source.skew) ** 2 / .82;
-            const shoulderB = (rx + .34) ** 2 / .9 + (ry - .3 - source.skew) ** 2 / 1.12;
             if (primary < 18) {
+              const shoulderA = (rx - .48) ** 2 / 1.18 + (ry + skew) ** 2 / .82;
+              const shoulderB = (rx + .34) ** 2 / .9 + (ry - .3 - skew) ** 2 / 1.12;
               const profile =
               .66 * Math.exp(-primary * .72) +
               .2 * Math.exp(-shoulderA * 1.05) +
               .14 * Math.exp(-shoulderB * 1.2);
-              const contribution = source.strength * profile * texture[cell] * source.detailOpacity;
-              const offset = y * gridWidth + x;
-              if(['event','current','surge','activity'].includes(source.evidence))currentField[offset]=Math.max(currentField[offset],profile);
-              if(source.evidence==='history'){historyField[offset]=Math.max(historyField[offset],contribution);continue;}
-              if(source.evidence==='event'||source.evidence==='activity')eventField[offset]=Math.max(eventField[offset],profile*source.shade);
-              if(source.evidence==='surge')surgeField[offset]=Math.max(surgeField[offset],profile*source.shade);
-              if(source.evidence==='modeled'){
-                if(contribution>backgroundField[offset]){backgroundField[offset]=contribution;backgroundShade[offset]=contribution*source.shade;}
+              const contribution = strengthOpacity * profile * texture[cell];
+              const offset = cell;
+              if(isCurrent&&profile>currentField[offset])currentField[offset]=profile;
+              if(isHistory){if(contribution>historyField[offset])historyField[offset]=contribution;continue;}
+              if(isEventish&&profile*shade>eventField[offset])eventField[offset]=profile*shade;
+              if(isSurge&&profile*shade>surgeField[offset])surgeField[offset]=profile*shade;
+              if(isModeled){
+                if(contribution>backgroundField[offset]){backgroundField[offset]=contribution;backgroundShade[offset]=contribution*shade;}
                 continue;
               }
               field[offset] += contribution;
@@ -582,7 +588,7 @@
               // instead of manufacturing automatic yellow and green rings.
               // Independent lower-demand sources can still create green or
               // yellow areas beside, inside, or away from a red area.
-              shadeField[offset] += contribution * source.shade;
+              shadeField[offset] += contribution * shade;
             }
           }
         });

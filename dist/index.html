@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Home Base">
-  <meta name="homebase-build" content="v293">
+  <meta name="homebase-build" content="v294">
   <meta name="description" content="Home Base connects local driver platforms, earnings forecasts, events and a GPS-based 12-hour route in one app.">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icon-192.png">
@@ -217,12 +217,12 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="baltimore-market.js?v=73"></script>
 <script src="homebase-metros.js?v=1"></script>
-<script src="homebase-heat.js?v=112"></script>
+<script src="homebase-heat.js?v=113"></script>
 <script src="homebase-global-heat.js?v=3"></script>
 <link rel="stylesheet" href="homebase-earnings.css?v=110">
 <link rel="stylesheet" href="homebase-growth.css?v=113">
 <script src="homebase-earnings.js?v=117"></script>
-<script src="homebase-demand-history.js?v=149"></script>
+<script src="homebase-demand-history.js?v=150"></script>
 <script src="homebase-route-policy.js?v=16"></script>
 <script src="homebase-public-data.js?v=6"></script>
 <script src="homebase-sports.js?v=2"></script>
@@ -999,7 +999,9 @@ async function loadScoreboardEvents(lat,lon,market,venues=[],keys){
     const parties=HomeBaseSports.watchParties(row);
     if(parties.length){if(isGreaterBaltimoreLocation(lat,lon))for(const p of parties){const e=scoreboardEvent(row,p);e.name=p.name+' bars · '+p.team+' game · '+marketTime(new Date(row.eventStart));e.venue=p.name+' bars';e.classification='sports watch party';e.tags.watchParty=true;e.tags.league='Watch party';out.push(e)}continue;}
     let place=Number.isFinite(row.lat)&&Number.isFinite(row.lon)?{lat:row.lat,lon:row.lon,name:row.venue}:null;
-    if(!place){const match=findEventVenue(row.venue,venues),city=eventToken(row.city);if(!match&&!(city&&marketName&&(city.includes(marketName)||marketName.includes(city))))continue;place=knownBaltimoreVenue(row.venue)||match}
+    // No coordinates: place only at a known local venue, or a distinctive venue-name match in a
+    // game whose listed city (when given) is this market's. Never at an unrelated local place.
+    if(!place){const city=eventToken(row.city),cityOk=!city||!marketName||city.includes(marketName)||marketName.includes(city),known=knownBaltimoreVenue(row.venue),match=cityOk?findEventVenue(row.venue,venues):null;place=known&&cityOk?known:match}
     if(!place)continue;
     const event=scoreboardEvent(row,place);
     const km=distanceKm([lat,lon],[event.lat,event.lon]),major=HomeBaseRoutePolicy.eventSize(event).major;
@@ -1010,7 +1012,11 @@ async function loadScoreboardEvents(lat,lon,market,venues=[],keys){
 async function loadTodaySports(lat,lon,market=currentMarketName,venues=[]){return loadScoreboardEvents(lat,lon,market,venues)}
 function eventToken(value){return String(value||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim()}
 function knownBaltimoreVenue(name){const value=eventToken(name);if(/m t bank stadium|ravens stadium/.test(value))return{lat:39.2780,lon:-76.6227,name:'M&T Bank Stadium'};if(/cfg bank arena|royal farms arena|baltimore arena/.test(value))return{lat:39.28861,lon:-76.61889,name:'CFG Bank Arena'};if(/oriole park|camden yards/.test(value))return{lat:39.2838,lon:-76.6217,name:'Oriole Park at Camden Yards'};if(/power plant live|powerplant live/.test(value))return{lat:39.28936,lon:-76.60689,name:'Power Plant Live'};if(/pier six|pier 6/.test(value))return{lat:39.2840,lon:-76.6043,name:'Pier Six Pavilion'};if(/rams head live/.test(value))return{lat:39.28958,lon:-76.60713,name:'Rams Head Live'};if(/horseshoe.*baltimore/.test(value))return{lat:39.27135,lon:-76.62834,name:'Horseshoe Baltimore'};if(/baltimore convention center/.test(value))return{lat:39.28578,lon:-76.61802,name:'Baltimore Convention Center'};if(/merriweather post/.test(value))return{lat:39.20885,lon:-76.86272,name:'Merriweather Post Pavilion'};if(/towson (center|university)/.test(value))return{lat:39.3933,lon:-76.6122,name:'Towson'};if(/live casino.*maryland/.test(value))return{lat:39.15780,lon:-76.72688,name:'Live! Casino & Hotel Maryland'};return null}
-function findEventVenue(name,venues){const tokens=eventToken(name).split(' ').filter(x=>x.length>3),scored=venues.map(v=>({v,score:tokens.filter(t=>eventToken(v.name).includes(t)).length})).sort((a,b)=>b.score-a.score);return scored[0]&&scored[0].score?scored[0].v:null}
+// A game is placed at a local venue only on a distinctive name match. Generic words
+// ("Center", "Arena", "Garden") once put Paycom Center (Oklahoma City) and Madison
+// Square Garden on Baltimore's Convention Center and Union Square.
+const GENERIC_VENUE_WORDS=/^(center|centre|arena|stadium|field|park|garden|gardens|square|theatre|theater|hall|place|pavilion|coliseum|dome|court|club|the|and|at|of|bank|live|amphitheatre|amphitheater|ballpark|events|event|sports|complex|one|new|city|for)$/;
+function findEventVenue(name,venues){const tokens=eventToken(name).split(' ').filter(x=>x.length>=3&&!GENERIC_VENUE_WORDS.test(x));if(!tokens.length)return null;const need=Math.min(2,tokens.length),scored=venues.map(v=>{const vt=new Set(eventToken(v.name).split(' '));return{v,score:tokens.filter(t=>vt.has(t)).length}}).sort((a,b)=>b.score-a.score);return scored[0]&&scored[0].score>=need?scored[0].v:null}
 async function loadEspnEvents(lat,lon,market,venues){return loadScoreboardEvents(lat,lon,market,venues)}
 function providerPriceSample(platform,item){
   const lat=Number(item&&item.lat),lon=Number(item&&item.lon);if(!Number.isFinite(lat)||!Number.isFinite(lon))return null;
@@ -1403,7 +1409,7 @@ function recheckDemandSources(){if(document.visibilityState!=='visible')return;s
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')recheckDemandSources()});window.addEventListener('pageshow',e=>{if(e.persisted)recheckDemandSources()});window.addEventListener('online',recheckDemandSources);
 window.addEventListener('homebase-calendar-identity',()=>{schoolSearchAt=0;schoolSearchKey='';schoolEventRows=[];if(currentLocation)refreshSchoolEvents(...currentLocation);});
 window.addEventListener('load',()=>{schoolSearchAt=0;if(currentLocation)refreshSchoolEvents(...currentLocation);},{once:true});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>{const replacingWorker=!!navigator.serviceWorker.controller;navigator.serviceWorker.register('sw.js?v=293',{updateViaCache:'none'}).then(r=>{r.update();navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!replacingWorker)return;if(!sessionStorage.getItem('hb-release-reload-v293')){sessionStorage.setItem('hb-release-reload-v293','1');location.reload()}})}).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';})});
+if('serviceWorker' in navigator)window.addEventListener('load',()=>{const replacingWorker=!!navigator.serviceWorker.controller;navigator.serviceWorker.register('sw.js?v=294',{updateViaCache:'none'}).then(r=>{r.update();navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!replacingWorker)return;if(!sessionStorage.getItem('hb-release-reload-v294')){sessionStorage.setItem('hb-release-reload-v294','1');location.reload()}})}).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';})});
 </script>
 <script src="homebase-live.js?v=39"></script>
 </body>
