@@ -2,6 +2,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { publicRecords } from './public-records.mjs';
 import { validArchive } from './calendar-archive-core.mjs';
+import { trafficIncidents } from './traffic-incidents.mjs';
 import { publicPlaces } from './public-places.mjs';
 import { publicSportsProvider } from './public-sports.mjs';
 import { publicAlertsProvider } from './public-alerts.mjs';
@@ -344,10 +345,11 @@ async function main() {
     const [uber, ticketmaster, booking, flightaware, records, places] = await Promise.all([
       uberProvider(market), ticketmasterProvider(market), bookingProvider(market), flightAwareProvider(market), publicRecords(market, NOW.getTime(), fetch, calendarArchive), publicPlaces(market, NOW.getTime(), old?.publicPlaces)
     ]);
-    const [sportsFeed, alerts, schoolBells] = await Promise.all([
+    const [sportsFeed, alerts, schoolBells, traffic] = await Promise.all([
       publicSportsProvider(market, old?.publicSports, NOW.getTime(), fetch, places.places || []),
       publicAlertsProvider(market, NOW.getTime()),
-      market.bellTimes === 'bcpss' ? bcpssBellRegistry(old?.schoolBells, NOW.getTime()).catch(() => old?.schoolBells || { status: 'unavailable', schools: [] }) : Promise.resolve(undefined)
+      market.bellTimes === 'bcpss' ? bcpssBellRegistry(old?.schoolBells, NOW.getTime()).catch(() => old?.schoolBells || { status: 'unavailable', schools: [] }) : Promise.resolve(undefined),
+      trafficIncidents(market, NOW.getTime())
     ]);
     const calendar = retainRecent(old, { ...records, status: records.calendarStatus }, 'publicRecords', 24 * 60 * 60_000);
     return {
@@ -360,6 +362,8 @@ async function main() {
       publicPlaces: places,
       publicSports: sportsFeed,
       weatherAlerts: retainRecent(old, alerts, 'weatherAlerts', 30 * 60_000),
+      // Incidents age fast: keep a failed read's previous list for 20 minutes at most.
+      trafficIncidents: retainRecent(old, traffic, 'trafficIncidents', 20 * 60_000),
       ...(schoolBells ? { schoolBells } : {}),
       employerSites: { source: 'config/employer-sites.json', sites: EMPLOYER_SITES.filter(site => Number.isFinite(site.lat) && Number.isFinite(site.lon) && haversineKm(market.center, site) <= market.radiusKm) }
     };

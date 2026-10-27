@@ -355,9 +355,36 @@
    return result(lineFor(summarize(records,period,tz),period.label));
   }
   const period=periodFrom(raw,now,tz);if(period)return result(lineFor(summarize(records,period,tz),period.label));
-  return{handled:false,intent:null,answer:'The built-in assistant can\'t answer that one. It handles earnings, goal pace, trip offers, app comparisons, costs, best hours, weather, screenshots and where to go. Home Base AI Plus (GPT) handles open questions.',source:'built-in'};
+  return{handled:false,intent:null,answer:'The built-in assistant can\'t answer that one. It handles earnings, goal pace, trip offers, app comparisons, costs, best hours, weather, screenshots and where to go. Home Base AI handles open conversation when the phone can reach it.',source:'built-in'};
  }
 
+ // ---------- learning how this driver works ----------
+ // Measured on the phone and sent with every Home Base AI request so answers fit
+ // the driver without them repeating themselves. Nothing here leaves the phone
+ // except as context for their own assistant.
+ function noteUsage(text,now=new Date(),store=typeof localStorage!=='undefined'?localStorage:null){
+  if(!store||!String(text||'').trim())return null;let u={};try{u=JSON.parse(store.getItem('homeBaseAiUsage')||'{}')||{};}catch{}
+  const topic=intentOf(String(text))||'open',hour=+new Date(now).toLocaleString('en-US',{timeZone:TZ,hour:'numeric',hourCycle:'h23'});
+  u.topics=u.topics||{};u.topics[topic]=(u.topics[topic]||0)+1;u.hours=u.hours||{};u.hours[hour]=(u.hours[hour]||0)+1;u.count=(u.count||0)+1;u.lastAt=new Date(now).toISOString();
+  try{store.setItem('homeBaseAiUsage',JSON.stringify(u));}catch{}return u;
+ }
+ function driverProfile(ctx=null,now=new Date()){
+  const c=ctx||(typeof window!=='undefined'?browserContext():{}),records=c.records||[],tz=c.tz||TZ,today=dayKey(now,tz);
+  const from=shiftDay(today,-56),recent=records.filter(r=>{const d=recordDayOf(r,tz);return d&&d>=from&&d<=today;});
+  const s=summarize(recent,{from,to:today},tz),days={},starts={};
+  for(const r of recent){const d=recordDayOf(r,tz);if(!d)continue;const w=DAYS[weekday(d)];days[w]=(days[w]||0)+1;
+   if(r.timePrecision&&r.startedAt&&r.hoursType==='online'){const h=+new Date(r.startedAt).toLocaleString('en-US',{timeZone:tz,hour:'numeric',hourCycle:'h23'});starts[h]=(starts[h]||0)+1;}}
+  const top=(o,n)=>Object.entries(o).sort((a,b)=>b[1]-a[1]).slice(0,n).map(([k])=>k);
+  let usage={};try{usage=JSON.parse((typeof localStorage!=='undefined'&&localStorage.getItem('homeBaseAiUsage'))||'{}')||{};}catch{}
+  const g=goalRate(c),car=c.carInputs||{};
+  return{
+   period:'last 8 weeks',daysDriven:Object.values(days).reduce((a,b)=>a+b,0)||0,usualDays:top(days,3),usualStartHours:top(starts,3).map(Number),
+   grossLast8Weeks:Math.round(s.gross||0),grossPerOnlineHour:s.onlineHours>0?Math.round(s.onlineGross/s.onlineHours*100)/100:null,
+   platforms:Object.entries(s.platforms||{}).filter(([,p])=>p.gross>0).sort((a,b)=>b[1].gross-a[1].gross).map(([n,p])=>({name:n,gross:Math.round(p.gross)})),
+   goal:g?{amount:g.goal,hours:g.hours,perHour:Math.round(g.rate*100)/100}:null,vehicleMpg:num(car.mpg)||null,costLimitPercent:num(car.target)||null,
+   asksMostAbout:top(usage.topics||{},4),usuallyAsksAtHours:top(usage.hours||{},3).map(Number),messagesSent:usage.count||0
+  };
+ }
  // ---------- browser: OCR and review ----------
  const TESSERACT='https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
  let tesseractLoad=null,worker=null,progressHandler=null;
@@ -461,14 +488,16 @@
   s.querySelector('#hbTripsCsv').onclick=downloadCsv;
   s.querySelector('#hbShotInput').onchange=async e=>{const files=[...(e.target.files||[])];e.target.value='';if(!files.length)return;try{const results=await readScreenshots(files,{onStatus:t=>status.textContent=t});status.textContent=summaryOf(results);if(results.length&&typeof renderEarningsPanel==='function')setTimeout(()=>renderEarningsPanel(summaryOf(results)),50);}catch(error){status.textContent=error.message||'Could not read that screenshot.';}};
  }
- function plan(){try{return JSON.parse(localStorage.getItem('homeBaseProductPrefs')||'{}').aiPlan==='plus'?'plus':'builtin';}catch{return'builtin';}}
- function setPlan(value,{chosen=false}={}){let p={};try{p=JSON.parse(localStorage.getItem('homeBaseProductPrefs')||'{}')||{};}catch{}p.aiPlan=value==='plus'?'plus':'builtin';if(chosen)p.aiPlanChosen=true;localStorage.setItem('homeBaseProductPrefs',JSON.stringify(p));}
+ // Claude (the conversational Home Base AI) answers by default for every signed-in
+ // driver; the phone's built-in answers are the offline fallback or an explicit choice.
+ function plan(){try{const p=JSON.parse(localStorage.getItem('homeBaseProductPrefs')||'{}');if(p.aiPlanChosen2)return p.aiPlan==='builtin'?'builtin':'plus';return(serverStatus?.plan||read('homeBasePlanStatus',null)?.plan)==='signed-out'?'builtin':'plus';}catch{return'plus';}}
+ function setPlan(value,{chosen=false}={}){let p={};try{p=JSON.parse(localStorage.getItem('homeBaseProductPrefs')||'{}')||{};}catch{}p.aiPlan=value==='builtin'?'builtin':'plus';if(chosen)p.aiPlanChosen2=true;localStorage.setItem('homeBaseProductPrefs',JSON.stringify(p));}
  // The server decides the plan (free, plus, pro) and GPT Live minutes left.
  let serverStatus=null;
  function notePlanStatus(a){
   if(!a||typeof a.plan!=='string')return;serverStatus={...a,at:Date.now()};try{localStorage.setItem('homeBasePlanStatus',JSON.stringify(serverStatus));}catch{}
-  let chosen=false;try{chosen=JSON.parse(localStorage.getItem('homeBaseProductPrefs')||'{}').aiPlanChosen===true;}catch{}
-  if(a.plan==='free')setPlan('builtin');else if(['plus','pro'].includes(a.plan)&&!chosen)setPlan('plus');
+  let chosen=false;try{chosen=JSON.parse(localStorage.getItem('homeBaseProductPrefs')||'{}').aiPlanChosen2===true;}catch{}
+  if(!chosen)setPlan('plus');
   if(typeof document!=='undefined')document.dispatchEvent(new Event('homebase:plan-changed'));
  }
  function serverPlan(){return serverStatus?.plan||read('homeBasePlanStatus',null)?.plan||null;}
@@ -478,12 +507,12 @@
   try{const u=await b.getUser();if(!u?.id||u.is_anonymous){serverStatus={plan:'signed-out'};if(typeof document!=='undefined')document.dispatchEvent(new Event('homebase:plan-changed'));return serverStatus;}
    const a=await b.evaluateDispatch({operation:'allowance'});notePlanStatus(a);return a;}catch{return null;}
  }
- function ask(text){const r=answer(text,browserContext());if(r.action==='export_csv'&&typeof document!=='undefined')downloadCsv();return r;}
+ function ask(text){noteUsage(text);const r=answer(text,browserContext());if(r.action==='export_csv'&&typeof document!=='undefined')downloadCsv();return r;}
  if(typeof window!=='undefined'&&typeof document!=='undefined'){
   const hook=()=>{if(typeof renderEarningsPanel!=='function')return false;const base=renderEarningsPanel;renderEarningsPanel=function(...args){base(...args);try{const rootEl=document.getElementById('workspaceContent');if(rootEl?.querySelector('#earningsCsv'))mountEarnings(rootEl);}catch{}};return true;};
   if(!hook())window.addEventListener('DOMContentLoaded',hook,{once:true});
   let tries=0;const wait=setInterval(()=>{if(window.HomeBaseAccounts?.backend||++tries>40){clearInterval(wait);refreshEntitlement();}},500);
   window.addEventListener('homebase-calendar-identity',()=>setTimeout(refreshEntitlement,300));
  }
- return{VERSION:'builtin-1',notePlanStatus,serverPlan,planStatus,refreshEntitlement,combineParsed,_prepare:typeof document!=='undefined'?prepareImage:null,answer,ask,intentOf,periodFrom,summarize,overheadMinutes,parseScreenshotText,toRecords,tripsCsv,zonedIso,dayKey,readImage,readScreenshots,review,saveParsed,summaryOf,mountEarnings,downloadCsv,plan,setPlan};
+ return{VERSION:'builtin-2',noteUsage,driverProfile,notePlanStatus,serverPlan,planStatus,refreshEntitlement,combineParsed,_prepare:typeof document!=='undefined'?prepareImage:null,answer,ask,intentOf,periodFrom,summarize,overheadMinutes,parseScreenshotText,toRecords,tripsCsv,zonedIso,dayKey,readImage,readScreenshots,review,saveParsed,summaryOf,mountEarnings,downloadCsv,plan,setPlan};
 });

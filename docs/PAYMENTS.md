@@ -69,3 +69,12 @@ Defaults: `CLAUDE_MODEL=claude-sonnet-5-5` (answers, web search, photos), `CLAUD
 (understanding, translation, memory). `AI_PROVIDER=openai` switches back. Claude has no realtime
 voice: without `OPENAI_API_KEY`, spoken replies use the phone's voice and "live voice" becomes the
 phone-voice conversation with Claude answers. GPT Live and the minutes pack need OpenAI.
+
+**Workspace (v301).** An organization-level Claude key is rejected with "not scoped to a workspace"
+unless `ANTHROPIC_WORKSPACE_ID` (the Console workspace id, `wrkspc_…`) is also set; a key created
+inside a workspace needs nothing extra. Until this was found (Oct 27) every Claude request failed
+and the app fell back to canned built-in answers.
+
+**Who gets Claude (v301).** Every signed-in driver talks to Claude in chat by default. Free drivers
+have `AI_FREE_DAILY_MESSAGES` (default 25) messages per 24 hours; Plus/Pro are unlimited. GPT voice,
+translation and live minutes stay Plus/Pro. The phone-only assistant is the offline fallback.

@@ -7,12 +7,14 @@ export function providerFailure(response,payload,stage,provider='OpenAI'){
  let message='The AI provider could not complete this request. Please retry.';
  if(provider==='Anthropic'){
   const lowCredit=/credit balance/i.test(String(payload?.error?.message||''));
+  const workspace=/not scoped to a workspace|anthropic-workspace-id/i.test(String(payload?.error?.message||''));
   if(status===401)message='The server Claude credential was rejected. An owner must check ANTHROPIC_API_KEY.';
+  else if(workspace)message='The Claude API key is not tied to a workspace. An owner must set ANTHROPIC_WORKSPACE_ID (or use a workspace API key).';
   else if(lowCredit)message='The Claude API account has no credit left. An owner must add credits in the Claude Console.';
   else if(status===403||status===404)message='The Claude API key cannot use the configured model. An owner must check CLAUDE_MODEL.';
   else if(status===429||status===529)message='Home Base AI is busy right now. Please wait a moment and retry.';
   else if(status===400)message='Home Base AI rejected the request configuration. An owner must check the server diagnostic.';
-  return Object.assign(Error(message),{code:lowCredit?'ai_no_credit':'ai_provider_error',provider_status:status,provider_code:code,provider_stage:identifier(stage),provider_request_id:identifier(response.headers?.get('request-id'))});
+  return Object.assign(Error(message),{code:workspace?'ai_not_configured':lowCredit?'ai_no_credit':'ai_provider_error',provider_status:status,provider_code:code,provider_stage:identifier(stage),provider_request_id:identifier(response.headers?.get('request-id'))});
  }
  if(status===401)message='The server OpenAI credential was rejected. An owner must check OPENAI_API_KEY.';
  else if(code==='insufficient_quota')message='The OpenAI project has no available quota. An owner must check billing and spending limits.';

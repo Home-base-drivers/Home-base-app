@@ -3,6 +3,13 @@
 // replies use the phone's own voice; GPT Live stays optional when OpenAI is funded.
 import {providerFailure} from './errors.mjs';
 export const CLAUDE_URL='https://api.anthropic.com/v1/messages';
+// An organization-level API key must name the workspace to bill
+// (ANTHROPIC_WORKSPACE_ID); a workspace-scoped key needs nothing extra.
+export function claudeHeaders(apiKey,workspaceId=globalThis.Deno?.env?.get?.('ANTHROPIC_WORKSPACE_ID')){
+ const h={'x-api-key':apiKey,'anthropic-version':'2023-06-01','content-type':'application/json'};
+ if(workspaceId&&/^[A-Za-z0-9_-]{4,80}$/.test(String(workspaceId).trim()))h['anthropic-workspace-id']=String(workspaceId).trim();
+ return h;
+}
 export const WEB_SEARCH={type:'web_search_20250305',name:'web_search',max_uses:3};
 
 // Claude needs alternating user/assistant turns that start with the user.
@@ -26,7 +33,7 @@ export async function callClaude({apiKey,fetchImpl=fetch,timeoutMs=60000,stage='
  let messages=body.messages,last=null;
  for(let round=0;round<3;round++){
   let response;
-  try{response=await fetchImpl(CLAUDE_URL,{method:'POST',signal:AbortSignal.timeout(timeoutMs),headers:{'x-api-key':apiKey,'anthropic-version':'2023-06-01','content-type':'application/json'},body:JSON.stringify({...body,messages})});}
+  try{response=await fetchImpl(CLAUDE_URL,{method:'POST',signal:AbortSignal.timeout(timeoutMs),headers:claudeHeaders(apiKey),body:JSON.stringify({...body,messages})});}
   catch(error){if(error?.name==='TimeoutError'||error?.name==='AbortError')throw Object.assign(new Error('Home Base AI took too long to answer.'),{code:'ai_timeout'});throw error;}
   const payload=await response.json().catch(()=>({}));
   if(!response.ok)throw providerFailure(response,payload,stage,'Anthropic');

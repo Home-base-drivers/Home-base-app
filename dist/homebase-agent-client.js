@@ -16,8 +16,9 @@
  function describeError(error){
   const code=String(error?.code||''),message=String(error?.message||error||'');
   if(code==='plan_required')return'GPT answers and GPT Live voice are part of Home Base Plus. The built-in AI is free and still answers.';
+  if(code==='daily_messages_used_up')return'Today\'s free Home Base AI messages are used. Home Base Plus has unlimited conversation; offline answers continue.';
   if(code==='voice_minutes_used_up')return'This month\'s GPT Live minutes are used. Voice continues on this phone with the built-in AI.';
-  if(code==='ai_not_configured'||/not configured/i.test(message))return'Home Base AI is not switched on yet on the server.';
+  if(code==='ai_not_configured'||/not configured|not tied to a workspace/i.test(message))return'Home Base AI is not switched on yet on the server.';
   if(code==='sign_in'||error?.name==='AuthSessionMissingError'||/sign in.*first|auth session missing|invalid session/i.test(message))return'You are signed out on this phone. Sign in from Profile to use Home Base AI.';
   if(code==='ai_timeout'||/timed? ?out|abort/i.test(message))return'Home Base AI took too long to answer. Try again.';
   if(/failed to fetch|network|load failed|offline/i.test(message))return'Can\'t reach Home Base AI right now. Check your signal and try again.';

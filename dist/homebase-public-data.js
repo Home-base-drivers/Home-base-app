@@ -65,6 +65,12 @@
     const dates=usable.map(f=>Date.parse(f.fetchedAt||payload.generatedAt)).filter(Number.isFinite);
     return{status:!markets.length?'unsupported':!usable.length?'unavailable':usable.some(f=>(f.calendarStatus||f.status)==='stale')?'stale':usable.some(f=>(f.calendarStatus||f.status)==='partial'||f.calendarTruncated||f.truncated)?'partial':'active',fetchedAt:dates.length?new Date(Math.min(...dates)).toISOString():null,sourceCount:sources.filter(s=>s.pages>0).length,failedSources:sources.filter(s=>s.status==='unavailable').length,ticketmasterConfigured:markets.some(m=>m.ticketmaster?.status&&!['not_configured','not_supported'].includes(m.ticketmaster.status))};
   }
+  // Live traffic incidents near a point (newest refresh only; incidents go stale fast).
+  function incidentsForLocation(payload,lat,lon,now=Date.now()){
+    const rows=new Map();
+    for(const market of matchingMarkets(payload,lat,lon)){const feed=market.trafficIncidents;if(!feed||!['active','stale'].includes(feed.status)||now-Date.parse(feed.fetchedAt||'')>30*60000)continue;for(const i of feed.incidents||[])if(i&&i.id&&Number.isFinite(i.lat)&&Number.isFinite(i.lon))rows.set(i.id,{...i,fetchedAt:feed.fetchedAt});}
+    return [...rows.values()];
+  }
   function alertsForLocation(payload,lat,lon,now=Date.now()){
     const rows=new Map();
     for(const market of matchingMarkets(payload,lat,lon)){const feed=market.weatherAlerts;if(!feed||!['active','partial','stale'].includes(feed.status)||now-Date.parse(feed.fetchedAt||'')>45*60000)continue;for(const a of feed.alerts||[])if(a&&a.id&&Date.parse(a.ends)>now)rows.set(a.id,a);}
@@ -154,5 +160,5 @@
     lastActivity={key,at:now};
     try{const r=await request(config.supabaseUrl+'/functions/v1/market-activity',{method:'POST',headers:{apikey:config.supabasePublishableKey,'Content-Type':'application/json'},body:JSON.stringify({markets:ids}),keepalive:true});return r&&r.ok?await r.json():null;}catch{return null;}
   }
-  return{LIVE_SIGNALS_URL,reportActivity,activeMarketIds,newestSnapshot,loadSnapshot,alertsForLocation,bellTimesForLocation,bellMatch,matchingMarkets,eventsForLocation,placesForLocation,calendarCoverage,isTicketAddon,eventIdentity,consolidateEvents,sameEvent};
+  return{LIVE_SIGNALS_URL,reportActivity,activeMarketIds,newestSnapshot,loadSnapshot,alertsForLocation,incidentsForLocation,bellTimesForLocation,bellMatch,matchingMarkets,eventsForLocation,placesForLocation,calendarCoverage,isTicketAddon,eventIdentity,consolidateEvents,sameEvent};
 });

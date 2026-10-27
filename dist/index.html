@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Home Base">
-  <meta name="homebase-build" content="v300">
+  <meta name="homebase-build" content="v301">
   <meta name="description" content="Home Base connects local driver platforms, earnings forecasts, events and a GPS-based 12-hour route in one app.">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icon-192.png">
@@ -224,9 +224,9 @@
 <script src="homebase-earnings.js?v=117"></script>
 <script src="homebase-demand-history.js?v=151"></script>
 <script src="homebase-route-policy.js?v=17"></script>
-<script src="homebase-public-data.js?v=6"></script>
+<script src="homebase-public-data.js?v=7"></script>
 <script src="homebase-sports.js?v=3"></script>
-<script src="homebase-weather.js?v=1"></script>
+<script src="homebase-weather.js?v=1"></script><script src="homebase-safety.js?v=1"></script>
 <script src="homebase-school-events.js?v=4"></script>
 <script src="homebase-planner.js?v=131"></script>
 <script src="homebase-config.js?v=111"></script>
@@ -236,12 +236,12 @@
 <script src="homebase-dispatch.js?v=2"></script>
 <script src="homebase-languages.js?v=2"></script>
 <script src="homebase-voice.js?v=4"></script>
-<script src="homebase-internal-ai.js?v=4"></script>
+<script src="homebase-internal-ai.js?v=5"></script>
 <script src="homebase-plans.js?v=4"></script>
-<script src="homebase-agent-client.js?v=8"></script>
-<script src="homebase-copilot.js?v=50"></script>
+<script src="homebase-agent-client.js?v=9"></script>
+<script src="homebase-copilot.js?v=51"></script>
 <script src="homebase-live-assistant.js?v=8"></script>
-<script src="homebase-chat.js?v=5"></script>
+<script src="homebase-chat.js?v=6"></script>
 <script>
 const app=document.getElementById('app');
 app.classList.add('map-mode');
@@ -1072,6 +1072,7 @@ async function loadProviderSignals(lat,lon,market){
     const records=match.publicRecords;
     schoolBellTimes=HomeBasePublicData.bellTimesForLocation(payload,lat,lon);
     employerSites=matches.flatMap(m=>m.employerSites?.sites||[]).filter(s=>Number.isFinite(s.lat)&&Number.isFinite(s.lon));
+    try{window.HomeBaseSafety?.setIncidents?.(HomeBasePublicData.incidentsForLocation(payload,lat,lon));}catch{}
     if(Date.now()-weatherAlertsFetchedAt>30*60000){const hostedAlerts=HomeBasePublicData.alertsForLocation(payload,lat,lon);if(hostedAlerts.length||activeWeatherAlerts.length){activeWeatherAlerts=hostedAlerts;renderWeatherAlert()}}
     if(records?.schoolCoverage&&!schoolCoverage.checkedCount){schoolCoverage={...records.schoolCoverage,status:schoolCoverage.status==='loading'?'loading':'partial'};schoolDateContext=records.schoolContext||[];}
     providerStatuses.public_calendar=records&&records.calendarStatus||'unavailable';providerStatuses.public_weather=records&&records.weatherStatus||'unavailable';
@@ -1424,7 +1425,7 @@ function recheckDemandSources(){if(document.visibilityState!=='visible')return;s
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')recheckDemandSources()});window.addEventListener('pageshow',e=>{if(e.persisted)recheckDemandSources()});window.addEventListener('online',recheckDemandSources);
 window.addEventListener('homebase-calendar-identity',()=>{schoolSearchAt=0;schoolSearchKey='';schoolEventRows=[];if(currentLocation)refreshSchoolEvents(...currentLocation);});
 window.addEventListener('load',()=>{schoolSearchAt=0;if(currentLocation)refreshSchoolEvents(...currentLocation);},{once:true});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>{const replacingWorker=!!navigator.serviceWorker.controller;navigator.serviceWorker.register('sw.js?v=300',{updateViaCache:'none'}).then(r=>{r.update();navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!replacingWorker)return;if(!sessionStorage.getItem('hb-release-reload-v300')){sessionStorage.setItem('hb-release-reload-v300','1');location.reload()}})}).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';})});
+if('serviceWorker' in navigator)window.addEventListener('load',()=>{const replacingWorker=!!navigator.serviceWorker.controller;navigator.serviceWorker.register('sw.js?v=301',{updateViaCache:'none'}).then(r=>{r.update();navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!replacingWorker)return;if(!sessionStorage.getItem('hb-release-reload-v301')){sessionStorage.setItem('hb-release-reload-v301','1');location.reload()}})}).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';})});
 </script>
 <script src="homebase-live.js?v=39"></script>
 </body>

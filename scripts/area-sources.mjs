@@ -8,6 +8,7 @@
 //   node scripts/area-sources.mjs --status <provider-signals.json> <out.csv>
 //       Same rows plus live status, item count and check time from a refresh
 //       snapshot. The live refresh publishes this next to provider-signals.json.
+import { chartCovers } from './traffic-incidents.mjs';
 import { readFile, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 
@@ -55,6 +56,7 @@ export function areaSourceRows(config, sites, snapshot = null) {
     add({ source_type: 'places', source_name: 'Public places baseline (GeoNames/OSM)', url: 'config/public-place-baseline.json' }, feed(live?.publicPlaces, live?.publicPlaces?.places?.length ?? ''));
     add({ source_type: 'places_live', source_name: 'OpenStreetMap Overpass (queried on the phone)', url: 'https://overpass-api.de/api/interpreter' }, { status: 'on_device' });
     add({ source_type: 'weather_alerts', source_name: 'National Weather Service alerts', url: 'https://api.weather.gov/alerts/active' }, feed(live?.weatherAlerts, live?.weatherAlerts?.alerts ?? ''));
+    if (chartCovers(market)) add({ source_type: 'traffic_incidents', source_name: 'Maryland CHART traffic incidents', url: 'https://chart.maryland.gov/' }, feed(live?.trafficIncidents, live?.trafficIncidents?.incidents ?? ''));
     add({ source_type: 'weather_forecast', source_name: 'Open-Meteo hourly forecast (queried on the phone)', url: 'https://api.open-meteo.com/v1/forecast' }, { status: 'on_device' });
     add({ source_type: 'surge_history', source_name: 'Screenshot-derived Uber/Empower surge history', url: 'dist/homebase-demand-history.js' }, { status: 'stored', items: surgeHistoryCount(market) });
     for (const [key, name, url] of [['ticketmaster', 'Ticketmaster Discovery API', 'https://developer.ticketmaster.com/'], ['uber', 'Uber price estimates', 'https://developer.uber.com/'], ['flightaware', 'FlightAware AeroAPI', 'https://www.flightaware.com/aeroapi/'], ['booking', 'Booking.com availability', 'https://developers.booking.com/']]) {
