@@ -1,0 +1,43 @@
+# Manual, read-only diagnosis of every configured public calendar from a runner
+# (open network). Publishes the report to the machine-owned `diagnostics` branch.
+name: Diagnose public calendars
+
+on:
+  workflow_dispatch:
+    inputs:
+      market:
+        description: 'Optional market id (default: all)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Diagnose
+        env:
+          MARKET: ${{ github.event.inputs.market }}
+        run: node scripts/diagnose-calendars.mjs ${MARKET:+--market=$MARKET} | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Publish to the diagnostics branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -eu
+          out="$RUNNER_TEMP/diag"; mkdir -p "$out"
+          cp calendar-diagnostics.json calendar-diagnostics.md "$out/"
+          cd "$out"
+          git init -q -b diagnostics
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add . && git commit -q -m "diagnostics $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push -q --force "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/diagnostics
