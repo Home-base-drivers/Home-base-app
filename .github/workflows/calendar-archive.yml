@@ -2,7 +2,7 @@ name: Daily calendar check
 
 # Reads every configured public calendar (venue calendars in every market,
 # including the Baltimore Convention Center's events service, plus campus
-# calendars) a week ahead and saves the results per calendar on the
+# calendars) two weeks ahead and saves the results per calendar on the
 # machine-owned `calendar-archive` branch, with a health report.
 #  - A calendar read successfully today is not read again until the next day;
 #    the evening pass only retries calendars that failed in the morning.

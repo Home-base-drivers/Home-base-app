@@ -19,7 +19,7 @@ its listings at that venue.
 ## Daily calendar check and saved results (calendar-archive)
 `.github/workflows/calendar-archive.yml` runs at ~5 AM Eastern (and a 5 PM retry
 pass). It reads every configured calendar — venue calendars in every market and the
-Towson/Morgan campus calendars — a week ahead (`scripts/calendar-archive.mjs`) and
+Towson/Morgan campus calendars — two weeks ahead (`scripts/calendar-archive.mjs`) and
 saves each calendar's events, last success, failures in a row and reason to
 `calendar-archive.json` on the machine-owned `calendar-archive` branch, with
 `calendar-health.md` (also shown on the run's summary page).
