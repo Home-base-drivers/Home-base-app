@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Home Base">
-  <meta name="homebase-build" content="v291">
+  <meta name="homebase-build" content="v292">
   <meta name="description" content="Home Base connects local driver platforms, earnings forecasts, events and a GPS-based 12-hour route in one app.">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icon-192.png">
@@ -223,7 +223,7 @@
 <link rel="stylesheet" href="homebase-growth.css?v=113">
 <script src="homebase-earnings.js?v=117"></script>
 <script src="homebase-demand-history.js?v=148"></script>
-<script src="homebase-route-policy.js?v=15"></script>
+<script src="homebase-route-policy.js?v=16"></script>
 <script src="homebase-public-data.js?v=6"></script>
 <script src="homebase-sports.js?v=2"></script>
 <script src="homebase-weather.js?v=1"></script>
@@ -1140,7 +1140,7 @@ function driverRouteLabel(s){
   if(s.cat==='school'||s.cat==='k12')return 'School '+(marketParts(s.when).hour<10?'drop-off':'pickup')+(s.schoolEnd&&marketParts(s.when).hour>=10?' · lets out '+clockLabel(s.schoolEnd):'');
   const ev=s.routeEvidence||{};
   if(ev.kind==='history')return staging+`Surged here on ${ev.days} past days around this time`;
-  if(ev.kind==='shift')return staging+(s.cat==='medical'?'Hospital shift change':'Shift change');
+  if(ev.kind==='shift')return staging+(ev.amazon?'Amazon shift change · long rides home'+(ev.unconfirmed?' (site unconfirmed)':''):s.cat==='medical'?'Hospital shift change':'Shift change');
   if(ev.kind==='closing')return staging+'Closing time · shoppers leaving';
   if(ev.kind==='staging')return 'Get in place for '+String(ev.event||s.stagingFor||'the event').split(' · ')[0];
   return staging+'Verified hot spot';
@@ -1250,7 +1250,9 @@ function buildRoute(venues,lat,lon,market,publicHeatSources=venues){
   // one pull toward its venue so the driver is close when the crowd moves.
   const bigByHour=Array.from({length:12},(_,i)=>{const when=new Date(start.getTime()+i*3600000),parts=marketParts(when),evs=HomeBaseRoutePolicy.routeEvents(HomeBaseRoutePolicy.candidatesForHour(pool,when,{day:parts.day,hour:parts.hour+when.getMinutes()/60},start).events,homeRegion);return evs.filter(e=>HomeBaseRoutePolicy.crowdTier(e)!=='local').sort((a,b)=>HomeBaseRoutePolicy.eventSize(b).bonus-HomeBaseRoutePolicy.eventSize(a).bonus)[0]||null});
   for(let i=0;i<12;i++){
-    const when=new Date(start.getTime()+i*3600000),parts=marketParts(when),eligible=HomeBaseRoutePolicy.candidatesForHour([...pool,...restaurantDistrictCandidates(lat,lon,when),...historyPatternStops(when,lat,lon)],when,{day:parts.day,hour:parts.hour+when.getMinutes()/60},start),eventCandidates=HomeBaseRoutePolicy.routeEvents(eligible.events,homeRegion).map(v=>{const size=HomeBaseRoutePolicy.eventSize(v),demand=demandWeight(v,when),tier=HomeBaseRoutePolicy.crowdTier(v);return{...v,majorEvent:size.major,crowdTier:tier,routeDemand:demand,score:demand+28+size.bonus*2.5+(tier==='mega'?10:0)}}),liveCandidates=eligible.live.map(v=>({...v,routeDemand:demandWeight(v,when),score:demandWeight(v,when)+18})),generalCandidates=eligible.general.map(v=>({...v,routeEvidence:HomeBaseRoutePolicy.generalEvidence(v,{day:parts.day,hour:parts.hour+when.getMinutes()/60},when,{history:routeHistoryAt,nextBig:bigByHour.slice(i+1,i+4).find(Boolean),distanceKm})})).filter(v=>v.routeEvidence).map(v=>({...v,routeDemand:v.tags?.aggregateDistrict?8:demandWeight(v,when),score:v.tags?.aggregateDistrict?8:demandWeight(v,when)})),destinations=[...eventCandidates,...liveCandidates,...generalCandidates],candidates=HomeBaseRoutePolicy.selectRanked(HomeBasePlanner.rankCandidates(destinations,{origin:planOrigin,radiusMiles:Number(readProfile().radius)||25,hourlyRate:currentApps[0]?.base||23,costPerMile:Number(readCostPrefs().reserveRate)||.2,preferredMinutes:30,majorMaxMinutes:90,isHome:isGreaterBaltimoreLocation(lat,lon)&&window.HomeBaseMarket?.isHomeRegionPoint?HomeBaseMarket.isHomeRegionPoint:null})),seen=new Set(),options=[];
+    const when=new Date(start.getTime()+i*3600000),parts=marketParts(when),eligible=HomeBaseRoutePolicy.candidatesForHour([...pool,...restaurantDistrictCandidates(lat,lon,when),...historyPatternStops(when,lat,lon)],when,{day:parts.day,hour:parts.hour+when.getMinutes()/60},start),eventCandidates=HomeBaseRoutePolicy.routeEvents(eligible.events,homeRegion).map(v=>{const size=HomeBaseRoutePolicy.eventSize(v),demand=demandWeight(v,when),tier=HomeBaseRoutePolicy.crowdTier(v);return{...v,majorEvent:size.major,crowdTier:tier,routeDemand:demand,score:demand+28+size.bonus*2.5+(tier==='mega'?10:0)}}),liveCandidates=eligible.live.map(v=>({...v,routeDemand:demandWeight(v,when),score:demandWeight(v,when)+18})),generalCandidates=eligible.general.map(v=>({...v,routeEvidence:HomeBaseRoutePolicy.generalEvidence(v,{day:parts.day,hour:parts.hour+when.getMinutes()/60},when,{history:routeHistoryAt,nextBig:bigByHour.slice(i+1,i+4).find(Boolean),distanceKm})})).filter(v=>v.routeEvidence).map(v=>{const demand=v.tags?.aggregateDistrict?8:demandWeight(v,when),amazon=v.routeEvidence.kind==='shift'&&v.routeEvidence.amazon;
+      // Amazon shift change: long rides home (often $20+) rank like a mid-size event when close.
+      return{...v,amazonShift:amazon,routeDemand:demand,score:demand+(amazon&&demand>0?(v.routeEvidence.unconfirmed?10:20):0)};}),destinations=[...eventCandidates,...liveCandidates,...generalCandidates],candidates=HomeBaseRoutePolicy.selectRanked(HomeBasePlanner.rankCandidates(destinations,{origin:planOrigin,radiusMiles:Number(readProfile().radius)||25,hourlyRate:currentApps[0]?.base||23,costPerMile:Number(readCostPrefs().reserveRate)||.2,preferredMinutes:30,majorMaxMinutes:90,isHome:isGreaterBaltimoreLocation(lat,lon)&&window.HomeBaseMarket?.isHomeRegionPoint?HomeBaseMarket.isHomeRegionPoint:null})),seen=new Set(),options=[];
     const nextBig=bigByHour.slice(i+1,i+4).find(Boolean);
     if(nextBig&&candidates.length&&candidates.every(c=>c.routeBasis==='general_area')){
       // Hours without evidence stage toward the next big event (within 3 hours).
@@ -1401,7 +1403,7 @@ function recheckDemandSources(){if(document.visibilityState!=='visible')return;s
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')recheckDemandSources()});window.addEventListener('pageshow',e=>{if(e.persisted)recheckDemandSources()});window.addEventListener('online',recheckDemandSources);
 window.addEventListener('homebase-calendar-identity',()=>{schoolSearchAt=0;schoolSearchKey='';schoolEventRows=[];if(currentLocation)refreshSchoolEvents(...currentLocation);});
 window.addEventListener('load',()=>{schoolSearchAt=0;if(currentLocation)refreshSchoolEvents(...currentLocation);},{once:true});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>{const replacingWorker=!!navigator.serviceWorker.controller;navigator.serviceWorker.register('sw.js?v=291',{updateViaCache:'none'}).then(r=>{r.update();navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!replacingWorker)return;if(!sessionStorage.getItem('hb-release-reload-v291')){sessionStorage.setItem('hb-release-reload-v291','1');location.reload()}})}).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';})});
+if('serviceWorker' in navigator)window.addEventListener('load',()=>{const replacingWorker=!!navigator.serviceWorker.controller;navigator.serviceWorker.register('sw.js?v=292',{updateViaCache:'none'}).then(r=>{r.update();navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!replacingWorker)return;if(!sessionStorage.getItem('hb-release-reload-v292')){sessionStorage.setItem('hb-release-reload-v292','1');location.reload()}})}).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';})});
 </script>
 <script src="homebase-live.js?v=39"></script>
 </body>
