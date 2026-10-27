@@ -111,13 +111,15 @@ export function publishedAttendance(event, sourceUrl){
     {expectedAttendance:count,attendanceBasis:'organizer_estimate',attendanceSourceUrl:sourceUrl,attendanceConfidence:.75}:{};
 }
 
-export function normalizePublicEvent(event, market, source, now = Date.now()) {
-  if (event.private || event.allDay || event.isAllDay || /cancel|postpon|reschedul/i.test(String(event.eventStatus || '')) || /OnlineEventAttendanceMode/.test(String(event.eventAttendanceMode || ''))) return null;
+export function normalizePublicEvent(event, market, source, now = Date.now(), horizonHours = 36, why = null) {
+  const drop = reason => { if (why) why.reason = reason; return null; };
+  if (event.private || event.allDay || event.isAllDay || /cancel|postpon|reschedul/i.test(String(event.eventStatus || '')) || /OnlineEventAttendanceMode/.test(String(event.eventAttendanceMode || ''))) return drop('private/all-day/cancelled/online');
   const start = zonedEventTime(event.startDate, market.timeZone);
-  if (!start) return null;
+  if (!start) return drop(/^\d{4}-\d{2}-\d{2}$/.test(String(event.startDate||'')) ? 'date only, no time' : 'no start time');
   const reportedEnd = zonedEventTime(event.endDate, market.timeZone);
   const end = reportedEnd && Date.parse(reportedEnd) > Date.parse(start) ? reportedEnd : null;
-  if ((end ? Date.parse(end) < now - 90 * 60_000 : Date.parse(start) < now - 6 * HOUR) || Date.parse(start) > now + 36 * HOUR) return null;
+  if (end ? Date.parse(end) < now - 90 * 60_000 : Date.parse(start) < now - 6 * HOUR) return drop('past');
+  if (Date.parse(start) > now + horizonHours * HOUR) return drop('beyond horizon');
   const venue = [event.location].flat().find(place => place && typeof place === 'object');
   const geo = venue?.geo;
   const known = (source.venues || []).find(place => place.name.toLowerCase() === String(venue?.name || '').toLowerCase());
@@ -125,15 +127,16 @@ export function normalizePublicEvent(event, market, source, now = Date.now()) {
   const only = !known && geo?.latitude == null ? (source.venue && Number.isFinite(source.venue.lat) ? source.venue : (source.venues || []).length === 1 ? source.venues[0] : null) : null;
   const place = known || only;
   const lat = geo?.latitude == null ? place?.lat : Number(geo.latitude), lon = geo?.longitude == null ? place?.lon : Number(geo.longitude);
-  if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180 || distanceKm(market.center, { lat, lon }) > market.radiusKm) return null;
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) return drop('no location');
+  if (distanceKm(market.center, { lat, lon }) > market.radiusKm) return drop('outside market');
   const name = String(event.name || '').trim(), eventType = [event['@type']].flat().join(' ');
   // A sports or arena source may describe its listings only as "A vs. B";
   // its configured classification supplies the missing category.
   const context = [name, venue?.name, eventType, event.description, source.classification].join(' ');
-  if (!name || publicData.isTicketAddon(name) || /webinar|virtual|online.only|exhibition|gallery|workshop|seminar|campus.tour|all.day.entry|standard.entry|standard.admission|standard.experience/i.test(context)) return null;
+  if (!name || publicData.isTicketAddon(name) || /webinar|virtual|online.only|exhibition|gallery|workshop|seminar|campus.tour|all.day.entry|standard.entry|standard.admission|standard.experience/i.test(context)) return drop('not a crowd event');
   const performers = [event.performer].flat().filter(Boolean);
   const classification = performers.map(p => p['@type']).flat().join(' ');
-  if (!/sports|concert|festival|convention|conference|football|basketball|baseball|hockey|soccer|stadium|arena|theatre|theater|comedy|performing|music|graduation|commencement|fairground|circus|danceevent|homecoming|prom\b|tailgate|bonfire|reunion|gala|party|social|community|screening/i.test(context + ' ' + classification)) return null;
+  if (!/sports|concert|festival|convention|conference|football|basketball|baseball|hockey|soccer|stadium|arena|theatre|theater|comedy|performing|music|graduation|commencement|fairground|circus|danceevent|homecoming|prom\b|tailgate|bonfire|reunion|gala|party|social|community|screening/i.test(context + ' ' + classification)) return drop('no crowd keyword');
   const url = safeUrl(event.url || event.offers?.url, source.url);
   return { id: 'public:' + (url || `${name}:${lat}:${lon}`) + ':' + start, name: name.slice(0, 180), venue: String(venue?.name || place?.name || '').slice(0, 160), lat, lon, eventStart: start, eventEnd: end, url, source: source.name, sourceUrl: source.url, eventType, classification, ...publishedAttendance(event,url||source.url), fetchedAt: new Date(now).toISOString() };
 }

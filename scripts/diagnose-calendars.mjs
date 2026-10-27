@@ -31,7 +31,8 @@ function signals(body) {
   };
 }
 const rows = [];
-const targets = [...markets.filter(m => !only || m.id === only).flatMap(m => (m.publicCalendars || []).map(c => ({ market: m.id, kind: 'venue', ...c }))), ...(only && only !== 'baltimore' ? [] : schools.map(s => ({ market: 'baltimore', kind: s.kind || 'school', ...s })))];
+const extra = (process.env.EXTRA_URLS || '').split(/\s+/).filter(Boolean).map(u => ({ market: 'candidate', kind: 'candidate', name: u, url: u }));
+const targets = [...extra, ...markets.filter(m => !only || m.id === only).flatMap(m => (m.publicCalendars || []).map(c => ({ market: m.id, kind: 'venue', ...c }))), ...(only && only !== 'baltimore' ? [] : schools.map(s => ({ market: 'baltimore', kind: s.kind || 'school', ...s })))];
 for (const t of targets) {
   const app = await get(t.url, APP_UA), sig = signals(app.body);
   let events = 0; try { events = structuredEvents(app.body).length + publishedVenueEvents(app.body, t).length; } catch {}
@@ -50,9 +51,11 @@ for (const r of rows) {
 md.push('', '### Pipeline (readVenueCalendar, next 36 h)', '', '| market | source | status | method | stored events | reason |', '|---|---|---|---|---|---|');
 const now=Date.now();
 for (const m of markets.filter(m => !only || m.id === only)) for (const c of m.publicCalendars || []) {
-  let r; try { r = await readVenueCalendar(c, m, now); } catch (e) { r = { source: { status: 'error', reason: String(e.message).slice(0, 60) }, events: [] }; }
-  const row = rows.find(x => x.url === c.url && x.market === m.id); if (row) row.pipeline = { ...r.source, sample: r.events.slice(0, 3).map(e => e.eventStart + ' ' + e.name) };
-  md.push(`| ${m.id} | ${c.name} | ${r.source.status} | ${r.source.method || ''} | ${r.events.length} | ${r.source.reason || ''} |`);
+  let r; const o = { why: {}, recordCount: 0, horizonHours: 24 * 14 }, o36 = { why: {}, recordCount: 0 };
+  try { r = await readVenueCalendar(c, m, now, fetch, undefined, o); } catch (e) { r = { source: { status: 'error', reason: String(e.message).slice(0, 60) }, events: [] }; }
+  let r36; try { r36 = await readVenueCalendar(c, m, now, fetch, undefined, o36); } catch { r36 = { events: [] }; }
+  const row = rows.find(x => x.url === c.url && x.market === m.id); if (row) row.pipeline = { ...r.source, records: o.recordCount, dropped14d: o.why, stored36h: r36.events.length, sample: r.events.slice(0, 5).map(e => e.eventStart + ' ' + e.name + ' @ ' + e.venue) };
+  md.push(`| ${m.id} | ${c.name} | ${r.source.status} | ${r.source.method || ''} | ${r36.events.length} (14 d: ${r.events.length} of ${o.recordCount}; dropped ${JSON.stringify(o.why).replace(/[{}"]/g, '')}) | ${r.source.reason || ''} |`);
 }
 await writeFile('calendar-diagnostics.json', JSON.stringify({ generatedAt: new Date().toISOString(), rows }, null, 1));
 await writeFile('calendar-diagnostics.md', md.join('\n') + '\n');

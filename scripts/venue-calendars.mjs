@@ -17,7 +17,7 @@ export async function discoverVenueCalendars(market,request=fetch){
  for(const base of ['https://overpass-api.de/api/interpreter','https://overpass.private.coffee/api/interpreter'])try{const url=new URL(base);url.searchParams.set('data',query);const r=await request(url,{signal:AbortSignal.timeout(15000)});if(!r.ok)continue;const p=await r.json();return{sources:venuesFromOsm(p,market),status:p.remark||p.elements?.length>=1000?'partial':'active'};}catch{}
  return{sources:[],status:'unavailable'};
 }
-export async function readVenueCalendar(source,market,now=Date.now(),request=fetch,lookup){
+export async function readVenueCalendar(source,market,now=Date.now(),request=fetch,lookup,opts={}){
  const queue=[source.url],visited=new Set(),feeds=new Set(),events=[],context=[],methods=new Set();let pages=0,parsed=false,failed=false,limited=false,reason='';
  for(let n=0;queue.length&&n<4;n++){
   const url=queue.shift(),key=url.toLowerCase();if(visited.has(key)){n--;continue;}visited.add(key);
@@ -37,7 +37,8 @@ export async function readVenueCalendar(source,market,now=Date.now(),request=fet
     }
    }
    parsed ||= !!ics||records.length>0;limited ||= !!ics?.recurrenceLimited;
-   for(const row of records){const event=normalizePublicEvent(row,market,source,now);if(event)events.push({...event,demandEligible:true,timePrecision:'minute',locationPrecision:row.location?.geo?'venue':source.venues?.find(v=>v.name.toLowerCase()===String(event.venue).toLowerCase())?.locationPrecision||'venue'});
+   if(opts.recordCount!=null)opts.recordCount+=records.length;
+   for(const row of records){const why={},event=normalizePublicEvent(row,market,source,now,opts.horizonHours||36,why);if(!event&&opts.why)opts.why[why.reason||'other']=(opts.why[why.reason||'other']||0)+1;if(event)events.push({...event,demandEligible:true,timePrecision:'minute',locationPrecision:row.location?.geo?'venue':source.venues?.find(v=>v.name.toLowerCase()===String(event.venue).toLowerCase())?.locationPrecision||'venue'});
     else if(/^\d{4}-\d{2}-\d{2}$/.test(row.startDate||'')&&Date.parse(row.startDate+'T12:00:00Z')>=now-86400000&&Date.parse(row.startDate+'T12:00:00Z')<=now+7*86400000)context.push({name:row.name,eventDate:row.startDate,id:source.url+':'+row.name+':'+row.startDate,demandEligible:false});
    }
    if(source.followEvents){const origin=new URL(result.url).origin,links=schoolCalendarLinks(result.body,result.url).filter(u=>new URL(u).origin===origin);links.filter(u=>/\.ics(?:\?|$)|[?&]ical/i.test(u)).forEach(u=>feeds.add(u));queue.push(...links.filter(u=>/(?:\/events?\/[^/?]+|\.ics(?:\?|$)|[?&]ical)/i.test(u)&&!visited.has(u.toLowerCase())&&!queue.includes(u)));}
