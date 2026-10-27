@@ -179,7 +179,7 @@
   }
   // Large events justify a longer drive. Size comes from published attendance,
   // a professional league scoreboard, or a stadium/arena venue.
-  const PRO=/^(NFL|MLB|NBA|NHL|MLS|WNBA|NWSL)$/;
+  const PRO=/^(NFL|MLB|NBA|NHL|MLS|WNBA|NWSL|Premier League)$/;
   const MAJOR_VENUE=/m\s*&?\s*t bank stadium|camden yards|oriole park|cfg bank arena|capital one arena|nationals park|northwest stadium|fedex ?field|audi field|secu stadium|xfinity center|navy[- ]marine corps|hughes memorial stadium|johnny unitas stadium|merriweather post|jiffy lube live|eaglebank arena|baltimore convention center|pier six pavilion/i;
   function eventSize(source){
     if(!source||!(source.eventStart||source.cat==='event'))return{major:false,bonus:0};

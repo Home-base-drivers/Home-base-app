@@ -12,6 +12,7 @@
     {sport:'hockey',league:'nhl',label:'NHL',finalPeriod:3},
     {sport:'soccer',league:'usa.1',label:'MLS',finalPeriod:2,finalMinute:75},
     {sport:'soccer',league:'usa.nwsl',label:'NWSL',finalPeriod:2,finalMinute:75},
+    {sport:'soccer',league:'eng.1',label:'Premier League',finalPeriod:2,finalMinute:75},
     {sport:'basketball',league:'mens-college-basketball',label:'NCAA men’s basketball',finalPeriod:2},
     {sport:'basketball',league:'womens-college-basketball',label:'NCAA women’s basketball',finalPeriod:4},
     {sport:'football',league:'college-football',label:'College football',finalPeriod:4}

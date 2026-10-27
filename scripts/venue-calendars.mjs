@@ -18,10 +18,10 @@ export async function discoverVenueCalendars(market,request=fetch){
  return{sources:[],status:'unavailable'};
 }
 export async function readVenueCalendar(source,market,now=Date.now(),request=fetch,lookup,opts={}){
- const queue=[source.url],visited=new Set(),feeds=new Set(),events=[],context=[],methods=new Set();let pages=0,parsed=false,failed=false,limited=false,reason='';
+ const queue=[source.url],visited=new Set(),feeds=new Set(),events=[],context=[],methods=new Set();let pages=0,parsed=false,failed=false,limited=false,reason='',firstBody='',firstUrl='',listingRecords=0;
  for(let n=0;queue.length&&n<4;n++){
   const url=queue.shift(),key=url.toLowerCase();if(visited.has(key)){n--;continue;}visited.add(key);
-  try{const result=await schoolPage(url,request,lookup);pages++;
+  try{const result=await schoolPage(url,request,lookup);pages++;if(n===0){firstBody=result.body;firstUrl=result.url;}
    const ics=/BEGIN:VCALENDAR/.test(result.body)?schoolIcsEvents(result.body,market.timeZone):null;
    let records=ics?.events||[...structuredEvents(result.body),...publishedVenueEvents(result.body,source)];
    if(records.length)methods.add(ics?'ics':'json-ld/adapter');
@@ -36,6 +36,7 @@ export async function readVenueCalendar(source,market,now=Date.now(),request=fet
      }catch{}
     }
    }
+   if(n===0)listingRecords=records.length;
    parsed ||= !!ics||records.length>0;limited ||= !!ics?.recurrenceLimited;
    if(opts.recordCount!=null)opts.recordCount+=records.length;
    for(const row of records){const why={},event=normalizePublicEvent(row,market,source,now,opts.horizonHours||36,why);if(!event&&opts.why)opts.why[why.reason||'other']=(opts.why[why.reason||'other']||0)+1;if(event)events.push({...event,demandEligible:true,timePrecision:'minute',locationPrecision:row.location?.geo?'venue':source.venues?.find(v=>v.name.toLowerCase()===String(event.venue).toLowerCase())?.locationPrecision||'venue'});
@@ -43,6 +44,20 @@ export async function readVenueCalendar(source,market,now=Date.now(),request=fet
    }
    if(source.followEvents){const origin=new URL(result.url).origin,links=schoolCalendarLinks(result.body,result.url).filter(u=>new URL(u).origin===origin);links.filter(u=>/\.ics(?:\?|$)|[?&]ical/i.test(u)).forEach(u=>feeds.add(u));queue.push(...links.filter(u=>/(?:\/events?\/[^/?]+|\.ics(?:\?|$)|[?&]ical)/i.test(u)&&!visited.has(u.toLowerCase())&&!queue.includes(u)));}
   }catch(e){failed=true;if(!reason)reason=String(e?.message||'').slice(0,60)||'network_error';}
+ }
+ // Listing pages with no data of their own (WordPress venue plugins, aggregators):
+ // read each listed event's own page, which usually carries schema.org Event data.
+ if(firstBody&&!listingRecords&&(source.followEvents||source.detailPages)){
+  const origin=new URL(firstUrl).origin,max=Number(source.maxDetails)||24,links=new Set();
+  for(const m of firstBody.matchAll(/href=["']([^"'#]+)["']/gi)){let u;try{u=new URL(m[1].replace(/&amp;/g,'&'),firstUrl);}catch{continue;}
+   if(u.origin!==origin||!/\/events?\/[^/?#]{3,}/i.test(u.pathname)||/\/(?:category|tag|page|feed|calendar|list|month|week|day)\b|ical|season-pass|gift-card/i.test(u.pathname+u.search))continue;
+   u.hash='';links.add(u.href);if(links.size>=max)break;}
+  const list=[...links].filter(u=>!visited.has(u.toLowerCase()));let next=0,read=0;
+  await Promise.all(Array.from({length:Math.min(4,list.length)},async()=>{while(next<list.length){const u=list[next++];try{const r=await schoolPage(u,request,lookup);read++;
+   const rows=structuredEvents(r.body);if(opts.recordCount!=null)opts.recordCount+=rows.length;
+   for(const row of rows){const why={},event=normalizePublicEvent({url:u,...row},market,source,now,opts.horizonHours||36,why);if(!event&&opts.why)opts.why[why.reason||'other']=(opts.why[why.reason||'other']||0)+1;if(event)events.push({...event,demandEligible:true,timePrecision:'minute',locationPrecision:row.location?.geo?'venue':'venue'});}
+   if(rows.length)parsed=true;}catch{}}}));
+  if(read){pages+=read;methods.add('detail-pages');}
  }
  limited ||= queue.length>0;
  if(!parsed&&!reason)reason='no_event_data';

@@ -234,11 +234,6 @@
       "placeRadiusKm": 20,
       "publicCalendars": [
         {
-          "name": "Ticketmaster Baltimore public listings",
-          "url": "https://www.ticketmaster.com/discover/baltimore",
-          "maxPages": 6
-        },
-        {
           "name": "Baltimore Soundstage calendar",
           "url": "https://www.baltimoresoundstage.com/calendar/",
           "adapter": "soundstage",
@@ -251,14 +246,18 @@
           "classification": "concert music"
         },
         {
-          "name": "Nevermore Hall published AXS calendar",
-          "url": "https://www.axs.com/venues/134269/nevermore-hall-baltimore-tickets",
-          "nextOnly": true
-        },
-        {
-          "name": "Ottobar published AXS calendar",
-          "url": "https://www.axs.com/venues/128508/ottobar-baltimore-tickets",
-          "nextOnly": true
+          "name": "Ottobar calendar",
+          "url": "https://theottobar.com/calendar/",
+          "followEvents": true,
+          "detailPages": true,
+          "maxDetails": 24,
+          "classification": "concert music",
+          "venue": {
+            "name": "Ottobar",
+            "lat": 39.318602,
+            "lon": -76.619718,
+            "coordinateSource": "U.S. Census Bureau geocoder (2549 N Howard St)"
+          }
         },
         {
           "name": "Power Plant Live district calendar",
@@ -392,7 +391,9 @@
               "locationPrecision": "venue"
             }
           ],
-          "classification": "fairground festival"
+          "classification": "fairground festival",
+          "detailPages": true,
+          "maxDetails": 24
         },
         {
           "name": "Baltimore City Recreation & Parks events",
@@ -519,11 +520,6 @@
       "uberDestinations": [],
       "publicCalendars": [
         {
-          "name": "Ticketmaster New York public calendar",
-          "url": "https://www.ticketmaster.com/discover/new-york-city",
-          "maxPages": 6
-        },
-        {
           "name": "NJPAC events",
           "url": "https://www.njpac.org/events/",
           "classification": "performing arts",
@@ -637,11 +633,6 @@
       "sampleAreas": [],
       "uberDestinations": [],
       "publicCalendars": [
-        {
-          "name": "Ticketmaster New York public calendar",
-          "url": "https://www.ticketmaster.com/discover/new-york-city",
-          "maxPages": 6
-        },
         {
           "name": "MSG Entertainment calendar (MSG, Radio City, Beacon)",
           "url": "https://www.msg.com/calendar",
@@ -787,35 +778,63 @@
       "timeZone": "Europe/London",
       "sampleAreas": [],
       "uberDestinations": [],
-      "publicCalendars": [
+      "publicCalendars": [],
+      "sportsVenues": [
         {
-          "name": "Ticketmaster London public calendar",
-          "url": "https://www.ticketmaster.co.uk/discover/london",
-          "maxPages": 6
+          "name": "Emirates Stadium",
+          "match": "emirates stadium",
+          "city": "London",
+          "lat": 51.5549,
+          "lon": -0.1084
         },
         {
-          "name": "Hamilton published performances",
-          "url": "https://www.ticketmaster.co.uk/hamilton-tickets/artist/5218048?venueId=434783"
+          "name": "Tottenham Hotspur Stadium",
+          "match": "tottenham hotspur stadium",
+          "city": "London",
+          "lat": 51.6043,
+          "lon": -0.0664
         },
         {
-          "name": "Les Misérables published performances",
-          "url": "https://www.ticketmaster.co.uk/les-miserables-tickets/artist/803968?venueId=434617"
+          "name": "Stamford Bridge",
+          "match": "stamford bridge",
+          "city": "London",
+          "lat": 51.4817,
+          "lon": -0.191
         },
         {
-          "name": "The Book of Mormon published performances",
-          "url": "https://www.ticketmaster.co.uk/the-book-of-mormon-london-tickets/artist/1747137"
+          "name": "London Stadium",
+          "match": "london stadium",
+          "city": "London",
+          "lat": 51.5386,
+          "lon": -0.0166
         },
         {
-          "name": "Beetlejuice published performances",
-          "url": "https://www.ticketmaster.co.uk/beetlejuice-the-musical-tickets/artist/5376080"
+          "name": "Craven Cottage",
+          "match": "craven cottage",
+          "city": "London",
+          "lat": 51.4749,
+          "lon": -0.2217
         },
         {
-          "name": "Avenue Q published performances",
-          "url": "https://www.ticketmaster.co.uk/avenue-q-tickets/artist/973986"
+          "name": "Selhurst Park",
+          "match": "selhurst park",
+          "city": "London",
+          "lat": 51.3983,
+          "lon": -0.0855
         },
         {
-          "name": "Sinatra published performances",
-          "url": "https://www.ticketmaster.co.uk/sinatra-the-musical-tickets/artist/5674208"
+          "name": "Gtech Community Stadium",
+          "match": "gtech community stadium",
+          "city": "Brentford",
+          "lat": 51.4907,
+          "lon": -0.2886
+        },
+        {
+          "name": "Wembley Stadium",
+          "match": "wembley stadium",
+          "city": "London",
+          "lat": 51.556,
+          "lon": -0.2796
         }
       ]
     },
@@ -978,13 +997,7 @@
           "lon": -80.2389
         }
       ],
-      "publicCalendars": [
-        {
-          "name": "Ticketmaster Miami public listings",
-          "url": "https://www.ticketmaster.com/discover/miami",
-          "maxPages": 6
-        }
-      ]
+      "publicCalendars": []
     }
   ]
 }

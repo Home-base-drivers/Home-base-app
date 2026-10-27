@@ -2,13 +2,15 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {makeSchoolSearch} from './school-service.mjs';
 import {localCalendarSources,cloudCalendarRegistry} from './calendar-registry.mjs';
-const market={center:{lat:51.5,lon:-.12},radiusKm:35,timeZone:'Europe/London'},input={lat:51.5,lon:-.12,timeZone:'Europe/London',refresh:true};
-const source={name:'Local school',url:'https://school.example.org/calendar',kind:'high_school',lat:51.5,lon:-.12};
+// Baltimore: its registered venue calendars seed the registry (London's were Ticketmaster
+// web pages, which always return 403, and were removed).
+const market={center:{lat:39.29,lon:-76.61},radiusKm:35,timeZone:'America/New_York'},input={lat:39.29,lon:-76.61,timeZone:'America/New_York',refresh:true};
+const source={name:'Local school',url:'https://school.example.org/calendar',kind:'high_school',lat:39.29,lon:-76.61};
 test('saved local minimum is checked again on load, discoveries persist and distant history is excluded',async()=>{
  const now=Date.parse('2026-10-08T21:00Z');let discoveries=0,reads=0,saved=[];
  const request=async url=>{if(String(url).includes('overpass')){discoveries++;return new Response('{"elements":[]}');}reads++;return new Response('BEGIN:VCALENDAR\nEND:VCALENDAR');};
  const registry={load:async()=>({sources:localCalendarSources(saved,market),discoveredAt:saved.length?now-1000:0,discoveryStatus:'active'}),save:async(m,s)=>{saved=s;}};
- saved=[source,{...source,name:'Distant school',url:'https://distant.example.org/calendar',lat:39.3,lon:-76.6}];
+ saved=[source,{...source,name:'Distant school',url:'https://distant.example.org/calendar',lat:51.5,lon:-.12}];
  const search=makeSchoolSearch({request,now:()=>now});
  const a=await search(input,{userId:'a',registry});assert.ok(a.registrySources.some(s=>s.url===source.url));assert.ok(!a.registrySources.some(s=>s.name==='Distant school'));assert.equal(discoveries,0);
  const before=reads;await search(input,{userId:'a',registry});assert.ok(reads>before);assert.equal(discoveries,0);
