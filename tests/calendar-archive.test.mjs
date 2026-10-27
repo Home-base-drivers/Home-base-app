@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { saffireEvents, readVenueCalendar, venueCalendars } from '../scripts/venue-calendars.mjs';
 import { mergeCheck, checkedToday, fromArchive, archiveFallback, emptyArchive, healthReport, localDay } from '../scripts/calendar-archive-core.mjs';
-import { runCalendarCheck, calendarJobs } from '../scripts/calendar-archive.mjs';
+import { runCalendarCheck, calendarJobs, ARCHIVE_HORIZON_HOURS } from '../scripts/calendar-archive.mjs';
 import config from '../config/provider-markets.json' with { type: 'json' };
 
 const baltimore = config.markets.find(m => m.id === 'baltimore');
@@ -109,4 +109,12 @@ test('the daily check covers every configured calendar, skips ones read today an
 
 test('fromArchive ignores sources not read today', () => {
   assert.equal(fromArchive(emptyArchive(), bcc, NOW, baltimore.timeZone, 168), null);
+});
+
+test('the daily check saves conventions listed two weeks out', async () => {
+  assert.ok(ARCHIVE_HORIZON_HOURS >= 14 * 24);
+  const request = async url => ({ ok: true, json: async () => /GetEventDays$/.test(url) ? { d: ['11/08/2026'] } : payload });
+  const early = Date.parse('2026-10-27T15:00:00Z');
+  const { archive } = await runCalendarCheck({ archive: null, now: early, request, only: new Set(['baltimore']), markets: [{ ...baltimore, publicCalendars: [bcc], name: 'BCC only' }] });
+  assert.deepEqual(archive.sources[bcc.url].events.map(e => e.name), ['Maryland Bridal & Wedding Expo']);
 });

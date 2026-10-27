@@ -7,9 +7,13 @@
 //      MARKETS=baltimore,new-york limits the check.
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import config from '../config/provider-markets.json' with { type: 'json' };
-import { readVenueCalendar, VENUE_HORIZON_HOURS } from './venue-calendars.mjs';
+import { readVenueCalendar } from './venue-calendars.mjs';
 import { CAMPUS_CALENDARS, readCampusCalendar } from './public-records.mjs';
 import { emptyArchive, validArchive, checkedToday, mergeCheck, archiveKey, healthReport } from './calendar-archive-core.mjs';
+
+// The check saves two weeks ahead (conventions and big shows are listed weeks out);
+// the live refresh still uses only what is relevant now.
+export const ARCHIVE_HORIZON_HOURS = 14 * 24;
 
 export function calendarJobs(markets, only = null) {
   const jobs = [];
@@ -33,7 +37,7 @@ export async function runCalendarCheck({ archive, markets = config.markets, now 
       summary.checked++;
       let result;
       try {
-        result = job.kind === 'campus' ? await readCampusCalendar(job.campus, now, request, VENUE_HORIZON_HOURS) : await readVenueCalendar(job.source, job.market, now, request);
+        result = job.kind === 'campus' ? await readCampusCalendar(job.campus, now, request, ARCHIVE_HORIZON_HOURS) : await readVenueCalendar(job.source, job.market, now, request, undefined, { horizonHours: ARCHIVE_HORIZON_HOURS });
       } catch (error) {
         result = { source: { name: job.source.name, url: job.source.url, status: 'unavailable', reason: String(error?.message || 'error').slice(0, 60) }, events: [] };
       }
