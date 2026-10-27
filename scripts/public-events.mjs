@@ -111,28 +111,36 @@ export function publishedAttendance(event, sourceUrl){
     {expectedAttendance:count,attendanceBasis:'organizer_estimate',attendanceSourceUrl:sourceUrl,attendanceConfidence:.75}:{};
 }
 
-export function normalizePublicEvent(event, market, source, now = Date.now()) {
-  if (event.private || event.allDay || event.isAllDay || /cancel|postpon|reschedul/i.test(String(event.eventStatus || '')) || /OnlineEventAttendanceMode/.test(String(event.eventAttendanceMode || ''))) return null;
+export function normalizePublicEvent(event, market, source, now = Date.now(), horizonHours = 36, why = null) {
+  const drop = reason => { if (why) why.reason = reason; return null; };
+  if (event.private || event.allDay || event.isAllDay || /cancel|postpon|reschedul/i.test(String(event.eventStatus || '')) || /OnlineEventAttendanceMode/.test(String(event.eventAttendanceMode || ''))) return drop('private/all-day/cancelled/online');
   const start = zonedEventTime(event.startDate, market.timeZone);
-  if (!start) return null;
+  if (!start) return drop(/^\d{4}-\d{2}-\d{2}$/.test(String(event.startDate||'')) ? 'date only, no time' : 'no start time');
   const reportedEnd = zonedEventTime(event.endDate, market.timeZone);
   const end = reportedEnd && Date.parse(reportedEnd) > Date.parse(start) ? reportedEnd : null;
-  if ((end ? Date.parse(end) < now - 90 * 60_000 : Date.parse(start) < now - 6 * HOUR) || Date.parse(start) > now + 36 * HOUR) return null;
+  if (end ? Date.parse(end) < now - 90 * 60_000 : Date.parse(start) < now - 6 * HOUR) return drop('past');
+  if (Date.parse(start) > now + horizonHours * HOUR) return drop('beyond horizon');
   const venue = [event.location].flat().find(place => place && typeof place === 'object');
   const geo = venue?.geo;
   const known = (source.venues || []).find(place => place.name.toLowerCase() === String(venue?.name || '').toLowerCase());
-  const lat = geo?.latitude == null ? known?.lat : Number(geo.latitude), lon = geo?.longitude == null ? known?.lon : Number(geo.longitude);
-  if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180 || distanceKm(market.center, { lat, lon }) > market.radiusKm) return null;
+  // A single-venue calendar's listings are at that venue even when a listing spells it differently.
+  const vs = source.venues || [], oneSite = vs.length > 0 && vs.every(v => Number.isFinite(v.lat) && distanceKm(vs[0], v) <= .25);
+  // ...or all of its venues share one site (e.g. the Power Plant Live! complex).
+  const only = !known && geo?.latitude == null ? (source.venue && Number.isFinite(source.venue.lat) ? source.venue : oneSite ? vs[0] : null) : null;
+  const place = known || only;
+  const lat = geo?.latitude == null ? place?.lat : Number(geo.latitude), lon = geo?.longitude == null ? place?.lon : Number(geo.longitude);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) return drop('no location');
+  if (distanceKm(market.center, { lat, lon }) > market.radiusKm) return drop('outside market');
   const name = String(event.name || '').trim(), eventType = [event['@type']].flat().join(' ');
   // A sports or arena source may describe its listings only as "A vs. B";
   // its configured classification supplies the missing category.
   const context = [name, venue?.name, eventType, event.description, source.classification].join(' ');
-  if (!name || publicData.isTicketAddon(name) || /webinar|virtual|online.only|exhibition|gallery|workshop|seminar|campus.tour|all.day.entry|standard.entry|standard.admission|standard.experience/i.test(context)) return null;
+  if (!name || publicData.isTicketAddon(name) || /webinar|virtual|online.only|exhibition|gallery|workshop|seminar|campus.tour|all.day.entry|standard.entry|standard.admission|standard.experience/i.test(context)) return drop('not a crowd event');
   const performers = [event.performer].flat().filter(Boolean);
   const classification = performers.map(p => p['@type']).flat().join(' ');
-  if (!/sports|concert|festival|convention|conference|football|basketball|baseball|hockey|soccer|stadium|arena|theatre|theater|comedy|performing|music|graduation|commencement|fairground|circus|danceevent|homecoming|prom\b|tailgate|bonfire|reunion|gala|party|social|community|screening/i.test(context + ' ' + classification)) return null;
+  if (!/sports|concert|festival|convention|conference|football|basketball|baseball|hockey|soccer|stadium|arena|theatre|theater|comedy|performing|music|graduation|commencement|fairground|circus|danceevent|homecoming|prom\b|tailgate|bonfire|reunion|gala|party|social|community|screening/i.test(context + ' ' + classification)) return drop('no crowd keyword');
   const url = safeUrl(event.url || event.offers?.url, source.url);
-  return { id: 'public:' + (url || `${name}:${lat}:${lon}`) + ':' + start, name: name.slice(0, 180), venue: String(venue?.name || known?.name || '').slice(0, 160), lat, lon, eventStart: start, eventEnd: end, url, source: source.name, sourceUrl: source.url, eventType, classification, ...publishedAttendance(event,url||source.url), fetchedAt: new Date(now).toISOString() };
+  return { id: 'public:' + (url || `${name}:${lat}:${lon}`) + ':' + start, name: name.slice(0, 180), venue: String(venue?.name || place?.name || '').slice(0, 160), lat, lon, eventStart: start, eventEnd: end, url, source: source.name, sourceUrl: source.url, eventType, classification, ...publishedAttendance(event,url||source.url), fetchedAt: new Date(now).toISOString() };
 }
 
 export function nextPublicPage(html, current) {
@@ -184,4 +192,51 @@ export async function publicEventCalendars(market, now = Date.now(), request = f
   const events = publicData.consolidateEvents([...new Map(results.flatMap(r => r.events).map(e => [publicData.eventIdentity(e), e])).values()]);
   const succeeded = results.filter(r => r.source.status === 'active').length;
   return { status: succeeded === sources.length ? 'active' : results.some(r => r.source.pages) ? 'partial' : 'unavailable', fetchedAt: new Date(now).toISOString(), events, sources: results.map(r => r.source), truncated: results.some(r => r.source.truncated) };
+}
+
+// ---- Machine-readable feeds behind calendar pages ------------------------------
+// Many venue sites render events with JavaScript and publish no schema.org data,
+// but expose the same listings as an iCalendar feed, The Events Calendar REST API,
+// a Localist API, or the page's own Next.js data. These are the venue's published
+// listings, read directly instead of guessed from page text.
+function eventLikeTime(value){
+  if(typeof value==='number'&&value>1e12&&value<4e12)return new Date(value).toISOString();
+  if(typeof value==='number'&&value>1e9&&value<4e9)return new Date(value*1000).toISOString();
+  if(typeof value!=='string')return null;
+  const v=value.trim();
+  if(/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(v))return v.replace(' ','T').replace(/\.\d+(?=Z|[+-]|$)/,'');
+  return null;
+}
+export function nextDataEvents(html){
+  const m=String(html).match(/<script[^>]+id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i);if(!m)return [];
+  let data;try{data=JSON.parse(m[1]);}catch{return [];}
+  const out=[],seen=new Set();
+  const walk=(v,depth)=>{
+    if(depth>14||!v||typeof v!=='object')return;
+    if(Array.isArray(v)){v.forEach(x=>walk(x,depth+1));return;}
+    const name=v.name||v.title||v.eventName||v.headline;
+    const start=eventLikeTime(v.startDate??v.start_date??v.startTime??v.start_time??v.eventDate??v.dateTime??v.start??v.date??v.showTime);
+    if(typeof name==='string'&&name.trim()&&start){
+      const venueName=typeof v.venue==='string'?v.venue:v.venue?.name||v.location?.name||(typeof v.location==='string'?v.location:'');
+      const key=name+'|'+start;if(!seen.has(key)){seen.add(key);out.push({'@type':'Event',name:name.trim(),startDate:start,endDate:eventLikeTime(v.endDate??v.end_date??v.endTime??v.end),url:typeof v.url==='string'?v.url:typeof v.link==='string'?v.link:undefined,location:{name:venueName||''},description:[v.category,v.genre,v.type,v.eventType,...(Array.isArray(v.categories)?v.categories.map(c=>c?.name||c):[])].filter(x=>typeof x==='string').join(' ')});}
+    }
+    for(const child of Object.values(v))if(child&&typeof child==='object')walk(child,depth+1);
+  };
+  walk(data,0);return out;
+}
+export function feedLinks(html,pageUrl){
+  const out=new Set(),add=u=>{try{const url=new URL(String(u).replace(/&amp;/g,'&').replace(/^webcal:/i,'https:'),pageUrl);if(/^https:$/.test(url.protocol))out.add(url.href);}catch{}};
+  for(const m of String(html).matchAll(/href=["']([^"']+)["']/gi)){const u=m[1];if(/calendar\.google\.com\/calendar\/render\?cid=/i.test(u)){const cid=decodeURIComponent(u.split('cid=')[1]||'').replace(/^http:/i,'https:');if(/\.ics/i.test(cid))add(cid);continue;}if(/(?:\.ics(?:\?|$)|[?&]ical=1|^webcal:)/i.test(u))add(u);}
+  return [...out];
+}
+export function feedCandidates(html,pageUrl){
+  const page=new URL(pageUrl),origin=page.origin,b=String(html),c=[];
+  for(const u of feedLinks(b,pageUrl))c.push({kind:'ics',url:u});
+  if(/tribe-events|wp-json\/tribe|the-events-calendar/i.test(b)){c.push({kind:'tribe',url:origin+'/wp-json/tribe/events/v1/events?per_page=50'});c.push({kind:'ics',url:origin+'/events/?ical=1'});}
+  if(/localist/i.test(b))c.push({kind:'localist',url:origin+'/api/2/events?days=3&pp=100'});
+  return [...new Map(c.map(x=>[x.url,x])).values()].slice(0,4);
+}
+export function localistEvents(body){
+  let p;try{p=JSON.parse(body);}catch{return [];}
+  return (p.events||[]).flatMap(w=>{const e=w.event;if(!e||e.private||e.rejected||e.experience==='virtual'||e.status==='cancelled')return[];return(e.event_instances||[]).filter(i=>!i.event_instance?.all_day).map(i=>({'@type':'Event',name:e.title,startDate:i.event_instance?.start,endDate:i.event_instance?.end,url:e.localist_url,location:{name:e.location_name,...(e.geo?.latitude!=null?{geo:{latitude:e.geo.latitude,longitude:e.geo.longitude}}:{})},description:Object.values(e.filters||{}).flat().map(f=>f.name).join(' ')}));});
 }

@@ -3,6 +3,7 @@
 // and which machine-readable feeds the page exposes. Read-only.
 import { readFile, writeFile } from 'node:fs/promises';
 import { structuredEvents, publishedVenueEvents } from './public-events.mjs';
+import { readVenueCalendar } from './venue-calendars.mjs';
 const markets = JSON.parse(await readFile(new URL('../config/provider-markets.json', import.meta.url), 'utf8')).markets;
 const schools = JSON.parse(await readFile(new URL('../config/school-calendar-sources.json', import.meta.url), 'utf8')).sources || [];
 const APP_UA = 'HomeBase public event context (+https://github.com/Home-base-drivers/Home-base-app)';
@@ -30,20 +31,32 @@ function signals(body) {
   };
 }
 const rows = [];
-const targets = [...markets.filter(m => !only || m.id === only).flatMap(m => (m.publicCalendars || []).map(c => ({ market: m.id, kind: 'venue', ...c }))), ...(only && only !== 'baltimore' ? [] : schools.map(s => ({ market: 'baltimore', kind: s.kind || 'school', ...s })))];
+const extra = (process.env.EXTRA_URLS || '').split(/\s+/).filter(Boolean).map(u => ({ market: 'candidate', kind: 'candidate', name: u, url: u }));
+const targets = [...extra, ...markets.filter(m => !only || m.id === only).flatMap(m => (m.publicCalendars || []).map(c => ({ market: m.id, kind: 'venue', ...c }))), ...(only && only !== 'baltimore' ? [] : schools.map(s => ({ market: 'baltimore', kind: s.kind || 'school', ...s })))];
 for (const t of targets) {
   const app = await get(t.url, APP_UA), sig = signals(app.body);
   let events = 0; try { events = structuredEvents(app.body).length + publishedVenueEvents(app.body, t).length; } catch {}
   const needBrowser = !(app.status === 200 && events > 0);
   const browser = needBrowser ? await get(t.url, BROWSER_UA) : null, bsig = browser ? signals(browser.body) : null;
   let bevents = 0; try { if (browser) bevents = structuredEvents(browser.body).length + publishedVenueEvents(browser.body, t).length; } catch {}
-  rows.push({ market: t.market, kind: t.kind, name: t.name, url: t.url, adapter: t.adapter || '', app: { status: app.status, error: app.error, bytes: app.bytes, finalUrl: app.finalUrl !== t.url ? app.finalUrl : undefined, server: app.server, cf: app.cf, events, ...sig },
+  const snippet = t.kind === 'candidate' ? (process.env.SNIPPET_GREP ? [...new Set([...app.body.matchAll(new RegExp('.{0,160}(?:' + process.env.SNIPPET_GREP + ').{0,240}', 'gi'))].map(m => m[0]))].slice(0, 12) : [app.body.slice(0, 4000)]) : undefined;
+  rows.push({ snippet, market: t.market, kind: t.kind, name: t.name, url: t.url, adapter: t.adapter || '', app: { status: app.status, error: app.error, bytes: app.bytes, finalUrl: app.finalUrl !== t.url ? app.finalUrl : undefined, server: app.server, cf: app.cf, events, ...sig },
     browser: browser ? { status: browser.status, error: browser.error, bytes: browser.bytes, events: bevents, blocked: bsig.blocked, ldjson: bsig.ldjson, title: bsig.title } : null });
 }
 const md = ['| market | source | app status | bytes | events | blocked | ld+json | feeds/platform | browser status | browser events |', '|---|---|---|---|---|---|---|---|---|---|'];
 for (const r of rows) {
   const a = r.app, feeds = [a.ics.length ? 'ics' : '', a.rss.length ? 'rss' : '', a.tribe ? 'tribe' : '', a.localist ? 'localist' : '', a.trumba ? 'trumba' : '', a.nextData ? 'next' : '', a.nuxt ? 'nuxt' : '', a.algolia ? 'algolia' : '', a.eventbrite ? 'eventbrite' : '', a.etix ? 'etix' : '', a.ticketmaster ? 'tm' : '', a.axs ? 'axs' : '', a.seetickets ? 'seetickets' : '', a.squarespace ? 'squarespace' : '', a.wix ? 'wix' : '', a.civicplus ? 'civicplus' : '', a.activenet ? 'activenet' : '', a.finalsite ? 'finalsite' : '', a.rschooltoday ? 'rschooltoday' : '', a.blackbaud ? 'blackbaud' : '', a.wordpress ? 'wp' : ''].filter(Boolean).join(' ');
   md.push(`| ${r.market} | ${r.name} | ${a.status || a.error} | ${a.bytes} | ${a.events} | ${a.blocked} | ${a.ldjson} | ${feeds} | ${r.browser ? (r.browser.status || r.browser.error) : ''} | ${r.browser ? r.browser.events + (r.browser.blocked ? ' (block page)' : '') : ''} |`);
+}
+// The real pipeline (what the live refresh stores), per venue calendar.
+md.push('', '### Pipeline (readVenueCalendar, next 36 h)', '', '| market | source | status | method | stored events | reason |', '|---|---|---|---|---|---|');
+const now=Date.now();
+for (const m of markets.filter(m => !only || m.id === only)) for (const c of m.publicCalendars || []) {
+  let r; const o = { why: {}, recordCount: 0, horizonHours: 24 * 14 }, o36 = { why: {}, recordCount: 0 };
+  try { r = await readVenueCalendar(c, m, now, fetch, undefined, o); } catch (e) { r = { source: { status: 'error', reason: String(e.message).slice(0, 60) }, events: [] }; }
+  let r36; try { r36 = await readVenueCalendar(c, m, now, fetch, undefined, o36); } catch { r36 = { events: [] }; }
+  const row = rows.find(x => x.url === c.url && x.market === m.id); if (row) row.pipeline = { ...r.source, records: o.recordCount, dropped14d: o.why, stored36h: r36.events.length, sample: r.events.slice(0, 5).map(e => e.eventStart + ' ' + e.name + ' @ ' + e.venue) };
+  md.push(`| ${m.id} | ${c.name} | ${r.source.status} | ${r.source.method || ''} | ${r36.events.length} (14 d: ${r.events.length} of ${o.recordCount}; dropped ${JSON.stringify(o.why).replace(/[{}"]/g, '')}) | ${r.source.reason || ''} |`);
 }
 await writeFile('calendar-diagnostics.json', JSON.stringify({ generatedAt: new Date().toISOString(), rows }, null, 1));
 await writeFile('calendar-diagnostics.md', md.join('\n') + '\n');

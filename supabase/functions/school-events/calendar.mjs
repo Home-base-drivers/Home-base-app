@@ -455,26 +455,116 @@ function publishedAttendance(event, sourceUrl) {
   const count = Number(event.expectedAttendance);
   return event.expectedAttendance != null && Number.isFinite(count) && count >= 0 && count <= 1e6 && /^https:\/\//.test(sourceUrl || "") ? { expectedAttendance: count, attendanceBasis: "organizer_estimate", attendanceSourceUrl: sourceUrl, attendanceConfidence: 0.75 } : {};
 }
-function normalizePublicEvent(event, market, source, now = Date.now()) {
-  if (event.private || event.allDay || event.isAllDay || /cancel|postpon|reschedul/i.test(String(event.eventStatus || "")) || /OnlineEventAttendanceMode/.test(String(event.eventAttendanceMode || ""))) return null;
+function normalizePublicEvent(event, market, source, now = Date.now(), horizonHours = 36, why = null) {
+  const drop = (reason) => {
+    if (why) why.reason = reason;
+    return null;
+  };
+  if (event.private || event.allDay || event.isAllDay || /cancel|postpon|reschedul/i.test(String(event.eventStatus || "")) || /OnlineEventAttendanceMode/.test(String(event.eventAttendanceMode || ""))) return drop("private/all-day/cancelled/online");
   const start = zonedEventTime(event.startDate, market.timeZone);
-  if (!start) return null;
+  if (!start) return drop(/^\d{4}-\d{2}-\d{2}$/.test(String(event.startDate || "")) ? "date only, no time" : "no start time");
   const reportedEnd = zonedEventTime(event.endDate, market.timeZone);
   const end = reportedEnd && Date.parse(reportedEnd) > Date.parse(start) ? reportedEnd : null;
-  if ((end ? Date.parse(end) < now - 90 * 6e4 : Date.parse(start) < now - 6 * HOUR) || Date.parse(start) > now + 36 * HOUR) return null;
-  const venue = [event.location].flat().find((place) => place && typeof place === "object");
+  if (end ? Date.parse(end) < now - 90 * 6e4 : Date.parse(start) < now - 6 * HOUR) return drop("past");
+  if (Date.parse(start) > now + horizonHours * HOUR) return drop("beyond horizon");
+  const venue = [event.location].flat().find((place2) => place2 && typeof place2 === "object");
   const geo = venue?.geo;
-  const known = (source.venues || []).find((place) => place.name.toLowerCase() === String(venue?.name || "").toLowerCase());
-  const lat = geo?.latitude == null ? known?.lat : Number(geo.latitude), lon = geo?.longitude == null ? known?.lon : Number(geo.longitude);
-  if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180 || distanceKm(market.center, { lat, lon }) > market.radiusKm) return null;
+  const known = (source.venues || []).find((place2) => place2.name.toLowerCase() === String(venue?.name || "").toLowerCase());
+  const vs = source.venues || [], oneSite = vs.length > 0 && vs.every((v) => Number.isFinite(v.lat) && distanceKm(vs[0], v) <= 0.25);
+  const only = !known && geo?.latitude == null ? source.venue && Number.isFinite(source.venue.lat) ? source.venue : oneSite ? vs[0] : null : null;
+  const place = known || only;
+  const lat = geo?.latitude == null ? place?.lat : Number(geo.latitude), lon = geo?.longitude == null ? place?.lon : Number(geo.longitude);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) return drop("no location");
+  if (distanceKm(market.center, { lat, lon }) > market.radiusKm) return drop("outside market");
   const name = String(event.name || "").trim(), eventType = [event["@type"]].flat().join(" ");
   const context = [name, venue?.name, eventType, event.description, source.classification].join(" ");
-  if (!name || import_homebase_public_data.default.isTicketAddon(name) || /webinar|virtual|online.only|exhibition|gallery|workshop|seminar|campus.tour|all.day.entry|standard.entry|standard.admission|standard.experience/i.test(context)) return null;
+  if (!name || import_homebase_public_data.default.isTicketAddon(name) || /webinar|virtual|online.only|exhibition|gallery|workshop|seminar|campus.tour|all.day.entry|standard.entry|standard.admission|standard.experience/i.test(context)) return drop("not a crowd event");
   const performers = [event.performer].flat().filter(Boolean);
   const classification = performers.map((p) => p["@type"]).flat().join(" ");
-  if (!/sports|concert|festival|convention|conference|football|basketball|baseball|hockey|soccer|stadium|arena|theatre|theater|comedy|performing|music|graduation|commencement|fairground|circus|danceevent|homecoming|prom\b|tailgate|bonfire|reunion|gala|party|social|community|screening/i.test(context + " " + classification)) return null;
+  if (!/sports|concert|festival|convention|conference|football|basketball|baseball|hockey|soccer|stadium|arena|theatre|theater|comedy|performing|music|graduation|commencement|fairground|circus|danceevent|homecoming|prom\b|tailgate|bonfire|reunion|gala|party|social|community|screening/i.test(context + " " + classification)) return drop("no crowd keyword");
   const url = safeUrl(event.url || event.offers?.url, source.url);
-  return { id: "public:" + (url || `${name}:${lat}:${lon}`) + ":" + start, name: name.slice(0, 180), venue: String(venue?.name || known?.name || "").slice(0, 160), lat, lon, eventStart: start, eventEnd: end, url, source: source.name, sourceUrl: source.url, eventType, classification, ...publishedAttendance(event, url || source.url), fetchedAt: new Date(now).toISOString() };
+  return { id: "public:" + (url || `${name}:${lat}:${lon}`) + ":" + start, name: name.slice(0, 180), venue: String(venue?.name || place?.name || "").slice(0, 160), lat, lon, eventStart: start, eventEnd: end, url, source: source.name, sourceUrl: source.url, eventType, classification, ...publishedAttendance(event, url || source.url), fetchedAt: new Date(now).toISOString() };
+}
+function eventLikeTime(value) {
+  if (typeof value === "number" && value > 1e12 && value < 4e12) return new Date(value).toISOString();
+  if (typeof value === "number" && value > 1e9 && value < 4e9) return new Date(value * 1e3).toISOString();
+  if (typeof value !== "string") return null;
+  const v = value.trim();
+  if (/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(v)) return v.replace(" ", "T").replace(/\.\d+(?=Z|[+-]|$)/, "");
+  return null;
+}
+function nextDataEvents(html) {
+  const m = String(html).match(/<script[^>]+id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i);
+  if (!m) return [];
+  let data;
+  try {
+    data = JSON.parse(m[1]);
+  } catch {
+    return [];
+  }
+  const out = [], seen = /* @__PURE__ */ new Set();
+  const walk = (v, depth) => {
+    if (depth > 14 || !v || typeof v !== "object") return;
+    if (Array.isArray(v)) {
+      v.forEach((x) => walk(x, depth + 1));
+      return;
+    }
+    const name = v.name || v.title || v.eventName || v.headline;
+    const start = eventLikeTime(v.startDate ?? v.start_date ?? v.startTime ?? v.start_time ?? v.eventDate ?? v.dateTime ?? v.start ?? v.date ?? v.showTime);
+    if (typeof name === "string" && name.trim() && start) {
+      const venueName = typeof v.venue === "string" ? v.venue : v.venue?.name || v.location?.name || (typeof v.location === "string" ? v.location : "");
+      const key = name + "|" + start;
+      if (!seen.has(key)) {
+        seen.add(key);
+        out.push({ "@type": "Event", name: name.trim(), startDate: start, endDate: eventLikeTime(v.endDate ?? v.end_date ?? v.endTime ?? v.end), url: typeof v.url === "string" ? v.url : typeof v.link === "string" ? v.link : void 0, location: { name: venueName || "" }, description: [v.category, v.genre, v.type, v.eventType, ...Array.isArray(v.categories) ? v.categories.map((c) => c?.name || c) : []].filter((x) => typeof x === "string").join(" ") });
+      }
+    }
+    for (const child of Object.values(v)) if (child && typeof child === "object") walk(child, depth + 1);
+  };
+  walk(data, 0);
+  return out;
+}
+function feedLinks(html, pageUrl) {
+  const out = /* @__PURE__ */ new Set(), add = (u) => {
+    try {
+      const url = new URL(String(u).replace(/&amp;/g, "&").replace(/^webcal:/i, "https:"), pageUrl);
+      if (/^https:$/.test(url.protocol)) out.add(url.href);
+    } catch {
+    }
+  };
+  for (const m of String(html).matchAll(/href=["']([^"']+)["']/gi)) {
+    const u = m[1];
+    if (/calendar\.google\.com\/calendar\/render\?cid=/i.test(u)) {
+      const cid = decodeURIComponent(u.split("cid=")[1] || "").replace(/^http:/i, "https:");
+      if (/\.ics/i.test(cid)) add(cid);
+      continue;
+    }
+    if (/(?:\.ics(?:\?|$)|[?&]ical=1|^webcal:)/i.test(u)) add(u);
+  }
+  return [...out];
+}
+function feedCandidates(html, pageUrl) {
+  const page = new URL(pageUrl), origin = page.origin, b = String(html), c = [];
+  for (const u of feedLinks(b, pageUrl)) c.push({ kind: "ics", url: u });
+  if (/tribe-events|wp-json\/tribe|the-events-calendar/i.test(b)) {
+    c.push({ kind: "tribe", url: origin + "/wp-json/tribe/events/v1/events?per_page=50" });
+    c.push({ kind: "ics", url: origin + "/events/?ical=1" });
+  }
+  if (/localist/i.test(b)) c.push({ kind: "localist", url: origin + "/api/2/events?days=3&pp=100" });
+  return [...new Map(c.map((x) => [x.url, x])).values()].slice(0, 4);
+}
+function localistEvents(body) {
+  let p;
+  try {
+    p = JSON.parse(body);
+  } catch {
+    return [];
+  }
+  return (p.events || []).flatMap((w) => {
+    const e = w.event;
+    if (!e || e.private || e.rejected || e.experience === "virtual" || e.status === "cancelled") return [];
+    return (e.event_instances || []).filter((i) => !i.event_instance?.all_day).map((i) => ({ "@type": "Event", name: e.title, startDate: i.event_instance?.start, endDate: i.event_instance?.end, url: e.localist_url, location: { name: e.location_name, ...e.geo?.latitude != null ? { geo: { latitude: e.geo.latitude, longitude: e.geo.longitude } } : {} }, description: Object.values(e.filters || {}).flat().map((f) => f.name).join(" ") }));
+  });
 }
 
 // scripts/school-events.mjs
@@ -971,11 +1061,6 @@ var provider_markets_default = {
       placeRadiusKm: 20,
       publicCalendars: [
         {
-          name: "Ticketmaster Baltimore public listings",
-          url: "https://www.ticketmaster.com/discover/baltimore",
-          maxPages: 6
-        },
-        {
           name: "Baltimore Soundstage calendar",
           url: "https://www.baltimoresoundstage.com/calendar/",
           adapter: "soundstage",
@@ -984,17 +1069,22 @@ var provider_markets_default = {
             lat: 39.2875169,
             lon: -76.607604,
             coordinateSource: "https://baltimore.org/listings/baltimore-soundstage/"
+          },
+          classification: "concert music"
+        },
+        {
+          name: "Ottobar calendar",
+          url: "https://theottobar.com/calendar/",
+          followEvents: true,
+          detailPages: true,
+          maxDetails: 24,
+          classification: "concert music",
+          venue: {
+            name: "Ottobar",
+            lat: 39.318602,
+            lon: -76.619718,
+            coordinateSource: "U.S. Census Bureau geocoder (2549 N Howard St)"
           }
-        },
-        {
-          name: "Nevermore Hall published AXS calendar",
-          url: "https://www.axs.com/venues/134269/nevermore-hall-baltimore-tickets",
-          nextOnly: true
-        },
-        {
-          name: "Ottobar published AXS calendar",
-          url: "https://www.axs.com/venues/128508/ottobar-baltimore-tickets",
-          nextOnly: true
         },
         {
           name: "Power Plant Live district calendar",
@@ -1015,7 +1105,8 @@ var provider_markets_default = {
               coordinateSource: "Home Base existing mapped venue anchor",
               locationPrecision: "venue_complex"
             }
-          ]
+          ],
+          classification: "nightlife music party"
         },
         {
           name: "Baltimore Convention Center calendar",
@@ -1029,7 +1120,8 @@ var provider_markets_default = {
               coordinateSource: "Home Base existing mapped venue anchor",
               locationPrecision: "venue"
             }
-          ]
+          ],
+          classification: "convention conference"
         },
         {
           name: "CFG Bank Arena calendar",
@@ -1043,7 +1135,8 @@ var provider_markets_default = {
               coordinateSource: "Home Base existing mapped venue anchor",
               locationPrecision: "venue"
             }
-          ]
+          ],
+          classification: "arena concert sports"
         },
         {
           name: "M&T Bank Stadium calendar",
@@ -1057,7 +1150,8 @@ var provider_markets_default = {
               coordinateSource: "Home Base existing mapped venue anchor",
               locationPrecision: "venue"
             }
-          ]
+          ],
+          classification: "stadium football"
         },
         {
           name: "Maryland Stadium Authority events",
@@ -1078,7 +1172,8 @@ var provider_markets_default = {
               coordinateSource: "Home Base existing mapped venue anchor",
               locationPrecision: "venue"
             }
-          ]
+          ],
+          classification: "stadium sports"
         },
         {
           name: "Orioles Camden Yards calendar",
@@ -1092,7 +1187,8 @@ var provider_markets_default = {
               coordinateSource: "Home Base existing mapped venue anchor",
               locationPrecision: "venue"
             }
-          ]
+          ],
+          classification: "baseball stadium"
         },
         {
           name: "Pier Six Pavilion calendar",
@@ -1106,7 +1202,8 @@ var provider_markets_default = {
               coordinateSource: "Home Base existing mapped venue anchor",
               locationPrecision: "venue"
             }
-          ]
+          ],
+          classification: "concert music"
         },
         {
           name: "Maryland State Fairgrounds calendar",
@@ -1120,7 +1217,10 @@ var provider_markets_default = {
               coordinateSource: "Home Base existing mapped venue anchor",
               locationPrecision: "venue"
             }
-          ]
+          ],
+          classification: "fairground festival",
+          detailPages: true,
+          maxDetails: 24
         },
         {
           name: "Baltimore City Recreation & Parks events",
@@ -1158,7 +1258,8 @@ var provider_markets_default = {
             lon: -76.60656778,
             locationPrecision: "district",
             coordinateSource: "https://en.wikipedia.org/wiki/Port_Covington"
-          }
+          },
+          classification: "community festival"
         },
         {
           name: "Visit Baltimore community and venue calendar",
@@ -1246,11 +1347,6 @@ var provider_markets_default = {
       sampleAreas: [],
       uberDestinations: [],
       publicCalendars: [
-        {
-          name: "Ticketmaster New York public calendar",
-          url: "https://www.ticketmaster.com/discover/new-york-city",
-          maxPages: 6
-        },
         {
           name: "NJPAC events",
           url: "https://www.njpac.org/events/",
@@ -1365,11 +1461,6 @@ var provider_markets_default = {
       sampleAreas: [],
       uberDestinations: [],
       publicCalendars: [
-        {
-          name: "Ticketmaster New York public calendar",
-          url: "https://www.ticketmaster.com/discover/new-york-city",
-          maxPages: 6
-        },
         {
           name: "MSG Entertainment calendar (MSG, Radio City, Beacon)",
           url: "https://www.msg.com/calendar",
@@ -1515,35 +1606,63 @@ var provider_markets_default = {
       timeZone: "Europe/London",
       sampleAreas: [],
       uberDestinations: [],
-      publicCalendars: [
+      publicCalendars: [],
+      sportsVenues: [
         {
-          name: "Ticketmaster London public calendar",
-          url: "https://www.ticketmaster.co.uk/discover/london",
-          maxPages: 6
+          name: "Emirates Stadium",
+          match: "emirates stadium",
+          city: "London",
+          lat: 51.5549,
+          lon: -0.1084
         },
         {
-          name: "Hamilton published performances",
-          url: "https://www.ticketmaster.co.uk/hamilton-tickets/artist/5218048?venueId=434783"
+          name: "Tottenham Hotspur Stadium",
+          match: "tottenham hotspur stadium",
+          city: "London",
+          lat: 51.6043,
+          lon: -0.0664
         },
         {
-          name: "Les Mis\xE9rables published performances",
-          url: "https://www.ticketmaster.co.uk/les-miserables-tickets/artist/803968?venueId=434617"
+          name: "Stamford Bridge",
+          match: "stamford bridge",
+          city: "London",
+          lat: 51.4817,
+          lon: -0.191
         },
         {
-          name: "The Book of Mormon published performances",
-          url: "https://www.ticketmaster.co.uk/the-book-of-mormon-london-tickets/artist/1747137"
+          name: "London Stadium",
+          match: "london stadium",
+          city: "London",
+          lat: 51.5386,
+          lon: -0.0166
         },
         {
-          name: "Beetlejuice published performances",
-          url: "https://www.ticketmaster.co.uk/beetlejuice-the-musical-tickets/artist/5376080"
+          name: "Craven Cottage",
+          match: "craven cottage",
+          city: "London",
+          lat: 51.4749,
+          lon: -0.2217
         },
         {
-          name: "Avenue Q published performances",
-          url: "https://www.ticketmaster.co.uk/avenue-q-tickets/artist/973986"
+          name: "Selhurst Park",
+          match: "selhurst park",
+          city: "London",
+          lat: 51.3983,
+          lon: -0.0855
         },
         {
-          name: "Sinatra published performances",
-          url: "https://www.ticketmaster.co.uk/sinatra-the-musical-tickets/artist/5674208"
+          name: "Gtech Community Stadium",
+          match: "gtech community stadium",
+          city: "Brentford",
+          lat: 51.4907,
+          lon: -0.2886
+        },
+        {
+          name: "Wembley Stadium",
+          match: "wembley stadium",
+          city: "London",
+          lat: 51.556,
+          lon: -0.2796
         }
       ]
     },
@@ -1706,19 +1825,14 @@ var provider_markets_default = {
           lon: -80.2389
         }
       ],
-      publicCalendars: [
-        {
-          name: "Ticketmaster Miami public listings",
-          url: "https://www.ticketmaster.com/discover/miami",
-          maxPages: 6
-        }
-      ]
+      publicCalendars: []
     }
   ]
 };
 
 // scripts/venue-calendars.mjs
 var import_homebase_public_data2 = __toESM(require_homebase_public_data(), 1);
+var VENUE_HORIZON_HOURS = 7 * 24;
 function registeredVenueCalendars(market) {
   return [...new Map(provider_markets_default.markets.filter((m) => distanceKm(market.center, m.center) <= m.radiusKm + market.radiusKm).flatMap((m) => m.publicCalendars || []).map((s) => [s.url, { ...s, kind: "venue" }])).values()];
 }
@@ -1742,9 +1856,9 @@ async function discoverVenueCalendars(market, request = fetch) {
   }
   return { sources: [], status: "unavailable" };
 }
-async function readVenueCalendar(source, market, now = Date.now(), request = fetch, lookup) {
-  const queue = [source.url], visited = /* @__PURE__ */ new Set(), feeds = /* @__PURE__ */ new Set(), events = [], context = [];
-  let pages = 0, parsed = false, failed = false, limited = false;
+async function readVenueCalendar(source, market, now = Date.now(), request = fetch, lookup, opts = {}) {
+  const queue = [source.url], visited = /* @__PURE__ */ new Set(), feeds = /* @__PURE__ */ new Set(), events = [], context = [], methods = /* @__PURE__ */ new Set();
+  let pages = 0, parsed = false, failed = false, limited = false, reason = "", firstBody = "", firstUrl = "", listingRecords = 0;
   for (let n = 0; queue.length && n < 4; n++) {
     const url = queue.shift(), key = url.toLowerCase();
     if (visited.has(key)) {
@@ -1755,12 +1869,39 @@ async function readVenueCalendar(source, market, now = Date.now(), request = fet
     try {
       const result = await schoolPage(url, request, lookup);
       pages++;
+      if (n === 0) {
+        firstBody = result.body;
+        firstUrl = result.url;
+      }
       const ics = /BEGIN:VCALENDAR/.test(result.body) ? schoolIcsEvents(result.body, market.timeZone) : null;
-      const records = ics?.events || [...structuredEvents(result.body), ...publishedVenueEvents(result.body, source)];
+      let records = ics?.events || [...structuredEvents(result.body), ...publishedVenueEvents(result.body, source)];
+      if (records.length) methods.add(ics ? "ics" : "json-ld/adapter");
+      if (!ics && !records.length && n === 0) {
+        const next = nextDataEvents(result.body);
+        if (next.length) {
+          records = next;
+          methods.add("next-data");
+        }
+        for (const feed of records.length ? [] : feedCandidates(result.body, result.url)) {
+          try {
+            const f = await schoolPage(feed.url, request, lookup), body = f.body;
+            const rows = feed.kind === "tribe" ? tribeEvents(body, source) : feed.kind === "localist" ? localistEvents(body) : /BEGIN:VCALENDAR/.test(body) ? schoolIcsEvents(body, market.timeZone).events : [];
+            if (rows.length) {
+              records = rows;
+              methods.add(feed.kind);
+              break;
+            }
+          } catch {
+          }
+        }
+      }
+      if (n === 0) listingRecords = records.length;
       parsed ||= !!ics || records.length > 0;
       limited ||= !!ics?.recurrenceLimited;
+      if (opts.recordCount != null) opts.recordCount += records.length;
       for (const row of records) {
-        const event = normalizePublicEvent(row, market, source, now);
+        const why = {}, event = normalizePublicEvent(row, market, source, now, opts.horizonHours || VENUE_HORIZON_HOURS, why);
+        if (!event && opts.why) opts.why[why.reason || "other"] = (opts.why[why.reason || "other"] || 0) + 1;
         if (event) events.push({ ...event, demandEligible: true, timePrecision: "minute", locationPrecision: row.location?.geo ? "venue" : source.venues?.find((v) => v.name.toLowerCase() === String(event.venue).toLowerCase())?.locationPrecision || "venue" });
         else if (/^\d{4}-\d{2}-\d{2}$/.test(row.startDate || "") && Date.parse(row.startDate + "T12:00:00Z") >= now - 864e5 && Date.parse(row.startDate + "T12:00:00Z") <= now + 7 * 864e5) context.push({ name: row.name, eventDate: row.startDate, id: source.url + ":" + row.name + ":" + row.startDate, demandEligible: false });
       }
@@ -1769,12 +1910,53 @@ async function readVenueCalendar(source, market, now = Date.now(), request = fet
         links.filter((u) => /\.ics(?:\?|$)|[?&]ical/i.test(u)).forEach((u) => feeds.add(u));
         queue.push(...links.filter((u) => /(?:\/events?\/[^/?]+|\.ics(?:\?|$)|[?&]ical)/i.test(u) && !visited.has(u.toLowerCase()) && !queue.includes(u)));
       }
-    } catch {
+    } catch (e) {
       failed = true;
+      if (!reason) reason = String(e?.message || "").slice(0, 60) || "network_error";
+    }
+  }
+  if (firstBody && !listingRecords && (source.followEvents || source.detailPages)) {
+    const origin = new URL(firstUrl).origin, max = Number(source.maxDetails) || 24, links = /* @__PURE__ */ new Set();
+    for (const m of firstBody.matchAll(/href=["']([^"'#]+)["']/gi)) {
+      let u;
+      try {
+        u = new URL(m[1].replace(/&amp;/g, "&"), firstUrl);
+      } catch {
+        continue;
+      }
+      if (u.origin !== origin || !/\/events?\/[^/?#]{3,}/i.test(u.pathname) || /\/(?:category|tag|page|feed|calendar|list|month|week|day)\b|ical|season-pass|gift-card/i.test(u.pathname + u.search)) continue;
+      u.hash = "";
+      links.add(u.href);
+      if (links.size >= max) break;
+    }
+    const list = [...links].filter((u) => !visited.has(u.toLowerCase()));
+    let next = 0, read = 0;
+    await Promise.all(Array.from({ length: Math.min(4, list.length) }, async () => {
+      while (next < list.length) {
+        const u = list[next++];
+        try {
+          const r = await schoolPage(u, request, lookup);
+          read++;
+          const rows = structuredEvents(r.body);
+          if (opts.recordCount != null) opts.recordCount += rows.length;
+          for (const row of rows) {
+            const why = {}, event = normalizePublicEvent({ url: u, ...row }, market, source, now, opts.horizonHours || VENUE_HORIZON_HOURS, why);
+            if (!event && opts.why) opts.why[why.reason || "other"] = (opts.why[why.reason || "other"] || 0) + 1;
+            if (event) events.push({ ...event, demandEligible: true, timePrecision: "minute", locationPrecision: row.location?.geo ? "venue" : "venue" });
+          }
+          if (rows.length) parsed = true;
+        } catch {
+        }
+      }
+    }));
+    if (read) {
+      pages += read;
+      methods.add("detail-pages");
     }
   }
   limited ||= queue.length > 0;
-  return { source: { name: source.name, url: source.url, status: !parsed ? "unavailable" : failed || limited ? "partial" : "active", pages, eventCount: events.length, truncated: limited, fetchedAt: parsed ? new Date(now).toISOString() : null }, discoveredSources: [...feeds].filter((url) => url !== source.url).map((url) => ({ ...source, url })), events: [...new Map(events.map((e) => [import_homebase_public_data2.default.eventIdentity(e), e])).values()], context };
+  if (!parsed && !reason) reason = "no_event_data";
+  return { source: { name: source.name, url: source.url, status: !parsed ? "unavailable" : failed || limited ? "partial" : "active", pages, eventCount: events.length, truncated: limited, fetchedAt: parsed ? new Date(now).toISOString() : null, ...methods.size ? { method: [...methods].join("+") } : {}, ...reason && !parsed ? { reason } : {} }, discoveredSources: [...feeds].filter((url) => url !== source.url).map((url) => ({ ...source, url })), events: [...new Map(events.map((e) => [import_homebase_public_data2.default.eventIdentity(e), e])).values()], context };
 }
 async function venueCalendars(market, sources, now = Date.now(), request = fetch, lookup) {
   const results = [];

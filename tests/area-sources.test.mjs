@@ -14,10 +14,10 @@ test('the live refresh publishes the area source status CSV',()=>{
 });
 test('status rows report each calendar and venue with its item count',async()=>{
   const {config,sites}=await loadConfig();
-  const snap={markets:[{id:'north-jersey',publicRecords:{sources:[{name:'Ticketmaster New York public calendar',status:'unavailable',eventCount:0}]},publicSports:{status:'active',fetchedAt:'2026-10-23T01:50:54Z',gamesSeen:18,events:[{lat:40.71179,lon:-73.72604}]}}]};
+  const snap={markets:[{id:'north-jersey',publicRecords:{sources:[{name:'NJPAC events',status:'unavailable',eventCount:0}]},publicSports:{status:'active',fetchedAt:'2026-10-23T01:50:54Z',gamesSeen:18,events:[{lat:40.71179,lon:-73.72604}]}}]};
   const rows=areaSourceRows(config,sites,snap).filter(r=>r.market_id==='north-jersey');
   assert.equal(rows.find(r=>r.source_name==='UBS Arena').items,1);
-  assert.equal(rows.find(r=>r.source_type==='event_calendar'&&/Ticketmaster/.test(r.source_name)).status,'unavailable');
+  assert.equal(rows.find(r=>r.source_type==='event_calendar'&&/NJPAC/.test(r.source_name)).status,'unavailable');
 });
 
 test('a failed calendar reports why it failed, and the status CSV carries the reason', async () => {
