@@ -29,7 +29,7 @@ test('spoken requests get no source list, app actions come back as actions, and 
  const r=await agent({userId:'u1',utterance:'take me there',channel:'voice',capabilities:['navigate']});
  assert.equal(r.execution,'action_required');assert.equal(r.actions[0].name,'navigate');assert.equal(r.actions[0].callId,'tu_9');
  assert.equal(f.calls.length,2);assert.equal(f.calls[1].body.messages.at(-1).role,'assistant','paused turn is sent back to continue');
- assert.equal(f.calls[0].body.max_tokens,700);
+ assert.equal(f.calls[0].body.max_tokens,450);
 });
 
 test('a Claude account with no credit gets a plain owner message, not a crash',async()=>{

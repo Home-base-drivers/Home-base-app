@@ -26,7 +26,7 @@ test('GPT Live asset is versioned and cached by the PWA',()=>{
  assert.match(sw,/home-base-v\d+/);
 });
 
-function voiceHarness(getUser,{mediaError=true,voiceMode='live',plan='plus',execute=async()=>({ok:false,confirmed:false,requested:true}),dispatch=async()=>({transport:{sdp:'answer'}})}={}){
+function voiceHarness(getUser,{mediaError=true,voiceMode='live',plan='pro',execute=async()=>({ok:false,confirmed:false,requested:true}),dispatch=async()=>({transport:{sdp:'answer'}})}={}){
  const calls=[],messages=[],sent=[];let peer;
  class Events{listeners=new Map();addEventListener(name,fn){if(!this.listeners.has(name))this.listeners.set(name,new Set());this.listeners.get(name).add(fn)}removeEventListener(name,fn){this.listeners.get(name)?.delete(fn)}emit(name,event={}){for(const fn of this.listeners.get(name)||[])fn(event)}}
  class Peer extends Events{constructor(){super();peer=this;this.connectionState='new';this.iceGatheringState='complete';this.channel=new Events();this.channel.readyState='open';this.channel.send=s=>sent.push(JSON.parse(s));this.channel.close=()=>{this.channel.readyState='closed'}}addTrack(){}createDataChannel(){return this.channel}async createOffer(){return{type:'offer',sdp:'valid-offer'}}async setLocalDescription(d){this.localDescription=d}async setRemoteDescription(){calls.push('answer applied')}close(){this.connectionState='closed'}}
@@ -73,9 +73,10 @@ test('Live tools share verified app actions and duplicate calls are not executed
  const event={type:'response.event',event:{type:'response.output_item.done',item:{type:'function_call',name:'homebase_action',call_id:'call-1',arguments:'{"action":"refresh_location"}'}}};h.event(event);h.event(event);await tick();
  assert.equal(executions,1);const tool=h.sent.find(e=>e.type==='response.item.create');assert.equal(JSON.parse(tool.item.output).confirmed,false);await h.stop();
 });
-test('hybrid voice (default) and free plans talk on the phone without opening GPT Live',async()=>{
+test('hybrid voice (default), Free and Plus talk on the phone without opening GPT Live',async()=>{
  const hybrid=voiceHarness(()=>({id:'driver'}),{voiceMode:'hybrid'});await hybrid.start();assert.deepEqual(hybrid.calls,['guest voice']);assert.match(hybrid.messages.at(-1),/let's talk/);
  const free=voiceHarness(()=>({id:'driver'}),{plan:'free'});await free.start();assert.deepEqual(free.calls,['guest voice']);
+ const plus=voiceHarness(()=>({id:'driver'}),{plan:'plus'});await plus.start();assert.deepEqual(plus.calls,['guest voice'],'GPT Live is Pro only');assert.doesNotMatch(plus.messages.at(-1),/let's talk/);
 });
 test('GPT Live reports its end to the meter, and a refused plan falls back to phone voice',async()=>{
  const h=voiceHarness(()=>({id:'driver'}),{mediaError:false,dispatch:async p=>p.operation==='live-session'?{transport:{sdp:'answer'},voiceSessionId:'11111111-2222-4333-8444-555555555555',maxSeconds:600}:{}});

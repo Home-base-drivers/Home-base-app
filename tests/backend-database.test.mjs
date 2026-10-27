@@ -16,7 +16,7 @@ before(async () => {
     create role authenticated;
     create role service_role bypassrls;
     create schema auth;
-    create table auth.users(id uuid primary key);
+    create table auth.users(id uuid primary key, email text, email_confirmed_at timestamptz, phone_confirmed_at timestamptz, is_anonymous boolean default false);
     create function auth.uid() returns uuid language sql stable as
       $$select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid$$;
     grant usage on schema auth to anon, authenticated, service_role;
@@ -323,11 +323,13 @@ test('GPT Live minutes: free is refused, paid is metered from server time and ca
  await assert.rejects(asAlice(["select public.set_ai_plan($1,'pro','self')",[alice]]),{code:'42501'},'drivers cannot give themselves a plan');
  await assert.rejects(asAlice(["insert into public.ai_entitlements(user_id,plan) values ($1,'pro')",[alice]]),{code:'42501'});
  await admin("select public.set_ai_plan($1,'plus','test')",[alice]);
+ await assert.rejects(asAlice(['select public.start_voice_session()']),/plan_required/,'GPT voices are Pro only');
+ await admin("select public.set_ai_plan($1,'pro','test')",[alice]);
  const s=await one('select public.start_voice_session()');
- assert.equal(s.plan,'plus');assert.equal(s.max_seconds,7200);
+ assert.equal(s.plan,'pro');assert.equal(s.max_seconds,15600);
  await admin("update public.voice_sessions set started_at=now()-interval '600 seconds', last_seen_at=now() where id=$1",[s.session_id]);
  const end=await one("select public.end_voice_session($1,'ended')",[s.session_id]);
- assert.ok(end.used_seconds>=600&&end.used_seconds<=602,String(end.used_seconds));assert.equal(end.remaining_seconds,7200-end.used_seconds);
+ assert.ok(end.used_seconds>=600&&end.used_seconds<=602,String(end.used_seconds));assert.equal(end.remaining_seconds,15600-end.used_seconds);
  // A crashed phone stops counting 45 s after its last heartbeat.
  const s2=await one('select public.start_voice_session()');
  await admin("update public.voice_sessions set started_at=now()-interval '3000 seconds', last_seen_at=now()-interval '2900 seconds' where id=$1",[s2.session_id]);
@@ -336,9 +338,53 @@ test('GPT Live minutes: free is refused, paid is metered from server time and ca
  const failed=await one('select public.start_voice_session()');
  const after=await one("select public.end_voice_session($1,'failed')",[failed.session_id]);
  assert.equal(after.used_seconds,a.used_seconds,'a session that never connected is free');
- await admin("update public.voice_sessions set billed_seconds=7200 where user_id=$1 and end_reason='ended'",[alice]);
+ await admin("update public.voice_sessions set billed_seconds=15600 where user_id=$1 and end_reason='ended'",[alice]);
  await assert.rejects(asAlice(['select public.start_voice_session()']),/voice_minutes_used_up/);
- await admin("select public.set_ai_plan($1,'plus','test',null,6000,(date_trunc('month', now() at time zone 'America/New_York'))::date)",[alice]);
+ await admin("select public.set_ai_plan($1,'pro','test',null,6000,(date_trunc('month', now() at time zone 'America/New_York'))::date)",[alice]);
  const s3=await one('select public.start_voice_session()');assert.ok(s3.max_seconds>=5800&&s3.max_seconds<=6000,String(s3.max_seconds));
  assert.equal((await as('authenticated',bob,()=>db.query('select * from public.voice_sessions'))).rows.length,0,'sessions are private');
+});
+
+test('Claude message allowances: finite per plan, counted by the server, and no way to reset them without paying',async()=>{
+ const admin=(q,p=[])=>as('service_role',null,()=>db.query(q,p)),root=(q,p=[])=>db.query(q,p);
+ const claim=async(user,op='agent',image=false)=>(await admin('select public.claim_ai_usage($1,$2,$3) r',[user,op,image])).rows[0].r;
+ const carol='10000000-0000-4000-8000-000000000003',carol2='10000000-0000-4000-8000-000000000004',dave='10000000-0000-4000-8000-000000000005';
+ await root("insert into auth.users(id,email,email_confirmed_at) values ($1,'Carol.Driver+hb@gmail.com',now()),($2,'caroldriver@googlemail.com',now()),($3,'dave@example.com',null)",[carol,carol2,dave]);
+ const limits=(await admin('select plan,daily_messages,monthly_messages,daily_images,included_voice_seconds from public.ai_plan_limits order by plan')).rows;
+ for(const l of limits){assert.ok(l.daily_messages>0&&l.daily_messages<=l.monthly_messages,l.plan+' has a finite daily limit');assert.ok(l.monthly_messages<20000);}
+ assert.deepEqual(limits.filter(l=>l.included_voice_seconds>0).map(l=>l.plan),['pro'],'GPT voice minutes are Pro only');
+ await assert.rejects(admin("update public.ai_plan_limits set daily_messages=999999 where plan='pro'"),/ai_plan_limits_finite/,'never unlimited');
+ // Unconfirmed sign-ups get no Claude messages.
+ await assert.rejects(claim(dave),/email_unconfirmed/);
+ // Drivers cannot record, erase, or give back their own usage.
+ await assert.rejects(as('authenticated',carol,()=>db.query("select public.claim_ai_usage($1,'agent',false)",[carol])),{code:'42501'});
+ const first=await claim(carol);assert.equal(first.plan,'free');assert.equal(first.web_searches,1);
+ await assert.rejects(as('authenticated',carol,()=>db.query('select public.release_ai_usage($1,$2)',[first.usage_id,carol])),{code:'42501'});
+ await assert.rejects(as('authenticated',carol,()=>db.query('delete from public.ai_usage')),{code:'42501'});
+ await assert.rejects(as('authenticated',carol,()=>db.query('update public.ai_usage set released_at=now()')),{code:'42501'});
+ assert.equal((await as('authenticated',carol,()=>db.query('select * from public.ai_usage'))).rows.length,1,'drivers can see their own usage');
+ // Free daily limit (10), shared by a second account on the same Gmail address (dots and +tags ignored).
+ for(let i=1;i<9;i++)await claim(carol);
+ const last=await claim(carol2);assert.equal(last.messages_left_today,0);
+ await assert.rejects(claim(carol2),/daily_messages_used_up/,'a second account on the same email shares the limit');
+ // Deleting the account (and its chat history) does not reset usage.
+ await root('delete from auth.users where id=$1',[carol]);
+ await root("insert into auth.users(id,email,email_confirmed_at) values ($1,'carol.driver@gmail.com',now())",[carol]);
+ await assert.rejects(claim(carol),/daily_messages_used_up/);
+ // A refused provider request can be given back once, by the server only.
+ assert.equal((await admin('select public.release_ai_usage($1,$2) r',[first.usage_id,carol])).rows[0].r,true);
+ assert.equal((await admin('select public.release_ai_usage($1,$2) r',[first.usage_id,carol])).rows[0].r,false,'only once');
+ const back=await claim(carol);assert.equal(back.messages_left_today,0);
+ // Screenshots have their own daily limit on paid plans.
+ await admin("select public.set_ai_plan($1,'plus','test')",[dave]);await root('update auth.users set email_confirmed_at=now() where id=$1',[dave]);
+ for(let i=0;i<10;i++)await claim(dave,'agent',true);
+ await assert.rejects(claim(dave,'agent',true),/daily_images_used_up/);
+ const text=await claim(dave);assert.equal(text.plan,'plus');assert.equal(text.web_searches,2);
+ // The Free pool caps total Free usage no matter how many accounts exist.
+ await admin("update public.ai_plan_limits set pool_daily_messages=(select count(*) from public.ai_usage where plan='free' and released_at is null) where plan='free'");
+ const eve='10000000-0000-4000-8000-000000000006';await root("insert into auth.users(id,email,email_confirmed_at) values ($1,'eve@example.com',now())",[eve]);
+ await assert.rejects(claim(eve),/free_pool_used_up/);
+ await admin("update public.ai_plan_limits set pool_daily_messages=1500 where plan='free'");
+ const allowance=(await as('authenticated',dave,()=>db.query('select public.my_ai_allowance() a'))).rows[0].a;
+ assert.equal(allowance.plan,'plus');assert.equal(allowance.gpt_voice,false);assert.equal(allowance.daily_messages,50);assert.equal(allowance.messages_today,11);assert.equal(allowance.images_today,10);
 });

@@ -75,6 +75,24 @@ unless `ANTHROPIC_WORKSPACE_ID` (the Console workspace id, `wrkspc_…`) is also
 inside a workspace needs nothing extra. Until this was found (Oct 27) every Claude request failed
 and the app fell back to canned built-in answers.
 
-**Who gets Claude (v301).** Every signed-in driver talks to Claude in chat by default. Free drivers
-have `AI_FREE_DAILY_MESSAGES` (default 25) messages per 24 hours; Plus/Pro are unlimited. GPT voice,
-translation and live minutes stay Plus/Pro. The phone-only assistant is the offline fallback.
+**Plans and usage limits (v302).** We pay per message, so no plan is unlimited and cost can only
+grow when payment grows. Limits live in `ai_plan_limits` (edit there; a check constraint blocks
+unlimited values) and are enforced by the dispatch function before every Claude call:
+
+| Plan | Price | Claude messages / day | / month | AI screenshots / day | Web lookups / message | Voice |
+|---|---|---:|---:|---:|---:|---|
+| Free | $0 | 10 | 150 | 2 | 1 | phone voice, Claude answers |
+| Plus | $19.99 | 50 | 800 | 10 | 2 | phone voice, Claude answers |
+| Pro | $39.99 | 120 | 1,200 | 30 | 3 | GPT voices + 260 GPT Live min |
+
+- All Free accounts together are capped at `pool_daily_messages` (1,500) a day.
+- Everyday answers use `CLAUDE_CHAT_MODEL` (default `claude-haiku-5-5`); only photos/screenshots use
+  `CLAUDE_VISION_MODEL` (default `claude-sonnet-5-5`); memory and command understanding use
+  `CLAUDE_FAST_MODEL`. `CLAUDE_MODEL` is no longer read. Each message sends at most 12 earlier turns
+  and replies are capped (1,024 tokens typed, 450 spoken).
+- Usage is an append-only server ledger (`ai_usage`, service role only) keyed by a hash of the
+  normalized email (Gmail dots and +tags ignored), so deleting chat history, deleting and recreating
+  the account, or a second account on the same address does not reset it. Parallel requests are
+  serialized. Unconfirmed emails get no Claude messages. A message is given back only when the
+  provider refused the request (nothing billed); timeouts still count.
+- Translation and Pro GPT voice replies count as messages. Minute packs are Pro only.

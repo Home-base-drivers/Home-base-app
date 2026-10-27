@@ -1,16 +1,25 @@
 import {failureDetails} from './errors.mjs';
 // Shared foreground dispatch endpoint. Auth is checked before reading private driver data.
-export function makeDispatchHandler({FREE_DAILY_MESSAGES=25,engine,authenticate,loadState,loadTrips,parseLanguage,translateLanguage,synthesizeVoice,createLiveSession,agent,entitlements=null,reportFailure=details=>console.error(JSON.stringify({event:'homebase_dispatch_failure',...details}))}) {
+export function makeDispatchHandler({engine,authenticate,loadState,loadTrips,parseLanguage,translateLanguage,synthesizeVoice,createLiveSession,agent,entitlements=null,reportFailure=details=>console.error(JSON.stringify({event:'homebase_dispatch_failure',...details}))}) {
  const headers={'Content-Type':'application/json','Access-Control-Allow-Origin':'https://home-base-drivers.github.io','Access-Control-Allow-Headers':'authorization,apikey,content-type,x-client-info','Access-Control-Allow-Methods':'POST,OPTIONS'};
  const response=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{...headers,'Cache-Control':'no-store'}});
  const failure=(error,operation)=>{const details=failureDetails(error),requestId=globalThis.crypto?.randomUUID?.()||'unavailable';reportFailure({operation,request_id:requestId,...details});const status=PAYWALL.has(details.code)?402:['ai_not_configured','ai_no_credit'].includes(details.code)?503:details.code==='ai_timeout'?504:details.code==='ai_provider_error'?502:400;return response({error:error?.message||'Home Base AI is unavailable.',...details,request_id:requestId},status)};
- // Plans are enforced here, not on the phone. Free drivers use the built-in AI;
- // GPT answers, GPT voice and GPT Live minutes need Plus or Pro.
- const PAYWALL=new Set(['plan_required','voice_minutes_used_up','daily_messages_used_up']);
- const PAID_OPERATIONS=new Set(['agent','agent-result','chat','translate','voice','live-session']);
- const planError=error=>{const m=String(error?.message||'');const code=[...PAYWALL].find(c=>m.includes(c));if(!code)return error;
-  if(code==='daily_messages_used_up')return Object.assign(Error('Today\'s free Home Base AI messages are used. Home Base Plus has unlimited conversation; the built-in assistant still answers.'),{code});
-  return Object.assign(Error(code==='plan_required'?'Home Base AI answers and live voice are part of Home Base Plus. The built-in AI is free.':'This month\'s GPT Live minutes are used. Voice continues with the built-in AI, or add minutes.'),{code});};
+ // Plans and usage are enforced here, not on the phone. Every plan gets Claude
+ // answers up to finite daily/monthly limits recorded by the server (we pay per
+ // message); GPT voices and GPT Live are Pro only.
+ const PAYWALL=new Set(['plan_required','voice_minutes_used_up','daily_messages_used_up','monthly_messages_used_up','daily_images_used_up','free_pool_used_up','email_unconfirmed']);
+ const METERED=new Set(['agent','agent-result','chat','translate','voice']);
+ const PAYWALL_TEXT={
+  plan_required:'GPT voices and GPT Live are part of Home Base Pro. Home Base AI answers keep working with your phone\'s voice.',
+  voice_minutes_used_up:'This month\'s GPT Live minutes are used. Voice continues with your phone\'s voice, or add minutes.',
+  daily_messages_used_up:'Today\'s Home Base AI messages on your plan are used. They reset at midnight; a higher plan includes more. Offline answers still work.',
+  monthly_messages_used_up:'This month\'s Home Base AI messages on your plan are used. A higher plan includes more. Offline answers still work.',
+  daily_images_used_up:'Today\'s screenshot readings on your plan are used. The phone can still read screenshots offline.',
+  free_pool_used_up:'Free Home Base AI is at today\'s limit for everyone. Plus and Pro keep their own allowance. Offline answers still work.',
+  email_unconfirmed:'Confirm your email address to use Home Base AI. Check your inbox for the sign-in link.'};
+ const planError=error=>{const m=String(error?.message||'')+' '+String(error?.code||'');const code=[...PAYWALL].find(c=>m.includes(c));if(!code)return error;return Object.assign(Error(PAYWALL_TEXT[code]),{code});};
+ // The provider refused the request (nothing billed): give the message back.
+ const refusedByProvider=e=>['ai_not_configured','ai_no_credit'].includes(e?.code)||[400,401,403,404,413,429,529].includes(Number(e?.provider_status));
  return async request=>{
   if(request.method==='OPTIONS')return new Response(null,{status:204,headers});
   if(request.method!=='POST')return response({error:'POST required'},405);
@@ -26,16 +35,13 @@ export function makeDispatchHandler({FREE_DAILY_MESSAGES=25,engine,authenticate,
     if(!entitlements)return response({open:false});const id=String(payload.voiceSessionId||'');if(!/^[0-9a-f-]{36}$/i.test(id))return response({error:'Unknown voice session'},400);
     return response(payload.operation==='live-end'?await entitlements.end(id,['ended','idle','cap','failed','background'].includes(payload.reason)?payload.reason:'ended'):await entitlements.heartbeat(id));
    }
-   if(entitlements&&PAID_OPERATIONS.has(payload.operation)&&payload.operation!=='live-session'){
-    const allowance=await entitlements.allowance();
-    if(!['plus','pro'].includes(allowance?.plan)){
-     // Free drivers still talk to Claude in chat, up to a daily number of messages;
-     // GPT voice, translation and live minutes stay with Plus/Pro.
-     const conversational=['agent','agent-result','chat'].includes(payload.operation);
-     if(!conversational||!entitlements.freeMessagesUsed)throw planError(Error('plan_required'));
-     if(payload.operation!=='agent-result'&&await entitlements.freeMessagesUsed(user.id)>=FREE_DAILY_MESSAGES)throw planError(Error('daily_messages_used_up'));
-    }
+   let usage=null;
+   if(entitlements&&METERED.has(payload.operation)){
+    if(payload.operation==='voice'){const allowance=await entitlements.allowance();if(allowance?.plan!=='pro')throw planError(Error('plan_required'));}
+    const image=['agent','chat'].includes(payload.operation)&&Array.isArray(payload.attachments)&&payload.attachments.length>0;
+    try{usage=await entitlements.claim(user.id,payload.operation,image);}catch(e){throw planError(e);}
    }
+   const metered=async fn=>{try{return await fn();}catch(e){if(usage?.usage_id&&refusedByProvider(e))await entitlements.release(usage.usage_id,user.id).catch(()=>{});throw e;}};
    if(payload.operation==='live-session'){
     if(!createLiveSession)return response({configured:false,code:'live_unavailable',error:'Live voice uses your phone\'s voice with Home Base AI answers.'},503);
     // Open the metered session first; it refuses free plans and used-up months.
@@ -47,14 +53,14 @@ export function makeDispatchHandler({FREE_DAILY_MESSAGES=25,engine,authenticate,
    }
    if(payload.operation==='voice'){
     if(!synthesizeVoice)return response({configured:false,provider:'not_configured'});
-    const result=await synthesizeVoice({text:payload.text,locale:payload.locale,voice:payload.voice,style:payload.style});
-    if(!result.configured)return response(result);
+    const result=await metered(()=>synthesizeVoice({text:payload.text,locale:payload.locale,voice:payload.voice,style:payload.style}));
+    if(!result.configured){if(usage?.usage_id)await entitlements.release(usage.usage_id,user.id).catch(()=>{});return response(result);}
     // Supabase functions.invoke only preserves binary responses as Blob for application/octet-stream.
     // Keep the actual media type in a dedicated header so the browser can still identify the audio.
     return new Response(result.audio,{status:200,headers:{...headers,'Content-Type':'application/octet-stream','Cache-Control':'no-store','X-HomeBase-Voice':'ai','X-HomeBase-Audio-Type':result.contentType||'audio/mpeg'}});
    }
-   if(payload.operation==='translate'){if(!translateLanguage)return response({translated:false,provider:'not_configured'});return response(await translateLanguage(payload.text,payload.locale));}
-   if(payload.operation==='agent'||payload.operation==='agent-result'||payload.operation==='chat'){if(agent){try{return response(await agent({userId:user.id,utterance:typeof payload.utterance==='string'?payload.utterance:'',context:payload.context||{},conversationId:String(payload.conversationId||'default').slice(0,120),capabilities:payload.capabilities||[],actionResults:payload.actionResults||[],channel:payload.channel==='chat'?'chat':'voice',attachments:payload.attachments||[]}));}catch(e){return failure(e,payload.operation);}}const language=parseLanguage?await parseLanguage(payload.utterance,payload.locale,payload.context):{command:engine.parseCommand(payload.utterance),provider:'not_configured',execution:'advisory'};return response(language);}
+   if(payload.operation==='translate'){if(!translateLanguage)return response({translated:false,provider:'not_configured'});return response(await metered(()=>translateLanguage(payload.text,payload.locale)));}
+   if(payload.operation==='agent'||payload.operation==='agent-result'||payload.operation==='chat'){if(agent){try{return response(await metered(()=>agent({webSearches:usage?usage.web_searches:undefined,userId:user.id,utterance:typeof payload.utterance==='string'?payload.utterance:'',context:payload.context||{},conversationId:String(payload.conversationId||'default').slice(0,120),capabilities:payload.capabilities||[],actionResults:payload.actionResults||[],channel:payload.channel==='chat'?'chat':'voice',attachments:payload.attachments||[]})));}catch(e){return failure(e,payload.operation);}}const language=parseLanguage?await metered(()=>parseLanguage(payload.utterance,payload.locale,payload.context)):{command:engine.parseCommand(payload.utterance),provider:'not_configured',execution:'advisory'};return response(language);}
    const stored=await loadState(user.id),trips=await loadTrips(user.id);
    const state=engine.DriverState.create({...stored,...payload.state});
    // Request context is driver-reported; no client can create official capability support.

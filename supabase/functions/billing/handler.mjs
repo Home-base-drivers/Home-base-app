@@ -22,9 +22,9 @@ export const WEBHOOK_URL = 'https://nixihmurdtfcbffgvpij.supabase.co/functions/v
 export const LEGAL_URL = APP_URL + 'legal.html';
 export const WEBHOOK_EVENTS = ['checkout.session.completed', 'customer.subscription.created', 'customer.subscription.updated', 'customer.subscription.deleted'];
 export const CATALOG = {
-  plus: { product: 'homebase_plus', name: 'Home Base Plus', description: 'GPT answers by text or voice and 120 GPT Live minutes a month.', amount: 1999, lookup: 'homebase_plus_monthly', recurring: true },
-  pro: { product: 'homebase_pro', name: 'Home Base Pro', description: 'Everything in Plus and 260 GPT Live minutes a month.', amount: 3999, lookup: 'homebase_pro_monthly', recurring: true },
-  minutes: { product: 'homebase_minutes_100', name: 'Home Base 100 GPT Live minutes', description: '100 extra GPT Live minutes for the current month (Plus and Pro).', amount: 1499, lookup: 'homebase_minutes_100', recurring: false }
+  plus: { product: 'homebase_plus', name: 'Home Base Plus', description: 'More Home Base AI answers each day and month, more screenshot readings and web lookups. Answers spoken in your phone\'s voice.', amount: 1999, lookup: 'homebase_plus_monthly', recurring: true },
+  pro: { product: 'homebase_pro', name: 'Home Base Pro', description: 'The highest Home Base AI limits, GPT voices and 260 GPT Live minutes a month.', amount: 3999, lookup: 'homebase_pro_monthly', recurring: true },
+  minutes: { product: 'homebase_minutes_100', name: 'Home Base 100 GPT Live minutes', description: '100 extra GPT Live minutes for the current month (Pro).', amount: 1499, lookup: 'homebase_minutes_100', recurring: false }
 };
 const setupCache = new Map(); // per secret-key mode, per warm instance
 
@@ -237,7 +237,8 @@ export function billingHandler(createClient, env, fetchImpl = fetch) {
         const kind = ['plus', 'pro', 'minutes'].includes(body.plan) ? body.plan : null;
         if (PROTECTED.includes((await entitlement(db, user.id))?.source)) return reply(409, { error: 'Your account already has Pro access as an owner. Use a separate account to test purchases.', code: 'owner_plan' });
         if (!kind || !prices()[kind]) return reply(400, { error: 'Choose Plus, Pro or extra minutes.' });
-        if (kind === 'minutes' && !['plus', 'pro'].includes(customer?.plan)) return reply(400, { error: 'Extra minutes are for Plus and Pro members.' });
+        // GPT Live is Pro only, so minute packs are too (a Plus driver could not use them).
+        if (kind === 'minutes' && customer?.plan !== 'pro') return reply(400, { error: 'Extra GPT Live minutes are for Pro members.' });
         if (kind !== 'minutes' && ['plus', 'pro'].includes(customer?.plan) && ['active', 'trialing', 'past_due'].includes(customer?.subscription_status))
           return reply(409, { error: 'You already have a subscription. Use Manage subscription to change plans.', code: 'already_subscribed' });
         let customerId = customer?.stripe_customer_id;

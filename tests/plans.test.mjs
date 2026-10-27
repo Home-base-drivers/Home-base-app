@@ -6,7 +6,8 @@ import {makeDispatchHandler} from '../supabase/functions/dispatch/handler.mjs';
 function setup(plan,{liveFails=false,used=false}={}){
  const calls=[];
  const entitlements={
-  allowance:async()=>({plan,remaining_seconds:plan==='free'?0:7200}),
+  allowance:async()=>({plan,remaining_seconds:plan==='pro'?15600:0}),
+  claim:async(id,op)=>{calls.push('claim:'+op);return{usage_id:1,plan,web_searches:1};},release:async()=>{calls.push('release');},
   start:async()=>{calls.push('start');if(plan==='free')throw Error('plan_required');if(used)throw Error('voice_minutes_used_up');return{session_id:'11111111-2222-4333-8444-555555555555',max_seconds:7200,plan,remaining_seconds:7200};},
   heartbeat:async id=>{calls.push('heartbeat:'+id);return{open:true,seconds_left:7000};},
   end:async(id,reason)=>{calls.push('end:'+reason);return{plan,used_seconds:60};}
@@ -18,12 +19,12 @@ function setup(plan,{liveFails=false,used=false}={}){
  return{call,calls};
 }
 
-test('free drivers get a clear Plus message for GPT answers; paid drivers get GPT',async()=>{
+test('every plan gets Home Base AI (Claude) answers, counted; GPT voices are Pro only',async()=>{
  const free=setup('free');const r=await free.call({operation:'agent',utterance:'hi',channel:'chat'});
- assert.equal(r.status,402);const body=await r.json();assert.equal(body.code,'plan_required');assert.match(body.error,/built-in AI is free/);
- assert.equal((await free.call({operation:'voice',text:'hi'})).status,402,'GPT voice is paid too');
- const plus=setup('plus');const ok=await plus.call({operation:'agent',utterance:'hi',channel:'chat'});
- assert.equal(ok.status,200);assert.equal((await ok.json()).answer,'GPT answer');
+ assert.equal(r.status,200);assert.equal((await r.json()).answer,'GPT answer');assert.deepEqual(free.calls,['claim:agent']);
+ const v=await free.call({operation:'voice',text:'hi'});assert.equal(v.status,402);const body=await v.json();assert.equal(body.code,'plan_required');assert.match(body.error,/Pro/);
+ assert.equal((await setup('plus').call({operation:'voice',text:'hi'})).status,402,'GPT voices are Pro only');
+ const pro=setup('pro');assert.equal((await pro.call({operation:'voice',text:'hi'})).status,200);assert.deepEqual(pro.calls,['claim:voice','release'],'no GPT voice configured: the message is given back');
 });
 
 test('GPT Live opens a metered session, refuses free/used-up, and never bills a failed start',async()=>{
