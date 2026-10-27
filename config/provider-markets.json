@@ -431,7 +431,8 @@
             "lon": -76.60656778,
             "locationPrecision": "district",
             "coordinateSource": "https://en.wikipedia.org/wiki/Port_Covington"
-          }
+          },
+          "classification": "community festival"
         },
         {
           "name": "Visit Baltimore community and venue calendar",
