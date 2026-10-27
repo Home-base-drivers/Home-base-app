@@ -53,6 +53,24 @@ Every published-bell school is placed on the map even when no mapped school poin
 matches it. Routine schools without bell times stay faint. `tests/scheduled-heat.test.mjs`
 enforces this.
 
+## Conversational AI contract
+
+Home Base AI is Claude (`supabase/functions/dispatch/agent.mjs`), not the phone's keyword
+assistant. Chat and voice go to Claude by default for every signed-in driver; the built-in
+assistant answers only offline, when Claude is unreachable, or when the driver picks Offline.
+Each request carries the driver's learned memory (`homebase_agent_memory`, as short lines),
+the measured driver profile (`HomeBaseInternalAI.driverProfile`: usual days and start hours,
+platforms, pay per hour, goal, what they ask about) and live safety context. After each answer
+a fast model updates memory and can retire keys the driver asks to forget. Never reintroduce a
+canned menu for open questions. `tests/conversational-ai.test.mjs` enforces this.
+
+## Spoken safety alerts
+
+`dist/homebase-safety.js` speaks each new NWS alert for the area (Moderate+ or safety) and each
+nearby crash, fire, closure or lane-blocking incident (Maryland CHART via live signals) once.
+Drivers mute it with the speaker button on the conditions card or by saying "mute safety
+alerts". Incidents older than 30 minutes are never announced. `tests/safety-alerts.test.mjs`.
+
 ## Saved calendars contract
 
 Public calendars are read by the daily calendar check and saved per calendar on the

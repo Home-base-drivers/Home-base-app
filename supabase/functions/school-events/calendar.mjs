@@ -124,6 +124,15 @@ var require_homebase_public_data = __commonJS({
         const dates = usable.map((f) => Date.parse(f.fetchedAt || payload.generatedAt)).filter(Number.isFinite);
         return { status: !markets.length ? "unsupported" : !usable.length ? "unavailable" : usable.some((f) => (f.calendarStatus || f.status) === "stale") ? "stale" : usable.some((f) => (f.calendarStatus || f.status) === "partial" || f.calendarTruncated || f.truncated) ? "partial" : "active", fetchedAt: dates.length ? new Date(Math.min(...dates)).toISOString() : null, sourceCount: sources.filter((s) => s.pages > 0).length, failedSources: sources.filter((s) => s.status === "unavailable").length, ticketmasterConfigured: markets.some((m) => m.ticketmaster?.status && !["not_configured", "not_supported"].includes(m.ticketmaster.status)) };
       }
+      function incidentsForLocation(payload, lat, lon, now = Date.now()) {
+        const rows = /* @__PURE__ */ new Map();
+        for (const market of matchingMarkets(payload, lat, lon)) {
+          const feed = market.trafficIncidents;
+          if (!feed || !["active", "stale"].includes(feed.status) || now - Date.parse(feed.fetchedAt || "") > 30 * 6e4) continue;
+          for (const i of feed.incidents || []) if (i && i.id && Number.isFinite(i.lat) && Number.isFinite(i.lon)) rows.set(i.id, { ...i, fetchedAt: feed.fetchedAt });
+        }
+        return [...rows.values()];
+      }
       function alertsForLocation(payload, lat, lon, now = Date.now()) {
         const rows = /* @__PURE__ */ new Map();
         for (const market of matchingMarkets(payload, lat, lon)) {
@@ -255,7 +264,7 @@ var require_homebase_public_data = __commonJS({
           return null;
         }
       }
-      return { LIVE_SIGNALS_URL, reportActivity, activeMarketIds, newestSnapshot, loadSnapshot, alertsForLocation, bellTimesForLocation, bellMatch, matchingMarkets, eventsForLocation, placesForLocation, calendarCoverage, isTicketAddon, eventIdentity, consolidateEvents, sameEvent };
+      return { LIVE_SIGNALS_URL, reportActivity, activeMarketIds, newestSnapshot, loadSnapshot, alertsForLocation, incidentsForLocation, bellTimesForLocation, bellMatch, matchingMarkets, eventsForLocation, placesForLocation, calendarCoverage, isTicketAddon, eventIdentity, consolidateEvents, sameEvent };
     });
   }
 });

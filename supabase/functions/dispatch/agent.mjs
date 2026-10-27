@@ -23,6 +23,16 @@ The learning loop records recommendations, whether followed, actual earnings, ti
 Driver privacy: exact home location is sensitive; minimize storage and never expose it in shared analytics.
 `;
 
+// Driver memory as short readable lines (newest first), so it stays useful as it grows.
+export function memoryLines(memories,limit=6000){
+ const lines=[];let size=0;
+ for(const m of memories||[]){const c=m?.content,summary=typeof c==='string'?c:c?.summary||JSON.stringify(c??'');if(!summary)continue;
+  const line='- ['+(m.memory_type||m.type||'fact')+'] '+(m.memory_key||m.key||'')+': '+String(summary).replace(/\s+/g,' ').slice(0,320)+(m.confidence!=null?' (confidence '+Number(m.confidence).toFixed(2)+')':'');
+  if(size+line.length>limit)break;lines.push(line);size+=line.length+1;}
+ return lines.join('\n')||'(nothing learned yet)';
+}
+const LEARN_SYSTEM='You maintain a rideshare driver\'s long-term profile for the Home Base assistant. From the latest exchange, return only durable driver-specific information that should improve future answers: explicit preferences (areas, platforms, trip types, hours, voice/alert style), goals, constraints, home-time habits, vehicle facts, repeated lessons and strategies that worked or failed. Reuse an existing key when the new information updates it. When the driver asks to forget something or says a remembered fact is wrong, list that key in forget. Never save transient weather or traffic, one-time locations, secrets, passwords, exact home address, health data, or guesses. Return empty lists when nothing qualifies.';
+const LEARN_SCHEMA={type:'object',required:['memories','forget'],properties:{memories:{type:'array',maxItems:5,items:{type:'object',required:['key','type','summary','confidence'],properties:{key:{type:'string'},type:{type:'string',enum:['preference','goal','constraint','lesson','fact','strategy']},summary:{type:'string'},confidence:{type:'number'}}}},forget:{type:'array',maxItems:5,items:{type:'string'}}}};
 function safe(value,limit=14000){try{return JSON.stringify(value??{}).slice(0,limit)}catch{return'{}'}}
 function outputText(payload){return(payload?.output||[]).flatMap(x=>x.content||[]).filter(x=>x.type==='output_text').map(x=>x.text||'').join('\n').trim()}
 function actionCalls(payload){return(payload?.output||[]).filter(x=>x?.type==='function_call').flatMap(x=>{try{return[{callId:x.call_id||x.id,name:x.name,arguments:JSON.parse(x.arguments||'{}')}]}catch{return[]}})}
@@ -42,7 +52,7 @@ function cleanAttachments(attachments){
 }
 function errorWithCode(message,code){return Object.assign(new Error(message),{code})}
 
-export function makeHomeBaseAgent({provider='openai',apiKey,model='gpt-6-luna',fastModel,fetchImpl=fetch,loadMemory,loadTurns,saveTurn,upsertMemories,timeoutMs=60000}={}){
+export function makeHomeBaseAgent({provider='openai',apiKey,model='gpt-6-luna',fastModel,fetchImpl=fetch,loadMemory,loadTurns,saveTurn,upsertMemories,forgetMemories=async()=>{},timeoutMs=60000}={}){
  return async({userId,utterance,context={},conversationId='default',capabilities=[],actionResults=[],channel='voice',attachments=[]}={})=>{
   if(!apiKey)throw errorWithCode('Home Base AI is not configured.','ai_not_configured');
   if(!userId)throw errorWithCode('Sign in first.','sign_in');
@@ -56,8 +66,11 @@ export function makeHomeBaseAgent({provider='openai',apiKey,model='gpt-6-luna',f
 
 ${PROJECT_KNOWLEDGE}
 
-CURRENT DRIVER MEMORY:
-${safe(memories,12000)}
+WHAT YOU HAVE LEARNED ABOUT THIS DRIVER (from past conversations; newest first):
+${memoryLines(memories)}
+
+HOW THIS DRIVER USES HOME BASE (measured on the phone):
+${safe(context?.driverProfile||{},3000)}
 
 CURRENT HOME BASE STATE:
 ${safe(context,14000)}
@@ -73,6 +86,9 @@ Behavior:
 - Do not fabricate demand, surge, earnings, events, traffic, weather, airport conditions, or platform capabilities.
 - For general knowledge questions, answer normally. Driving advice is optional unless relevant.
 - Learn from outcomes and explicit preferences, but do not treat one observation as a permanent truth. Prefer repeated evidence.
+- Personalize. Use what you have learned and how this driver works (usual hours, areas, platforms, goals, pay rules) without making them repeat it. If they ask what you know about them, tell them plainly and say they can ask you to forget anything.
+- Be predictive. When it helps, add one short forward-looking point the driver did not ask for but will need soon, based on their usual pattern and the live data (for example rain starting near their usual start time, an event letting out near their usual area, their goal pace). Do not invent anything to do this.
+- Safety first: if CURRENT HOME BASE STATE shows an active weather alert or a nearby crash, closure or heavy traffic, mention it when relevant to where they are going.
 - Never self-modify code or security rules. Learning means updating driver memory and future recommendations.
 ${typed?'- This message was TYPED in the Home Base chat screen. Reply like a capable assistant: complete and well organized, using short Markdown (bold, bullet lists, numbered steps, small tables) when it helps. The driver is not reading while moving.':'- This message was SPOKEN. Your reply will be read aloud: no Markdown, no lists, no links or URLs, no emoji. If the driver is moving, lead with the decision in two or three short sentences; give more only when parked or asked.'}
 - Sound like a capable human dispatcher, not a radio parody.`;
@@ -95,10 +111,11 @@ ${typed?'- This message was TYPED in the Home Base chat screen. Reply like a cap
    await saveTurn(userId,conversationId,'user',savedUtterance,context);
    await saveTurn(userId,conversationId,'assistant',answer,{channel});
    try{
-    const learned=await claudeJson({apiKey,fetchImpl,timeoutMs:9000,stage:'memory',model:fastModel||model,maxTokens:500,name:'save_memories',
-     system:'Extract only durable driver-specific information that should improve future Home Base recommendations: explicit preferences, goals, constraints, repeated lessons, stable facts, or strategies. Do not save transient weather, one-time locations, secrets, passwords, exact home address, health data, or guesses. Return an empty list when nothing qualifies.',
-     user:'Driver said: '+savedUtterance+'\nHome Base answered: '+answer.slice(0,3000),
-     schema:{type:'object',required:['memories'],properties:{memories:{type:'array',maxItems:5,items:{type:'object',required:['key','type','summary','confidence'],properties:{key:{type:'string'},type:{type:'string',enum:['preference','goal','constraint','lesson','fact','strategy']},summary:{type:'string'},confidence:{type:'number'}}}}}}});
+    const learned=await claudeJson({apiKey,fetchImpl,timeoutMs:12000,stage:'memory',model:fastModel||model,maxTokens:600,name:'save_memories',system:LEARN_SYSTEM,
+     user:'Existing memory:\n'+memoryLines(memories,3000)+'\n\nDriver said: '+savedUtterance+'\nHome Base answered: '+answer.slice(0,3000),schema:LEARN_SCHEMA});
+    const known=new Set((memories||[]).map(m=>m.memory_key||m.key));
+    const forget=(Array.isArray(learned.forget)?learned.forget:[]).filter(k=>known.has(k));
+    if(forget.length)await forgetMemories(userId,forget);
     if(Array.isArray(learned.memories)&&learned.memories.length)await upsertMemories(userId,learned.memories);
    }catch{}
    return{answer,sources,provider:'Claude',agent:true,channel,conversationId,execution:verifiedResults.length?'verified_action_result':'advisory'};

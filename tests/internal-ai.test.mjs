@@ -83,7 +83,7 @@ test('goal pace, costs, where to go and unknowns',()=>{
  assert.match(AI.answer('am I on pace for my goal',{...ctx,live:{...ctx.live,shiftHours:12.72}}).answer,/\$28\.64\/hr/);
  assert.match(AI.answer('what does gas cost me today',ctx).answer,/\$0\.22 per mile/);
  assert.match(AI.answer('where should I go',ctx).answer,/Fells Point, Canton/);
- const u=AI.answer('write me a poem about traffic',ctx);assert.equal(u.handled,false);assert.match(u.answer,/Plus/);
+ const u=AI.answer('write me a poem about traffic',ctx);assert.equal(u.handled,false);assert.match(u.answer,/Home Base AI handles open conversation/);
  assert.match(AI.answer('help',ctx).answer,/screenshots/);
 });
 
