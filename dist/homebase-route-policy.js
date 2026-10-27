@@ -142,6 +142,9 @@
     const h=typeof options.history==='function'?options.history(source,when):null;
     if(h&&Number(h.distinctDates)>=2)return{kind:'history',days:Number(h.distinctDates),band:h.band||null};
     if((source.cat==='school'||source.cat==='k12')&&(source.schoolEnd||tags.bellSource)&&schoolWeight(source,parts,when)>0)return{kind:'school'};
+    // Amazon buildings (listed or mapped) are shift-change stops: workers leaving at a
+    // shift change often take long rides home ($20+), worth a short detour.
+    if(amazonSite(source)&&warehouse(source)&&!tags.siteClosed&&workerWeight(source,parts)>0)return{kind:'shift',amazon:true,unconfirmed:!!tags.siteUnconfirmed};
     if(tags.employerSite&&workerWeight(source,parts)>0)return{kind:'shift'};
     if(source.cat==='shopping'&&(tags.opening_hours||source.mallClosingHour!=null||tags.mallClosingHour!=null)&&workerWeight(source,parts)>0)return{kind:'closing'};
     const big=options.nextBig,dist=options.distanceKm;
@@ -170,7 +173,7 @@
     // Apply after geographic/economic ranking: an unreachable event must not
     // suppress local fallback. Never pad an evidence-backed list with history.
     const evidence=ranked.filter(source=>['verified_event','live_signal'].includes(source.routeBasis));
-    if(evidence.length){const current=evidence.filter(s=>s.routeDemand==null||s.routeDemand>0);return [...current.filter(s=>s.routeBasis==='verified_event'),...current.filter(s=>s.routeBasis==='live_signal')];}
+    if(evidence.length){const current=ranked.filter(s=>(evidence.includes(s)||s.amazonShift)&&(s.routeDemand==null||s.routeDemand>0));return [...current.filter(s=>s.routeBasis==='verified_event'||s.amazonShift),...current.filter(s=>s.routeBasis==='live_signal')];}
     // Six modeled points is the route hot-spot floor, not a live-demand claim.
     return ranked.filter(source=>source.routeBasis==='general_area'&&Number(source.routeDemand??source.score)>=6);
   }

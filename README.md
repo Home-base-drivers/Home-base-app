@@ -102,8 +102,10 @@ snapshot, reference only). Verified shift sites live in
 `config/employer-sites.json`; closed sites switch off mapped warehouses nearby.
 Every Amazon building in the Baltimore catchment (fulfillment, sortation, delivery
 stations, air hub) is listed with the shift changes drivers observed at the same
-buildings: 7 AM, 3 PM, 7 PM, 11 PM and 1 AM. Unconfirmed sites add smaller heat
-only; sites listed by address are geocoded on the next live refresh.
+buildings: 7 AM, 3 PM, 7 PM, 11 PM and 1 AM. At those times a nearby Amazon
+building is a route stop (workers leaving often take long rides home, $20+),
+kept on the route alongside events; unconfirmed sites rank lower. Sites listed
+by address are geocoded on the next live refresh.
 Hospitals carry an approximate 12-hour handoff window (staff departures
 6:45-8:15 AM and PM; Johns Hopkins postings list 7am-7pm / 7pm-7am shifts,
 site-specific times are not published). Large office campuses (SSA/CMS

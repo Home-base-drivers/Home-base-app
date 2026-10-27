@@ -31,7 +31,7 @@ test('sites listed by address are geocoded once, then reused from the previous s
   assert.equal(failed[0].lat, null);
 });
 
-test('open Amazon sites are route-verified shift stops; unverified ones only add smaller heat', () => {
+test('Amazon sites are shift-change route stops; unconfirmed ones rank lower', () => {
   const html = fs.readFileSync(new URL('../dist/index.html', import.meta.url), 'utf8');
   const start = html.indexOf('function applySiteStatus('), body = html.indexOf('{', start); let depth = 0, end = body;
   for (; end < html.length; end++) { if (html[end] === '{') depth++; else if (html[end] === '}' && !--depth) break; }
@@ -46,6 +46,19 @@ test('open Amazon sites are route-verified shift stops; unverified ones only add
   const parts = { day: 2, hour: 7 }, when = new Date('2026-10-27T11:00:00Z');
   const open = out.find(s => /Aberdeen/.test(s.name)), maybe = out.find(s => /Lakeside/.test(s.name));
   assert.equal(policy.generalEvidence(open, parts, when)?.kind, 'shift');
-  assert.equal(policy.generalEvidence(maybe, parts, when), null);
+  assert.deepEqual(policy.generalEvidence(maybe, parts, when), { kind: 'shift', amazon: true, unconfirmed: true });
+  assert.equal(policy.generalEvidence(maybe, { day: 2, hour: 10 }, when), null, 'only at shift changes');
   assert.ok(policy.workerWeight(maybe, parts) > 0 && policy.workerWeight(maybe, parts) < policy.workerWeight(open, parts));
+});
+
+test('an Amazon shift change stays on the route when events are also available', () => {
+  const ranked = [
+    { name: 'Amazon BWI2', routeBasis: 'general_area', amazonShift: true, routeDemand: 8, score: 28 },
+    { name: 'Concert', routeBasis: 'verified_event', routeDemand: 6, score: 34 },
+    { name: 'Quiet park', routeBasis: 'general_area', routeDemand: 7, score: 7 },
+    { name: 'Surge now', routeBasis: 'live_signal', routeDemand: 5, score: 23 }];
+  assert.deepEqual(policy.selectRanked(ranked).map(s => s.name), ['Amazon BWI2', 'Concert', 'Surge now']);
+  const html = fs.readFileSync(new URL('../dist/index.html', import.meta.url), 'utf8');
+  assert.match(html, /Amazon shift change · long rides home/);
+  assert.match(html, /score:demand\+\(amazon&&demand>0\?\(v\.routeEvidence\.unconfirmed\?10:20\):0\)/);
 });
