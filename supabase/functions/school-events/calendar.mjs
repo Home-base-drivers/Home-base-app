@@ -455,6 +455,10 @@ function publishedAttendance(event, sourceUrl) {
   const count = Number(event.expectedAttendance);
   return event.expectedAttendance != null && Number.isFinite(count) && count >= 0 && count <= 1e6 && /^https:\/\//.test(sourceUrl || "") ? { expectedAttendance: count, attendanceBasis: "organizer_estimate", attendanceSourceUrl: sourceUrl, attendanceConfidence: 0.75 } : {};
 }
+function decodeEntities(value) {
+  const named = { amp: "&", quot: '"', apos: "'", lt: "<", gt: ">", nbsp: " ", ndash: "\u2013", mdash: "\u2014", rsquo: "\u2019", lsquo: "\u2018", rdquo: "\u201D", ldquo: "\u201C", hellip: "\u2026" };
+  return String(value || "").replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16))).replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(Number(d))).replace(/&([a-z]+);/gi, (m, n) => named[n.toLowerCase()] ?? m).replace(/\s+/g, " ").trim();
+}
 function normalizePublicEvent(event, market, source, now = Date.now(), horizonHours = 36, why = null) {
   const drop = (reason) => {
     if (why) why.reason = reason;
@@ -476,14 +480,14 @@ function normalizePublicEvent(event, market, source, now = Date.now(), horizonHo
   const lat = geo?.latitude == null ? place?.lat : Number(geo.latitude), lon = geo?.longitude == null ? place?.lon : Number(geo.longitude);
   if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) return drop("no location");
   if (distanceKm(market.center, { lat, lon }) > market.radiusKm) return drop("outside market");
-  const name = String(event.name || "").trim(), eventType = [event["@type"]].flat().join(" ");
+  const name = decodeEntities(event.name), eventType = [event["@type"]].flat().join(" ");
   const context = [name, venue?.name, eventType, event.description, source.classification].join(" ");
   if (!name || import_homebase_public_data.default.isTicketAddon(name) || /webinar|virtual|online.only|exhibition|gallery|workshop|seminar|campus.tour|all.day.entry|standard.entry|standard.admission|standard.experience/i.test(context)) return drop("not a crowd event");
   const performers = [event.performer].flat().filter(Boolean);
   const classification = performers.map((p) => p["@type"]).flat().join(" ");
   if (!/sports|concert|festival|convention|conference|football|basketball|baseball|hockey|soccer|stadium|arena|theatre|theater|comedy|performing|music|graduation|commencement|fairground|circus|danceevent|homecoming|prom\b|tailgate|bonfire|reunion|gala|party|social|community|screening/i.test(context + " " + classification)) return drop("no crowd keyword");
   const url = safeUrl(event.url || event.offers?.url, source.url);
-  return { id: "public:" + (url || `${name}:${lat}:${lon}`) + ":" + start, name: name.slice(0, 180), venue: String(venue?.name || place?.name || "").slice(0, 160), lat, lon, eventStart: start, eventEnd: end, url, source: source.name, sourceUrl: source.url, eventType, classification, ...publishedAttendance(event, url || source.url), fetchedAt: new Date(now).toISOString() };
+  return { id: "public:" + (url || `${name}:${lat}:${lon}`) + ":" + start, name: name.slice(0, 180), venue: decodeEntities(venue?.name || place?.name || "").slice(0, 160), lat, lon, eventStart: start, eventEnd: end, url, source: source.name, sourceUrl: source.url, eventType, classification, ...publishedAttendance(event, url || source.url), fetchedAt: new Date(now).toISOString() };
 }
 function eventLikeTime(value) {
   if (typeof value === "number" && value > 1e12 && value < 4e12) return new Date(value).toISOString();

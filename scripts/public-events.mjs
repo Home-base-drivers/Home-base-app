@@ -111,6 +111,11 @@ export function publishedAttendance(event, sourceUrl){
     {expectedAttendance:count,attendanceBasis:'organizer_estimate',attendanceSourceUrl:sourceUrl,attendanceConfidence:.75}:{};
 }
 
+// Listing titles often arrive HTML-encoded ("Hawthorne Heights &#8211; ...").
+export function decodeEntities(value){
+  const named={amp:'&',quot:'"',apos:"'",lt:'<',gt:'>',nbsp:' ',ndash:'–',mdash:'—',rsquo:'’',lsquo:'‘',rdquo:'”',ldquo:'“',hellip:'…'};
+  return String(value||'').replace(/&#x([0-9a-f]+);/gi,(_,h)=>String.fromCodePoint(parseInt(h,16))).replace(/&#(\d+);/g,(_,d)=>String.fromCodePoint(Number(d))).replace(/&([a-z]+);/gi,(m,n)=>named[n.toLowerCase()]??m).replace(/\s+/g,' ').trim();
+}
 export function normalizePublicEvent(event, market, source, now = Date.now(), horizonHours = 36, why = null) {
   const drop = reason => { if (why) why.reason = reason; return null; };
   if (event.private || event.allDay || event.isAllDay || /cancel|postpon|reschedul/i.test(String(event.eventStatus || '')) || /OnlineEventAttendanceMode/.test(String(event.eventAttendanceMode || ''))) return drop('private/all-day/cancelled/online');
@@ -131,7 +136,7 @@ export function normalizePublicEvent(event, market, source, now = Date.now(), ho
   const lat = geo?.latitude == null ? place?.lat : Number(geo.latitude), lon = geo?.longitude == null ? place?.lon : Number(geo.longitude);
   if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) return drop('no location');
   if (distanceKm(market.center, { lat, lon }) > market.radiusKm) return drop('outside market');
-  const name = String(event.name || '').trim(), eventType = [event['@type']].flat().join(' ');
+  const name = decodeEntities(event.name), eventType = [event['@type']].flat().join(' ');
   // A sports or arena source may describe its listings only as "A vs. B";
   // its configured classification supplies the missing category.
   const context = [name, venue?.name, eventType, event.description, source.classification].join(' ');
@@ -140,7 +145,7 @@ export function normalizePublicEvent(event, market, source, now = Date.now(), ho
   const classification = performers.map(p => p['@type']).flat().join(' ');
   if (!/sports|concert|festival|convention|conference|football|basketball|baseball|hockey|soccer|stadium|arena|theatre|theater|comedy|performing|music|graduation|commencement|fairground|circus|danceevent|homecoming|prom\b|tailgate|bonfire|reunion|gala|party|social|community|screening/i.test(context + ' ' + classification)) return drop('no crowd keyword');
   const url = safeUrl(event.url || event.offers?.url, source.url);
-  return { id: 'public:' + (url || `${name}:${lat}:${lon}`) + ':' + start, name: name.slice(0, 180), venue: String(venue?.name || place?.name || '').slice(0, 160), lat, lon, eventStart: start, eventEnd: end, url, source: source.name, sourceUrl: source.url, eventType, classification, ...publishedAttendance(event,url||source.url), fetchedAt: new Date(now).toISOString() };
+  return { id: 'public:' + (url || `${name}:${lat}:${lon}`) + ':' + start, name: name.slice(0, 180), venue: decodeEntities(venue?.name || place?.name || '').slice(0, 160), lat, lon, eventStart: start, eventEnd: end, url, source: source.name, sourceUrl: source.url, eventType, classification, ...publishedAttendance(event,url||source.url), fetchedAt: new Date(now).toISOString() };
 }
 
 export function nextPublicPage(html, current) {
