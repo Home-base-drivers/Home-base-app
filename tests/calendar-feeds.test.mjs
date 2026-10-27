@@ -43,3 +43,8 @@ test('no configured calendar is a Ticketmaster web page (they always return 403;
   assert.ok(!markets.some(m => (m.publicCalendars || []).some(c => /ticketmaster\./.test(c.url) || /axs\.com/.test(c.url))));
   assert.ok(markets.find(m => m.id === 'london').sportsVenues.length >= 5);
 });
+
+test('listing titles are decoded from HTML entities', async () => {
+  const { decodeEntities } = await import('../scripts/public-events.mjs');
+  assert.equal(decodeEntities('Hawthorne Heights &#8211; 20th &amp; Uncle Kunkel&#8217;s &#038; more'), 'Hawthorne Heights – 20th & Uncle Kunkel’s & more');
+});
