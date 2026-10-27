@@ -56,7 +56,10 @@ enforces this.
 ## Conversational AI contract
 
 Home Base AI is Claude (`supabase/functions/dispatch/agent.mjs`), not the phone's keyword
-assistant. Chat and voice go to Claude by default for every signed-in driver; the built-in
+assistant. Every Claude call is claimed first in the server-only usage ledger
+(`claim_ai_usage`, migration `20261027180000_ai_usage_limits.sql`); never add a Claude call that
+skips it, never make a plan unlimited, and keep everyday answers on the small model (photos only on
+the vision model). GPT voices and GPT Live are Pro only. See docs/PAYMENTS.md. Chat and voice go to Claude by default for every signed-in driver; the built-in
 assistant answers only offline, when Claude is unreachable, or when the driver picks Offline.
 Each request carries the driver's learned memory (`homebase_agent_memory`, as short lines),
 the measured driver profile (`HomeBaseInternalAI.driverProfile`: usual days and start hours,

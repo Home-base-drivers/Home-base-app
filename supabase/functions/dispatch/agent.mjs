@@ -33,6 +33,7 @@ export function memoryLines(memories,limit=6000){
 }
 const LEARN_SYSTEM='You maintain a rideshare driver\'s long-term profile for the Home Base assistant. From the latest exchange, return only durable driver-specific information that should improve future answers: explicit preferences (areas, platforms, trip types, hours, voice/alert style), goals, constraints, home-time habits, vehicle facts, repeated lessons and strategies that worked or failed. Reuse an existing key when the new information updates it. When the driver asks to forget something or says a remembered fact is wrong, list that key in forget. Never save transient weather or traffic, one-time locations, secrets, passwords, exact home address, health data, or guesses. Return empty lists when nothing qualifies.';
 const LEARN_SCHEMA={type:'object',required:['memories','forget'],properties:{memories:{type:'array',maxItems:5,items:{type:'object',required:['key','type','summary','confidence'],properties:{key:{type:'string'},type:{type:'string',enum:['preference','goal','constraint','lesson','fact','strategy']},summary:{type:'string'},confidence:{type:'number'}}}},forget:{type:'array',maxItems:5,items:{type:'string'}}}};
+export const HISTORY_TURNS=12;
 function safe(value,limit=14000){try{return JSON.stringify(value??{}).slice(0,limit)}catch{return'{}'}}
 function outputText(payload){return(payload?.output||[]).flatMap(x=>x.content||[]).filter(x=>x.type==='output_text').map(x=>x.text||'').join('\n').trim()}
 function actionCalls(payload){return(payload?.output||[]).filter(x=>x?.type==='function_call').flatMap(x=>{try{return[{callId:x.call_id||x.id,name:x.name,arguments:JSON.parse(x.arguments||'{}')}]}catch{return[]}})}
@@ -52,8 +53,10 @@ function cleanAttachments(attachments){
 }
 function errorWithCode(message,code){return Object.assign(new Error(message),{code})}
 
-export function makeHomeBaseAgent({provider='openai',apiKey,model='gpt-6-luna',fastModel,fetchImpl=fetch,loadMemory,loadTurns,saveTurn,upsertMemories,forgetMemories=async()=>{},timeoutMs=60000}={}){
- return async({userId,utterance,context={},conversationId='default',capabilities=[],actionResults=[],channel='voice',attachments=[]}={})=>{
+export function makeHomeBaseAgent({provider='openai',apiKey,model='gpt-6-luna',visionModel,fastModel,fetchImpl=fetch,loadMemory,loadTurns,saveTurn,upsertMemories,forgetMemories=async()=>{},timeoutMs=60000}={}){
+ // Cost bounds per message (we pay per message): recent history only, compact
+ // context, short replies, and the plan's web-search allowance.
+ return async({userId,utterance,context={},conversationId='default',capabilities=[],actionResults=[],channel='voice',attachments=[],webSearches}={})=>{
   if(!apiKey)throw errorWithCode('Home Base AI is not configured.','ai_not_configured');
   if(!userId)throw errorWithCode('Sign in first.','sign_in');
   const images=cleanAttachments(attachments);
@@ -67,13 +70,13 @@ export function makeHomeBaseAgent({provider='openai',apiKey,model='gpt-6-luna',f
 ${PROJECT_KNOWLEDGE}
 
 WHAT YOU HAVE LEARNED ABOUT THIS DRIVER (from past conversations; newest first):
-${memoryLines(memories)}
+${memoryLines(memories,4000)}
 
 HOW THIS DRIVER USES HOME BASE (measured on the phone):
 ${safe(context?.driverProfile||{},3000)}
 
 CURRENT HOME BASE STATE:
-${safe(context,14000)}
+${safe(context,8000)}
 
 Behavior:
 - Hold a real back-and-forth conversation. Use the earlier turns in this conversation; resolve "it", "there", "that one" from them. Ask a short follow-up question only when you truly cannot answer.
@@ -95,13 +98,14 @@ ${typed?'- This message was TYPED in the Home Base chat screen. Reply like a cap
   const verifiedResults=Array.isArray(actionResults)?actionResults.slice(0,8):[];
   const text=(utterance.trim()||'What does this photo show, and what should I do about it?')+(verifiedResults.length?'\n\nVERIFIED HOME BASE ACTION RESULTS:\n'+safe(verifiedResults,5000):'');
   const userContent=images.length?[{type:'input_text',text},...images]:text;
-  const input=[...turns.slice(-40).map(t=>({role:t.role==='assistant'?'assistant':'user',content:String(t.content||'')})).filter(t=>t.content),{role:'user',content:userContent}];
+  const input=[...turns.slice(-HISTORY_TURNS).map(t=>({role:t.role==='assistant'?'assistant':'user',content:String(t.content||'')})).filter(t=>t.content),{role:'user',content:userContent}];
   if(provider==='anthropic'){
-   const tools=[WEB_SEARCH,...claudeTools(ACTION_TOOLS.filter(t=>!Array.isArray(capabilities)||!capabilities.length||capabilities.includes(t.name)))];
+   const searches=webSearches==null?WEB_SEARCH.max_uses:Math.max(0,Math.min(WEB_SEARCH.max_uses,Number(webSearches)||0));
+   const tools=[...(searches?[{...WEB_SEARCH,max_uses:searches}]:[]),...claudeTools(ACTION_TOOLS.filter(t=>!Array.isArray(capabilities)||!capabilities.length||capabilities.includes(t.name)))];
    const content=images.length?[{type:'text',text},...images.map(i=>claudeImage(i.image_url)).filter(Boolean)]:text;
-   const messages=[...claudeMessages(turns.slice(-40).map(t=>({role:t.role,content:String(t.content||'')}))),{role:'user',content}];
+   const messages=[...claudeMessages(turns.slice(-HISTORY_TURNS).map(t=>({role:t.role,content:String(t.content||'')}))),{role:'user',content}];
    if(messages.length>1&&messages[messages.length-2].role==='user'){const prev=messages.splice(messages.length-2,1)[0];messages[messages.length-1].content=typeof content==='string'?prev.content+'\n\n'+content:[{type:'text',text:prev.content},...content];}
-   const message=await callClaude({apiKey,fetchImpl,timeoutMs,stage:'agent',model,max_tokens:typed?2048:700,system:instructions,messages,tools});
+   const message=await callClaude({apiKey,fetchImpl,timeoutMs,stage:'agent',model:images.length&&visionModel?visionModel:model,max_tokens:typed?1024:450,system:instructions,messages,tools});
    const actions=toolCalls(message),sources=sourcesOf(message);
    let answer=textOf(message);
    if(actions.length)return{answer:answer||'Executing the requested Home Base action.',actions,provider:'Claude',agent:true,execution:'action_required'};

@@ -66,11 +66,13 @@ test('only a correctly signed Stripe webhook changes a plan, once per event',asy
 });
 
 test('extra minutes add 100 minutes to this month and keep the plan',async()=>{
- const s=setup();s.db.tables.billing_customers.push({user_id:USER,stripe_customer_id:'cus_1',plan:'plus',subscription_status:'active'});
- s.db.tables.ai_entitlements.push({user_id:USER,plan:'plus',current_period_end:'2026-12-01T00:00:00Z',extra_voice_seconds:6000,extra_month:localMonth()});
+ const plus=setup();plus.db.tables.billing_customers.push({user_id:USER,stripe_customer_id:'cus_1',plan:'plus',subscription_status:'active'});
+ assert.equal((await plus.app({operation:'checkout',plan:'minutes'})).status,400,'GPT Live minutes are Pro only');
+ const s=setup();s.db.tables.billing_customers.push({user_id:USER,stripe_customer_id:'cus_1',plan:'pro',subscription_status:'active'});
+ s.db.tables.ai_entitlements.push({user_id:USER,plan:'pro',current_period_end:'2026-12-01T00:00:00Z',extra_voice_seconds:6000,extra_month:localMonth()});
  const c=await s.app({operation:'checkout',plan:'minutes'});assert.equal(c.status,200);assert.equal(s.calls.at(-1).body.mode,'payment');
  await s.hook({id:'evt_3',type:'checkout.session.completed',data:{object:{mode:'payment',payment_status:'paid',client_reference_id:USER,metadata:{kind:'minutes',user_id:USER}}}});
- const e=s.db.tables.ai_entitlements[0];assert.equal(e.extra_voice_seconds,12000);assert.equal(e.plan,'plus');assert.equal(e.current_period_end,'2026-12-01T00:00:00Z');
+ const e=s.db.tables.ai_entitlements[0];assert.equal(e.extra_voice_seconds,12000);assert.equal(e.plan,'pro');assert.equal(e.current_period_end,'2026-12-01T00:00:00Z');
  assert.equal((await s.app({operation:'checkout',plan:'plus'})).status,409,'no double subscription');
 });
 

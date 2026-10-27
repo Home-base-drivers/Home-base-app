@@ -4,11 +4,14 @@
 (function(){
  'use strict';
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ // Every plan has finite Home Base AI (Claude) message limits: we pay per message.
+ // Limits come from the server (ai_plan_limits); these are the shipped defaults.
  const PLANS=[
-  {id:'free',name:'Free',price:'$0',features:['Built-in AI on your phone: earnings, goal pace, offer checks','Daily briefing, weekly report, "keep driving?" advice','Screenshots → trips, and your own trip CSV','Heat map, 12-hour route, events, phone voice']},
-  {id:'plus',name:'Plus',price:'$19.99/mo',features:['Everything in Free','Home Base AI (Claude) answers any question, by text or voice','Spoken replies, plus photo and web lookups','120 GPT Live dispatcher minutes a month']},
-  {id:'pro',name:'Pro',price:'$39.99/mo',features:['Everything in Plus','260 GPT Live minutes a month','For drivers who talk to dispatch all shift']}
+  {id:'free',name:'Free',price:'$0',features:['Home Base AI (Claude) answers by text or voice: 10 messages a day, 150 a month','Answers spoken in your phone\'s voice','2 screenshot readings a day by AI, unlimited on the phone','Offline answers, heat map, 12-hour route, events, safety alerts']},
+  {id:'plus',name:'Plus',price:'$19.99/mo',features:['Everything in Free','50 Home Base AI messages a day, 800 a month','10 screenshot readings a day, more web lookups','Answers spoken in your phone\'s voice']},
+  {id:'pro',name:'Pro',price:'$39.99/mo',features:['Everything in Plus','120 messages a day, 1,200 a month; 30 screenshots a day','GPT voices and 260 GPT Live dispatcher minutes a month','For drivers who talk to dispatch all shift']}
  ];
+
  let status=null,busy=false,message='';
  const backend=()=>window.HomeBaseAccounts?.backend;
  async function signedIn(){try{const u=await backend()?.getUser?.();return !!(u?.id&&!u.is_anonymous)}catch{return false}}
@@ -25,10 +28,10 @@
   const st=window.HomeBaseInternalAI?.planStatus?.()||{},current=['plus','pro'].includes(st.plan)?st.plan:'free',open=!!status?.open,signed=status!==null;
   const min=Math.floor((Number(st.remaining_seconds)||0)/60);
   box.innerHTML='<h3>HOME BASE PLANS</h3>'+
-   (current!=='free'?'<p class="earnings-data-note"><b>Your plan: '+(current==='pro'?'Pro':'Plus')+'</b> · '+min+' GPT Live minutes left this month'+(status?.subscription?.renews?' · renews '+esc(new Date(status.subscription.renews).toLocaleDateString()):'')+'</p>':'<p class="earnings-data-note">You are on <b>Free</b>. The built-in AI stays free forever.</p>')+
+   (current!=='free'?'<p class="earnings-data-note"><b>Your plan: '+(current==='pro'?'Pro':'Plus')+'</b> · '+(Number.isFinite(st.messages_left_today)?st.messages_left_today+' Home Base AI messages left today':'')+(current==='pro'?' · '+min+' GPT Live minutes left this month':'')+(status?.subscription?.renews?' · renews '+esc(new Date(status.subscription.renews).toLocaleDateString()):'')+'</p>':'<p class="earnings-data-note">You are on <b>Free</b>'+(Number.isFinite(st.messages_left_today)?' · '+st.messages_left_today+' Home Base AI messages left today':'')+'. Offline answers are always free.</p>')+
    '<div class="hb-plan-grid">'+PLANS.map(p=>'<article class="hb-plan'+(p.id===current?' current':'')+'"><div class="hb-plan-head"><b>'+p.name+'</b><span>'+p.price+'</span></div><ul>'+p.features.map(f=>'<li>'+esc(f)+'</li>').join('')+'</ul>'+
     (p.id==='free'?'':p.id===current?'<em>Current plan</em>':current!=='free'?'<button type="button" data-portal>Switch in Manage subscription</button>':'<button type="button" class="primary-action" data-buy="'+p.id+'"'+(open?'':' disabled')+'>'+(open?'Get '+p.name:'Opens soon')+'</button>')+'</article>').join('')+'</div>'+
-   (current!=='free'?'<div class="hb-plan-actions"><button type="button" data-buy="minutes"'+(open?'':' disabled')+'>Add 100 GPT Live minutes · $14.99</button><button type="button" data-portal>Manage subscription</button></div>':'')+
+   (current!=='free'?'<div class="hb-plan-actions">'+(current==='pro'?'<button type="button" data-buy="minutes"'+(open?'':' disabled')+'>Add 100 GPT Live minutes · $14.99</button>':'')+'<button type="button" data-portal>Manage subscription</button></div>':'')+
    (status?.test?'<p class="earnings-data-note"><b>Test mode:</b> Stripe test checkout for approved testers. Use card 4242 4242 4242 4242. No real charge.</p>':'')+
    (!signed?'<p class="earnings-data-note">Sign in above to subscribe. Payments are handled by Stripe; Home Base never sees your card.</p>':!open?'<p class="earnings-data-note">Plus and Pro open soon. Everything on Free works today.</p>':'<p class="earnings-data-note">Secure payment by Stripe (card, Apple Pay, Google Pay). Cancel anytime in Manage subscription.</p>')+
    '<p class="earnings-data-note"><a href="legal.html#refunds" target="_blank" rel="noopener">Terms, refunds and privacy</a></p>'+

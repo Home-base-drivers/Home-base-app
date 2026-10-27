@@ -17,20 +17,38 @@ test('an organization Claude key is sent with its workspace, and the missing-wor
   assert.match(fs.readFileSync('supabase/functions/dispatch/claude.mjs', 'utf8'), /headers:claudeHeaders\(apiKey\)/);
 });
 
-function handler(plan, used) {
-  const h = makeDispatchHandler({ FREE_DAILY_MESSAGES: 3, engine: {}, authenticate: async () => ({ id: 'u1' }), loadState: async () => ({}), loadTrips: async () => [], reportFailure() {},
-    entitlements: { allowance: async () => ({ plan }), freeMessagesUsed: async id => { assert.equal(id, 'u1'); return used; } },
-    agent: async () => ({ answer: 'Claude answer' }) });
-  return body => h(new Request('https://x/dispatch', { method: 'POST', headers: { Authorization: 'Bearer t' }, body: JSON.stringify(body) }));
+function handler(plan, { refuse = null, providerError = null, voiceConfigured = true } = {}) {
+  const claims = [], releases = [], agentCalls = [];
+  const h = makeDispatchHandler({ engine: {}, authenticate: async () => ({ id: 'u1' }), loadState: async () => ({}), loadTrips: async () => [], reportFailure() {},
+    entitlements: { allowance: async () => ({ plan }),
+      claim: async (id, op, image) => { assert.equal(id, 'u1'); claims.push({ op, image }); if (refuse) throw Object.assign(Error(refuse), { code: refuse }); return { usage_id: claims.length, plan, web_searches: plan === 'free' ? 1 : 2 }; },
+      release: async (id, u) => releases.push(id) },
+    agent: async args => { agentCalls.push(args); if (providerError) throw providerError; return { answer: 'Claude answer' }; },
+    synthesizeVoice: async () => voiceConfigured ? { configured: true, audio: new Uint8Array([1]) } : { configured: false } });
+  const call = body => h(new Request('https://x/dispatch', { method: 'POST', headers: { Authorization: 'Bearer t' }, body: JSON.stringify(body) }));
+  return { call, claims, releases, agentCalls };
 }
-test('free drivers talk to Claude in chat up to a daily allowance; paid voice stays paid', async () => {
-  const ok = await handler('free', 2)({ operation: 'agent', utterance: 'hi', channel: 'chat' });
+test('every plan gets Claude answers within server-recorded limits; GPT voices are Pro only; refused requests are given back', async () => {
+  const free = handler('free');
+  const ok = await free.call({ operation: 'agent', utterance: 'hi', channel: 'chat' });
   assert.equal(ok.status, 200); assert.equal((await ok.json()).answer, 'Claude answer');
-  const capped = await handler('free', 3)({ operation: 'agent', utterance: 'hi', channel: 'chat' });
-  assert.equal(capped.status, 402); assert.equal((await capped.json()).code, 'daily_messages_used_up');
-  assert.equal((await handler('free', 0)({ operation: 'voice', text: 'hi' })).status, 402);
-  assert.equal((await handler('free', 0)({ operation: 'translate', text: 'hi' })).status, 402);
-  assert.equal((await handler('pro', 999)({ operation: 'agent', utterance: 'hi', channel: 'chat' })).status, 200);
+  assert.deepEqual(free.claims, [{ op: 'agent', image: false }]); assert.equal(free.agentCalls[0].webSearches, 1);
+  await free.call({ operation: 'agent', utterance: 'read this', channel: 'chat', attachments: [{ dataUrl: 'data:image/png;base64,AAAA' }] });
+  assert.deepEqual(free.claims[1], { op: 'agent', image: true }, 'screenshots are counted as images');
+  for (const code of ['daily_messages_used_up', 'monthly_messages_used_up', 'daily_images_used_up', 'free_pool_used_up', 'email_unconfirmed']) {
+    const r = await handler('plus', { refuse: code }).call({ operation: 'agent', utterance: 'hi', channel: 'chat' });
+    assert.equal(r.status, 402, code); const body = await r.json(); assert.equal(body.code, code); assert.doesNotMatch(body.error, /unlimited/i);
+  }
+  const plusVoice = handler('plus'); assert.equal((await plusVoice.call({ operation: 'voice', text: 'hi' })).status, 402); assert.equal(plusVoice.claims.length, 0, 'no charge for a refused GPT voice');
+  const pro = handler('pro'); assert.equal((await pro.call({ operation: 'voice', text: 'hi' })).status, 200); assert.equal(pro.claims[0].op, 'voice');
+  const noOpenAI = handler('pro', { voiceConfigured: false }); await noOpenAI.call({ operation: 'voice', text: 'hi' }); assert.deepEqual(noOpenAI.releases, [1]);
+  const refused = handler('free', { providerError: Object.assign(Error('rejected'), { code: 'ai_provider_error', provider_status: 400 }) });
+  assert.equal((await refused.call({ operation: 'agent', utterance: 'hi', channel: 'chat' })).status, 502); assert.deepEqual(refused.releases, [1]);
+  const timedOut = handler('free', { providerError: Object.assign(Error('slow'), { code: 'ai_timeout' }) });
+  await timedOut.call({ operation: 'agent', utterance: 'hi', channel: 'chat' }); assert.deepEqual(timedOut.releases, [], 'a timeout may have been billed, so it still counts');
+  const src = fs.readFileSync('supabase/functions/dispatch/index.ts', 'utf8');
+  assert.match(src, /CLAUDE_CHAT_MODEL'\)\|\|'claude-haiku-5-5'/); assert.match(src, /CLAUDE_VISION_MODEL'\)\|\|'claude-sonnet-5-5'/);
+  assert.match(src, /SUPABASE_SERVICE_ROLE_KEY/); assert.doesNotMatch(src, /FREE_DAILY|freeMessagesUsed/);
 });
 
 test('the assistant knows the driver: learned memory and measured habits go into every request, and it can forget', async () => {
@@ -73,4 +91,18 @@ test('Claude answers by default; the phone-only assistant is the offline fallbac
   const chat = fs.readFileSync('dist/homebase-chat.js', 'utf8');
   assert.match(chat, /data-engine="plus">Home Base AI</);
   assert.doesNotMatch(chat, /GPT · Plus/);
+});
+
+test('everyday answers use the small model; only screenshots use the vision model; history and replies stay short', async () => {
+  const bodies = [];
+  const agent = makeHomeBaseAgent({ provider: 'anthropic', apiKey: 'k', model: 'claude-haiku-5-5', visionModel: 'claude-sonnet-5-5', fastModel: 'claude-haiku-5-5',
+    fetchImpl: async (u, init) => { bodies.push(JSON.parse(init.body)); return new Response(JSON.stringify({ stop_reason: 'end_turn', content: [{ type: 'text', text: 'ok' }] }), { status: 200 }); },
+    loadMemory: async () => [], loadTurns: async () => Array.from({ length: 50 }, (_, i) => ({ role: i % 2 ? 'assistant' : 'user', content: 'turn ' + i })), saveTurn: async () => {}, upsertMemories: async () => {} });
+  await agent({ userId: 'u', utterance: 'hi', channel: 'chat', webSearches: 0 });
+  assert.equal(bodies[0].model, 'claude-haiku-5-5'); assert.equal(bodies[0].max_tokens, 1024);
+  assert.ok(!bodies[0].tools.some(t => t.name === 'web_search'), 'no web search when the plan allows none');
+  assert.ok(bodies[0].messages.length <= 13, 'only recent history is sent');
+  await agent({ userId: 'u', utterance: 'read this', channel: 'chat', webSearches: 2, attachments: [{ dataUrl: 'data:image/png;base64,AAAA' }] });
+  const vision = bodies.find(b => b.model === 'claude-sonnet-5-5');
+  assert.ok(vision, 'screenshots use the vision model'); assert.equal(vision.tools.find(t => t.name === 'web_search').max_uses, 2);
 });

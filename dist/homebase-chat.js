@@ -70,7 +70,7 @@
   const readVoice=()=>{try{return JSON.parse(localStorage.getItem('homeBaseVoicePrefs')||'{}')}catch{return{}}};
   voiceSel.value=readVoice().voiceMode==='live'?'live':'hybrid';
   voiceSel.addEventListener('change',()=>{const v=readVoice();v.voiceMode=voiceSel.value;localStorage.setItem('homeBaseVoicePrefs',JSON.stringify(v));showNotice(voiceSel.value==='live'?'Talk opens GPT Live right away. It pauses after 20 seconds of quiet to save minutes.':'Talk runs on your phone for free; GPT answers by text and reads it aloud. Say "let\'s talk" to open GPT Live.')});
-  const showPlan=()=>{const st=internal()?.planStatus?.();const paid=st&&['plus','pro'].includes(st.plan);planLine.hidden=!paid;if(paid){const min=Math.floor((Number(st.remaining_seconds)||0)/60);planText.textContent=(st.plan==='pro'?'Pro':'Plus')+' · '+min+' GPT Live min left this month';}};
+  const showPlan=()=>{const st=internal()?.planStatus?.();const known=st&&['free','plus','pro'].includes(st.plan);planLine.hidden=!known;if(known){const min=Math.floor((Number(st.remaining_seconds)||0)/60),left=Number(st.messages_left_today);planText.textContent=({free:'Free',plus:'Plus',pro:'Pro'})[st.plan]+(Number.isFinite(left)?' · '+left+' AI messages left today':'')+(st.plan==='pro'?' · '+min+' GPT Live min':'');voiceSel.hidden=st.plan!=='pro';}};
   document.addEventListener('homebase:plan-changed',()=>{showEngine();showPlan();});
   engines.forEach(b=>b.addEventListener('click',()=>{
    const want=b.dataset.engine,server=internal()?.serverPlan?.();
@@ -101,14 +101,14 @@
       answer=typeof result?.answer==='string'?result.answer.trim():'';}
      catch(error){
       // Plus is unavailable: answer with the built-in AI when it can, and say why.
-      if(error?.code==='plan_required'||error?.code==='daily_messages_used_up'){window.HomeBaseInternalAI?.refreshEntitlement?.();answer=await builtinReply(text,photo)+'\n\n_'+agent.describeError(error)+'_';}
+      if(['plan_required','daily_messages_used_up','monthly_messages_used_up','daily_images_used_up','free_pool_used_up','email_unconfirmed'].includes(error?.code)){window.HomeBaseInternalAI?.refreshEntitlement?.();answer=await builtinReply(text,photo)+'\n\n_'+agent.describeError(error)+'_';}
       else{if(error?.code==='sign_in')throw error;
       // Home Base AI unreachable: answer from the phone when possible and say why.
       const r=photo?null:window.HomeBaseInternalAI?.ask?.(text);if(!r?.handled)throw error;
       answer=r.answer+'\n\n_Answered offline: '+agent.describeError(error)+'_';}}
     }
     if(!answer)throw Error('Home Base AI returned no answer.');
-    lastFailed=null;pending=false;window.HomeBaseShell?.logChat?.('assistant',answer);
+    lastFailed=null;pending=false;window.HomeBaseShell?.logChat?.('assistant',answer);internal()?.refreshEntitlement?.().then(showPlan).catch(()=>{});
    }catch(error){
     pending=false;lastFailed={text,photo};showNotice(agent?.describeError?agent.describeError(error):String(error?.message||error),true);
    }

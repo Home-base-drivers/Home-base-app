@@ -56,7 +56,7 @@ async function start(){
  // Hybrid (default): talk runs on the phone for free; commands and the built-in
  // AI answer, Plus questions go to GPT as text. GPT Live (metered minutes) opens
  // only in Live mode or when the driver says "let's talk".
- if(voiceMode()!=='live'||window.HomeBaseInternalAI?.serverPlan?.()==='free')return deviceVoice('Voice on this phone · free. Say "let\'s talk" for GPT Live.');
+ if(voiceMode()!=='live'||window.HomeBaseInternalAI?.serverPlan?.()!=='pro')return deviceVoice(window.HomeBaseInternalAI?.serverPlan?.()==='pro'?'Voice on this phone with Home Base AI answers. Say "let\'s talk" for GPT Live.':'Voice on this phone with Home Base AI answers.');
  return startLive();
 }
 async function startLive({question=''}={}){

@@ -15,8 +15,12 @@
  // Plain-language reason for an AI failure. Never hide it behind a canned answer.
  function describeError(error){
   const code=String(error?.code||''),message=String(error?.message||error||'');
-  if(code==='plan_required')return'GPT answers and GPT Live voice are part of Home Base Plus. The built-in AI is free and still answers.';
-  if(code==='daily_messages_used_up')return'Today\'s free Home Base AI messages are used. Home Base Plus has unlimited conversation; offline answers continue.';
+  if(code==='plan_required')return'GPT voices and GPT Live are part of Home Base Pro. Home Base AI keeps answering in your phone\'s voice.';
+  if(code==='daily_messages_used_up')return'Today\'s Home Base AI messages on your plan are used. They reset at midnight; a higher plan includes more. Offline answers continue.';
+  if(code==='monthly_messages_used_up')return'This month\'s Home Base AI messages on your plan are used. A higher plan includes more. Offline answers continue.';
+  if(code==='daily_images_used_up')return'Today\'s AI screenshot readings are used. The phone reads screenshots offline instead.';
+  if(code==='free_pool_used_up')return'Free Home Base AI is at today\'s limit. Plus and Pro have their own allowance. Offline answers continue.';
+  if(code==='email_unconfirmed')return'Confirm your email address to use Home Base AI. Check your inbox for the sign-in link.';
   if(code==='voice_minutes_used_up')return'This month\'s GPT Live minutes are used. Voice continues on this phone with the built-in AI.';
   if(code==='ai_not_configured'||/not configured|not tied to a workspace/i.test(message))return'Home Base AI is not switched on yet on the server.';
   if(code==='sign_in'||error?.name==='AuthSessionMissingError'||/sign in.*first|auth session missing|invalid session/i.test(message))return'You are signed out on this phone. Sign in from Profile to use Home Base AI.';
