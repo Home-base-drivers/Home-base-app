@@ -42,3 +42,12 @@ test('every school with published bells is on the map, even when no mapped schoo
   assert.equal(out[0].schoolEnd, '14:35');
   assert.equal(out[1].name, 'Cecil Elementary School'); assert.equal(out[1].schoolEnd, '14:10'); assert.equal(out[1].tags.bellSource, 'u1');
 });
+
+test('a repeated surge pattern clears the route hot-spot floor (Rosemont morning wave)', () => {
+  const H = require('../dist/homebase-demand-history.js');
+  const r = H.recurrenceAt(39.3065, -76.653, new Date('2026-11-03T07:50:00-05:00'), { route: true });
+  assert.ok(r.distinctDates >= 5);
+  const score = 6 + 30 * Math.min(.6, r.confidence) + Math.min(10, r.distinctDates) * .4;
+  assert.ok(score >= 15, `pattern score ${score}`);
+  assert.match(html, /demand=hist&&hist\.distinctDates>=2\?Math\.max\(modeled,6\+30\*Math\.min\(\.6,hist\.confidence\|\|0\)\+Math\.min\(10,hist\.distinctDates\)\*\.4\):modeled/);
+});
