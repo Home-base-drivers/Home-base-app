@@ -26,7 +26,7 @@ test('GPT Live asset is versioned and cached by the PWA',()=>{
  assert.match(sw,/home-base-v\d+/);
 });
 
-function voiceHarness(getUser,{mediaError=true,voiceMode='live',plan='pro',execute=async()=>({ok:false,confirmed:false,requested:true}),dispatch=async()=>({transport:{sdp:'answer'}})}={}){
+function voiceHarness(getUser,{mediaError=true,voiceMode='live',plan='pro',gptVoice=true,execute=async()=>({ok:false,confirmed:false,requested:true}),dispatch=async()=>({transport:{sdp:'answer'}})}={}){
  const calls=[],messages=[],sent=[];let peer;
  class Events{listeners=new Map();addEventListener(name,fn){if(!this.listeners.has(name))this.listeners.set(name,new Set());this.listeners.get(name).add(fn)}removeEventListener(name,fn){this.listeners.get(name)?.delete(fn)}emit(name,event={}){for(const fn of this.listeners.get(name)||[])fn(event)}}
  class Peer extends Events{constructor(){super();peer=this;this.connectionState='new';this.iceGatheringState='complete';this.channel=new Events();this.channel.readyState='open';this.channel.send=s=>sent.push(JSON.parse(s));this.channel.close=()=>{this.channel.readyState='closed'}}addTrack(){}createDataChannel(){return this.channel}async createOffer(){return{type:'offer',sdp:'valid-offer'}}async setLocalDescription(d){this.localDescription=d}async setRemoteDescription(){calls.push('answer applied')}close(){this.connectionState='closed'}}
@@ -35,7 +35,7 @@ function voiceHarness(getUser,{mediaError=true,voiceMode='live',plan='pro',execu
   navigator:{mediaDevices:{getUserMedia:async()=>{calls.push('microphone');if(mediaError)throw Error('Test microphone unavailable');return{getTracks:()=>[track]}}}},
   RTCPeerConnection:Peer,HomeBaseAccounts:{backend:{getUser:async()=>{calls.push('auth');return getUser();},evaluateDispatch:async(...a)=>{calls.push('dispatch:'+a[0].operation);return dispatch(...a)}}},
   HomeBaseAgentClient:{execute},HomeBaseCopilot:{toggleConversation:()=>calls.push('guest voice'),stopConversation:()=>calls.push('old voice stopped')},HomeBaseShell:{setVoiceStatus:text=>messages.push(text)},clearTimeout,setTimeout,setInterval:()=>0,clearInterval(){},Date,
-  localStorage:{getItem:k=>k==='homeBaseVoicePrefs'?JSON.stringify({voiceMode}):null},HomeBaseInternalAI:{serverPlan:()=>plan,refreshEntitlement(){}}};
+  localStorage:{getItem:k=>k==='homeBaseVoicePrefs'?JSON.stringify({voiceMode}):null},HomeBaseInternalAI:{serverPlan:()=>plan,gptVoice:()=>plan==='pro'&&gptVoice,refreshEntitlement(){}}};
  ctx.document.body={append:()=>{}};ctx.document.createElement=()=>({setAttribute:()=>{},pause:()=>{},remove:()=>{},play:()=>Promise.resolve()});
  ctx.window=ctx;vm.createContext(ctx);vm.runInContext(live,ctx);
  return{start:ctx.HomeBaseLiveAssistant.start,stop:ctx.HomeBaseLiveAssistant.stop,calls,messages,sent,assistant:ctx.HomeBaseLiveAssistant,get peer(){return peer},event:e=>peer.channel.emit('message',{data:JSON.stringify(e)})};
@@ -77,6 +77,12 @@ test('hybrid voice (default), Free and Plus talk on the phone without opening GP
  const hybrid=voiceHarness(()=>({id:'driver'}),{voiceMode:'hybrid'});await hybrid.start();assert.deepEqual(hybrid.calls,['guest voice']);assert.match(hybrid.messages.at(-1),/let's talk/);
  const free=voiceHarness(()=>({id:'driver'}),{plan:'free'});await free.start();assert.deepEqual(free.calls,['guest voice']);
  const plus=voiceHarness(()=>({id:'driver'}),{plan:'plus'});await plus.start();assert.deepEqual(plus.calls,['guest voice'],'GPT Live is Pro only');assert.doesNotMatch(plus.messages.at(-1),/let's talk/);
+});
+test('with GPT voice switched off on the server, voice never opens GPT Live and Claude answers on the phone',async()=>{
+ const off=voiceHarness(()=>({id:'driver'}),{gptVoice:false,mediaError:false});await off.start();
+ assert.deepEqual(off.calls,['guest voice']);assert.doesNotMatch(off.messages.at(-1),/let's talk|GPT/);
+ const wake=voiceHarness(()=>({id:'driver'}),{gptVoice:false,mediaError:false});await wake.assistant.startLive({question:'weather'});
+ assert.ok(!wake.calls.includes('microphone')&&!wake.calls.some(c=>c.startsWith('dispatch:')),'no GPT Live session is requested');
 });
 test('GPT Live reports its end to the meter, and a refused plan falls back to phone voice',async()=>{
  const h=voiceHarness(()=>({id:'driver'}),{mediaError:false,dispatch:async p=>p.operation==='live-session'?{transport:{sdp:'answer'},voiceSessionId:'11111111-2222-4333-8444-555555555555',maxSeconds:600}:{}});

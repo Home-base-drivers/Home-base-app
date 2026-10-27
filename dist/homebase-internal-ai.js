@@ -501,6 +501,9 @@
   if(typeof document!=='undefined')document.dispatchEvent(new Event('homebase:plan-changed'));
  }
  function serverPlan(){return serverStatus?.plan||read('homeBasePlanStatus',null)?.plan||null;}
+ // GPT voices and GPT Live run only when the server reports them switched on (gpt_voice) for a Pro plan.
+ // Otherwise every voice question is answered by Claude and spoken in the phone's own voice.
+ function gptVoice(){const st=serverStatus||read('homeBasePlanStatus',null);return st?.plan==='pro'&&st?.gpt_voice===true;}
  function planStatus(){return serverStatus||read('homeBasePlanStatus',null);}
  async function refreshEntitlement(){
   const b=typeof window!=='undefined'?window.HomeBaseAccounts?.backend:null;if(!b)return null;
@@ -514,5 +517,5 @@
   let tries=0;const wait=setInterval(()=>{if(window.HomeBaseAccounts?.backend||++tries>40){clearInterval(wait);refreshEntitlement();}},500);
   window.addEventListener('homebase-calendar-identity',()=>setTimeout(refreshEntitlement,300));
  }
- return{VERSION:'builtin-2',noteUsage,driverProfile,notePlanStatus,serverPlan,planStatus,refreshEntitlement,combineParsed,_prepare:typeof document!=='undefined'?prepareImage:null,answer,ask,intentOf,periodFrom,summarize,overheadMinutes,parseScreenshotText,toRecords,tripsCsv,zonedIso,dayKey,readImage,readScreenshots,review,saveParsed,summaryOf,mountEarnings,downloadCsv,plan,setPlan};
+ return{VERSION:'builtin-2',noteUsage,driverProfile,notePlanStatus,serverPlan,gptVoice,planStatus,refreshEntitlement,combineParsed,_prepare:typeof document!=='undefined'?prepareImage:null,answer,ask,intentOf,periodFrom,summarize,overheadMinutes,parseScreenshotText,toRecords,tripsCsv,zonedIso,dayKey,readImage,readScreenshots,review,saveParsed,summaryOf,mountEarnings,downloadCsv,plan,setPlan};
 });

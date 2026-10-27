@@ -22,8 +22,12 @@ const usageDb=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_
 const fastModel=provider==='anthropic'?claudeFastModel:Deno.env.get('OPENAI_COPILOT_MODEL');
 const parseLanguage=makeLanguageParser({engine,provider,apiKey:textKey,model:fastModel});
 const translateLanguage=makeLanguageTranslator({provider,apiKey:textKey,model:fastModel});
-const synthesizeVoice=makeVoiceSynthesizer({apiKey:openaiKey,model:Deno.env.get('OPENAI_TTS_MODEL')||'gpt-4o-mini-tts'});
-const createLiveSession=openaiKey?makeLiveSessionCreator({apiKey:openaiKey,liveModel:Deno.env.get('OPENAI_LIVE_MODEL')||'gpt-live-1',backendModel:Deno.env.get('OPENAI_LIVE_BACKEND_MODEL')||'gpt-6-luna'}):null;
+// GPT voices and GPT Live stay off until an owner sets GPT_VOICE_ENABLED=true (OpenAI must be funded).
+// While off, voice questions are answered by Claude and spoken in the phone's own voice; a GPT voice
+// request returns configured:false so its usage claim is given back, and GPT Live reports live_unavailable.
+const gptVoiceEnabled=Deno.env.get('GPT_VOICE_ENABLED')==='true'&&!!openaiKey;
+const synthesizeVoice=gptVoiceEnabled?makeVoiceSynthesizer({apiKey:openaiKey,model:Deno.env.get('OPENAI_TTS_MODEL')||'gpt-4o-mini-tts'}):async()=>({configured:false,provider:'gpt_voice_off'});
+const createLiveSession=gptVoiceEnabled?makeLiveSessionCreator({apiKey:openaiKey,liveModel:Deno.env.get('OPENAI_LIVE_MODEL')||'gpt-live-1',backendModel:Deno.env.get('OPENAI_LIVE_BACKEND_MODEL')||'gpt-6-luna'}):null;
 Deno.serve(withAllowedOrigin(async(request:Request)=>{
  const client=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_ANON_KEY')!,{global:{headers:{Authorization:request.headers.get('Authorization')||''}},auth:{persistSession:false,autoRefreshToken:false}});
  const agent=makeHomeBaseAgent({provider,apiKey:textKey,fastModel:claudeFastModel,visionModel:provider==='anthropic'?claudeVisionModel:undefined,model:provider==='anthropic'?claudeModel:Deno.env.get('OPENAI_AGENT_MODEL')||Deno.env.get('OPENAI_LIVE_BACKEND_MODEL')||'gpt-6-luna',
@@ -36,7 +40,7 @@ Deno.serve(withAllowedOrigin(async(request:Request)=>{
  // Plan checks and GPT Live minutes run as the signed-in driver through
  // security-definer functions; the phone cannot change its own plan or usage.
  const rpc=async(name:string,args?:Record<string,unknown>)=>{const {data,error}=await client.rpc(name,args);if(error)throw Object.assign(new Error(error.message),{code:error.message?.includes('plan_required')?'plan_required':error.message?.includes('voice_minutes_used_up')?'voice_minutes_used_up':undefined});return data;};
- const entitlements={allowance:()=>rpc('my_ai_allowance'),
+ const entitlements={allowance:async()=>({...(await rpc('my_ai_allowance')||{}),gpt_voice:gptVoiceEnabled}),
   claim:async(userId:string,operation:string,image:boolean)=>{const {data,error}=await usageDb.rpc('claim_ai_usage',{p_user:userId,p_operation:operation,p_image:image});if(error)throw Object.assign(new Error(error.message),{code:error.message});return data;},
   release:async(id:number,userId:string)=>{const {error}=await usageDb.rpc('release_ai_usage',{p_usage:id,p_user:userId});if(error)throw error;},start:()=>rpc('start_voice_session'),heartbeat:(id:string)=>rpc('heartbeat_voice_session',{p_session:id}),end:(id:string,reason:string)=>rpc('end_voice_session',{p_session:id,p_reason:reason})};
  return makeDispatchHandler({engine,parseLanguage,translateLanguage,synthesizeVoice,createLiveSession,agent,entitlements,
