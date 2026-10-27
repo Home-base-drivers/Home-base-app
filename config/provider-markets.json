@@ -284,7 +284,8 @@
         {
           "name": "Baltimore Convention Center calendar",
           "url": "https://www.bccenter.org/events",
-          "followEvents": true,
+          "adapter": "saffire",
+          "api": "https://www.bccenter.org/services/eventsservice.asmx",
           "venues": [
             {
               "name": "Baltimore Convention Center",
