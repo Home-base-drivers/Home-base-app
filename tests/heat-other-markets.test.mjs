@@ -27,6 +27,9 @@ test('local point heat stays present at every zoom and uses finer samples in nei
   layer._drawSources=(_output,_map,sources,_size,sample)=>{assert.equal(sources.length,1);assert.equal(sources[0].lat,41.01);samples.push(sample);};
   for(const level of [8,10,13,16]){zoom=level;layer._draw();}
   assert.equal(samples.length,4);assert.ok(samples.every(sample=>sample>=1&&sample<=3));
-  assert.ok(samples[0]>samples[1]&&samples[1]>samples[2]);assert.equal(samples[2],samples[3]);
+  // Finer on the ground as you zoom in (metres per cell shrink), while pixel cells stay
+  // coarse enough that a zoom step never stalls the phone.
+  const metres=samples.map((s,i)=>s/2**[8,10,13,16][i]);
+  assert.ok(metres[0]>metres[1]&&metres[1]>metres[2]&&metres[2]>metres[3]);assert.ok(samples[2]>=2.5,'street-zoom grid stays coarse');
  }finally{global.window=previous;}
 });
