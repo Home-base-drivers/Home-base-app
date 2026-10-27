@@ -36,7 +36,7 @@ var require_homebase_public_data = __commonJS({
       if (typeof module === "object" && module.exports) module.exports = api;
       else root.HomeBasePublicData = api;
     })(typeof globalThis !== "undefined" ? globalThis : exports, function() {
-      const HOUR2 = 36e5;
+      const HOUR3 = 36e5;
       const LIVE_SIGNALS_URL = "https://raw.githubusercontent.com/Home-base-drivers/Home-base-app/signals/provider-signals.json";
       function snapshotTime(payload, now = Date.now()) {
         const t = Date.parse(payload && payload.generatedAt || "");
@@ -80,7 +80,7 @@ var require_homebase_public_data = __commonJS({
       }
       function calendarFresh(feed, generatedAt, now) {
         const fetched = Date.parse(feed?.fetchedAt || generatedAt || "");
-        return Number.isFinite(fetched) && now - fetched <= 24 * HOUR2 && now - fetched >= -5 * 6e4;
+        return Number.isFinite(fetched) && now - fetched <= 24 * HOUR3 && now - fetched >= -5 * 6e4;
       }
       function eventsForLocation(payload, lat, lon, now = Date.now()) {
         const rows = [], seen = /* @__PURE__ */ new Set();
@@ -91,7 +91,7 @@ var require_homebase_public_data = __commonJS({
           if (scoreboard && now - Date.parse(feed.fetchedAt || "") > 45 * 6e4) continue;
           for (const e of feed.events || []) {
             const start = Date.parse(e.eventStart), end = Date.parse(e.eventEnd || "");
-            if (isTicketAddon(e.name) || !point(e) || !Number.isFinite(start) || !/^\d{4}-\d\d-\d\dT\d\d:\d\d/.test(e.eventStart) || start > now + 12 * HOUR2 || (Number.isFinite(end) && end > start ? end < now - 90 * 6e4 : start < now - 6 * HOUR2) || distance([lat, lon], [Number(e.lat), Number(e.lon)]) > (market === nearby.find((m) => distance([lat, lon], [Number(m.center.lat), Number(m.center.lon)]) <= Number(m.radiusKm || 0)) ? 65 : 110)) continue;
+            if (isTicketAddon(e.name) || !point(e) || !Number.isFinite(start) || !/^\d{4}-\d\d-\d\dT\d\d:\d\d/.test(e.eventStart) || start > now + 12 * HOUR3 || (Number.isFinite(end) && end > start ? end < now - 90 * 6e4 : start < now - 6 * HOUR3) || distance([lat, lon], [Number(e.lat), Number(e.lon)]) > (market === nearby.find((m) => distance([lat, lon], [Number(m.center.lat), Number(m.center.lon)]) <= Number(m.radiusKm || 0)) ? 65 : 110)) continue;
             const key = eventIdentity(e);
             if (seen.has(key)) continue;
             seen.add(key);
@@ -104,7 +104,7 @@ var require_homebase_public_data = __commonJS({
         const rows = [], seen = /* @__PURE__ */ new Set();
         for (const market of matchingMarkets(payload, lat, lon)) for (const p of market.publicPlaces?.places || []) {
           if (!point(p) || !p.name || distance([lat, lon], [Number(p.lat), Number(p.lon)]) > radiusKm) continue;
-          if (!p.tags?.gazetteerArea && now - Number(p.tags?.publicFetchedAt || 0) > 7 * 24 * HOUR2) continue;
+          if (!p.tags?.gazetteerArea && now - Number(p.tags?.publicFetchedAt || 0) > 7 * 24 * HOUR3) continue;
           const key = String(p.name).toLowerCase() + ":" + Number(p.lat).toFixed(4) + ":" + Number(p.lon).toFixed(4);
           if (seen.has(key)) continue;
           seen.add(key);
@@ -202,8 +202,8 @@ var require_homebase_public_data = __commonJS({
       function timedEntryText(e) {
         return /\b(museum|exhibit(ion)?|immersive|experience|gallery|timed entry|general admission entry)\b/i.test([e.name, e.venue].join(" ")) && !/\b(gala|concert|party|benefit|fundraiser|live music)\b/i.test(e.name || "");
       }
-      function localDay(t) {
-        return new Date(t - 5 * HOUR2).toISOString().slice(0, 10);
+      function localDay2(t) {
+        return new Date(t - 5 * HOUR3).toISOString().slice(0, 10);
       }
       function consolidateEvents(events) {
         const rows = (events || []).filter(Boolean).slice().sort((a, b) => startOf(a) - startOf(b)), groups = [];
@@ -221,7 +221,7 @@ var require_homebase_public_data = __commonJS({
         });
         const byVenue = /* @__PURE__ */ new Map();
         merged.forEach((e, i) => {
-          const k = (venueKey(e.venue) || (point(e) ? Number(e.lat).toFixed(3) + ":" + Number(e.lon).toFixed(3) : "?")) + "|" + localDay(startOf(e));
+          const k = (venueKey(e.venue) || (point(e) ? Number(e.lat).toFixed(3) + ":" + Number(e.lon).toFixed(3) : "?")) + "|" + localDay2(startOf(e));
           if (!byVenue.has(k)) byVenue.set(k, []);
           byVenue.get(k).push(i);
         });
@@ -233,7 +233,7 @@ var require_homebase_public_data = __commonJS({
           const packed = items.length >= 4 && gaps[Math.floor(gaps.length / 2)] <= 60 * 6e4;
           if (!packed && !items.every(timedEntryText)) continue;
           const keep = idx.find((i) => !sportsEvent(merged[i])), first = merged[keep], lastStart = starts[starts.length - 1];
-          merged[keep] = { ...first, eventStart: first.eventStart instanceof Date ? new Date(starts[0]) : new Date(starts[0]).toISOString(), eventEnd: first.eventStart instanceof Date ? new Date(lastStart + HOUR2) : new Date(lastStart + HOUR2).toISOString(), timedEntry: true, timedSlots: items.length, tags: { ...first.tags || {}, timedEntry: true } };
+          merged[keep] = { ...first, eventStart: first.eventStart instanceof Date ? new Date(starts[0]) : new Date(starts[0]).toISOString(), eventEnd: first.eventStart instanceof Date ? new Date(lastStart + HOUR3) : new Date(lastStart + HOUR3).toISOString(), timedEntry: true, timedSlots: items.length, tags: { ...first.tags || {}, timedEntry: true } };
           for (const i of idx) if (i !== keep && !sportsEvent(merged[i])) drop.add(i);
         }
         merged = merged.filter((_, i) => !drop.has(i));
@@ -1115,7 +1115,8 @@ var provider_markets_default = {
         {
           name: "Baltimore Convention Center calendar",
           url: "https://www.bccenter.org/events",
-          followEvents: true,
+          adapter: "saffire",
+          api: "https://www.bccenter.org/services/eventsservice.asmx",
           venues: [
             {
               name: "Baltimore Convention Center",
@@ -1836,6 +1837,43 @@ var provider_markets_default = {
 
 // scripts/venue-calendars.mjs
 var import_homebase_public_data2 = __toESM(require_homebase_public_data(), 1);
+
+// scripts/calendar-archive-core.mjs
+var HOUR2 = 36e5;
+function localDay(now, timeZone = "America/New_York") {
+  try {
+    return new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(now));
+  } catch {
+    return new Date(now).toISOString().slice(0, 10);
+  }
+}
+var archiveKey = (source) => String(source.url || source.origin || source.name);
+function checkedToday(entry, now, timeZone) {
+  return !!entry?.lastSuccessAt && entry.lastSuccessDay === localDay(now, timeZone) && Date.parse(entry.lastSuccessAt) <= now && now - Date.parse(entry.lastSuccessAt) < 26 * HOUR2;
+}
+function archivedEvents(entry, now, horizonHours) {
+  return (entry?.events || []).filter((e) => {
+    const start = Date.parse(e.eventStart), end = Date.parse(e.eventEnd);
+    if (!Number.isFinite(start)) return false;
+    if (Number.isFinite(end) && end > start ? end < now - 90 * 6e4 : start < now - 6 * HOUR2) return false;
+    return start <= now + horizonHours * HOUR2;
+  });
+}
+function fromArchive(archive, source, now, timeZone, horizonHours) {
+  const entry = archive?.sources?.[archiveKey(source)];
+  if (!checkedToday(entry, now, timeZone)) return null;
+  const events = archivedEvents(entry, now, horizonHours);
+  return { source: { name: source.name, url: source.url, status: "active", pages: 0, eventCount: events.length, truncated: false, fetchedAt: entry.lastSuccessAt, method: "archive" + (entry.method ? ":" + entry.method : ""), archivedAt: entry.lastSuccessAt }, discoveredSources: [], events: events.map((e) => ({ ...e, archived: true })), context: [] };
+}
+function archiveFallback(archive, source, live, now, horizonHours) {
+  const entry = archive?.sources?.[archiveKey(source)];
+  const events = archivedEvents(entry, now, horizonHours);
+  if (live.source.status !== "unavailable" && (live.events.length || !events.length)) return live;
+  if (!entry?.lastSuccessAt || !events.length) return live;
+  return { ...live, source: { ...live.source, status: "archived", eventCount: events.length, archivedAt: entry.lastSuccessAt, liveReason: live.source.reason || null, fetchedAt: entry.lastSuccessAt }, events: events.map((e) => ({ ...e, archived: true })) };
+}
+
+// scripts/venue-calendars.mjs
 var VENUE_HORIZON_HOURS = 7 * 24;
 function registeredVenueCalendars(market) {
   return [...new Map(provider_markets_default.markets.filter((m) => distanceKm(market.center, m.center) <= m.radiusKm + market.radiusKm).flatMap((m) => m.publicCalendars || []).map((s) => [s.url, { ...s, kind: "venue" }])).values()];
@@ -1860,7 +1898,58 @@ async function discoverVenueCalendars(market, request = fetch) {
   }
   return { sources: [], status: "unavailable" };
 }
+function saffireDate(ms) {
+  const d = new Date(ms);
+  return `${String(d.getUTCMonth() + 1).padStart(2, "0")}/${String(d.getUTCDate()).padStart(2, "0")}/${d.getUTCFullYear()}`;
+}
+function clockTime(text2) {
+  const m = String(text2 || "").match(/(\d{1,2})(?::(\d{2}))?\s*([ap])\.?m/i);
+  if (!m) return null;
+  let h = +m[1] % 12;
+  if (/p/i.test(m[3])) h += 12;
+  return `${String(h).padStart(2, "0")}:${m[2] || "00"}`;
+}
+function saffireEvents(payload, source) {
+  const venue = source.venues?.[0], rows = [];
+  for (const day of payload?.d?.Days || []) {
+    const date = String(day.DateString || "").match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (!date) continue;
+    const iso = `${date[3]}-${date[1]}-${date[2]}`;
+    for (const slot of day.Times || []) for (const item of slot.Items || []) {
+      if (item.IsPrivate || item.IsMemberOnly || !item.Name) continue;
+      const range = String(item.EventTimeRangeString || ""), parts = range.split(/\s*[-–]\s*/), start = clockTime(slot.HasSpecificTime ? slot.TimeDisplay : "") || clockTime(parts[0]), end = start && parts[1] ? clockTime(parts[1]) : null;
+      rows.push({ "@type": "Event", name: item.Name, startDate: `${iso}T${start || "09:00"}:00`, endDate: end || (start ? null : "17:00") ? `${iso}T${end || "17:00"}:00` : void 0, url: item.DetailURL || source.url, location: { name: item.Locations?.[0]?.Name || venue?.name }, description: source.classification || "convention", approximateTime: !start, eventId: item.EventID });
+    }
+  }
+  return rows;
+}
+async function readSaffireCalendar(source, market, now = Date.now(), request = fetch, horizonHours = VENUE_HORIZON_HOURS) {
+  const api = source.api || new URL("/services/eventsservice.asmx", source.url).href, headers = { "Content-Type": "application/json; charset=utf-8", Accept: "application/json", "User-Agent": "HomeBaseDrivers/1.0 (+https://homebasedrivers.com)" };
+  const common = { day: "", categoryID: 0, tagID: 0, keywords: "%%", isFeatured: "false", fanPicks: "false", pastEvents: "false", allEvents: "false", memberEvents: "false", memberOnly: "false", showCategoryExceptionID: 0, isolatedSchedule: 0, customFieldFilters: [], searchInDescription: false };
+  const post = async (method, body) => {
+    const r = await request(api + "/" + method, { method: "POST", headers, body: JSON.stringify(body), signal: AbortSignal.timeout(2e4) });
+    if (!r.ok) throw new Error("http_" + r.status);
+    return r.json();
+  };
+  const days = await post("GetEventDays", { ...common, startDate: saffireDate(now - 864e5), endDate: saffireDate(now + horizonHours * 36e5), currentUserItems: "false", myPicks: "false" });
+  const dates = (days?.d || []).filter((d) => /^\d{2}\/\d{2}\/\d{4}$/.test(d)).slice(0, 60);
+  return dates.length ? saffireEvents(await post("GetEventDaysByList", { ...common, dates: dates.join(",") }), source) : [];
+}
 async function readVenueCalendar(source, market, now = Date.now(), request = fetch, lookup, opts = {}) {
+  if (source.adapter === "saffire") {
+    try {
+      const rows = await readSaffireCalendar(source, market, now, request, opts.horizonHours || VENUE_HORIZON_HOURS), events2 = [];
+      if (opts.recordCount != null) opts.recordCount += rows.length;
+      for (const row of rows) {
+        const why = {}, event = normalizePublicEvent(row, market, source, now, opts.horizonHours || VENUE_HORIZON_HOURS, why);
+        if (!event && opts.why) opts.why[why.reason || "other"] = (opts.why[why.reason || "other"] || 0) + 1;
+        if (event) events2.push({ ...event, demandEligible: true, timePrecision: row.approximateTime ? "approximate" : "minute", ...row.approximateTime ? { timeNote: "Hours not published; modeled 9 AM-5 PM" } : {}, locationPrecision: "venue" });
+      }
+      return { source: { name: source.name, url: source.url, status: "active", pages: 2, eventCount: events2.length, truncated: false, fetchedAt: new Date(now).toISOString(), method: "saffire-api" }, discoveredSources: [], events: [...new Map(events2.map((e) => [import_homebase_public_data2.default.eventIdentity(e), e])).values()], context: [] };
+    } catch (e) {
+      return { source: { name: source.name, url: source.url, status: "unavailable", pages: 0, eventCount: 0, truncated: false, fetchedAt: null, method: "saffire-api", reason: String(e?.message || "network_error").slice(0, 60) }, discoveredSources: [], events: [], context: [] };
+    }
+  }
   const queue = [source.url], visited = /* @__PURE__ */ new Set(), feeds = /* @__PURE__ */ new Set(), events = [], context = [], methods = /* @__PURE__ */ new Set();
   let pages = 0, parsed = false, failed = false, limited = false, reason = "", firstBody = "", firstUrl = "", listingRecords = 0;
   for (let n = 0; queue.length && n < 4; n++) {
@@ -1962,11 +2051,15 @@ async function readVenueCalendar(source, market, now = Date.now(), request = fet
   if (!parsed && !reason) reason = "no_event_data";
   return { source: { name: source.name, url: source.url, status: !parsed ? "unavailable" : failed || limited ? "partial" : "active", pages, eventCount: events.length, truncated: limited, fetchedAt: parsed ? new Date(now).toISOString() : null, ...methods.size ? { method: [...methods].join("+") } : {}, ...reason && !parsed ? { reason } : {} }, discoveredSources: [...feeds].filter((url) => url !== source.url).map((url) => ({ ...source, url })), events: [...new Map(events.map((e) => [import_homebase_public_data2.default.eventIdentity(e), e])).values()], context };
 }
-async function venueCalendars(market, sources, now = Date.now(), request = fetch, lookup) {
+async function venueCalendars(market, sources, now = Date.now(), request = fetch, lookup, archive = null) {
   const results = [];
   let next = 0;
   await Promise.all(Array.from({ length: Math.min(6, sources.length) }, async () => {
-    while (next < sources.length) results.push(await readVenueCalendar(sources[next++], market, now, request, lookup));
+    while (next < sources.length) {
+      const source = sources[next++];
+      const saved = archive && fromArchive(archive, source, now, market.timeZone, VENUE_HORIZON_HOURS);
+      results.push(saved || archiveFallback(archive, source, await readVenueCalendar(source, market, now, request, lookup), now, VENUE_HORIZON_HOURS));
+    }
   }));
   return { status: results.length && results.every((r) => r.source.status === "active") ? "active" : results.some((r) => r.source.status !== "unavailable") ? "partial" : "unavailable", fetchedAt: new Date(now).toISOString(), sources: results.map((r) => r.source), discoveredSources: results.flatMap((r) => r.discoveredSources || []), events: [...new Map(results.flatMap((r) => r.events).map((e) => [import_homebase_public_data2.default.eventIdentity(e), e])).values()], context: results.flatMap((r) => r.context) };
 }

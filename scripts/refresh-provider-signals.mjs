@@ -1,6 +1,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { publicRecords } from './public-records.mjs';
+import { validArchive } from './calendar-archive-core.mjs';
 import { publicPlaces } from './public-places.mjs';
 import { publicSportsProvider } from './public-sports.mjs';
 import { publicAlertsProvider } from './public-alerts.mjs';
@@ -324,6 +325,16 @@ async function main() {
       if (Array.isArray(deployed?.markets) && Date.parse(deployed.generatedAt) > Date.parse(previous.generatedAt || '1970-01-01')) previous = deployed;
     } catch { /* Local/committed verified data is still available offline. */ }
   }
+  // Saved daily calendar check (calendar-archive branch): calendars already read
+  // today are not fetched again, and a calendar that is down keeps its saved events.
+  let calendarArchive = null;
+  if (process.env.GITHUB_REPOSITORY) {
+    const archiveSources = [[`https://raw.githubusercontent.com/${process.env.GITHUB_REPOSITORY}/calendar-archive/calendar-archive.json?t=${NOW.getTime()}`, { Accept: 'application/json' }]];
+    if (process.env.GITHUB_TOKEN) archiveSources.unshift([`https://api.github.com/repos/${process.env.GITHUB_REPOSITORY}/contents/calendar-archive.json?ref=calendar-archive`, { Accept: 'application/vnd.github.raw', Authorization: `Bearer ${process.env.GITHUB_TOKEN}`, 'X-GitHub-Api-Version': '2022-11-28' }]);
+    for (const [url, headers] of archiveSources) {
+      try { calendarArchive = validArchive(await readJson(await boundedFetch(url, { headers }))); if (calendarArchive) break; } catch { /* no archive yet: read calendars live */ }
+    }
+  }
   const selected = selectMarkets(config.markets, process.env.HOMEBASE_MARKETS);
   try { EMPLOYER_SITES = await resolveSiteCoordinates(CONFIG_SITES, previous); } catch { /* sites without coordinates stay off the map */ }
   const markets = await Promise.all(config.markets.map(async market => {
@@ -331,7 +342,7 @@ async function main() {
     // No driver in this market recently: keep its last data and make no feed calls.
     if (!selected.has(market.id) && old) return { ...old, idle: true, employerSites: { source: 'config/employer-sites.json', sites: EMPLOYER_SITES.filter(site => Number.isFinite(site.lat) && Number.isFinite(site.lon) && haversineKm(market.center, site) <= market.radiusKm) } };
     const [uber, ticketmaster, booking, flightaware, records, places] = await Promise.all([
-      uberProvider(market), ticketmasterProvider(market), bookingProvider(market), flightAwareProvider(market), publicRecords(market, NOW.getTime()), publicPlaces(market, NOW.getTime(), old?.publicPlaces)
+      uberProvider(market), ticketmasterProvider(market), bookingProvider(market), flightAwareProvider(market), publicRecords(market, NOW.getTime(), fetch, calendarArchive), publicPlaces(market, NOW.getTime(), old?.publicPlaces)
     ]);
     const [sportsFeed, alerts, schoolBells] = await Promise.all([
       publicSportsProvider(market, old?.publicSports, NOW.getTime(), fetch, places.places || []),

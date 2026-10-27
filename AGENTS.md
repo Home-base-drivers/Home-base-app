@@ -53,6 +53,15 @@ Every published-bell school is placed on the map even when no mapped school poin
 matches it. Routine schools without bell times stay faint. `tests/scheduled-heat.test.mjs`
 enforces this.
 
+## Saved calendars contract
+
+Public calendars are read by the daily calendar check and saved per calendar on the
+`calendar-archive` branch (`scripts/calendar-archive-core.mjs`). Never make the live
+refresh re-read a calendar that was read successfully today, and never let a failed
+or suddenly empty read erase saved upcoming events; fall back to the archive. New
+calendar sources go in `config/provider-markets.json` and are picked up by the
+check automatically. `tests/calendar-archive.test.mjs` enforces this.
+
 ## Speed and placement contract (map must never freeze)
 
 Surge history only grows, so anything that loops over it runs on every place and

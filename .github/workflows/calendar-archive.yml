@@ -1,0 +1,81 @@
+name: Daily calendar check
+
+# Reads every configured public calendar (venue calendars in every market,
+# including the Baltimore Convention Center's events service, plus campus
+# calendars) a week ahead and saves the results per calendar on the
+# machine-owned `calendar-archive` branch, with a health report.
+#  - A calendar read successfully today is not read again until the next day;
+#    the evening pass only retries calendars that failed in the morning.
+#  - A calendar that is down, or answers with nothing while saved events are
+#    still upcoming, keeps its saved events. The live refresh
+#    (live-signals.yml) serves calendars from this archive the same way.
+# It never changes main or the deployed app.
+on:
+  schedule:
+    - cron: '17 9 * * *'   # ~5 AM Eastern
+    - cron: '17 21 * * *'  # retry pass for calendars that failed
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Re-read calendars already read today (1 = yes)'
+        required: false
+        default: ''
+      markets:
+        description: 'Comma list of market ids (empty = all)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: calendar-archive
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      # Scheduled runs use main; a manual run uses the branch it was started from.
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install
+        run: npm ci --ignore-scripts
+      - name: Load the saved archive
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -u
+          curl -sf --max-time 30 -H "Authorization: Bearer $GITHUB_TOKEN" -H 'Accept: application/vnd.github.raw' -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/contents/calendar-archive.json?ref=calendar-archive" -o "$RUNNER_TEMP/previous.json" \
+            || echo "No saved archive yet; starting fresh."
+      - name: Read calendars
+        env:
+          FORCE: ${{ github.event.inputs.force }}
+          MARKETS: ${{ github.event.inputs.markets }}
+        run: node scripts/calendar-archive.mjs "$RUNNER_TEMP/previous.json" "$RUNNER_TEMP/archive"
+      - name: Save to the calendar-archive branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -eu
+          cd "$RUNNER_TEMP/archive"
+          node -e 'const a=JSON.parse(require("fs").readFileSync("calendar-archive.json","utf8"));if(a.schemaVersion!==1||!a.sources)process.exit(1)'
+          printf '%s\n' 'Machine-owned saved calendar results. Written by .github/workflows/calendar-archive.yml; do not edit by hand. See calendar-health.md.' > README.md
+          cat calendar-health.md >> "$GITHUB_STEP_SUMMARY"
+          git init -q -b calendar-archive
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add calendar-archive.json calendar-health.md README.md
+          git commit -q -m "data: calendar check $(date -u +%Y-%m-%dT%H:%MZ)"
+          # A single replaced commit keeps the data branch small; the archive file
+          # itself carries 14 days of saved events. It never touches main.
+          git push -q --force "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/calendar-archive

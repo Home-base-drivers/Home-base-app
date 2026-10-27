@@ -43,6 +43,11 @@ for (const t of targets) {
   rows.push({ snippet, market: t.market, kind: t.kind, name: t.name, url: t.url, adapter: t.adapter || '', app: { status: app.status, error: app.error, bytes: app.bytes, finalUrl: app.finalUrl !== t.url ? app.finalUrl : undefined, server: app.server, cf: app.cf, events, ...sig },
     browser: browser ? { status: browser.status, error: browser.error, bytes: browser.bytes, events: bevents, blocked: bsig.blocked, ldjson: bsig.ldjson, title: bsig.title } : null });
 }
+// Optional raw POST probe (JSON body), e.g. a calendar's own web-service call.
+if (process.env.PROBE_POST) {
+  const [url, body] = process.env.PROBE_POST.split('|');
+  try { const r = await fetch(url, { method: 'POST', signal: AbortSignal.timeout(20000), headers: { 'Content-Type': 'application/json; charset=utf-8', 'User-Agent': APP_UA, Accept: 'application/json' }, body }); const t = await r.text(); rows.unshift({ market: 'candidate', kind: 'candidate', name: 'POST ' + url, url, app: { status: r.status, bytes: t.length, events: 0, ics: [], rss: [] }, snippet: [t.slice(0, 6000)] }); } catch (e) { rows.unshift({ market: 'candidate', kind: 'candidate', name: 'POST ' + url, url, app: { status: 0, error: String(e.message), bytes: 0, events: 0, ics: [], rss: [] } }); }
+}
 const md = ['| market | source | app status | bytes | events | blocked | ld+json | feeds/platform | browser status | browser events |', '|---|---|---|---|---|---|---|---|---|---|'];
 for (const r of rows) {
   const a = r.app, feeds = [a.ics.length ? 'ics' : '', a.rss.length ? 'rss' : '', a.tribe ? 'tribe' : '', a.localist ? 'localist' : '', a.trumba ? 'trumba' : '', a.nextData ? 'next' : '', a.nuxt ? 'nuxt' : '', a.algolia ? 'algolia' : '', a.eventbrite ? 'eventbrite' : '', a.etix ? 'etix' : '', a.ticketmaster ? 'tm' : '', a.axs ? 'axs' : '', a.seetickets ? 'seetickets' : '', a.squarespace ? 'squarespace' : '', a.wix ? 'wix' : '', a.civicplus ? 'civicplus' : '', a.activenet ? 'activenet' : '', a.finalsite ? 'finalsite' : '', a.rschooltoday ? 'rschooltoday' : '', a.blackbaud ? 'blackbaud' : '', a.wordpress ? 'wp' : ''].filter(Boolean).join(' ');

@@ -16,6 +16,22 @@ Listings within 7 days are kept (venue calendars are small); the app still uses 
 next 12 hours for heat and routes. A single-venue (or single-complex) calendar places
 its listings at that venue.
 
+## Daily calendar check and saved results (calendar-archive)
+`.github/workflows/calendar-archive.yml` runs at ~5 AM Eastern (and a 5 PM retry
+pass). It reads every configured calendar — venue calendars in every market and the
+Towson/Morgan campus calendars — a week ahead (`scripts/calendar-archive.mjs`) and
+saves each calendar's events, last success, failures in a row and reason to
+`calendar-archive.json` on the machine-owned `calendar-archive` branch, with
+`calendar-health.md` (also shown on the run's summary page).
+- **Same day is not re-read.** A calendar read successfully on the market's current
+  day is skipped by later passes and served from the archive by the live refresh
+  (method `archive:…`). Manual run with `force=1` re-reads everything.
+- **Site down or silent.** If a calendar fails, or answers with an empty list while
+  saved events are still upcoming, its saved events are kept; the live refresh marks
+  that calendar `archived` (with `archivedAt`) and still sends its events to the app.
+- Saved past events are kept 14 days; calendars removed from config drop out.
+`tests/calendar-archive.test.mjs` enforces these rules.
+
 ## Baltimore status after this change (14-day check)
 | Source | Result |
 |---|---|
@@ -25,7 +41,7 @@ its listings at that venue.
 | Baltimore Soundstage, M&T Bank Stadium, Maryland State Fairgrounds | Working |
 | Morgan State, Towson University | Working (Localist API) |
 | CFG Bank Arena, Lake Roland | Intermittent: AWS WAF challenge (HTTP 202) blocks automated reads; CFG is covered by the Ticketmaster API |
-| Baltimore Convention Center | No machine-readable data (Saffire JavaScript calendar) |
+| Baltimore Convention Center | Connected (v299): read from the site's public Saffire events service (`GetEventDays` → `GetEventDaysByList`). Shows that list only a date are placed at the center with modeled 9 AM–5 PM hours and marked "est. hours" |
 | Visit Baltimore | Listing and event pages carry no Event data (Algolia search only) |
 | Baltimore City / County Recreation & Parks, bcrpsports | No machine-readable event data (program catalogs) |
 | Orioles (mlb.com) | No data on the page; games come from the MLB Stats API instead |

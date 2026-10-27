@@ -17,6 +17,10 @@ on:
         description: 'Optional regex; store matching snippets of candidate pages'
         required: false
         default: ''
+      post:
+        description: 'Optional POST probe: url|json-body'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -37,6 +41,7 @@ jobs:
           MARKET: ${{ github.event.inputs.market }}
           EXTRA_URLS: ${{ github.event.inputs.urls }}
           SNIPPET_GREP: ${{ github.event.inputs.grep }}
+          PROBE_POST: ${{ github.event.inputs.post }}
         run: node scripts/diagnose-calendars.mjs ${MARKET:+--market=$MARKET} | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Publish to the diagnostics branch
         env:
