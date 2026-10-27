@@ -1,0 +1,21 @@
+{
+ "generatedAt": "2026-10-27T17:55:33.133Z",
+ "rows": [
+  {
+   "market": "candidate",
+   "kind": "candidate",
+   "name": "POST https://nixihmurdtfcbffgvpij.supabase.co/functions/v1/billing",
+   "url": "https://nixihmurdtfcbffgvpij.supabase.co/functions/v1/billing",
+   "app": {
+    "status": 401,
+    "bytes": 25,
+    "events": 0,
+    "ics": [],
+    "rss": []
+   },
+   "snippet": [
+    "{\"error\":\"Sign in first\"}"
+   ]
+  }
+ ]
+}
