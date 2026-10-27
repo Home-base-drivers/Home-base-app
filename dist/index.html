@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Home Base">
-  <meta name="homebase-build" content="v295">
+  <meta name="homebase-build" content="v296">
   <meta name="description" content="Home Base connects local driver platforms, earnings forecasts, events and a GPS-based 12-hour route in one app.">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icon-192.png">
@@ -217,7 +217,7 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="baltimore-market.js?v=73"></script>
 <script src="homebase-metros.js?v=1"></script>
-<script src="homebase-heat.js?v=113"></script>
+<script src="homebase-heat.js?v=114"></script>
 <script src="homebase-global-heat.js?v=3"></script>
 <link rel="stylesheet" href="homebase-earnings.css?v=110">
 <link rel="stylesheet" href="homebase-growth.css?v=113">
@@ -1206,12 +1206,23 @@ function applySiteStatus(sources){
 // that match a district profile by location and name.
 function applyBellTimes(sources){
   if(!schoolBellTimes.length||!Array.isArray(sources))return sources;
-  return sources.map(source=>{
+  const matched=new Set();
+  const out=sources.map(source=>{
     if(!source||!(source.cat==='school'||source.cat==='k12')||source.schoolStart||source.tags?.schoolStart)return source;
     const match=HomeBasePublicData.bellMatch(source,schoolBellTimes);if(!match)return source;
+    matched.add(match);
     const stage=HomeBaseRoutePolicy.schoolStage(source),levels=match.levels||{},w=levels[stage==='primary'?'elementary':stage]||levels.all||levels.elementary||levels.middle||levels.high;
     return w?{...source,schoolStart:w.open,schoolEnd:w.close,tags:{...(source.tags||{}),bellSource:match.url,bellSchool:match.name}}:source;
   });
+  // Every school with published bell times is on the map at its drop-off and pickup
+  // windows, even when no mapped school point matched it (most did not).
+  for(const school of schoolBellTimes){
+    if(matched.has(school)||!Number.isFinite(Number(school.lat))||!Number.isFinite(Number(school.lon)))continue;
+    if(out.some(v=>v&&(v.cat==='school'||v.cat==='k12')&&v.tags?.bellSchool===school.name))continue;
+    const base={name:school.name,cat:'k12',lat:Number(school.lat),lon:Number(school.lon)},stage=HomeBaseRoutePolicy.schoolStage(base),levels=school.levels||{},w=levels[stage==='primary'?'elementary':stage]||levels.all||levels.elementary||levels.middle||levels.high;
+    if(w)out.push({...base,schoolStart:w.open,schoolEnd:w.close,tags:{bellSource:school.url,bellSchool:school.name,source:'Published bell times'}});
+  }
+  return out;
 }
 // Re-center automatically only on a new location, never while the driver is
 // looking around the map (zooming out to see the route, panning to a stop).
@@ -1409,7 +1420,7 @@ function recheckDemandSources(){if(document.visibilityState!=='visible')return;s
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')recheckDemandSources()});window.addEventListener('pageshow',e=>{if(e.persisted)recheckDemandSources()});window.addEventListener('online',recheckDemandSources);
 window.addEventListener('homebase-calendar-identity',()=>{schoolSearchAt=0;schoolSearchKey='';schoolEventRows=[];if(currentLocation)refreshSchoolEvents(...currentLocation);});
 window.addEventListener('load',()=>{schoolSearchAt=0;if(currentLocation)refreshSchoolEvents(...currentLocation);},{once:true});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>{const replacingWorker=!!navigator.serviceWorker.controller;navigator.serviceWorker.register('sw.js?v=295',{updateViaCache:'none'}).then(r=>{r.update();navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!replacingWorker)return;if(!sessionStorage.getItem('hb-release-reload-v295')){sessionStorage.setItem('hb-release-reload-v295','1');location.reload()}})}).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';})});
+if('serviceWorker' in navigator)window.addEventListener('load',()=>{const replacingWorker=!!navigator.serviceWorker.controller;navigator.serviceWorker.register('sw.js?v=296',{updateViaCache:'none'}).then(r=>{r.update();navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!replacingWorker)return;if(!sessionStorage.getItem('hb-release-reload-v296')){sessionStorage.setItem('hb-release-reload-v296','1');location.reload()}})}).catch(()=>{const node=document.getElementById('updated');if(node)node.textContent='App loaded · offline cache unavailable in this browser';})});
 </script>
 <script src="homebase-live.js?v=39"></script>
 </body>
