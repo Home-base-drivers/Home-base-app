@@ -247,7 +247,8 @@
             "lat": 39.2875169,
             "lon": -76.607604,
             "coordinateSource": "https://baltimore.org/listings/baltimore-soundstage/"
-          }
+          },
+          "classification": "concert music"
         },
         {
           "name": "Nevermore Hall published AXS calendar",
@@ -278,7 +279,8 @@
               "coordinateSource": "Home Base existing mapped venue anchor",
               "locationPrecision": "venue_complex"
             }
-          ]
+          ],
+          "classification": "nightlife music party"
         },
         {
           "name": "Baltimore Convention Center calendar",
@@ -292,7 +294,8 @@
               "coordinateSource": "Home Base existing mapped venue anchor",
               "locationPrecision": "venue"
             }
-          ]
+          ],
+          "classification": "convention conference"
         },
         {
           "name": "CFG Bank Arena calendar",
@@ -306,7 +309,8 @@
               "coordinateSource": "Home Base existing mapped venue anchor",
               "locationPrecision": "venue"
             }
-          ]
+          ],
+          "classification": "arena concert sports"
         },
         {
           "name": "M&T Bank Stadium calendar",
@@ -320,7 +324,8 @@
               "coordinateSource": "Home Base existing mapped venue anchor",
               "locationPrecision": "venue"
             }
-          ]
+          ],
+          "classification": "stadium football"
         },
         {
           "name": "Maryland Stadium Authority events",
@@ -341,7 +346,8 @@
               "coordinateSource": "Home Base existing mapped venue anchor",
               "locationPrecision": "venue"
             }
-          ]
+          ],
+          "classification": "stadium sports"
         },
         {
           "name": "Orioles Camden Yards calendar",
@@ -355,7 +361,8 @@
               "coordinateSource": "Home Base existing mapped venue anchor",
               "locationPrecision": "venue"
             }
-          ]
+          ],
+          "classification": "baseball stadium"
         },
         {
           "name": "Pier Six Pavilion calendar",
@@ -369,7 +376,8 @@
               "coordinateSource": "Home Base existing mapped venue anchor",
               "locationPrecision": "venue"
             }
-          ]
+          ],
+          "classification": "concert music"
         },
         {
           "name": "Maryland State Fairgrounds calendar",
@@ -383,7 +391,8 @@
               "coordinateSource": "Home Base existing mapped venue anchor",
               "locationPrecision": "venue"
             }
-          ]
+          ],
+          "classification": "fairground festival"
         },
         {
           "name": "Baltimore City Recreation & Parks events",

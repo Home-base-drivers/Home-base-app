@@ -3,6 +3,7 @@
 // and which machine-readable feeds the page exposes. Read-only.
 import { readFile, writeFile } from 'node:fs/promises';
 import { structuredEvents, publishedVenueEvents } from './public-events.mjs';
+import { readVenueCalendar } from './venue-calendars.mjs';
 const markets = JSON.parse(await readFile(new URL('../config/provider-markets.json', import.meta.url), 'utf8')).markets;
 const schools = JSON.parse(await readFile(new URL('../config/school-calendar-sources.json', import.meta.url), 'utf8')).sources || [];
 const APP_UA = 'HomeBase public event context (+https://github.com/Home-base-drivers/Home-base-app)';
@@ -44,6 +45,14 @@ const md = ['| market | source | app status | bytes | events | blocked | ld+json
 for (const r of rows) {
   const a = r.app, feeds = [a.ics.length ? 'ics' : '', a.rss.length ? 'rss' : '', a.tribe ? 'tribe' : '', a.localist ? 'localist' : '', a.trumba ? 'trumba' : '', a.nextData ? 'next' : '', a.nuxt ? 'nuxt' : '', a.algolia ? 'algolia' : '', a.eventbrite ? 'eventbrite' : '', a.etix ? 'etix' : '', a.ticketmaster ? 'tm' : '', a.axs ? 'axs' : '', a.seetickets ? 'seetickets' : '', a.squarespace ? 'squarespace' : '', a.wix ? 'wix' : '', a.civicplus ? 'civicplus' : '', a.activenet ? 'activenet' : '', a.finalsite ? 'finalsite' : '', a.rschooltoday ? 'rschooltoday' : '', a.blackbaud ? 'blackbaud' : '', a.wordpress ? 'wp' : ''].filter(Boolean).join(' ');
   md.push(`| ${r.market} | ${r.name} | ${a.status || a.error} | ${a.bytes} | ${a.events} | ${a.blocked} | ${a.ldjson} | ${feeds} | ${r.browser ? (r.browser.status || r.browser.error) : ''} | ${r.browser ? r.browser.events + (r.browser.blocked ? ' (block page)' : '') : ''} |`);
+}
+// The real pipeline (what the live refresh stores), per venue calendar.
+md.push('', '### Pipeline (readVenueCalendar, next 36 h)', '', '| market | source | status | method | stored events | reason |', '|---|---|---|---|---|---|');
+const now=Date.now();
+for (const m of markets.filter(m => !only || m.id === only)) for (const c of m.publicCalendars || []) {
+  let r; try { r = await readVenueCalendar(c, m, now); } catch (e) { r = { source: { status: 'error', reason: String(e.message).slice(0, 60) }, events: [] }; }
+  const row = rows.find(x => x.url === c.url && x.market === m.id); if (row) row.pipeline = { ...r.source, sample: r.events.slice(0, 3).map(e => e.eventStart + ' ' + e.name) };
+  md.push(`| ${m.id} | ${c.name} | ${r.source.status} | ${r.source.method || ''} | ${r.events.length} | ${r.source.reason || ''} |`);
 }
 await writeFile('calendar-diagnostics.json', JSON.stringify({ generatedAt: new Date().toISOString(), rows }, null, 1));
 await writeFile('calendar-diagnostics.md', md.join('\n') + '\n');
