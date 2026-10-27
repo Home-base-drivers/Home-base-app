@@ -3,6 +3,9 @@ import publicData from '../dist/homebase-public-data.js';
 import {distanceKm,structuredEvents,publishedVenueEvents,normalizePublicEvent,nextDataEvents,feedCandidates,tribeEvents,localistEvents} from './public-events.mjs';
 import {schoolPage,schoolCalendarLinks,schoolIcsEvents,publicSchoolUrl} from './school-events.mjs';
 
+// Venue calendars change rarely and are small: keep a week of listings so the model
+// sees what is coming, not only the next day and a half.
+export const VENUE_HORIZON_HOURS=7*24;
 export function registeredVenueCalendars(market){
  return [...new Map(markets.markets.filter(m=>distanceKm(market.center,m.center)<=m.radiusKm+market.radiusKm).flatMap(m=>m.publicCalendars||[]).map(s=>[s.url,{...s,kind:'venue'}])).values()];
 }
@@ -39,7 +42,7 @@ export async function readVenueCalendar(source,market,now=Date.now(),request=fet
    if(n===0)listingRecords=records.length;
    parsed ||= !!ics||records.length>0;limited ||= !!ics?.recurrenceLimited;
    if(opts.recordCount!=null)opts.recordCount+=records.length;
-   for(const row of records){const why={},event=normalizePublicEvent(row,market,source,now,opts.horizonHours||36,why);if(!event&&opts.why)opts.why[why.reason||'other']=(opts.why[why.reason||'other']||0)+1;if(event)events.push({...event,demandEligible:true,timePrecision:'minute',locationPrecision:row.location?.geo?'venue':source.venues?.find(v=>v.name.toLowerCase()===String(event.venue).toLowerCase())?.locationPrecision||'venue'});
+   for(const row of records){const why={},event=normalizePublicEvent(row,market,source,now,opts.horizonHours||VENUE_HORIZON_HOURS,why);if(!event&&opts.why)opts.why[why.reason||'other']=(opts.why[why.reason||'other']||0)+1;if(event)events.push({...event,demandEligible:true,timePrecision:'minute',locationPrecision:row.location?.geo?'venue':source.venues?.find(v=>v.name.toLowerCase()===String(event.venue).toLowerCase())?.locationPrecision||'venue'});
     else if(/^\d{4}-\d{2}-\d{2}$/.test(row.startDate||'')&&Date.parse(row.startDate+'T12:00:00Z')>=now-86400000&&Date.parse(row.startDate+'T12:00:00Z')<=now+7*86400000)context.push({name:row.name,eventDate:row.startDate,id:source.url+':'+row.name+':'+row.startDate,demandEligible:false});
    }
    if(source.followEvents){const origin=new URL(result.url).origin,links=schoolCalendarLinks(result.body,result.url).filter(u=>new URL(u).origin===origin);links.filter(u=>/\.ics(?:\?|$)|[?&]ical/i.test(u)).forEach(u=>feeds.add(u));queue.push(...links.filter(u=>/(?:\/events?\/[^/?]+|\.ics(?:\?|$)|[?&]ical)/i.test(u)&&!visited.has(u.toLowerCase())&&!queue.includes(u)));}
@@ -55,7 +58,7 @@ export async function readVenueCalendar(source,market,now=Date.now(),request=fet
   const list=[...links].filter(u=>!visited.has(u.toLowerCase()));let next=0,read=0;
   await Promise.all(Array.from({length:Math.min(4,list.length)},async()=>{while(next<list.length){const u=list[next++];try{const r=await schoolPage(u,request,lookup);read++;
    const rows=structuredEvents(r.body);if(opts.recordCount!=null)opts.recordCount+=rows.length;
-   for(const row of rows){const why={},event=normalizePublicEvent({url:u,...row},market,source,now,opts.horizonHours||36,why);if(!event&&opts.why)opts.why[why.reason||'other']=(opts.why[why.reason||'other']||0)+1;if(event)events.push({...event,demandEligible:true,timePrecision:'minute',locationPrecision:row.location?.geo?'venue':'venue'});}
+   for(const row of rows){const why={},event=normalizePublicEvent({url:u,...row},market,source,now,opts.horizonHours||VENUE_HORIZON_HOURS,why);if(!event&&opts.why)opts.why[why.reason||'other']=(opts.why[why.reason||'other']||0)+1;if(event)events.push({...event,demandEligible:true,timePrecision:'minute',locationPrecision:row.location?.geo?'venue':'venue'});}
    if(rows.length)parsed=true;}catch{}}}));
   if(read){pages+=read;methods.add('detail-pages');}
  }

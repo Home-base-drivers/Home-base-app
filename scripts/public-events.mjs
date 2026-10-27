@@ -124,7 +124,9 @@ export function normalizePublicEvent(event, market, source, now = Date.now(), ho
   const geo = venue?.geo;
   const known = (source.venues || []).find(place => place.name.toLowerCase() === String(venue?.name || '').toLowerCase());
   // A single-venue calendar's listings are at that venue even when a listing spells it differently.
-  const only = !known && geo?.latitude == null ? (source.venue && Number.isFinite(source.venue.lat) ? source.venue : (source.venues || []).length === 1 ? source.venues[0] : null) : null;
+  const vs = source.venues || [], oneSite = vs.length > 0 && vs.every(v => Number.isFinite(v.lat) && distanceKm(vs[0], v) <= .25);
+  // ...or all of its venues share one site (e.g. the Power Plant Live! complex).
+  const only = !known && geo?.latitude == null ? (source.venue && Number.isFinite(source.venue.lat) ? source.venue : oneSite ? vs[0] : null) : null;
   const place = known || only;
   const lat = geo?.latitude == null ? place?.lat : Number(geo.latitude), lon = geo?.longitude == null ? place?.lon : Number(geo.longitude);
   if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) return drop('no location');
