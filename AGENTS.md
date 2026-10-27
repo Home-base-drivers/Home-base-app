@@ -44,6 +44,23 @@ the published snapshot stops yielding events, places or bells, when a market has
 no keyless event source, or when the app stops re-checking sources on open. After
 adding records, run `npm run history:manifest` and commit the updated manifest.
 
+## Speed and placement contract (map must never freeze)
+
+Surge history only grows, so anything that loops over it runs on every place and
+every hour of the 12-hour route. Keep `recurrenceForPlatform` working from the
+cached per-record facts (`rowFacts`) and the `recurrence` memo; never convert
+times through `Intl`/`toLocaleDateString` inside a per-record or per-cell loop.
+Heat drawing keeps per-cell work allocation-free and coarsens pixel cells as the
+map zooms in. Games without coordinates are placed on a local venue only by a
+distinctive name word and a matching city; generic words (Center, Arena, Garden)
+never place a game.
+
+`tests/freeze-and-venues.test.mjs` enforces this with time budgets (including
+four times today's history) and with the Oct 26 out-of-state games (Paycom
+Center, Toyota Center, Madison Square Garden, Rocket Arena). Every one of those
+tests fails on the v293 code that froze. Do not raise a budget to make a change
+pass; make the change faster.
+
 ## Before you start
 
 Read [docs/AGENT_ENVIRONMENT.md](docs/AGENT_ENVIRONMENT.md). It covers the
