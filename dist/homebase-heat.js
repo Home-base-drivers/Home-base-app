@@ -91,6 +91,20 @@
     const p=letOutProfile(source),min=(time-end)/60000;if(min<0||min>=p.exitMinutes)return 0;
     if(min<p.peakFrom)return .6+.4*min/p.peakFrom;if(min<=p.peakTo)return 1;return Math.max(0,1-(min-p.peakTo)/(p.exitMinutes-p.peakTo));
   }
+  // Confirmed schedules: a school with published bell times inside its drop-off or
+  // pickup window, or a verified shift site (Amazon, hospital) at a shift change.
+  // These are known demand, so they draw like a dated event (thick orange/red),
+  // not like faint background context. 0..1 window strength; 0 outside it.
+  function scheduledWindow(source,when){
+    const P=globalThis.HomeBaseRoutePolicy,parts=typeof globalThis.marketParts==='function'?globalThis.marketParts(new Date(when)):null;
+    if(!P||!parts||!source||source.eventStart)return 0;
+    const tags=source.tags||{},hour=parts.hour+new Date(when).getMinutes()/60;
+    try{
+      if((source.cat==='school'||source.cat==='k12')&&(source.schoolEnd||tags.schoolEnd||tags.bellSource))return clamp(P.schoolWeight(source,{day:parts.day,hour},new Date(when))/8,0,1);
+      if((tags.employerSite||P.amazonSite?.(source)&&P.warehouse(source))&&!tags.siteClosed)return clamp(P.workerWeight(source,{day:parts.day,hour})/8,0,1);
+    }catch{}
+    return 0;
+  }
   function currentEvidence(source, when, now = Date.now()) {
     const tags=source.tags||{},time=+new Date(when);
     if(tags.historicalPrior)return 'history';
@@ -104,6 +118,7 @@
       if(Number.isFinite(fetched)&&(now-fetched>24*3600000||fetched>now+5*60000))return 'modeled';
       if(time>=start-60*60000&&time<=start||Number.isFinite(end)&&end>start&&!source.eventEndEstimated&&time>=end&&time<end+letOutProfile(source).exitMinutes*60000)return 'event';
     }
+    if(scheduledWindow(source,when)>0)return 'event';
     return 'modeled';
   }
   function smoothstep(a,b,x){const t=clamp((x-a)/(b-a),0,1);return t*t*(3-2*t);}
@@ -162,6 +177,9 @@
     // timed events, nightlife and other local signals create the stronger peaks.
     if (tags.areaCoverageAnchor) strength *= .42;
     if (tags.metroBaseline || tags.forecast) strength *= .85;
+    // Confirmed school bells and shift changes draw at event strength.
+    const scheduled=scheduledWindow(source,when);
+    if(scheduled>0)return clamp(Math.max(strength,.65+.75*scheduled),0,1.6);
     // Event-size variation must survive normalization; background stays capped.
     return clamp(strength, 0, source.eventStart&&currentEvidence(source,when)==='event'?3:1.25);
   }
@@ -231,12 +249,15 @@
     return RADII_KM[String(category || '').toLowerCase()] || 1.5;
   }
 
-  function sourceInfluenceLimitKm(source){return ['school','k12'].includes(source.cat)&&!source.eventStart? .4:Infinity;}
+  // Routine schools stay on their block; a confirmed bell window spills onto the
+  // surrounding streets where parents and students are picked up.
+  function sourceInfluenceLimitKm(source,when){if(!['school','k12'].includes(source.cat)||source.eventStart)return Infinity;return when!=null&&scheduledWindow(source,when)>0?1.1:.4;}
 
   // Broader interpolation for modeled neighborhood context, not for live
   // surge/event evidence. Routine schools stay confined to their own block.
   function displayFootprintKm(source, evidence, when) {
     const compactSchool=['school','k12'].includes(source.cat)&&!source.eventStart;
+    if(compactSchool&&when!=null&&scheduledWindow(source,when)>0)return .7;
     const base=sourceFootprintKm(source)*(evidence==='modeled'&&!compactSchool?1.4:1);
     // A big crowd leaving spreads across surrounding neighborhoods, not just the gate.
     if(evidence==='event'&&when!=null&&letOutStrength(source,when)>0)return Math.max(base,letOutProfile(source).footprintKm*Math.max(.7,letOutStrength(source,when)));
@@ -500,7 +521,7 @@
             ry = ry * .58 + areaRy * .42;
           }
           return {
-            center, strength, angle, rx, ry, influenceLimit:sourceInfluenceLimitKm(source)*radius/km, evidence:currentEvidence(source,this._when),
+            center, strength, angle, rx, ry, influenceLimit:sourceInfluenceLimitKm(source,this._when)*radius/km, evidence:currentEvidence(source,this._when),
             blockShape: (source.heatAreaType === 'label' || source.heatAreaType === 'neighborhood') && Array.isArray(bounds),
             shade: sourceShade(strength),
             detailOpacity: source.tags && (source.tags.providerSignal || source.tags.providerEvent || source.tags.liveEvent) ? .76 :
@@ -617,5 +638,5 @@
     return new HeatLayer();
   }
 
-  return { letOutProfile, letOutStrength, displayFootprintKm, fractalNoise, boxBlur, historicalPriorForSource, composeFields, composePixel, currentEvidence, evidenceLevel, evidenceOpacity, colorAt, setPalette, getCustomColors, setCustomColors, getPalette: () => activePalette, paletteNames: Object.keys(PALETTES), sourceStrength, areaIntensity, sourceShade, compositeLevel, compositeOpacity, sourceRadiusKm, sourceFootprintKm, sourceInfluenceLimitKm, anchoredGridOrigin, createLayer };
+  return { scheduledWindow, letOutProfile, letOutStrength, displayFootprintKm, fractalNoise, boxBlur, historicalPriorForSource, composeFields, composePixel, currentEvidence, evidenceLevel, evidenceOpacity, colorAt, setPalette, getCustomColors, setCustomColors, getPalette: () => activePalette, paletteNames: Object.keys(PALETTES), sourceStrength, areaIntensity, sourceShade, compositeLevel, compositeOpacity, sourceRadiusKm, sourceFootprintKm, sourceInfluenceLimitKm, anchoredGridOrigin, createLayer };
 });

@@ -44,6 +44,15 @@ the published snapshot stops yielding events, places or bells, when a market has
 no keyless event source, or when the app stops re-checking sources on open. After
 adding records, run `npm run history:manifest` and commit the updated manifest.
 
+## Confirmed schedules draw thick
+
+Schools with published bell times (inside drop-off/pickup windows) and verified
+shift sites (Amazon, hospitals at shift change) draw as confirmed demand, like a
+dated event: strong orange/red over the surrounding streets, not faint background.
+Every published-bell school is placed on the map even when no mapped school point
+matches it. Routine schools without bell times stay faint. `tests/scheduled-heat.test.mjs`
+enforces this.
+
 ## Speed and placement contract (map must never freeze)
 
 Surge history only grows, so anything that loops over it runs on every place and
