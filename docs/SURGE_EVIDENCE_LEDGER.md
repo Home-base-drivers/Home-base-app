@@ -209,3 +209,15 @@ Every upload was matched by EXIF capture time and file contents (112 files, 107 
 - **"1h ago" alerts count fully.** An alert shown only as "1h/2h/3h ago" belongs to that hour's surge window. It now matches any minute in the hour at full weight, instead of half weight pinned to one estimated minute. Records whose date itself is estimated still count at half weight.
 - **Bigger dollars weigh more.** Each date keeps its largest amount. Amounts up to $8 are neutral, scaling to 1.6× at $18 or more. Because the boost multiplies the date-count cap, big amounts repeated on different days build the strongest patterns. The pattern ceiling rises from 0.45 to 0.72 so the boost can show.
 - **Effect next Monday:** Rosemont at 7:30 AM rises 0.37 → 0.42 (its $17, $13 and $11 days). Mondawmin and Broadway East have mostly $5–7 days, so they are unchanged.
+
+## Mon Oct 26 (6:08 PM Empower capture + Uber maps 12:18 PM–6:07 PM)
+
+- **Monday morning wave now has exact times** (lock screen shows clock times on this later capture), replacing the bucket-timed copies from the 9:52 AM capture (those are kept but superseded): Rosemont $5 at 6:35, **$11 at 6:42**, $7–8 from 6:53 to 7:50, **$13 at 7:56, $17 at 8:03**; Broadway E. $5–7 from 6:50 to 8:03; Mondawmin $5–7 from 7:28 to 7:56; Frankford $5–6 at 7:26–7:32; Belair-Edison $5 at 7:28; Union Sq. $5–6 at 8:31–8:37.
+- **Average suggested surge, exact:** $1–2 overnight; **$3–4 at 4:37–4:45 AM** (early shifts); $3–4 at 6:33–6:46 AM; $2 in the afternoon; $1 by 5:11 PM.
+- **Monday afternoon (school dismissal), from "3h/2h ago":** Union Sq., Mondawmin and Broadway E. $5 between 2:08 and 3:08 PM; Mount Vernon $5 twice in that hour and again 3:08–4:08 PM.
+- **Uber, same afternoon:**
+  - 12:18 PM: calm, no bonuses.
+  - 2:11 PM: city core red with 1–2 min pickups.
+  - **2:36 PM peak:** Pikesville +$8, Back River Neck +$7.75, Owings Mills and Reisterstown +$4.75, Middle River +$4.50, Dundalk +$3.25, Perry Hall +$2.75.
+  - 2:44–2:45 PM: Reisterstown +$4.25; **two red 1–2 min badges at Broening Hwy (Amazon BWI2) and purple at Sparrows Point (Route 151, Tradepoint Atlantic Amazon) 15 minutes before the 3 PM Amazon shift change.**
+  - 6:07 PM: evening commute shading only.

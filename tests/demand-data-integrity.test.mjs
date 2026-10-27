@@ -78,11 +78,15 @@ test('all demand sources are re-checked every time the app is opened or comes ba
   assert.match(html,/setTimeout\(autoRefreshGps,150\)/,'first-open refresh removed');
 });
 
-test('alerts shown only as "1h ago" count for their whole hour at full weight',()=>{
-  // Monday Oct 26: Rosemont $17 arrived "1h ago" on a 9:52 AM capture (7:52-8:52 AM).
-  const row=History.observationRows().find(r=>r.id.startsWith('empower-baltimore-20261026-')&&r.area_observations.some(o=>o.shown_usd===17));
-  assert.ok(row,'Rosemont $17 record');
-  assert.equal(row.notifications[0].earliest,'2026-10-26T07:52:00-04:00');
-  const early=History.forecastAt(39.3065,-76.653,new Date('2026-11-02T07:55:00-05:00')),late=History.forecastAt(39.3065,-76.653,new Date('2026-11-02T08:45:00-05:00'));
+test('alerts shown only by age ("2h ago") count for their whole hour at full weight',()=>{
+  // Monday Oct 26: Mount Vernon $5 arrived "2h ago" on a 6:08 PM capture (3:08-4:08 PM).
+  // (The earlier 9:52 AM bucket-timed Rosemont copies are superseded by exact lock-screen times.)
+  const row=History.observationRows().find(r=>r.id==='empower-baltimore-20261026-exact-1530-mountvernon');
+  assert.ok(row,'Mount Vernon 2h-ago record');
+  assert.equal(row.notifications[0].earliest,'2026-10-26T15:08:00-04:00');
+  const early=History.forecastAt(39.29761,-76.6158,new Date('2026-11-02T15:12:00-05:00')),late=History.forecastAt(39.29761,-76.6158,new Date('2026-11-02T16:04:00-05:00'));
   assert.ok(early.strength>0&&late.strength>0,'both ends of the hour see the pattern');
+  const rosemont=History.observationRows().find(r=>r.id==='empower-baltimore-20261026-exact-0803-rosemont-broadway');
+  assert.equal(rosemont.area_observations[0].shown_usd,17);
+  assert.equal(rosemont.captured_at,'2026-10-26T08:03:00-04:00');
 });
