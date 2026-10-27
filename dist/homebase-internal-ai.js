@@ -196,6 +196,7 @@
   ['week',/\b(how was my week|how'?s my week|weekly|week(ly)? (report|summary|recap)|recap|this week vs|compared to last week)\b/i],
   ['stop',/\b(call it|keep driving|stay out|head home|go home|quit for|stop (driving|for (the )?(day|night))|worth staying|done for (the )?(day|night))\b/i],
   ['offer',/\$\s?\d+(?:\.\d+)?.*\b\d+(?:\.\d+)?\s*(mi|mile|miles|millas)\b|\b\d+(?:\.\d+)?\s*(mi|mile|miles|millas)\b.*\$\s?\d+/i],
+  ['weather',/\b(weather|forecast|rain(?:ing|y)?|snow(?:ing)?|storms?|thunder\w*|temperature|temp|degrees|cold|hot(?!\s?spots?)|umbrella|icy|fog(?:gy)?|windy|clima|lluvia|llover)\b/i],
   ['csv',/\b(export|download|csv|spreadsheet)\b/i],
   ['screenshot',/\b(screenshot|screen shot|photo|picture|captura)\b/i],
   ['compare',/\b(empower|lyft)\b.*\b(vs|versus|or|compare|better)\b|\b(uber|lyft)\b.*\b(vs|versus)\b|\bwhich app\b/i],
@@ -219,6 +220,23 @@
   if(sum.payout)s+=' Payouts in this period: '+money(sum.payout)+' (kept separate from gross).';
   return s;
  }
+// Weather from the app's own feeds (Open-Meteo now + hourly, NWS alerts).
+ const WMO={0:'clear',1:'mostly clear',2:'partly cloudy',3:'overcast',45:'fog',48:'freezing fog',51:'light drizzle',53:'drizzle',55:'heavy drizzle',56:'freezing drizzle',57:'freezing drizzle',61:'light rain',63:'rain',65:'heavy rain',66:'freezing rain',67:'freezing rain',71:'light snow',73:'snow',75:'heavy snow',77:'snow grains',80:'rain showers',81:'rain showers',82:'heavy showers',85:'snow showers',86:'heavy snow showers',95:'thunderstorms',96:'thunderstorms with hail',99:'thunderstorms with hail'};
+ function weatherLines(w,now,tz,full){
+  const lines=[],t=+new Date(now);if(!w||(!w.available&&!(w.hourly||[]).length&&!(w.alerts||[]).length))return full?['Weather is still loading on this phone. The temperature shows on the Home screen once it arrives; GPS or the selected market sets the location.']:[];
+  const hr=h=>new Date(h).toLocaleTimeString('en-US',{timeZone:tz,hour:'numeric'});
+  if(w.available&&w.temp!=null)lines.push((full?'**Now:** ':'')+String(w.temp).replace(/°?$/,'°')+(w.unit?String(w.unit).replace('°',''):'')+(WMO[Number(w.code)]?', '+WMO[Number(w.code)]:'')+'.');
+  const next=(w.hourly||[]).filter(r=>r.time>=t-1800000&&r.time<=t+12*3600000);
+  if(next.length){const max=next.reduce((b,r)=>r.probability>b.probability?r:b,next[0]),wet=next.find(r=>r.probability>=50),snow=next.some(r=>r.snowfallCm>0);
+   const temps=next.map(r=>r.temperatureF).filter(Number.isFinite);
+   const c=/C/.test(String(w.unit||'')),deg=f=>Math.round(c?(f-32)*5/9:f);
+   if(full&&temps.length)lines.push('**Next 12 hours:** '+deg(Math.min(...temps))+'–'+deg(Math.max(...temps))+(c?'°C':'°F')+'.');
+   lines.push(wet?(snow?'Snow':'Rain')+' likely from about '+hr(wet.time)+' (up to '+Math.round(max.probability)+'%). Rain usually lifts ride requests near bars, transit and events; leave extra following distance.':'Rain chance stays low, '+Math.round(max.probability||0)+'% at most, so weather should not change demand much.');}
+  const alerts=(w.alerts||[]).filter(a=>Date.parse(a.ends)>t);
+  if(alerts.length)lines.push('**NWS:** '+alerts.slice(0,2).map(a=>a.event+(Date.parse(a.onset)<=t?' until '+hr(a.ends):' from '+hr(a.onset))).join('; ')+'.'+(alerts.some(a=>a.safety)?' Follow official guidance.':''));
+  if(full&&!lines.length)lines.push('Weather is still loading on this phone. Try again in a moment.');
+  return lines;
+ }
  function answer(text,ctx={}){
   const raw=String(text||'').trim(),now=ctx.now?new Date(ctx.now):new Date(),tz=ctx.tz||TZ,records=ctx.records||[],tripRows=ctx.tripRows||[];
   const intent=intentOf(raw);
@@ -237,6 +255,7 @@
    if(g)lines.push('**Goal:** '+money(g.goal)+' every '+g.hours+' hours, so aim for '+money(g.rate)+' per working hour.');
    const prof=hourProfile(true).length?hourProfile(true):hourProfile(false),ahead=prof.filter(x=>x.h>=hourNow).sort((a,b)=>b.avg-a.avg).slice(0,3);
    if(ahead.length)lines.push('**Your best hours still ahead** ('+(hourProfile(true).length?DAYS[weekday(today)][0].toUpperCase()+DAYS[weekday(today)].slice(1)+'s':'all days')+'): '+ahead.map(x=>fmtHour(x.h)+' ('+money(x.avg)+'/trip)').join(', ')+'.');
+   const wx=weatherLines(ctx.weather,now,tz,false);if(wx.length)lines.push('**Weather:** '+wx.join(' '));
    const z=liveZones();if(z.length)lines.push('**Busiest areas right now:** '+z.join(', ')+'.');
    const ev=soonEvents();if(ev.length)lines.push('**Events next 12 hours:** '+ev.slice(0,4).map(e=>e.name+' '+clock(e.start)).join('; ')+'.');
    const over=overheadMinutes(records,tripRows,tz);if(over&&g)lines.push('**Offer rule for today:** with about '+Math.round(over)+' unpaid minutes per trip, a trip needs roughly '+money(g.rate*(over+12)/60)+' for a 12-minute ride to hold your pace.');
@@ -267,7 +286,8 @@
    const max=num(ctx.live?.driverPreferences?.maxShiftHours),sh=num(ctx.live?.shiftHours);if(max&&sh&&sh>=max-0.5)lines.push('You are near your '+max+'-hour shift limit. Safety first.');
    return result(lines.join('\n'));
   }
-  if(intent==='help')return result('Built-in Home Base AI (free) can:\n- **"Brief me"**: today\'s plan, best hours ahead, busy areas, events\n- **"How was my week?"**: totals, best day, pace, gas share\n- **"Should I keep driving?"**: your next hours vs your usual\n- Total your earnings for today, a day, this week or this month\n- Check your pace against your goal\n- Judge a trip offer: say the pay and miles, like "$14 for 9 miles, 20 minutes"\n- Compare Uber and Empower from your own records\n- Show your best hours and days\n- Read Uber, Empower or Lyft screenshots into trips (attach a photo)\n- Export your trips as a CSV\n- Point to the busiest areas and upcoming events on the map\n\nOpen-ended planning and conversation use Home Base AI Plus.');
+  if(intent==='weather')return result(weatherLines(ctx.weather,now,tz,true).join('\n'));
+  if(intent==='help')return result('Built-in Home Base AI (free) can:\n- **"Brief me"**: today\'s plan, best hours ahead, busy areas, events\n- **"How was my week?"**: totals, best day, pace, gas share\n- **"Should I keep driving?"**: your next hours vs your usual\n- **"What\'s the weather?"**: now, rain in the next 12 hours, NWS alerts\n- Total your earnings for today, a day, this week or this month\n- Check your pace against your goal\n- Judge a trip offer: say the pay and miles, like "$14 for 9 miles, 20 minutes"\n- Compare Uber and Empower from your own records\n- Show your best hours and days\n- Read Uber, Empower or Lyft screenshots into trips (attach a photo)\n- Export your trips as a CSV\n- Point to the busiest areas and upcoming events on the map\n\nOpen-ended planning and conversation use Home Base AI Plus.');
   if(intent==='offer'){
    const pay=num(raw.match(/\$\s?(\d+(?:\.\d+)?)/)?.[1]),mi=num(raw.match(/(\d+(?:\.\d+)?)\s*(?:mi|mile|miles|millas)\b/i)?.[1]),mins=num(raw.match(/(\d+(?:\.\d+)?)\s*(?:min|mins|minutes|minutos)\b/i)?.[1]);
    if(!(pay>0)||!(mi>0))return result('Tell me the pay and the miles, for example "$14 for 9 miles, 20 minutes".');
@@ -335,7 +355,7 @@
    return result(lineFor(summarize(records,period,tz),period.label));
   }
   const period=periodFrom(raw,now,tz);if(period)return result(lineFor(summarize(records,period,tz),period.label));
-  return{handled:false,intent:null,answer:'The built-in assistant can\'t answer that one. It handles earnings, goal pace, trip offers, app comparisons, costs, best hours, screenshots and where to go. Home Base AI Plus (GPT) handles open questions.',source:'built-in'};
+  return{handled:false,intent:null,answer:'The built-in assistant can\'t answer that one. It handles earnings, goal pace, trip offers, app comparisons, costs, best hours, weather, screenshots and where to go. Home Base AI Plus (GPT) handles open questions.',source:'built-in'};
  }
 
  // ---------- browser: OCR and review ----------
@@ -375,7 +395,7 @@
   // Each source is optional: a map or live feed that is still loading must not
   // stop the driver's own numbers from being answered.
   const safe=(fn,f)=>{try{return fn()??f;}catch{return f;}};
-  return{records:safe(()=>window.HomeBaseDriverRecords?.(),null)||read('homeBaseLedger',[]),tripRows:read('homeBaseTripRows',[]).filter(r=>r?.record_id),goalPace:read('homeBaseGoalPace',{}),carInputs:read('homeBaseCarCostInputs',{}),live:safe(()=>window.HomeBaseCopilot?.liveContext?.(),{}),tz:safe(()=>typeof marketTimeZone==='string'?marketTimeZone:TZ,TZ)};
+  return{records:safe(()=>window.HomeBaseDriverRecords?.(),null)||read('homeBaseLedger',[]),tripRows:read('homeBaseTripRows',[]).filter(r=>r?.record_id),goalPace:read('homeBaseGoalPace',{}),carInputs:read('homeBaseCarCostInputs',{}),live:safe(()=>window.HomeBaseCopilot?.liveContext?.(),{}),weather:safe(()=>({...(window.HomeBaseWeatherState||{}),hourly:typeof hourlyRainForecast!=='undefined'?hourlyRainForecast:[],alerts:typeof activeWeatherAlerts!=='undefined'?activeWeatherAlerts:[]}),null),tz:safe(()=>typeof marketTimeZone==='string'?marketTimeZone:TZ,TZ)};
  }
  function saveParsed(parsed){
   const ledger=read('homeBaseLedger',[]),out=toRecords(parsed,{ledger});
