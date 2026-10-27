@@ -70,7 +70,7 @@
   const readVoice=()=>{try{return JSON.parse(localStorage.getItem('homeBaseVoicePrefs')||'{}')}catch{return{}}};
   voiceSel.value=readVoice().voiceMode==='live'?'live':'hybrid';
   voiceSel.addEventListener('change',()=>{const v=readVoice();v.voiceMode=voiceSel.value;localStorage.setItem('homeBaseVoicePrefs',JSON.stringify(v));showNotice(voiceSel.value==='live'?'Talk opens GPT Live right away. It pauses after 20 seconds of quiet to save minutes.':'Talk runs on your phone for free; GPT answers by text and reads it aloud. Say "let\'s talk" to open GPT Live.')});
-  const showPlan=()=>{const st=internal()?.planStatus?.();const known=st&&['free','plus','pro'].includes(st.plan);planLine.hidden=!known;if(known){const min=Math.floor((Number(st.remaining_seconds)||0)/60),left=Number(st.messages_left_today);planText.textContent=({free:'Free',plus:'Plus',pro:'Pro'})[st.plan]+(Number.isFinite(left)?' · '+left+' AI messages left today':'')+(st.plan==='pro'?' · '+min+' GPT Live min':'');voiceSel.hidden=st.plan!=='pro';}};
+  const showPlan=()=>{const st=internal()?.planStatus?.();const known=st&&['free','plus','pro'].includes(st.plan);planLine.hidden=!known;if(known){const min=Math.floor((Number(st.remaining_seconds)||0)/60),left=Number(st.messages_left_today);planText.textContent=({free:'Free',plus:'Plus',pro:'Pro'})[st.plan]+(Number.isFinite(left)?' · '+left+' AI messages left today':'')+(st.plan==='pro'&&st.gpt_voice===true?' · '+min+' GPT Live min':'');voiceSel.hidden=!(st.plan==='pro'&&st.gpt_voice===true);}};
   document.addEventListener('homebase:plan-changed',()=>{showEngine();showPlan();});
   engines.forEach(b=>b.addEventListener('click',()=>{
    const want=b.dataset.engine,server=internal()?.serverPlan?.();

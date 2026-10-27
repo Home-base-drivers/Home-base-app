@@ -52,15 +52,20 @@ function waitIce(peer){if(peer.iceGatheringState==='complete')return Promise.res
 async function stop(message='Voice stopped. Tap the microphone to talk again.',reason='ended'){++generation;endMeter(reason);startupReady?.cancel();starting=false;active=false;sessionStarted=false;handledCalls.clear();if(guestActive){guestActive=false;oldStop?.(message)}flush('user');flush('assistant');try{if(dc?.readyState==='open')dc.send(JSON.stringify({type:'session.close',event_id:'homebase-close-'+Date.now()}))}catch{}try{dc?.close()}catch{}try{pc?.close()}catch{}try{stream?.getTracks().forEach(t=>t.stop())}catch{}try{if(audio){audio.pause();audio.srcObject=null;audio.remove()}}catch{}dc=null;pc=null;stream=null;audio=null;buttonState(false,message);status(message)}
 async function start(){
  if(active||starting)return stop();
+ // Phone voice that already ended must not keep the button tied to the old session.
+ if(guestActive&&window.HomeBaseCopilot?.voiceActive?.()===false)guestActive=false;
  if(guestActive)return oldToggle?.();
  // Hybrid (default): talk runs on the phone for free; commands and the built-in
  // AI answer, Plus questions go to GPT as text. GPT Live (metered minutes) opens
  // only in Live mode or when the driver says "let's talk".
- if(voiceMode()!=='live'||window.HomeBaseInternalAI?.serverPlan?.()!=='pro')return deviceVoice(window.HomeBaseInternalAI?.serverPlan?.()==='pro'?'Voice on this phone with Home Base AI answers. Say "let\'s talk" for GPT Live.':'Voice on this phone with Home Base AI answers.');
+ // GPT Live opens only when the server has GPT voice switched on for a Pro plan; otherwise Claude answers.
+ const gptOn=window.HomeBaseInternalAI?.gptVoice?.()===true;
+ if(voiceMode()!=='live'||!gptOn)return deviceVoice(gptOn?'Voice on this phone with Home Base AI answers. Say "let\'s talk" for GPT Live.':'Voice on this phone with Home Base AI answers.');
  return startLive();
 }
 async function startLive({question=''}={}){
  if(active||starting)return;
+ if(window.HomeBaseInternalAI?.gptVoice?.()!==true)return deviceVoice('Voice on this phone with Home Base AI answers.');
  if(guestActive){guestActive=false;try{oldStop?.('Switching to GPT Live…')}catch{}}
  pendingQuestion=String(question||'').trim().slice(0,600);
  // Voice is a core Homebase feature: never require account creation just to talk.
