@@ -39,7 +39,8 @@ for (const t of targets) {
   const needBrowser = !(app.status === 200 && events > 0);
   const browser = needBrowser ? await get(t.url, BROWSER_UA) : null, bsig = browser ? signals(browser.body) : null;
   let bevents = 0; try { if (browser) bevents = structuredEvents(browser.body).length + publishedVenueEvents(browser.body, t).length; } catch {}
-  rows.push({ market: t.market, kind: t.kind, name: t.name, url: t.url, adapter: t.adapter || '', app: { status: app.status, error: app.error, bytes: app.bytes, finalUrl: app.finalUrl !== t.url ? app.finalUrl : undefined, server: app.server, cf: app.cf, events, ...sig },
+  const snippet = t.kind === 'candidate' ? (process.env.SNIPPET_GREP ? [...new Set([...app.body.matchAll(new RegExp('.{0,160}(?:' + process.env.SNIPPET_GREP + ').{0,240}', 'gi'))].map(m => m[0]))].slice(0, 12) : [app.body.slice(0, 4000)]) : undefined;
+  rows.push({ snippet, market: t.market, kind: t.kind, name: t.name, url: t.url, adapter: t.adapter || '', app: { status: app.status, error: app.error, bytes: app.bytes, finalUrl: app.finalUrl !== t.url ? app.finalUrl : undefined, server: app.server, cf: app.cf, events, ...sig },
     browser: browser ? { status: browser.status, error: browser.error, bytes: browser.bytes, events: bevents, blocked: bsig.blocked, ldjson: bsig.ldjson, title: bsig.title } : null });
 }
 const md = ['| market | source | app status | bytes | events | blocked | ld+json | feeds/platform | browser status | browser events |', '|---|---|---|---|---|---|---|---|---|---|'];

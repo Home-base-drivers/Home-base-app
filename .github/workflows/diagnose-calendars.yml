@@ -13,6 +13,10 @@ on:
         description: 'Optional extra candidate URLs (space separated)'
         required: false
         default: ''
+      grep:
+        description: 'Optional regex; store matching snippets of candidate pages'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -32,6 +36,7 @@ jobs:
         env:
           MARKET: ${{ github.event.inputs.market }}
           EXTRA_URLS: ${{ github.event.inputs.urls }}
+          SNIPPET_GREP: ${{ github.event.inputs.grep }}
         run: node scripts/diagnose-calendars.mjs ${MARKET:+--market=$MARKET} | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Publish to the diagnostics branch
         env:
