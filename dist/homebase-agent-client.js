@@ -24,13 +24,22 @@
   if(code==='voice_minutes_used_up')return'This month\'s GPT Live minutes are used. Voice continues on this phone with the built-in AI.';
   if(code==='ai_not_configured'||/not configured|not tied to a workspace/i.test(message))return'Home Base AI is not switched on yet on the server.';
   if(code==='sign_in'||error?.name==='AuthSessionMissingError'||/sign in.*first|auth session missing|invalid session/i.test(message))return'You are signed out on this phone. Sign in from Profile to use Home Base AI.';
-  if(code==='ai_timeout'||/timed? ?out|abort/i.test(message))return'Home Base AI took too long to answer. Try again.';
+  if(code==='auth_timeout')return'Home Base could not check your sign-in. Check your signal and try again.';
+  if(code==='ai_timeout'||code==='dispatch_timeout'||/timed? ?out|abort/i.test(message))return'Home Base AI took too long to answer. Try again.';
   if(/failed to fetch|network|load failed|offline/i.test(message))return'Can\'t reach Home Base AI right now. Check your signal and try again.';
   if(/backend unavailable/i.test(message))return'Home Base AI is still loading. Try again in a moment.';
   return message&&message.length<200?'Home Base AI: '+message:'Home Base AI could not answer. Try again.';
  }
- async function signedIn(){try{const user=await window.HomeBaseAccounts?.backend?.getUser?.();return!!(user?.id&&!user.is_anonymous)}catch(error){if(error?.name==='AuthSessionMissingError'||/auth session missing|sign in.*first|invalid session/i.test(error?.message||''))return false;throw error}}
- async function ask(raw,prefs={},options={}){
+ // Deadlines: a stuck sign-in check or request must never leave the AI silent.
+ const SIGNIN_TIMEOUT_MS=7000,ASK_TIMEOUT_MS=70000;
+ function withTimeout(promise,ms,code){if(typeof setTimeout!=='function')return Promise.resolve(promise);let timer;return Promise.race([Promise.resolve(promise).finally(()=>clearTimeout(timer)),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Object.assign(new Error('Timed out'),{code})),ms)})]);}
+ // Uses the session saved on this phone (no network) when available. A check that
+ // cannot finish counts as signed in so the server decides, instead of hanging.
+ // A check from the last minute is reused so one question never waits on it twice.
+ let lastCheck=null;
+ async function signedIn(){if(lastCheck&&Date.now()-lastCheck.at<60000)return lastCheck.value;const b=window.HomeBaseAccounts?.backend;try{const user=await withTimeout(b?.signedInUser?b.signedInUser():b?.getUser?.(),SIGNIN_TIMEOUT_MS,'auth_timeout');const value=!!(user?.id&&!user.is_anonymous);lastCheck=value?{at:Date.now(),value}:null;return value}catch(error){if(error?.code==='auth_timeout'){lastCheck={at:Date.now(),value:true};return true}if(error?.name==='AuthSessionMissingError'||error?.code==='sign_in'||/auth session missing|sign in.*first|invalid session/i.test(error?.message||''))return false;throw error}}
+ function ask(raw,prefs={},options={}){return withTimeout(askOnce(raw,prefs,options),options.timeoutMs||ASK_TIMEOUT_MS,'ai_timeout');}
+ async function askOnce(raw,prefs={},options={}){
   if(!window.HomeBaseAccounts?.backend?.evaluateDispatch)throw new Error('Home Base backend unavailable');
   if(!await signedIn())throw Object.assign(new Error('Sign in first'),{code:'sign_in'});
   const channel=options.channel||prefs.channel||'voice',attachments=Array.isArray(options.attachments)?options.attachments.slice(0,1):[];
