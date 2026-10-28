@@ -5,7 +5,7 @@ import { createHomeBaseBackend, progressSnapshot, toEarningsRecord, fromEarnings
 const sample = { id: 'provider:Uber:123', platform: 'Uber', earnings: 40, date: '2026-09-30',
   startedAt: '2026-09-30T16:00:00Z', timePrecision: false, hours: 2,
   hoursType: 'online', payType: 'gross', miles: null, trips: 4, filename: 'uber.csv' };
-const fake = (rpc, user = { id: 'alice' }) => ({ auth: { getUser: async () => ({ data: { user }, error: null }) }, rpc });
+const fake = (rpc, user = { id: 'alice' }) => ({ auth: { getUser: async () => ({ data: { user }, error: null }), getSession: async () => ({ data: { session: user ? { user, access_token: 'token' } : null }, error: null }) }, rpc });
 
 test('email sign-in requests a link for existing accounts without creating users or claiming a session',async()=>{
   let request;

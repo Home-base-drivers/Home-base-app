@@ -88,8 +88,11 @@
   async function submit(raw,photo=attachment,isRetry=false){
    const text=String(raw||'').trim();if(pending||(!text&&!photo))return;
    const agent=window.HomeBaseAgentClient,usePlus=window.HomeBaseInternalAI?.plan?.()==='plus';if(usePlus&&!agent){showNotice('Home Base AI is still loading. Try again in a moment.');return}
-   if(usePlus&&!await agent.signedIn()){showNotice('Sign in to talk with Home Base AI, or switch to Offline. Open Profile to sign in.');return}
-   pending=true;showNotice('');
+   // Mark busy before any network step so a slow sign-in check shows progress, and
+   // always release the lock (finally) so one stuck request can't silence the chat.
+   pending=true;
+   try{if(usePlus&&!await agent.signedIn()){pending=false;showNotice('Sign in to talk with Home Base AI, or switch to Offline. Open Profile to sign in.');return}}catch(error){pending=false;showNotice(agent?.describeError?.(error)||'Home Base AI could not answer. Try again.',true);lastFailed={text,photo};render();return}
+   showNotice('');
    if(!isRetry)window.HomeBaseShell?.logChat?.('user',text||'(photo)',photo?{photo:true}:undefined);
    input.value='';attachment=null;chip.hidden=true;grow();render();
    try{

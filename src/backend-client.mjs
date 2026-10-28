@@ -17,6 +17,32 @@ export class CloudConflictError extends Error {
   }
 }
 
+
+// Phone networks can leave an auth refresh or a request hanging forever (iOS
+// suspends apps mid-request). Every AI call gets a deadline so the app always
+// answers or says why instead of going silent.
+export const AUTH_TIMEOUT_MS = 6000, DISPATCH_TIMEOUT_MS = 20000, AI_DISPATCH_TIMEOUT_MS = 60000;
+const LONG_OPERATIONS = new Set(['agent', 'agent-result', 'chat', 'live-session', 'voice', 'translate']);
+export function withTimeout(promise, ms, code, message) {
+  let timer;
+  return Promise.race([
+    Promise.resolve(promise).finally(() => clearTimeout(timer)),
+    new Promise((_, reject) => { timer = setTimeout(() => reject(Object.assign(new Error(message || 'Timed out'), { code })), ms); })
+  ]);
+}
+// The session the auth library saved on this phone, used only when the auth
+// library itself stops answering. The server still verifies the token.
+export function storedSession(storage, storageKey, now = Date.now()) {
+  try {
+    const raw = storage?.getItem?.(storageKey);
+    const saved = raw ? JSON.parse(raw) : null;
+    const session = saved?.currentSession || saved;
+    if (!session?.access_token || !session?.user?.id || session.user.is_anonymous) return null;
+    if (Number(session.expires_at) && Number(session.expires_at) * 1000 <= now + 30000) return null;
+    return session;
+  } catch { return null; }
+}
+
 function result(response) {
   if (response.error?.code === '40001') throw new CloudConflictError();
   if (response.error) throw response.error;
@@ -175,7 +201,25 @@ export function syncStatus(storage, session = {}, now = Date.now()) {
     detail: syncedAt ? 'Saved to your account ' + sinceLabel(syncedAt, now) + '.' : 'Saving to your account is on.' };
 }
 
-export function createHomeBaseBackend(client) {
+export function createHomeBaseBackend(client, options = {}) {
+  const storage = options.storage || globalThis.localStorage;
+  const signInError = () => Object.assign(new Error('Sign in to your Home Base account first.'), { code: 'sign_in' });
+  // Local session check with a deadline; falls back to the saved token when the
+  // auth library is stuck, and never blocks longer than AUTH_TIMEOUT_MS.
+  async function session() {
+    try {
+      const { data, error } = await withTimeout(client.auth.getSession(), options.authTimeoutMs || AUTH_TIMEOUT_MS, 'auth_timeout');
+      if (error) throw error;
+      const current = data?.session;
+      if (!current?.user?.id || current.user.is_anonymous) throw signInError();
+      return { session: current, stuck: false };
+    } catch (error) {
+      if (error?.code !== 'auth_timeout') throw error;
+      const saved = options.storageKey ? storedSession(storage, options.storageKey) : null;
+      if (saved) return { session: saved, stuck: true };
+      throw Object.assign(new Error('Home Base could not check your sign-in. Check your signal and try again.'), { code: 'auth_timeout' });
+    }
+  }
   async function user() {
     const data = result(await client.auth.getUser());
     if (!data?.user?.id || data.user.is_anonymous) throw new Error('Sign in to your Home Base account first.');
@@ -307,9 +351,28 @@ export function createHomeBaseBackend(client) {
       const me = await user();
       return result(await client.from('shift_observations').select('area,observed_at,modeled_score,event_arrivals,event_exits').eq('user_id',me.id).order('observed_at',{ascending:false}).limit(1000));
     },
+    async signedInUser() {
+      try { return (await session()).session.user; }
+      catch (error) { if (error?.code === 'sign_in' || error?.name === 'AuthSessionMissingError') return null; throw error; }
+    },
     async evaluateDispatch(payload) {
-      await user();
-      const response = await client.functions.invoke('dispatch',{body:payload});
+      const { session: current, stuck } = await session();
+      const long = LONG_OPERATIONS.has(payload?.operation), deadline = long ? (options.aiTimeoutMs || AI_DISPATCH_TIMEOUT_MS) : (options.dispatchTimeoutMs || DISPATCH_TIMEOUT_MS);
+      const code = long ? 'ai_timeout' : 'dispatch_timeout', message = long ? 'Home Base AI timed out' : 'Home Base timed out';
+      // When the auth library is stuck, call the function directly with the saved
+      // token: the client's own fetch waits on the same stuck auth call.
+      if (stuck && options.supabaseUrl && options.supabaseKey && typeof fetch === 'function') {
+        const controller = typeof AbortController === 'function' ? new AbortController() : null;
+        const request = fetch(options.supabaseUrl + '/functions/v1/dispatch', { method: 'POST', signal: controller?.signal,
+          headers: { 'Content-Type': 'application/json', apikey: options.supabaseKey, Authorization: 'Bearer ' + current.access_token }, body: JSON.stringify(payload) })
+          .then(async res => {
+            const body = await res.json().catch(() => null);
+            if (!res.ok) { const failure = new Error(typeof body?.error === 'string' ? body.error : 'Home Base AI could not answer.'); failure.code = typeof body?.code === 'string' ? body.code : (res.status === 401 ? 'sign_in' : 'dispatch_error'); failure.status = res.status; throw failure; }
+            return body;
+          });
+        return withTimeout(request, deadline, code, message).catch(error => { controller?.abort(); throw error; });
+      }
+      const response = await withTimeout(client.functions.invoke('dispatch',{body:payload,headers:{Authorization:'Bearer '+current.access_token},timeout:deadline}), deadline + 2000, code, message);
       // A non-2xx Edge Function reply hides the server's reason behind a generic
       // message. Read the JSON body so the app can tell the driver what failed.
       if (response.error && response.error.context && typeof response.error.context.json === 'function') {
@@ -413,5 +476,5 @@ export function connectHomeBase(config) {
   const client = createClient(config.supabaseUrl, config.supabasePublishableKey, {
     auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: 'home-base-auth' }
   });
-  return createHomeBaseBackend(client);
+  return createHomeBaseBackend(client, { storageKey: 'home-base-auth', supabaseUrl: config.supabaseUrl, supabaseKey: config.supabasePublishableKey });
 }
