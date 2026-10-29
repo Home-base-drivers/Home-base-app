@@ -61,8 +61,9 @@ test('Oct 8 2:35 PM +$11 and 3:26 PM +$6.25 stay distinct; Oct 6 4:41 cooling is
  const cock=at('Cockeysville','2026-10-27T16:10:00-04:00');
  assert.ok(cock.distinctDates>=3&&cock.strength>0);
  // Roland Park 2:35 PM (Oct 8 +$11) is a pattern window of its own, separate from Brooklyn Park 3:26 PM.
- assert.ok(at('Roland Park','2026-10-29T14:35:00-04:00').distinctDates>=1);
- assert.equal(at('Roland Park','2026-10-29T15:26:00-04:00').strength<at('Roland Park','2026-10-29T14:35:00-04:00').strength,true);
+ // Checked on a future Thursday: on Oct 29 itself, real 2:48 PM data counts for 3:26 but not 2:35 (no look-ahead).
+ assert.ok(at('Roland Park','2026-11-05T14:35:00-05:00').distinctDates>=1);
+ assert.equal(at('Roland Park','2026-11-05T15:26:00-05:00').strength<at('Roland Park','2026-11-05T14:35:00-05:00').strength,true);
 });
 test('IMG_3400 is dated Sat Oct 3 2:04 AM and Oct 8 12:25 AM keeps its +$6.75 badge',()=>{
  const src=require('node:fs').readFileSync(new URL('../dist/homebase-demand-history.js',import.meta.url),'utf8');
