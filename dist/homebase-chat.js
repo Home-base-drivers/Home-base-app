@@ -60,7 +60,9 @@
   const input=form.querySelector('#hbChatInput'),send=form.querySelector('#hbChatSend'),file=form.querySelector('#hbChatFile'),chip=form.querySelector('#hbChatAttachment'),notice=form.querySelector('#hbChatNotice');
   const grow=()=>{input.style.height='auto';input.style.height=Math.min(input.scrollHeight,160)+'px';send.disabled=pending||(!input.value.trim()&&!attachment)};
   input.addEventListener('input',grow);
-  input.addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing&&matchMedia('(hover:hover)').matches){event.preventDefault();form.requestSubmit()}});
+  // The keyboard's Send key sends on phones too (it used to add a new line, which looked stuck).
+  input.addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing){event.preventDefault();form.requestSubmit()}});
+  input.addEventListener('focus',()=>{if(window.HomeBaseCopilot?.voiceActive?.())window.HomeBaseCopilot.stopConversation?.('Voice paused while you type.')});
   file.addEventListener('change',async()=>{const picked=file.files?.[0];file.value='';if(!picked)return;try{attachment=await shrinkImage(picked);chip.querySelector('img').src=attachment;chip.hidden=false;showNotice('')}catch(error){showNotice(error.message||'That photo could not be attached.')}grow()});
   chip.querySelector('button').addEventListener('click',()=>{attachment=null;chip.hidden=true;grow()});
   form.addEventListener('submit',event=>{event.preventDefault();submit(input.value)});
