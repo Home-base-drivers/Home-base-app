@@ -105,11 +105,15 @@ ${typed?'- This message was TYPED in the Home Base chat screen. Reply like a cap
    const content=images.length?[{type:'text',text},...images.map(i=>claudeImage(i.image_url)).filter(Boolean)]:text;
    const messages=[...claudeMessages(turns.slice(-HISTORY_TURNS).map(t=>({role:t.role,content:String(t.content||'')}))),{role:'user',content}];
    if(messages.length>1&&messages[messages.length-2].role==='user'){const prev=messages.splice(messages.length-2,1)[0];messages[messages.length-1].content=typeof content==='string'?prev.content+'\n\n'+content:[{type:'text',text:prev.content},...content];}
-   const message=await callClaude({apiKey,fetchImpl,timeoutMs,stage:'agent',model:images.length&&visionModel?visionModel:model,max_tokens:typed?1024:450,system:instructions,messages,tools});
-   const actions=toolCalls(message),sources=sourcesOf(message);
+   const request={apiKey,fetchImpl,timeoutMs,stage:'agent',model:images.length&&visionModel?visionModel:model,max_tokens:typed?1024:450,system:instructions,messages};
+   let message=await callClaude({...request,tools});
+   let actions=toolCalls(message),sources=sourcesOf(message);
    let answer=textOf(message);
+   // A reply with no words (a search that never finished, or a stop with no text) gets one
+   // plain retry without tools, so the driver hears a real answer instead of an on-phone one.
+   if(!actions.length&&!answer){const first=message?.stop_reason;message=await callClaude({...request,stage:'agent_retry'});actions=toolCalls(message);sources=sourcesOf(message);answer=textOf(message);
+    if(!answer)throw Object.assign(errorWithCode('Home Base AI returned no answer.','ai_empty'),{provider_code:String(message?.stop_reason||first||'none'),provider_stage:'agent_retry'});}
    if(actions.length)return{answer:answer||'Executing the requested Home Base action.',actions,provider:'Claude',agent:true,execution:'action_required'};
-   if(!answer)throw errorWithCode('Home Base AI returned no answer.','ai_empty');
    if(typed&&sources.length)answer+='\n\n**Sources:** '+sources.map(s=>'['+String(s.title).replace(/[\[\]]/g,'')+']('+s.url+')').join(' · ');
    const savedUtterance=(utterance.trim()||'(photo)')+(images.length&&utterance.trim()?' [photo attached]':'');
    await saveTurn(userId,conversationId,'user',savedUtterance,context);

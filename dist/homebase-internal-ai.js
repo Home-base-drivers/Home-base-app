@@ -490,13 +490,16 @@
  }
  // Claude (the conversational Home Base AI) answers by default for every signed-in
  // driver; the phone's built-in answers are the offline fallback or an explicit choice.
- function plan(){try{const p=JSON.parse(localStorage.getItem('homeBaseProductPrefs')||'{}');if(p.aiPlanChosen2)return p.aiPlan==='builtin'?'builtin':'plus';return(serverStatus?.plan||read('homeBasePlanStatus',null)?.plan)==='signed-out'?'builtin':'plus';}catch{return'plus';}}
- function setPlan(value,{chosen=false}={}){let p={};try{p=JSON.parse(localStorage.getItem('homeBaseProductPrefs')||'{}')||{};}catch{}p.aiPlan=value==='builtin'?'builtin':'plus';if(chosen)p.aiPlanChosen2=true;localStorage.setItem('homeBaseProductPrefs',JSON.stringify(p));}
+ // Picking Offline lasts for that day only, so a tap made while the AI was down can't
+ // silently keep every later question on the phone (older lasting picks are ignored).
+ function offlinePickedToday(p,now=Date.now()){return p?.aiPlan==='builtin'&&p.aiPlanOfflineDay===dayKey(now);}
+ function plan(){try{const p=JSON.parse(localStorage.getItem('homeBaseProductPrefs')||'{}');if(offlinePickedToday(p))return'builtin';return(serverStatus?.plan||read('homeBasePlanStatus',null)?.plan)==='signed-out'?'builtin':'plus';}catch{return'plus';}}
+ function setPlan(value,{chosen=false}={}){let p={};try{p=JSON.parse(localStorage.getItem('homeBaseProductPrefs')||'{}')||{};}catch{}p.aiPlan=value==='builtin'?'builtin':'plus';delete p.aiPlanChosen2;if(chosen){if(p.aiPlan==='builtin')p.aiPlanOfflineDay=dayKey(Date.now());else delete p.aiPlanOfflineDay;}localStorage.setItem('homeBaseProductPrefs',JSON.stringify(p));}
  // The server decides the plan (free, plus, pro) and GPT Live minutes left.
  let serverStatus=null;
  function notePlanStatus(a){
   if(!a||typeof a.plan!=='string')return;serverStatus={...a,at:Date.now()};try{localStorage.setItem('homeBasePlanStatus',JSON.stringify(serverStatus));}catch{}
-  let chosen=false;try{chosen=JSON.parse(localStorage.getItem('homeBaseProductPrefs')||'{}').aiPlanChosen2===true;}catch{}
+  let chosen=false;try{chosen=offlinePickedToday(JSON.parse(localStorage.getItem('homeBaseProductPrefs')||'{}'));}catch{}
   if(!chosen)setPlan('plus');
   if(typeof document!=='undefined')document.dispatchEvent(new Event('homebase:plan-changed'));
  }

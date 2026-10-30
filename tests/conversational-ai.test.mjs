@@ -83,13 +83,25 @@ test('Claude answers by default; the phone-only assistant is the offline fallbac
     AI.setPlan('builtin', { chosen: true });
     assert.equal(AI.plan(), 'builtin');
     AI.notePlanStatus({ plan: 'pro' });
-    assert.equal(AI.plan(), 'builtin', 'an explicit choice is kept');
+    assert.equal(AI.plan(), 'builtin', 'an explicit choice is kept for the day');
+    AI.setPlan('plus', { chosen: true });
+    assert.equal(AI.plan(), 'plus');
+    // An Offline pick from an earlier day, or a lasting pick saved before v305, no longer
+    // keeps a signed-in driver off the AI: questions go to Claude again.
+    store.set('homeBaseProductPrefs', JSON.stringify({ aiPlan: 'builtin', aiPlanOfflineDay: '2026-10-27' }));
+    assert.equal(AI.plan(), 'plus', 'yesterday\'s Offline pick has expired');
+    store.set('homeBaseProductPrefs', JSON.stringify({ aiPlan: 'builtin', aiPlanChosen2: true }));
+    assert.equal(AI.plan(), 'plus', 'a lasting Offline pick from before v305 is ignored');
+    AI.notePlanStatus({ plan: 'pro' });
+    assert.equal(JSON.parse(store.get('homeBaseProductPrefs')).aiPlan, 'plus');
+    assert.equal(JSON.parse(store.get('homeBaseProductPrefs')).aiPlanChosen2, undefined);
     const u = AI.noteUsage("what's the weather", new Date('2026-10-27T20:00:00Z'));
     assert.equal(u.topics.weather, 1); assert.equal(u.hours[16], 1);
     assert.deepEqual(AI.driverProfile({ records: [] }).asksMostAbout, ['weather']);
   } finally { delete globalThis.localStorage; }
   const chat = fs.readFileSync('dist/homebase-chat.js', 'utf8');
   assert.match(chat, /data-engine="plus">Home Base AI</);
+  assert.match(chat, /Offline answer from this phone/, 'offline answers by choice always say so');
   assert.doesNotMatch(chat, /GPT · Plus/);
 });
 
