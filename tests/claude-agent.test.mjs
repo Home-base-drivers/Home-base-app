@@ -52,3 +52,18 @@ test('command understanding and translation run on Claude with forced structured
  const t=await makeLanguageTranslator({provider:'anthropic',apiKey:'k',model:'claude-haiku-5-5',fetchImpl:f.fetchImpl})('Go to Uber now.','es-US');
  assert.equal(t.provider,'Claude');assert.equal(t.text,'Ve a Uber ahora.');
 });
+
+test('a Claude reply with no words is retried once without tools, and a second empty reply names its stop reason',async()=>{
+ const m=memory(),f=fakeClaude([
+  {body:{stop_reason:'end_turn',content:[{type:'server_tool_use',id:'s',name:'web_search',input:{query:'x'}}]}},
+  {body:{stop_reason:'end_turn',content:[{type:'text',text:'Head to Fells Point after 9.'}]}},
+  {body:{stop_reason:'tool_use',content:[{type:'tool_use',id:'tu_1',name:'save_memories',input:{memories:[]}}]}}]);
+ const agent=makeHomeBaseAgent({provider:'anthropic',apiKey:'k',model:'claude-haiku-5-5',fetchImpl:f.fetchImpl,...m});
+ const r=await agent({userId:'u1',utterance:'Where should I drive tonight?',channel:'voice'});
+ assert.equal(r.answer,'Head to Fells Point after 9.');
+ assert.ok(f.calls[0].body.tools.length);assert.equal(f.calls[1].body.tools,undefined,'the retry has no tools');
+ const m2=memory(),g=fakeClaude([{body:{stop_reason:'end_turn',content:[]}},{body:{stop_reason:'max_tokens',content:[]}}]);
+ const again=makeHomeBaseAgent({provider:'anthropic',apiKey:'k',model:'claude-haiku-5-5',fetchImpl:g.fetchImpl,...m2});
+ await assert.rejects(again({userId:'u1',utterance:'hi',channel:'voice'}),e=>e.code==='ai_empty'&&e.provider_code==='max_tokens'&&e.provider_stage==='agent_retry');
+ assert.equal(m2.turns.length,0);
+});

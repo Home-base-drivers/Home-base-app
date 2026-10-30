@@ -60,7 +60,9 @@
   const input=form.querySelector('#hbChatInput'),send=form.querySelector('#hbChatSend'),file=form.querySelector('#hbChatFile'),chip=form.querySelector('#hbChatAttachment'),notice=form.querySelector('#hbChatNotice');
   const grow=()=>{input.style.height='auto';input.style.height=Math.min(input.scrollHeight,160)+'px';send.disabled=pending||(!input.value.trim()&&!attachment)};
   input.addEventListener('input',grow);
-  input.addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing&&matchMedia('(hover:hover)').matches){event.preventDefault();form.requestSubmit()}});
+  // The keyboard's Send key sends on phones too (it used to add a new line, which looked stuck).
+  input.addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing){event.preventDefault();form.requestSubmit()}});
+  input.addEventListener('focus',()=>{if(window.HomeBaseCopilot?.voiceActive?.())window.HomeBaseCopilot.stopConversation?.('Voice paused while you type.')});
   file.addEventListener('change',async()=>{const picked=file.files?.[0];file.value='';if(!picked)return;try{attachment=await shrinkImage(picked);chip.querySelector('img').src=attachment;chip.hidden=false;showNotice('')}catch(error){showNotice(error.message||'That photo could not be attached.')}grow()});
   chip.querySelector('button').addEventListener('click',()=>{attachment=null;chip.hidden=true;grow()});
   form.addEventListener('submit',event=>{event.preventDefault();submit(input.value)});
@@ -76,13 +78,15 @@
    const want=b.dataset.engine,server=internal()?.serverPlan?.();
    if(want==='plus'&&server==='signed-out'){showNotice('Sign in to talk with Home Base AI. Open Profile to sign in.');return;}
    internal()?.setPlan?.(want,{chosen:true});showEngine();showPlan();
-   showNotice(want==='plus'?'Home Base AI talks it through with you, remembers what you tell it and learns how you drive.':'Offline answers come from this phone only: earnings, goal pace, trip offers, weather, screenshots, costs, best hours and where to go.')}));
+   showNotice(want==='plus'?'Home Base AI talks it through with you, remembers what you tell it and learns how you drive.':'Offline answers come from this phone only, for the rest of today: earnings, goal pace, trip offers, weather, screenshots, costs, best hours and where to go.')}));
   showEngine();showPlan();internal()?.refreshEntitlement?.();
   // Built-in AI: free, on the phone. A photo is read into trips for review.
   async function builtinReply(text,photo){
    const ai=internal();if(!ai)throw Error('Built-in AI is still loading. Try again in a moment.');
    if(photo){showNotice('Reading the screenshot on this phone…');const raw=await ai.readImage(photo,p=>showNotice('Reading the screenshot… '+p+'%'));showNotice('');const saved=await ai.review(ai.parseScreenshotText(raw));return saved?ai.summaryOf([saved]):'Nothing saved from that screenshot.';}
-   const r=ai.ask(text);return r.handled?r.answer:r.answer+(ai.plan()==='builtin'?'\n\nSwitch to **Home Base AI** above for open conversation.':'');
+   const r=ai.ask(text),signedOut=ai.serverPlan?.()==='signed-out';
+   // Say every time when an answer came from the phone by choice, so Offline is never mistaken for the AI.
+   return r.answer+(ai.plan()==='builtin'&&!signedOut?'\n\n_Offline answer from this phone. Tap **Home Base AI** above to talk with the AI (Offline resets tomorrow)._':!r.handled?'\n\nSwitch to **Home Base AI** above for open conversation.':'');
   }
   function showNotice(text,retry=false){const signIn=/sign in/i.test(text||''),plans=/Home Base Plus|minutes are used/i.test(text||'');notice.hidden=!text;notice.innerHTML=text?esc(text)+(plans?' <button type="button" data-chat-plans>See plans</button>':signIn?' <button type="button" data-chat-signin>Sign in</button>':retry?' <button type="button" data-chat-retry>Retry</button>':''):'';notice.querySelector('[data-chat-plans]')?.addEventListener('click',()=>window.HomeBasePlans?.open?.());notice.querySelector('[data-chat-signin]')?.addEventListener('click',()=>{document.getElementById('hbChatClose')?.click();document.getElementById('navProfile')?.click()});notice.querySelector('[data-chat-retry]')?.addEventListener('click',()=>{if(lastFailed)submit(lastFailed.text,lastFailed.photo,true)})}
   async function submit(raw,photo=attachment,isRetry=false){
