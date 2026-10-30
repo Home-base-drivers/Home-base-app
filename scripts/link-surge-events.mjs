@@ -19,7 +19,8 @@ const git=ref=>{try{return JSON.parse(execFileSync('git',['show',ref],{encoding:
 const sources=[git('origin/calendar-archive:calendar-archive.json'),git('origin/signals:provider-signals.json'),...extra.map(f=>JSON.parse(fs.readFileSync(f,'utf8')))].filter(Boolean);
 const histFile=new URL('../config/event-history.json',import.meta.url);
 const hist=fs.existsSync(histFile)?JSON.parse(fs.readFileSync(histFile,'utf8')):{note:'Every public event Home Base has read (append-only), kept so past surges can be matched to events after live feeds drop them.',events:[]};
-const key=e=>String(e.name).toLowerCase().replace(/\s+/g,' ').trim()+'|'+new Date(e.eventStart).toISOString().slice(0,16)+'|'+Number(e.lat).toFixed(3);
+const norm=n=>String(n).toLowerCase().replace(/[\u2013\u2014-]/g,'-').replace(/\s+/g,' ').trim();
+const key=e=>norm(e.name).trim()+'|'+new Date(e.eventStart).toISOString().slice(0,16)+'|'+Number(e.lat).toFixed(3);
 const seen=new Set(hist.events.map(key));let saved=0;
 const walk=o=>{if(Array.isArray(o))o.forEach(walk);else if(o&&typeof o==='object'){const st=o.eventStart||o.start;
   if(st&&Number.isFinite(Date.parse(st))&&Number.isFinite(Number(o.lat))&&Number.isFinite(Number(o.lon))&&(o.name||o.title)){
@@ -41,8 +42,8 @@ for(const row of rows){
   if(since&&row.captured_at<since)continue;
   const found=H.matchEvents(row,events);
   const hand=row.linked_event||(row.related_events||[]).length;
-  if(found.length){matchedRows++;const have=links[row.id]||[],keys=new Set(have.map(e=>e.name+'|'+e.eventStart.slice(0,16)));
-    for(const e of found)if(!keys.has(e.name+'|'+e.eventStart.slice(0,16))){have.push(e);keys.add(e.name+'|'+e.eventStart.slice(0,16));added++;}
+  if(found.length){matchedRows++;const have=links[row.id]||[],keys=new Set(have.map(e=>norm(e.name)+'|'+e.eventStart.slice(0,16)));
+    for(const e of found){const k=norm(e.name)+'|'+e.eventStart.slice(0,16);if(!keys.has(k)){have.push(e);keys.add(k);added++;}}
     links[row.id]=have;}
   if(since)report.push(`${row.captured_at.slice(0,16)}  ${row.id.padEnd(58)} ${found.length?found.map(e=>`${e.name} @ ${e.venue} (${e.phase}, ${e.distanceKm} km)`).join('; '):hand?'(hand-linked)':row.cause_note?'no event: '+row.cause_note:'no event found'}`);
 }
