@@ -222,7 +222,7 @@
 <link rel="stylesheet" href="homebase-earnings.css?v=110">
 <link rel="stylesheet" href="homebase-growth.css?v=113">
 <script src="homebase-earnings.js?v=117"></script>
-<script src="homebase-demand-history.js?v=151"></script>
+<script src="homebase-demand-history.js?v=152"></script>
 <script src="homebase-route-policy.js?v=17"></script>
 <script src="homebase-public-data.js?v=7"></script>
 <script src="homebase-sports.js?v=3"></script>
@@ -397,7 +397,7 @@ function eventDirectionsUrl(event){
   if(typeof lat!=='number'||typeof lon!=='number'||!Number.isFinite(lat)||!Number.isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180)return '';
   return 'https://www.google.com/maps/dir/?api=1&destination='+lat+','+lon+'&travelmode=driving&dir_action=navigate';
 }
-function renderEvents(events){
+function renderEvents(events){try{globalThis.HomeBaseDemandHistory?.linkEvents?.(events)}catch{}
   const box=$('#todayEvents'),pulse=$('#eventPulse');
   if(events===null){box.innerHTML='<div class="event-empty">Checking dated events for the next 12 hours…</div>';pulse.textContent='Checking dated events for the next 12 hours…';return}
   events=events.filter(rideRelevantEvent);currentEventData=events;currentEventCount=events.length;updateClimateAdvisory();renderEventMarkers(events);
