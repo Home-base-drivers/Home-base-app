@@ -29,7 +29,7 @@ test('spoken requests get no source list, app actions come back as actions, and 
  const r=await agent({userId:'u1',utterance:'take me there',channel:'voice',capabilities:['navigate']});
  assert.equal(r.execution,'action_required');assert.equal(r.actions[0].name,'navigate');assert.equal(r.actions[0].callId,'tu_9');
  assert.equal(f.calls.length,2);assert.equal(f.calls[1].body.messages.at(-1).role,'assistant','paused turn is sent back to continue');
- assert.equal(f.calls[0].body.max_tokens,450);
+ assert.equal(f.calls[0].body.max_tokens,2048);assert.deepEqual(f.calls[0].body.output_config,{effort:'low'},'spoken replies think briefly');
 });
 
 test('a Claude account with no credit gets a plain owner message, not a crash',async()=>{
@@ -66,4 +66,17 @@ test('a Claude reply with no words is retried once without tools, and a second e
  const again=makeHomeBaseAgent({provider:'anthropic',apiKey:'k',model:'claude-haiku-5-5',fetchImpl:g.fetchImpl,...m2});
  await assert.rejects(again({userId:'u1',utterance:'hi',channel:'voice'}),e=>e.code==='ai_empty'&&e.provider_code==='max_tokens'&&e.provider_stage==='agent_retry');
  assert.equal(m2.turns.length,0);
+});
+
+test('thinking that fills the token cap no longer leaves the driver with a blank answer',async()=>{
+ // What production logged on Oct 30: Claude thought, hit max_tokens, and wrote no words.
+ const m=memory(),f=fakeClaude([
+  {body:{stop_reason:'max_tokens',content:[{type:'thinking',thinking:'',signature:'sig'}]}},
+  {body:{stop_reason:'end_turn',content:[{type:'thinking',thinking:'',signature:'sig2'},{type:'text',text:'Downtown is busiest right now.'}]}},
+  {body:{stop_reason:'tool_use',content:[{type:'tool_use',id:'tu_1',name:'save_memories',input:{memories:[]}}]}}]);
+ const agent=makeHomeBaseAgent({provider:'anthropic',apiKey:'k',model:'claude-haiku-5-5',fetchImpl:f.fetchImpl,...m});
+ const r=await agent({userId:'u1',utterance:'Where is it busy?',channel:'voice'});
+ assert.equal(r.answer,'Downtown is busiest right now.','thinking blocks are not read as the answer');
+ assert.ok(f.calls[0].body.max_tokens>=2048,'room for thinking plus a spoken reply');
+ assert.equal(f.calls[1].body.max_tokens,4096);assert.deepEqual(f.calls[1].body.output_config,{effort:'low'});assert.equal(f.calls[1].body.tools,undefined);
 });

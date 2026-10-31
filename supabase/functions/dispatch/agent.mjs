@@ -34,6 +34,8 @@ export function memoryLines(memories,limit=6000){
 const LEARN_SYSTEM='You maintain a rideshare driver\'s long-term profile for the Home Base assistant. From the latest exchange, return only durable driver-specific information that should improve future answers: explicit preferences (areas, platforms, trip types, hours, voice/alert style), goals, constraints, home-time habits, vehicle facts, repeated lessons and strategies that worked or failed. Reuse an existing key when the new information updates it. When the driver asks to forget something or says a remembered fact is wrong, list that key in forget. Never save transient weather or traffic, one-time locations, secrets, passwords, exact home address, health data, or guesses. Return empty lists when nothing qualifies.';
 const LEARN_SCHEMA={type:'object',required:['memories','forget'],properties:{memories:{type:'array',maxItems:5,items:{type:'object',required:['key','type','summary','confidence'],properties:{key:{type:'string'},type:{type:'string',enum:['preference','goal','constraint','lesson','fact','strategy']},summary:{type:'string'},confidence:{type:'number'}}}},forget:{type:'array',maxItems:5,items:{type:'string'}}}};
 export const HISTORY_TURNS=12;
+// Room for Claude's thinking plus the reply (thinking counts toward max_tokens).
+export const AGENT_MAX_TOKENS={voice:2048,typed:4096};
 function safe(value,limit=14000){try{return JSON.stringify(value??{}).slice(0,limit)}catch{return'{}'}}
 function outputText(payload){return(payload?.output||[]).flatMap(x=>x.content||[]).filter(x=>x.type==='output_text').map(x=>x.text||'').join('\n').trim()}
 function actionCalls(payload){return(payload?.output||[]).filter(x=>x?.type==='function_call').flatMap(x=>{try{return[{callId:x.call_id||x.id,name:x.name,arguments:JSON.parse(x.arguments||'{}')}]}catch{return[]}})}
@@ -105,13 +107,18 @@ ${typed?'- This message was TYPED in the Home Base chat screen. Reply like a cap
    const content=images.length?[{type:'text',text},...images.map(i=>claudeImage(i.image_url)).filter(Boolean)]:text;
    const messages=[...claudeMessages(turns.slice(-HISTORY_TURNS).map(t=>({role:t.role,content:String(t.content||'')}))),{role:'user',content}];
    if(messages.length>1&&messages[messages.length-2].role==='user'){const prev=messages.splice(messages.length-2,1)[0];messages[messages.length-1].content=typeof content==='string'?prev.content+'\n\n'+content:[{type:'text',text:prev.content},...content];}
-   const request={apiKey,fetchImpl,timeoutMs,stage:'agent',model:images.length&&visionModel?visionModel:model,max_tokens:typed?1024:450,system:instructions,messages};
+   // Current Claude models think before answering, and that thinking counts against
+   // max_tokens. The old 450/1024 caps were used up by thinking alone, so Claude stopped
+   // (stop_reason max_tokens) before writing any words. Leave room for thinking and keep
+   // cost down with effort instead: spoken replies think briefly, typed replies a bit more.
+   // Short answers are still asked for in the instructions; unused room is not billed.
+   const request={apiKey,fetchImpl,timeoutMs,stage:'agent',model:images.length&&visionModel?visionModel:model,max_tokens:typed?AGENT_MAX_TOKENS.typed:AGENT_MAX_TOKENS.voice,output_config:{effort:typed||images.length?'medium':'low'},system:instructions,messages};
    let message=await callClaude({...request,tools});
    let actions=toolCalls(message),sources=sourcesOf(message);
    let answer=textOf(message);
    // A reply with no words (a search that never finished, or a stop with no text) gets one
-   // plain retry without tools, so the driver hears a real answer instead of an on-phone one.
-   if(!actions.length&&!answer){const first=message?.stop_reason;message=await callClaude({...request,stage:'agent_retry'});actions=toolCalls(message);sources=sourcesOf(message);answer=textOf(message);
+   // plain retry without tools and with the least thinking, so the driver hears a real answer.
+   if(!actions.length&&!answer){const first=message?.stop_reason;message=await callClaude({...request,stage:'agent_retry',max_tokens:AGENT_MAX_TOKENS.typed,output_config:{effort:'low'}});actions=toolCalls(message);sources=sourcesOf(message);answer=textOf(message);
     if(!answer)throw Object.assign(errorWithCode('Home Base AI returned no answer.','ai_empty'),{provider_code:String(message?.stop_reason||first||'none'),provider_stage:'agent_retry'});}
    if(actions.length)return{answer:answer||'Executing the requested Home Base action.',actions,provider:'Claude',agent:true,execution:'action_required'};
    if(typed&&sources.length)answer+='\n\n**Sources:** '+sources.map(s=>'['+String(s.title).replace(/[\[\]]/g,'')+']('+s.url+')').join(' · ');
