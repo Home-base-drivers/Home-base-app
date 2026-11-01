@@ -39,7 +39,7 @@ if(!m)throw Error('EVENT_LINKS block not found');
 const links=JSON.parse(m[1]);let added=0,matchedRows=0;const report=[];
 for(const row of rows){
   if(!['uber_reference','empower_reference'].includes(row.record_type)||!row.captured_at)continue;
-  if(since&&row.captured_at<since)continue;
+  if(since&&Date.parse(row.captured_at)<Date.parse(since))continue; // compare instants: EST/EDT offsets made text comparison skip rows
   const found=H.matchEvents(row,events);
   const hand=row.linked_event||(row.related_events||[]).length;
   if(found.length){matchedRows++;const have=links[row.id]||[],keys=new Set(have.map(e=>norm(e.name)+'|'+e.eventStart.slice(0,16)));

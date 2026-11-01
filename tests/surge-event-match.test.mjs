@@ -40,3 +40,8 @@ test('all-day calendar listings do not match the next morning',()=>{
   assert.equal(H.matchEvents(r,[allDay]).length,0);
   assert.equal(H.matchEvents({...r,captured_at:'2026-10-30T23:00:00-04:00'},[allDay])[0].phase,'during');
 });
+test('Ravens away-game watch parties match nearby surges as major events',()=>{
+  const watch={name:'Sports Watch Ravens at Bills',venue:"Rally's Corner Bar",lat:39.2815,lon:-76.5800,eventStart:'2026-11-01T18:00:00.000Z'};
+  const r={...row,captured_at:'2026-11-01T12:15:00-05:00',area_observations:[{area:'East Baltimore',band:'very_high',lat:39.30,lon:-76.60}]};
+  const [m]=H.matchEvents(r,[watch]);assert.equal(m.major,true);assert.equal(m.phase,'arrivals');
+});
