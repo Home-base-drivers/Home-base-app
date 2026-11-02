@@ -449,6 +449,8 @@
     suburbs:{km:2.4,points:[['Cockeysville / Timonium',39.46,-76.63],['Pikesville',39.375,-76.705],['Owings Mills / Reisterstown',39.44,-76.8],['Carney / Perry Hall',39.395,-76.5],['Rosedale / Middle River',39.33,-76.47],['Essex / Edgemere',39.27,-76.45],['Catonsville / Arbutus',39.26,-76.71],['Elkridge / Ellicott City',39.23,-76.77],['Columbia',39.2,-76.86],['Glen Burnie / Pasadena',39.13,-76.57],['Odenton / Crofton',39.04,-76.69],['Annapolis',38.975,-76.5],['Bel Air / Fallston',39.53,-76.36],['Eldersburg / Westminster',39.45,-76.96]]},
     campus:{km:1.2,points:[['Towson University',39.3934,-76.6094],['Morgan State',39.3441,-76.5825],['Johns Hopkins Homewood',39.3299,-76.6205],['Loyola / Notre Dame',39.347,-76.622],['UMBC',39.2557,-76.7113]]},
     airport:{km:1.5,points:[['BWI',39.177,-76.668]]},
+    dining:{km:1.1,points:[['Harbor East',39.2826,-76.6003],['Little Italy',39.2862,-76.6017],['Fells Point restaurants',39.2826,-76.5928],['Federal Hill restaurants',39.2794,-76.6125],['Mount Vernon restaurants',39.2976,-76.6158],['Towson restaurants',39.4015,-76.6019],['Columbia / Maple Lawn',39.2,-76.86],['Annapolis downtown',38.978,-76.49]]},
+    shopping:{km:1.3,points:[['Arundel Mills',39.158,-76.728],['Towson Town Center',39.404,-76.6],['White Marsh Mall',39.377,-76.469],['The Mall in Columbia',39.215,-76.862],['Owings Mills / Foundry Row',39.408,-76.78],['Westfield Annapolis',39.0,-76.53],['Harbor East / Inner Harbor shops',39.2836,-76.6058],['Canton Crossing / Brewers Hill',39.2785,-76.5655]]},
     malls:{km:1.3,points:[['Arundel Mills',39.158,-76.728],['Towson Town Center',39.404,-76.6],['White Marsh Mall',39.377,-76.469],['The Mall in Columbia',39.215,-76.862],['Owings Mills / Foundry Row',39.408,-76.78]]}
   };
   const pad=n=>String(n).padStart(2,'0'),ymd=d=>`${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}`;
@@ -474,6 +476,20 @@
     add(new Date(Date.UTC(year,4,5)),'Cinco de Mayo',17,8,21,.5,['nightlife'],'Strongest on a weekend');
     add(nthWeekday(year,1,0,2),'Super Bowl Sunday',16,8,22,.6,['nightlife','suburbs'],'Watch parties; let-out after the game');
     add(new Date(Date.UTC(year,1,14)),"Valentine's Day",17,7,20,.45,['nightlife'],'Dinner reservations');
+    // Christmas season: office and friends' holiday parties, holiday shopping, dinners.
+    const xmas=new Date(Date.UTC(year,11,25)),superSat=addDays(xmas,-((xmas.getUTCDay()+1)%7||7));
+    for(let d=addDays(tg,2);d<xmas;d=addDays(d,1)){const wd=d.getUTCDay(),dec=d.getUTCMonth()===11,last10=xmas-d<=10*864e5;
+      // Shopping: every weekend from Black Friday, daily in the last 10 days; "Super Saturday" (last Saturday before Christmas) is the biggest.
+      if(wd===0||wd===6||last10)add(d,ymd(d)===ymd(superSat)?'Super Saturday holiday shopping':'Holiday shopping',10,10,15,ymd(d)===ymd(superSat)?.7:wd===6?.55:last10?.5:.4,['shopping'],'Malls and shopping districts; heaviest pickups mid-afternoon to close');
+      // Holiday parties: office parties Thu-Sat in December, peak the first three weeks; party let-out around 10 PM-1 AM.
+      if(dec&&wd>=4&&wd<=6&&d.getUTCDate()<=20)add(d,'Holiday party season',18,8,22,wd===4?.55:.75,['nightlife','dining','suburbs'],'Office and friends\u2019 holiday parties, dinners and bar meetups');
+      // Holiday dinners out on December weekends.
+      if(dec&&(wd===5||wd===6))add(d,'Holiday dinners',17,5,19,.5,['dining'],'Restaurant reservations');}
+    add(addDays(xmas,-1),'Christmas Eve',16,7,18,.6,['suburbs','dining'],'Family dinners, church services (4-midnight), last-minute shopping');
+    add(addDays(xmas,-1),'Christmas Eve last-minute shopping',9,8,13,.6,['shopping'],'Last-minute gifts');
+    add(xmas,'Christmas Day dinner',12,10,15,.5,['suburbs'],'Rides to and from relatives\u2019 homes for dinner; low driver supply; city nightlife quiet');
+    add(addDays(xmas,1),'Day-after-Christmas returns',9,9,13,.5,['shopping'],'Gift returns and sales');
+    add(addDays(xmas,1),'Day-after-Christmas night out',19,7,23,.45,['nightlife'],'People back out after family days');
     add(new Date(Date.UTC(year,11,24)),'Christmas Eve travel',8,10,14,.45,['airport'],'Airport and family travel');
     add(new Date(Date.UTC(year,11,26)),'Day after Christmas travel',9,10,14,.4,['airport'],'Returns and travel');
     return out;

@@ -41,3 +41,15 @@ test('a party holiday outweighs a big single stadium event in strength',()=>{
   assert.ok(hw.tags.holidayStrength>=.95);assert.equal(Heat.sourceFootprintKm(hw),1.4);
   const sub=H.holidaySources('2026-10-31T22:00:00-04:00').find(s=>/Cockeysville/.test(s.name));assert.equal(Heat.sourceFootprintKm(sub),2.4);
 });
+test('Christmas season: parties, shopping, dinners and Christmas Day',()=>{
+  const has=(t,re)=>H.holidaySources(t).some(s=>re.test(s.name));
+  assert.ok(has('2026-12-11T22:00:00-05:00',/Holiday party season: Federal Hill/),'Friday party night');
+  assert.ok(has('2026-12-11T22:00:00-05:00',/Holiday party season: Cockeysville/),'suburban parties');
+  assert.ok(has('2026-12-19T15:00:00-05:00',/Super Saturday holiday shopping: Arundel Mills/));
+  assert.ok(has('2026-11-28T14:00:00-05:00',/Holiday shopping: Towson Town Center/));
+  assert.ok(has('2026-12-12T19:00:00-05:00',/Holiday dinners: Harbor East/));
+  assert.ok(has('2026-12-24T19:00:00-05:00',/Christmas Eve: /));
+  assert.ok(has('2026-12-25T15:00:00-05:00',/Christmas Day dinner/));
+  assert.ok(has('2026-12-26T12:00:00-05:00',/returns/));
+  assert.ok(!has('2026-12-08T22:00:00-05:00',/Holiday party season/),'Tuesday is not a party night');
+});
