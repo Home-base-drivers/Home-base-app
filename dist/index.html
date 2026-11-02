@@ -147,6 +147,9 @@
     .app.satellite .layer-toggle{color:#fff}
     .leaflet-heat-pane{opacity:1!important;visibility:visible!important;mix-blend-mode:normal;filter:none;pointer-events:none}
     .leaflet-roads-pane{opacity:.58;filter:saturate(.35);pointer-events:none}
+    /* Like Uber: at street zoom the roads sit crisp and bright on top of the heat. */
+    .hb-street-zoom .leaflet-roads-pane{opacity:.9;filter:none}
+    .hb-street-zoom .leaflet-heat-pane,.hb-street-zoom .homebase-demand-canvas{opacity:.82!important}
     .leaflet-labels-pane{opacity:.95;filter:none;pointer-events:none}
     .map-marker-wrap.icon-only{width:38px;height:38px}.map-marker-wrap.event-point .event-map-icon{border-radius:50%;background:rgba(3,12,20,.97);color:var(--marker);width:38px;height:38px;flex-basis:38px;border-width:1.5px}.event-emoji,.destination-emoji{font-size:21px;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,.8))}.event-item .event-list-icon{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;color:var(--marker);border:1px solid color-mix(in srgb,var(--marker) 70%,transparent);background:color-mix(in srgb,var(--marker) 10%,#02090e)}.event-list-icon .event-emoji{font-size:20px}.event-icon-key{display:grid;grid-template-columns:1fr 1fr;gap:4px 7px;margin-top:6px;padding-top:5px;border-top:1px solid rgba(86,132,160,.28)}.event-legend-item{display:flex!important;align-items:center;gap:5px;white-space:nowrap;color:#d5e3ed;font-size:.54rem}.event-legend-item i{width:22px;height:22px;display:grid;place-items:center;border:1px solid color-mix(in srgb,var(--marker) 70%,transparent);border-radius:50%;background:rgba(3,12,20,.84);font-style:normal}.event-legend-item .event-emoji{font-size:16px}.event-popup b,.event-popup span,.event-popup small{display:block}.event-popup b{font-size:.84rem;line-height:1.2;margin-bottom:5px}.event-popup span{font-size:.72rem;line-height:1.3;margin-top:3px;color:#d9e6ee}.event-popup small{font-size:.58rem;line-height:1.25;margin-top:6px;color:#85bfe0}.homebase-event-popup .leaflet-popup-content-wrapper{border-color:rgba(79,180,235,.66)}.leaflet-popup-pane{z-index:780!important}
     .map-style-controls{display:flex;align-items:center;gap:7px;padding:5px 2px 1px;pointer-events:auto}
@@ -259,6 +262,7 @@ liveMap.on('layeradd',event=>{const layer=event.layer;if(layer instanceof L.Circ
 liveMap.createPane('heatPane');liveMap.getPane('heatPane').style.zIndex=320;liveMap.getPane('heatPane').style.pointerEvents='none';
 liveMap.createPane('roadsPane');liveMap.getPane('roadsPane').style.zIndex=340;liveMap.getPane('roadsPane').style.pointerEvents='none';
 liveMap.createPane('labelsPane');liveMap.getPane('labelsPane').style.zIndex=360;liveMap.getPane('labelsPane').style.pointerEvents='none';
+const syncStreetZoom=()=>{try{const z=Number(liveMap.getZoom?.()),c=liveMap.getContainer?.();if(c?.classList&&Number.isFinite(z))c.classList.toggle('hb-street-zoom',z>=13);}catch{}};liveMap.on?.('zoomend',syncStreetZoom);syncStreetZoom();
 // All basemap components use the same Web Mercator tile grid as the heat.
 const esriTiles='https://server.arcgisonline.com/ArcGIS/rest/services/';
 const imageryOptions={maxZoom:19,maxNativeZoom:19,keepBuffer:3,attribution:'Imagery © Esri, Maxar, Earthstar Geographics, and the GIS User Community'};

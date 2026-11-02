@@ -108,6 +108,8 @@
   function currentEvidence(source, when, now = Date.now()) {
     const tags=source.tags||{},time=+new Date(when);
     if(tags.historicalPrior)return 'history';
+    // Boost+ offers the driver signed up for are confirmed pay, drawn like a live surge.
+    if(tags.confirmedBoost){const s=Date.parse(tags.boostStart),e=Date.parse(tags.boostEnd);return time>=s-15*60000&&time<e?'surge':'modeled';}
     const sampled=Date.parse(tags.providerSampledAt||'');
     if(tags.providerSignal&&Number.isFinite(sampled)&&now>=sampled&&now-sampled<=25*60000&&Math.abs(time-sampled)<=25*60000&&Number.isFinite(Number(tags.uberSurgeMultiplier)))return Number(tags.uberSurgeMultiplier)>1?'surge':'current';
     const fetchedActivity=Date.parse(tags.sourceFetchedAt||''),flightHour=Date.parse(tags.flightHour||'');
@@ -152,6 +154,7 @@
   }
   function sourceStrength(source, when, scoreSource) {
     if(source.tags?.historicalPrior)return clamp(Number(source.tags.historicalPrior),0,.45);
+    if(source.tags?.confirmedBoost)return currentEvidence(source,when)==='surge'?clamp(.55+(Number(source.tags.boostUsdPerHour)||0)/30,.55,1):0;
     const weight = Number(scoreSource(source, when));
     if (!Number.isFinite(weight) || weight <= 0) return 0;
     let strength = weight / 10;
@@ -268,6 +271,7 @@
     const tags = source.tags || {};
     if(['school','k12'].includes(source.cat)&&!source.eventStart)return .25;
     if (tags.providerSignal) return 1.75;
+    if (tags.confirmedBoost) return Number(tags.boostRadiusKm) || 1;
     if (tags.metroBaseline) {
       // Community anchors represent an area, not a single address. Wider,
       // category-specific footprints connect county demand without turning it
@@ -291,6 +295,24 @@
     if(radius<1)return data;const tmp=new Float32Array(data.length),span=radius*2+1;
     for(let y=0;y<height;y++){let sum=0;const row=y*width;for(let x=-radius;x<=radius;x++)sum+=data[row+clamp(x,0,width-1)];for(let x=0;x<width;x++){tmp[row+x]=sum/span;sum+=data[row+Math.min(width-1,x+radius+1)]-data[row+Math.max(0,x-radius)];}}
     for(let x=0;x<width;x++){let sum=0;for(let y=-radius;y<=radius;y++)sum+=tmp[clamp(y,0,height-1)*width+x];for(let y=0;y<height;y++){data[y*width+x]=sum/span;sum+=tmp[Math.min(height-1,y+radius+1)*width+x]-tmp[Math.max(0,y-radius)*width+x];}}
+    return data;
+  }
+  // Pointy-top hex grid in world kilometres (about H3 resolution 8, the cell size
+  // visible at the edges of Uber's purple surge areas). Each hex takes the strongest
+  // surge inside it; weak tails drop out, so edges follow whole hexes.
+  const HEX_RADIUS_KM=.42;
+  function hexCell(xKm,yKm,size){const a=Math.sqrt(3)/3/size,b=1/3/size,c=2/3/size;let x=a*xKm-b*yKm,z=c*yKm,y=-x-z,rx=Math.round(x),ry=Math.round(y),rz=Math.round(z);const dx=Math.abs(rx-x),dy=Math.abs(ry-y),dz=Math.abs(rz-z);if(dx>dy&&dx>dz)rx=-ry-rz;else if(dy<=dz)rz=-rx-ry;return [rx,rz];}
+  function hexQuantize(data,width,height,xKmAt,yKmAt,size=HEX_RADIUS_KM){
+    let any=false;for(let i=0;i<data.length;i++)if(data[i]>0){any=true;break;}if(!any)return data;
+    const keys=new Int32Array(data.length),best=new Map(),a=Math.sqrt(3)/3/size,b=1/3/size,c=2/3/size;
+    for(let i=0;i<data.length;i++){
+      const xk=xKmAt(i),yk=yKmAt(i),x=a*xk-b*yk,z=c*yk,y=-x-z;let rx=Math.round(x),ry=Math.round(y),rz=Math.round(z);
+      const dx=Math.abs(rx-x),dy=Math.abs(ry-y),dz=Math.abs(rz-z);if(dx>dy&&dx>dz)rx=-ry-rz;else if(dy<=dz)rz=-rx-ry;
+      const k=((rx+32768)&65535)*65536+((rz+32768)&65535)|0;keys[i]=k;const v=data[i];if(v>0){const o=best.get(k);if(o===undefined||v>o)best.set(k,v);}
+    }
+    const shade=new Map();
+    for(let i=0;i<data.length;i++){const k=keys[i],v=best.get(k);if(v===undefined||v<.12){data[i]=0;continue;}
+      let m=shade.get(k);if(m===undefined){m=.9+.16*hash2((k>>>16)-32768,(k&65535)-32768);shade.set(k,m);}data[i]=Math.min(1,v*m);}
     return data;
   }
   function stableAngle(source, index) {
@@ -493,6 +515,7 @@
         const history=historyApi?sourceData.filter(s=>!(s.tags&&(s.tags.providerSignal||s.tags.providerEvent||s.tags.liveEvent))).map(s=>{const strength=historicalPriorForSource(s,this._when,historyApi);return strength>0?{...s,eventStart:null,eventEnd:null,tags:{historicalPrior:strength}}:null;}).filter(Boolean):[];
         // Coordinate patterns render even where no mapped place sits under them.
         if(historyApi?.patternSources)history.push(...historyApi.patternSources(this._when));
+        if(historyApi?.boostSources)history.push(...historyApi.boostSources(this._when));
         const sources = [...sourceData,...history].map((source, index) => {
           // Label/county anchors exist only to name areas. Neighborhood
           // coverage anchors remain fixed geographic sources at every zoom.
@@ -524,7 +547,7 @@
             center, strength, angle, rx, ry, influenceLimit:sourceInfluenceLimitKm(source,this._when)*radius/km, evidence:currentEvidence(source,this._when),
             blockShape: (source.heatAreaType === 'label' || source.heatAreaType === 'neighborhood') && Array.isArray(bounds),
             shade: sourceShade(strength),
-            detailOpacity: source.tags && (source.tags.providerSignal || source.tags.providerEvent || source.tags.liveEvent) ? .76 :
+            detailOpacity: source.tags && (source.tags.confirmedBoost || source.tags.providerSignal || source.tags.providerEvent || source.tags.liveEvent) ? .76 :
               source.heatAreaType === 'label' ? .34 : source.heatAreaType === 'neighborhood' ? .78 : .68,
             skew: ((index % 7) - 3) * .045
           };
@@ -617,6 +640,9 @@
         // Melt overlapping sources into one layered surface with no seams.
         const blurCells=clamp(Math.round(.28*pxPerKm/sample),1,8);
         [field,shadeField,backgroundField,backgroundShade,historyField,eventField,surgeField].forEach(data=>{boxBlur(data,gridWidth,gridHeight,blurCells);boxBlur(data,gridWidth,gridHeight,blurCells);});
+        // Uber draws surge (purple) as hexagon cells from neighborhood zoom in, with
+        // slightly darker and lighter cells, while ordinary demand stays a soft blur.
+        if(map.getZoom()>=11){const kmPer0=40075*Math.max(.2,Math.cos(centerLat*Math.PI/180))/256;hexQuantize(surgeField,gridWidth,gridHeight,i=>worldX(gridLeft+((i%gridWidth)+.5)*sample)*kmPer0,i=>worldY(gridTop+(Math.floor(i/gridWidth)+.5)*sample)*kmPer0,HEX_RADIUS_KM);}
         const paint = document.createElement('canvas');
         paint.width = gridWidth; paint.height = gridHeight;
         const context = paint.getContext('2d'), image = context.createImageData(gridWidth, gridHeight), pixels = image.data;
@@ -638,5 +664,5 @@
     return new HeatLayer();
   }
 
-  return { scheduledWindow, letOutProfile, letOutStrength, displayFootprintKm, fractalNoise, boxBlur, historicalPriorForSource, composeFields, composePixel, currentEvidence, evidenceLevel, evidenceOpacity, colorAt, setPalette, getCustomColors, setCustomColors, getPalette: () => activePalette, paletteNames: Object.keys(PALETTES), sourceStrength, areaIntensity, sourceShade, compositeLevel, compositeOpacity, sourceRadiusKm, sourceFootprintKm, sourceInfluenceLimitKm, anchoredGridOrigin, createLayer };
+  return { hexCell, hexQuantize, HEX_RADIUS_KM, scheduledWindow, letOutProfile, letOutStrength, displayFootprintKm, fractalNoise, boxBlur, historicalPriorForSource, composeFields, composePixel, currentEvidence, evidenceLevel, evidenceOpacity, colorAt, setPalette, getCustomColors, setCustomColors, getPalette: () => activePalette, paletteNames: Object.keys(PALETTES), sourceStrength, areaIntensity, sourceShade, compositeLevel, compositeOpacity, sourceRadiusKm, sourceFootprintKm, sourceInfluenceLimitKm, anchoredGridOrigin, createLayer };
 });
