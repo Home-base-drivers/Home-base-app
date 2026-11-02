@@ -109,6 +109,7 @@
     const tags=source.tags||{},time=+new Date(when);
     if(tags.historicalPrior)return 'history';
     // Boost+ offers the driver signed up for are confirmed pay, drawn like a live surge.
+    if(tags.holidayEvent){const s=Date.parse(tags.holidayStart),e=Date.parse(tags.holidayEnd);return time>=s&&time<e?'event':'modeled';}
     if(tags.confirmedBoost){const s=Date.parse(tags.boostStart),e=Date.parse(tags.boostEnd);return time>=s-15*60000&&time<e?'surge':'modeled';}
     const sampled=Date.parse(tags.providerSampledAt||'');
     if(tags.providerSignal&&Number.isFinite(sampled)&&now>=sampled&&now-sampled<=25*60000&&Math.abs(time-sampled)<=25*60000&&Number.isFinite(Number(tags.uberSurgeMultiplier)))return Number(tags.uberSurgeMultiplier)>1?'surge':'current';
@@ -154,6 +155,7 @@
   }
   function sourceStrength(source, when, scoreSource) {
     if(source.tags?.historicalPrior)return clamp(Number(source.tags.historicalPrior),0,.45);
+    if(source.tags?.holidayEvent)return currentEvidence(source,when)==='event'?clamp(Number(source.tags.holidayStrength)||0,0,1):0;
     if(source.tags?.confirmedBoost)return currentEvidence(source,when)==='surge'?clamp(.55+(Number(source.tags.boostUsdPerHour)||0)/30,.55,1):0;
     const weight = Number(scoreSource(source, when));
     if (!Number.isFinite(weight) || weight <= 0) return 0;
@@ -272,6 +274,7 @@
     if(['school','k12'].includes(source.cat)&&!source.eventStart)return .25;
     if (tags.providerSignal) return 1.75;
     if (tags.confirmedBoost) return Number(tags.boostRadiusKm) || 1;
+    if (tags.holidayEvent) return Number(tags.holidayRadiusKm) || 1.4;
     if (tags.metroBaseline) {
       // Community anchors represent an area, not a single address. Wider,
       // category-specific footprints connect county demand without turning it
@@ -516,6 +519,7 @@
         // Coordinate patterns render even where no mapped place sits under them.
         if(historyApi?.patternSources)history.push(...historyApi.patternSources(this._when));
         if(historyApi?.boostSources)history.push(...historyApi.boostSources(this._when));
+        if(historyApi?.holidaySources)history.push(...historyApi.holidaySources(this._when));
         const sources = [...sourceData,...history].map((source, index) => {
           // Label/county anchors exist only to name areas. Neighborhood
           // coverage anchors remain fixed geographic sources at every zoom.
@@ -547,7 +551,7 @@
             center, strength, angle, rx, ry, influenceLimit:sourceInfluenceLimitKm(source,this._when)*radius/km, evidence:currentEvidence(source,this._when),
             blockShape: (source.heatAreaType === 'label' || source.heatAreaType === 'neighborhood') && Array.isArray(bounds),
             shade: sourceShade(strength),
-            detailOpacity: source.tags && (source.tags.confirmedBoost || source.tags.providerSignal || source.tags.providerEvent || source.tags.liveEvent) ? .76 :
+            detailOpacity: source.tags && (source.tags.confirmedBoost || source.tags.holidayEvent || source.tags.providerSignal || source.tags.providerEvent || source.tags.liveEvent) ? .76 :
               source.heatAreaType === 'label' ? .34 : source.heatAreaType === 'neighborhood' ? .78 : .68,
             skew: ((index % 7) - 3) * .045
           };

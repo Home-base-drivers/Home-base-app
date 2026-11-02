@@ -439,5 +439,78 @@
     return out;
   }
   const boostOffers=()=>BOOST_OFFERS.map(o=>({...o,zones:o.zones.map(id=>({id,...BOOST_ZONES[id]}))}));
-  return{matchEvents,boostSources,boostOffers,linkEvents,observationRows:()=>screenshotBenchmarks.slice(),compare,eventPhase,context,html,adjustWeight,recurrenceFor,recurrenceAt,forecastFor,forecastAt,patternSources,recordObservation,rememberSignal};
+  // Holidays move the whole metro, not one venue: bars and nightlife districts,
+  // suburban house parties, campuses and community events all fill at once.
+  // Halloween 2026 (Oct 30-Nov 1) out-surged the 68,173-fan rugby test at M&T Bank
+  // Stadium (Sep 12: max +$16 vs $24-$32, ~50x the bonus badges), so a party holiday
+  // is weighted above any single stadium event.
+  const HOLIDAY_ZONES={
+    nightlife:{km:1.4,points:[['Federal Hill',39.2794,-76.6125],['Fells Point',39.2826,-76.5928],['Canton',39.2808,-76.574],['Power Plant Live / Downtown',39.2891,-76.6075],['Mount Vernon',39.2976,-76.6158],['Station North',39.3105,-76.6155],['Hampden',39.3305,-76.632],['Towson',39.4015,-76.6019],['Highlandtown',39.2865,-76.5689]]},
+    suburbs:{km:2.4,points:[['Cockeysville / Timonium',39.46,-76.63],['Pikesville',39.375,-76.705],['Owings Mills / Reisterstown',39.44,-76.8],['Carney / Perry Hall',39.395,-76.5],['Rosedale / Middle River',39.33,-76.47],['Essex / Edgemere',39.27,-76.45],['Catonsville / Arbutus',39.26,-76.71],['Elkridge / Ellicott City',39.23,-76.77],['Columbia',39.2,-76.86],['Glen Burnie / Pasadena',39.13,-76.57],['Odenton / Crofton',39.04,-76.69],['Annapolis',38.975,-76.5],['Bel Air / Fallston',39.53,-76.36],['Eldersburg / Westminster',39.45,-76.96]]},
+    campus:{km:1.2,points:[['Towson University',39.3934,-76.6094],['Morgan State',39.3441,-76.5825],['Johns Hopkins Homewood',39.3299,-76.6205],['Loyola / Notre Dame',39.347,-76.622],['UMBC',39.2557,-76.7113]]},
+    airport:{km:1.5,points:[['BWI',39.177,-76.668]]},
+    malls:{km:1.3,points:[['Arundel Mills',39.158,-76.728],['Towson Town Center',39.404,-76.6],['White Marsh Mall',39.377,-76.469],['The Mall in Columbia',39.215,-76.862],['Owings Mills / Foundry Row',39.408,-76.78]]}
+  };
+  const pad=n=>String(n).padStart(2,'0'),ymd=d=>`${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}`;
+  const nthWeekday=(y,m,wd,n)=>{const d=new Date(Date.UTC(y,m,1));d.setUTCDate(1+(wd-d.getUTCDay()+7)%7+7*(n-1));return d;};
+  const addDays=(d,n)=>{const x=new Date(d);x.setUTCDate(x.getUTCDate()+n);return x;};
+  // Party nights: [start hour, hours long, peak hour, weight, zones].
+  function holidayCalendar(year){
+    const out=[],add=(date,name,startH,hours,peakH,weight,zones,note)=>out.push({name,date:ymd(date),startH,hours,peakH,weight,zones,note});
+    const hw=new Date(Date.UTC(year,9,31)),dow=hw.getUTCDay();
+    add(hw,'Halloween night',17,10,22,1,['nightlife','suburbs','campus'],'Trick-or-treat until ~8 PM, then suburban house parties (8-11:30 PM) and bars to 3 AM');
+    // The Halloween weekend: the Friday and Saturday nearest Oct 31 party too.
+    const fri=addDays(hw,dow>=5?5-dow:dow===0?-2:5-dow-7),sat=addDays(fri,1);
+    for(const d of [fri,sat])if(ymd(d)!==ymd(hw)&&Math.abs(d-hw)<=4*864e5)add(d,'Halloween weekend',19,8,23,.95,['nightlife','suburbs','campus'],'Costume parties and bar crawls');
+    const tg=nthWeekday(year,10,4,4);
+    add(addDays(tg,-1),'Thanksgiving Eve',20,7,23,.95,['nightlife','suburbs'],'"Blackout Wednesday": college students home, hometown bars');
+    add(addDays(tg,1),'Black Friday',5,8,10,.45,['malls'],'Early shopping');
+    add(addDays(tg,-1),'Thanksgiving travel',12,10,16,.5,['airport'],'Airport departures');
+    add(addDays(tg,4),'Thanksgiving return travel',10,12,17,.5,['airport'],'Sunday after Thanksgiving is the busiest travel day');
+    add(new Date(Date.UTC(year,11,31)),"New Year's Eve",20,9,25,1,['nightlife','suburbs'],'Parties all night; rides peak 12-2:30 AM; Inner Harbor fireworks at midnight');
+    add(new Date(Date.UTC(year+1,0,1)),"New Year's Day",8,6,10,.45,['nightlife','suburbs'],'Car retrieval and bowl-game watch parties');
+    add(new Date(Date.UTC(year,2,17)),"St. Patrick's Day",11,15,20,.8,['nightlife'],'Parade and bar crawls (Fells Point, Federal Hill, Canton)');
+    add(new Date(Date.UTC(year,6,4)),'Fourth of July',17,7,22,.7,['nightlife','suburbs'],'Cookouts and Inner Harbor fireworks (~9:30 PM)');
+    add(new Date(Date.UTC(year,4,5)),'Cinco de Mayo',17,8,21,.5,['nightlife'],'Strongest on a weekend');
+    add(nthWeekday(year,1,0,2),'Super Bowl Sunday',16,8,22,.6,['nightlife','suburbs'],'Watch parties; let-out after the game');
+    add(new Date(Date.UTC(year,1,14)),"Valentine's Day",17,7,20,.45,['nightlife'],'Dinner reservations');
+    add(new Date(Date.UTC(year,11,24)),'Christmas Eve travel',8,10,14,.45,['airport'],'Airport and family travel');
+    add(new Date(Date.UTC(year,11,26)),'Day after Christmas travel',9,10,14,.4,['airport'],'Returns and travel');
+    return out;
+  }
+  // Community events from public calendars (Visit Baltimore, Waterfront Partnership, baltimore.org).
+  const COMMUNITY_EVENTS=[
+    ['2026-11-03',20,4,22,.4,[['Election night watch parties (downtown)',39.2891,-76.6075]],1.4,'General election night'],
+    ['2026-11-22',17,4,18,.4,[['Merryland Tree Lighting, Harbor East',39.2826,-76.6003]],1,'baltimore.org'],
+    ['2026-12-03',17,3,18,.55,[['Monument Lighting, Mount Vernon Place',39.2976,-76.6158]],1,'Dec 3, 5:30-7:30 PM'],
+    ['2026-12-05',9,11,18,.6,[['Fell’s Point Olde Tyme Christmas & Lighted Boat Parade',39.2826,-76.5928]],1.2,'Boat parade 6 PM (some listings say Dec 6)'],
+    ['2026-12-05',16,5,18,.4,[['Sagamore Spirit Tree Lighting, Baltimore Peninsula',39.2685,-76.6145]],1,'baltimore.org'],
+    ['2026-12-31',20,6,25,.8,[['NYE Live!, Power Plant Live',39.2891,-76.6075],['Charm City Countdown, BWI Hilton',39.191,-76.672]],1.2,'8 PM-2 AM']
+  ];
+  function seasonalCommunity(year){
+    // Nightly holiday attractions: German Christmas Village (Thanksgiving-Dec 24), Hampden Miracle on 34th (Sat after Thanksgiving-Dec 31).
+    const out=[],tg=nthWeekday(year,10,4,4);
+    for(let d=new Date(tg);d<=new Date(Date.UTC(year,11,31));d=addDays(d,1)){const wkend=[5,6].includes(d.getUTCDay());
+      if(d<=new Date(Date.UTC(year,11,24)))out.push([ymd(d),16,5,19,wkend?.4:.25,[['German Christmas Village, Inner Harbor',39.2857,-76.6157]],.8,'Nightly']);
+      if(d>=addDays(tg,2))out.push([ymd(d),17,5,19,wkend?.45:.3,[['Miracle on 34th Street, Hampden',39.3289,-76.6303]],.7,'Nightly lights']);}
+    return out;
+  }
+  const holidayCache=new Map();
+  function holidayWindows(year){
+    if(holidayCache.has(year))return holidayCache.get(year);
+    const local=(date,h)=>{const [y,m,d]=date.split('-').map(Number),guess=Date.UTC(y,m-1,d,h);const off=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',timeZoneName:'shortOffset'}).formatToParts(new Date(guess)).find(p=>p.type==='timeZoneName').value.match(/-?\d+/)[0];return guess-Number(off)*3600000;};
+    const list=[];
+    for(const y of [year-1,year])for(const h of holidayCalendar(y))for(const zone of h.zones){const z=HOLIDAY_ZONES[zone];for(const [name,lat,lon] of z.points)list.push({holiday:h.name,note:h.note,name:`${h.name}: ${name}`,lat,lon,km:z.km*(zone==='suburbs'?1:1),weight:h.weight*(zone==='campus'?.8:1),start:local(h.date,h.startH),end:local(h.date,h.startH)+h.hours*3600000,peak:local(h.date,h.peakH)});}
+    for(const e of [...COMMUNITY_EVENTS,...seasonalCommunity(year)]){const [date,sh,hours,ph,weight,points,km,note]=e;for(const [name,lat,lon] of points)list.push({holiday:'Community event',note,name,lat,lon,km,weight,start:local(date,sh),end:local(date,sh)+hours*3600000,peak:local(date,ph)});}
+    holidayCache.set(year,list);return list;
+  }
+  // Strength rises into the peak and tapers after it, within the window.
+  function holidaySources(when){
+    const t=+new Date(when);if(!Number.isFinite(t))return[];const out=[];
+    for(const w of holidayWindows(new Date(t).getUTCFullYear()))if(t>=w.start&&t<w.end){
+      const span=t<=w.peak?Math.max(1,w.peak-w.start):Math.max(1,w.end-w.peak),x=Math.abs(t-w.peak)/span,profile=.55+.45*Math.cos(Math.min(1,x)*Math.PI/2);
+      out.push({name:w.name,lat:w.lat,lon:w.lon,cat:'event',tags:{holidayEvent:true,holiday:w.holiday,holidayStrength:+(w.weight*profile).toFixed(3),holidayRadiusKm:w.km,holidayStart:new Date(w.start).toISOString(),holidayEnd:new Date(w.end).toISOString(),note:w.note}});}
+    return out;
+  }
+  return{matchEvents,boostSources,holidaySources,holidayCalendar,boostOffers,linkEvents,observationRows:()=>screenshotBenchmarks.slice(),compare,eventPhase,context,html,adjustWeight,recurrenceFor,recurrenceAt,forecastFor,forecastAt,patternSources,recordObservation,rememberSignal};
 });
