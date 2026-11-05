@@ -90,8 +90,8 @@ test('goal pace, costs, where to go and unknowns',()=>{
 test('trip CSV export',()=>{
  const csv=AI.tripsCsv([{record_id:'a',platform:'Uber',request_time:'2026-10-10T10:50:00Z',fare:7.73,trip_time:9.48,trip_distance:1.9,source:'screenshot'}]);
  const [head,row]=csv.trim().split('\n');
- assert.equal(head,'date,time,platform,pay,minutes_with_rider,miles,pay_per_mile,pay_per_hour,record_id,source');
- assert.equal(row,'2026-10-10,6:50 AM,Uber,7.73,9.48,1.9,4.07,48.92,a,screenshot');
+ assert.equal(head,'date,time,platform,pay,minutes_with_rider,miles,pay_per_mile,pay_per_hour,record_id,source,surge,gas_cost_rider_miles,net_pay,net_per_mile,net_per_hour');
+ assert.equal(row,'2026-10-10,6:50 AM,Uber,7.73,9.48,1.9,4.07,48.92,a,screenshot,,,,,');
 });
 
 test('app wiring: free plan uses the built-in AI for chat and voice; Plus keeps GPT',()=>{

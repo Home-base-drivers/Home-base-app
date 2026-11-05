@@ -97,7 +97,15 @@
  function detectPlatform(text,fallback='Uber'){if(/empower/i.test(text))return'Empower';if(/\blyft\b/i.test(text))return'Lyft';if(/\buber|uberx|comfort|uber\s?black|uber\s?xl/i.test(text))return'Uber';return fallback;}
  function detectDate(text,now=new Date(),tz=TZ){
   const m=text.match(/\b(?:mon|tue|wed|thu|fri|sat|sun)[a-z]*\.?,?\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(\d{1,2})\b/i)||text.match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(\d{1,2}),?\s+20\d\d\b/i);
-  if(!m)return null;const today=dayKey(now,tz),y=+today.slice(0,4);let k=y+'-'+String(MONTHS.indexOf(m[1].toLowerCase().slice(0,3))+1).padStart(2,'0')+'-'+String(+m[2]).padStart(2,'0');if(k>today)k=(y-1)+k.slice(4);return k;
+  if(!m){
+   // Uber's Earnings Activity list shows its date filter as a chip ("11/5") or "Yesterday".
+   if(!/earnings activity/i.test(text))return null;
+   const today=dayKey(now,tz),chip=text.match(/(?:^|\s)(1[0-2]|0?[1-9])\/(3[01]|[12]\d|0?[1-9])(?=\s|$)/m);
+   if(chip){const y=+today.slice(0,4);let k=y+'-'+String(+chip[1]).padStart(2,'0')+'-'+String(+chip[2]).padStart(2,'0');if(k>today)k=(y-1)+k.slice(4);return k;}
+   if(/\byesterday\b/i.test(text)){const d=new Date(today+'T12:00:00Z');d.setUTCDate(d.getUTCDate()-1);return d.toISOString().slice(0,10);}
+   return null;
+  }
+  const today=dayKey(now,tz),y=+today.slice(0,4);let k=y+'-'+String(MONTHS.indexOf(m[1].toLowerCase().slice(0,3))+1).padStart(2,'0')+'-'+String(+m[2]).padStart(2,'0');if(k>today)k=(y-1)+k.slice(4);return k;
  }
  // Turn OCR text into trips. A row starts at a ride-type label ("UberX $7.73")
  // or at a clock time; pay, duration and distance in that row belong to it.
@@ -105,16 +113,21 @@
  // row is flagged for the driver to fill in or leave blank.
  const PRODUCT=/\b(uber ?x ?l?|uberx|uberxl|comfort|uber ?black|black suv|uber ?green|uber ?pet|share|connect|reserve|courier|uber ?eats|lyft|standard|priority|wait & save|xl|empower)\b/i;
  const EXTRA=/\b(tip|tips|promotion|promotions|bonus|quest|boost|incentive|adjustment)\b/i;
+ // Lines inside one trip card that break its pay down (already included in the card's pay).
+ const BREAKDOWN=/\b(pro perk|surge|delayed ride guarantee|long pickup|wait time|reservation fee)\b/i;
  function parseScreenshotText(text,{date=null,platform=null,now=new Date(),tz=TZ}={}){
   const lines=String(text||'').replace(/\r/g,'').split('\n').map(l=>l.replace(/[|•·]/g,' ').replace(/\s+/g,' ').trim()).filter(Boolean);
   const plat=platform||detectPlatform(text),day=date||detectDate(text,now,tz);
   const pre=[],blocks=[];let cur=null;
   for(const line of lines){
    const hasTime=TIME.test(line),hasProduct=PRODUCT.test(line)&&!/earnings|total|week|today/i.test(line);
-   if(hasProduct&&!(cur&&!cur.time&&!cur.lines.length))cur={time:null,lines:[]},blocks.push(cur);
+   // Two layouts: "UberX / 6:50 AM / $7.73 / 9 min" (ride type first) and Uber's Earnings
+   // Activity "$13.31 9:04 AM / UberX · 24 min 51 sec · 10.74 mi" (pay and time first).
+   // A ride-type line starts a new trip only when the current trip already has one.
+   if(hasProduct&&(!cur||cur.product))cur={time:null,lines:[]},blocks.push(cur);
    else if(hasTime&&(!cur||cur.time))cur={time:null,lines:[]},blocks.push(cur);
    if(!cur){pre.push(line);continue;}
-   cur.lines.push(line);if(hasTime&&!cur.time)cur.time=TIME.match(line);
+   cur.lines.push(line);if(hasTime&&!cur.time)cur.time=TIME.match(line);if(hasProduct)cur.product=true;
   }
   // Rows without a time: before the first trip they are header; after, details.
   const timed=[];for(const b of blocks){if(b.time)timed.push(b);else if(timed.length)timed.at(-1).lines.push(...b.lines);else pre.push(...b.lines);}
@@ -124,11 +137,12 @@
   const extras=pre.filter(l=>EXTRA.test(l)&&moneyIn(l).length).map(l=>({label:l.replace(MONEY,'').trim().slice(0,40)||'Extra',amount:moneyIn(l)[0]}));
   const trips=timed.map(b=>{
    let hh=+b.time[1]%12;if(/p/i.test(b.time[3]))hh+=12;
-   const t={hh,mm:+b.time[2],time:(hh%12||12)+':'+b.time[2]+' '+(hh>=12?'PM':'AM'),fare:null,minutes:null,miles:null,canceled:false};
+   const t={hh,mm:+b.time[2],time:(hh%12||12)+':'+b.time[2]+' '+(hh>=12?'PM':'AM'),fare:null,minutes:null,miles:null,canceled:false,surge:null};
    for(const line of b.lines){
     const rest=TIME.strip(line);if(/cancel/i.test(line))t.canceled=true;
     const m=moneyIn(rest);
-    if(m.length&&EXTRA.test(line)&&!PRODUCT.test(line))extras.push({label:line.replace(MONEY,'').trim().slice(0,40)||'Extra',amount:m[0],time:t.time});
+    if(m.length&&BREAKDOWN.test(line)){const sg=rest.match(/\$\s?(\d{1,3}\.\d{2})\s*surge/i);if(sg)t.surge=Number(sg[1]);}
+    else if(m.length&&EXTRA.test(line)&&!PRODUCT.test(line))extras.push({label:line.replace(MONEY,'').trim().slice(0,40)||'Extra',amount:m[0],time:t.time});
     else if(m.length&&t.fare===null)t.fare=m[0];
     const mi=rest.match(MILES);if(mi&&t.miles===null){let v=Number(mi[1].replace(',','.'));if(/km/i.test(mi[2]))v=v*0.621371;t.miles=r2(v);}
     const d=durationMinutes(rest);if(d!==null&&t.minutes===null&&d>0&&d<240)t.minutes=r2(d);
@@ -141,7 +155,7 @@
    const flags=[];if(t.fare===null)flags.push('pay not found');if(t.minutes===null)flags.push('time with rider not found');if(t.miles===null)flags.push('miles not found');if(t.canceled)flags.push('canceled');
    // A misread digit shows up as an impossible speed; ask the driver to check it.
    if(t.minutes>0&&t.miles>0){const mph=t.miles/(t.minutes/60);if(mph>75||(mph<2&&t.miles>1))flags.push('check minutes or miles');}
-   return{key:hhmm+(seen[hhmm]>1?'-'+seen[hhmm]:''),time:t.time,hh:t.hh,mm:t.mm,fare:t.fare,minutes:t.minutes,miles:t.miles,canceled:t.canceled,flags,include:!t.canceled||t.fare>0};
+   return{key:hhmm+(seen[hhmm]>1?'-'+seen[hhmm]:''),time:t.time,hh:t.hh,mm:t.mm,fare:t.fare,minutes:t.minutes,miles:t.miles,surge:t.surge,canceled:t.canceled,flags,include:!t.canceled||t.fare>0};
   });
   const sum=rows.filter(r=>r.include&&r.fare>0).reduce((s,r)=>s+r.fare,0)+extras.reduce((s,e)=>s+(e.amount>0?e.amount:0),0);
   return{platform:plat,date:day,trips:rows,extras,dayTotal,tripSum:r2(sum),difference:dayTotal===null?null:r2(dayTotal-sum)};
@@ -175,17 +189,21 @@
    if(!t.include)continue;const id='screenshot-'+slug+'-'+ymd+'-'+t.key,at=zonedIso(parsed.date,t.hh,t.mm,tz);
    if(t.canceled){if(t.fare>0&&!daySummary)ledgerRows.push({id,platform:p,date:parsed.date,startedAt:at,timePrecision:true,earnings:t.fare,payType:'gross',hours:null,hoursType:'unknown',miles:null,trips:0,filename:source+': cancellation fee',source:'csv'});continue;}
    if(!(t.fare>=0))continue;
-   tripRows.push({record_id:id,platform:p,source:'screenshot',status:'completed',market:'Baltimore',request_time:at,fare:t.fare,trip_time:t.minutes,trip_distance:t.miles,completeness:t.flags.length?'partial':'complete',confidence:t.flags.length?.6:.85,time_basis:'time shown in the app list',source_note:source});
+   tripRows.push({record_id:id,platform:p,source:'screenshot',status:'completed',market:'Baltimore',request_time:at,fare:t.fare,surge:t.surge??null,trip_time:t.minutes,trip_distance:t.miles,completeness:t.flags.length?'partial':'complete',confidence:t.flags.length?.6:.85,time_basis:'time shown in the app list',source_note:source});
    if(!daySummary)ledgerRows.push({id,platform:p,date:parsed.date,startedAt:at,timePrecision:true,earnings:t.fare,payType:'gross',hours:t.minutes===null?null:r2(t.minutes/60*10000)/10000,hoursType:t.minutes===null?'unknown':'active',miles:t.miles,trips:1,filename:source,source:'csv'});
   }
   return{tripRows,ledgerRows,daySummary};
  }
  function mergeById(list,rows,key){const m=new Map((list||[]).map(r=>[String(r?.[key]),r]));for(const r of rows)m.set(String(r[key]),{...(m.get(String(r[key]))||{}),...r});return[...m.values()];}
- function tripsCsv(rows,tz=TZ){
-  const head=['date','time','platform','pay','minutes_with_rider','miles','pay_per_mile','pay_per_hour','record_id','source'];
+ // gasPerMile (price per gallon / mpg) turns pay into net pay. It covers the miles
+ // with a rider only; pickup and empty miles are not in Uber's trip list.
+ function tripsCsv(rows,tz=TZ,{gasPerMile=null}={}){
+  const gpm=num(gasPerMile)>0?gasPerMile:null;
+  const head=['date','time','platform','pay','minutes_with_rider','miles','pay_per_mile','pay_per_hour','record_id','source','surge','gas_cost_rider_miles','net_pay','net_per_mile','net_per_hour'];
   const q=v=>{const s=v===null||v===undefined?'':String(v);return/[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;};
   const body=(rows||[]).filter(r=>r?.request_time).sort((a,b)=>a.request_time.localeCompare(b.request_time)).map(r=>{const d=new Date(r.request_time),fare=num(r.fare),min=num(r.trip_time),mi=num(r.trip_distance);
-   return[dayKey(d,tz),d.toLocaleTimeString('en-US',{timeZone:tz,hour:'numeric',minute:'2-digit'}),r.platform,fare,min,mi,fare!==null&&mi>0?r2(fare/mi):'',fare!==null&&min>0?r2(fare/min*60):'',r.record_id,r.source].map(q).join(',');});
+   const gas=gpm!==null&&mi!==null?r2(gpm*mi):null,net=gas!==null&&fare!==null?r2(fare-gas):null;
+   return[dayKey(d,tz),d.toLocaleTimeString('en-US',{timeZone:tz,hour:'numeric',minute:'2-digit'}),r.platform,fare,min,mi,fare!==null&&mi>0?r2(fare/mi):'',fare!==null&&min>0?r2(fare/min*60):'',r.record_id,r.source,r.surge==null?'':num(r.surge)??'',gas??'',net??'',net!==null&&mi>0?r2(net/mi):'',net!==null&&min>0?r2(net/min*60):''].map(q).join(',');});
   return[head.join(','),...body].join('\n')+'\n';
  }
 
@@ -433,7 +451,8 @@
   return out;
  }
  function downloadCsv(){
-  const csv=tripsCsv(read('homeBaseTripRows',[])),url=URL.createObjectURL(new Blob([csv],{type:'text/csv'})),a=document.createElement('a');
+  const car=read('homeBaseCarCostInputs',{}),price=Number(car.price),mpg=Number(car.mpg);
+  const csv=tripsCsv(read('homeBaseTripRows',[]),TZ,{gasPerMile:price>0&&mpg>0?price/mpg:null}),url=URL.createObjectURL(new Blob([csv],{type:'text/csv'})),a=document.createElement('a');
   a.href=url;a.download='home-base-trips.csv';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
  }
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
