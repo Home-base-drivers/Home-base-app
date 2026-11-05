@@ -118,5 +118,61 @@
     const team=WATCH_PARTY_TEAMS.find(t=>t.league===row.league&&away===t.team&&home!==t.team);
     return team?team.districts.map(([name,lat,lon])=>({name,lat,lon,team:team.label})):[];
   }
-  return{ESPN_LEAGUES,WATCH_PARTY_TEAMS,watchParties,espnUrl,mlbUrl,scoreboardDates,espnGame,mlbGame,trackGame,trackAll,relevant,mergeObservations,describe};
+  /* Which sport an event is, for its map icon and label. Reads the league a
+     scoreboard reported first, then the provider's classification and genre,
+     then the title and venue. Returns null when nothing names a sport. */
+  const SPORT_STYLES={
+    football:{emoji:'🏈',name:'Football'},basketball:{emoji:'🏀',name:'Basketball'},baseball:{emoji:'⚾',name:'Baseball'},
+    softball:{emoji:'🥎',name:'Softball'},hockey:{emoji:'🏒',name:'Hockey'},fieldhockey:{emoji:'🏑',name:'Field hockey'},
+    soccer:{emoji:'⚽',name:'Soccer'},volleyball:{emoji:'🏐',name:'Volleyball'},lacrosse:{emoji:'🥍',name:'Lacrosse'},
+    tennis:{emoji:'🎾',name:'Tennis'},golf:{emoji:'⛳',name:'Golf'},fighting:{emoji:'🥊',name:'Boxing and MMA'},
+    wrestling:{emoji:'🤼',name:'Wrestling'},racing:{emoji:'🏇',name:'Horse racing'},motorsport:{emoji:'🏎️',name:'Motorsports'},
+    running:{emoji:'🏃',name:'Running'},sports:{emoji:'🏟️',name:'Sports'}
+  };
+  const LEAGUE_SPORTS=[
+    [/\bwnba\b/i,'basketball','WNBA'],[/\bnba\b/i,'basketball','NBA'],[/\bnfl\b/i,'football','NFL'],[/\bmlb\b/i,'baseball','MLB'],
+    [/\bnhl\b/i,'hockey','NHL'],[/\bnwsl\b/i,'soccer','NWSL'],[/\bmls\b/i,'soccer','MLS'],[/premier league/i,'soccer','Premier League'],
+    [/\bufc\b/i,'fighting','UFC'],[/\bwwe\b/i,'wrestling','WWE'],[/\bnascar\b/i,'motorsport','NASCAR']
+  ];
+  // Order matters: specific sports before the words they contain.
+  const SPORT_WORDS=[
+    [/field hockey/i,'fieldhockey'],[/softball/i,'softball'],[/soccer|futbol|\bfc\b/i,'soccer'],[/basketball/i,'basketball'],
+    [/baseball/i,'baseball'],[/football/i,'football'],[/hockey/i,'hockey'],[/volleyball/i,'volleyball'],[/lacrosse/i,'lacrosse'],
+    [/tennis/i,'tennis'],[/\bgolf\b|\bpga\b|\blpga\b/i,'golf'],[/boxing|\bmma\b|martial arts|fight night/i,'fighting'],
+    [/wrestling/i,'wrestling'],[/horse rac|thoroughbred|preakness|\bstakes\b|pimlico|laurel park/i,'racing'],
+    [/motorsport|auto rac|grand prix|indycar|monster jam|supercross/i,'motorsport'],[/marathon|\b(?:5|10)k\b|half marathon|track (?:&|and) field|cross country/i,'running']
+  ];
+  // Teams drivers see in the Baltimore and DC area, for titles that name only teams.
+  const TEAM_SPORTS=[
+    [/ravens|commanders|jaguars|steelers|eagles|giants\b|jets\b|cowboys|patriots|bengals|browns/i,'football'],
+    [/orioles|nationals|yankees|mets\b|phillies|red sox|blue jays|ironbirds|baysox|keys\b/i,'baseball'],
+    [/capitals|\bcaps\b|rangers\b|flyers|penguins|islanders|devils\b|kings\b/i,'hockey'],
+    [/wizards|mystics|knicks|76ers|sixers|pistons|celtics|nets\b|heat\b/i,'basketball'],
+    [/\bblast\b|d\.?c\.? united|washington spirit|union\b/i,'soccer']
+  ];
+  function sportResult(key,league){const style=SPORT_STYLES[key];const soccer=key==='soccer'&&league&&!/soccer/i.test(league);return{key,emoji:style.emoji,name:style.name,league:league||'',label:league?(soccer?league+' soccer':league):style.name};}
+  function sportOf(event){
+    if(!event||typeof event!=='object')return null;
+    const tags=event.tags||{},classification=event.classification&&typeof event.classification==='object'?event.classification.name:event.classification;
+    const leagueText=[tags.sportLeague,tags.league!=='Watch party'?tags.league:'',event.league].filter(Boolean).join(' ');
+    const declared=[leagueText,event.eventType,classification,event.genre,event.subGenre].filter(Boolean).join(' ');
+    const named=[event.name,event.venue].filter(Boolean).join(' ');
+    const fromLeague=text=>{for(const [re,key,league] of LEAGUE_SPORTS)if(re.test(text))return sportResult(key,league);return null;};
+    const fromWords=(text,list)=>{for(const [re,key] of list)if(re.test(text))return key;return null;};
+    const college=/\bcollege\b|\bncaa\b/i.test(declared);
+    const scoreboard=ESPN_LEAGUES.find(entry=>entry.label===leagueText.trim());
+    if(scoreboard)return sportResult(scoreboard.sport,scoreboard.label);
+    if(leagueText.trim()==='MLB')return sportResult('baseball','MLB');
+    const league=fromLeague(declared);if(league)return league;
+    const word=fromWords(declared,SPORT_WORDS);
+    if(word)return sportResult(word,college?'College '+SPORT_STYLES[word].name.toLowerCase():'');
+    const titled=fromLeague(named)||(()=>{const k=fromWords(named,SPORT_WORDS);return k?sportResult(k,''):null;})();
+    if(titled)return titled;
+    // Team nicknames are common words, so they count only for a listing that is already a sports event.
+    const sporty=/sport|athletic|\bgame\b/i.test(declared)||tags.source==='public sports feed'||!!tags.watchParty||/\s(?:vs?\.?|@|at)\s/i.test(String(event.name||''));
+    if(!sporty)return null;
+    const team=fromWords(named,TEAM_SPORTS);
+    return sportResult(team||'sports','');
+  }
+  return{ESPN_LEAGUES,WATCH_PARTY_TEAMS,SPORT_STYLES,sportOf,watchParties,espnUrl,mlbUrl,scoreboardDates,espnGame,mlbGame,trackGame,trackAll,relevant,mergeObservations,describe};
 });
