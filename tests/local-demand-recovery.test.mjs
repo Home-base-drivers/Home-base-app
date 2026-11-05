@@ -61,7 +61,8 @@ test('one dated event remains the only destination while history stays on the in
  context.buildRoute([event,...areas],41,-74,'Local',[event,...areas]);
  assert.equal(context.activeStops.length,1);assert.equal(context.activeStops[0].name,event.name);assert.equal(context.activeStops.filter(s=>s.routeBasis==='general_area').length,0);
  assert.equal(calls.markers.at(-1).length,1);assert.equal(calls.stops.length,1);
- assert.equal(context.hourlyDestinations[0].length,1);assert.equal(context.hourlyDestinations.at(-1).length,12,'hours without event or live evidence may use historical hot spots');assert.equal(calls.heat[0].length,21,'heat must retain public locations beyond the selected route');
+ assert.equal(context.hourlyDestinations[0].length,1);const later=context.hourlyDestinations.at(-1);assert.ok(later.length>=2,'hours without event or live evidence may use historical hot spots');
+ assert.ok(later.every((a,i)=>later.every((b,j)=>i===j||context.distanceKm([a.lat,a.lon],[b.lat,b.lon])>=1.2)),'places within about a kilometre are one option, not separate stops');assert.equal(calls.heat[0].length,21,'heat must retain public locations beyond the selected route');
 });
 test('scheduled events get real map pins even when they are not current-hour pickups',()=>{
  const pins=[];const L={divIcon:x=>x,marker:point=>{const marker={point,addTo(){pins.push(this);return this},bindPopup(){return this},on(){return this}};return marker}};
@@ -88,15 +89,20 @@ test('the London preview loads actual dated events and does not clear them when 
  vm.createContext(context);vm.runInContext(extract('loadDemo'),context);await context.loadDemo();
  assert.equal(renders.at(-1),events);assert.ok(routes.at(-1).some(s=>s.name===events[0].name));assert.ok(routes.at(-1).includes(area));assert.match(nodes.get('#updated').textContent,/1 dated events/);
 });
-test('the 12-hour route chains twelve distinct stops, each ranked from the previous stop',()=>{
+test('while one surge area keeps its pattern the route stays there instead of hopping to twelve places',()=>{
  const {context}=routeFixture(),areas=Array.from({length:14},(_,i)=>({name:'Area '+i,cat:'neighborhood',lat:41+i*.03,lon:-74,tags:{publicVenue:true,recurringPattern:true,patternDays:2}}));
  context.buildRoute(areas,41,-74,'Local',areas);
  const plan=context.shiftPlan.filter(p=>p.stop);
- assert.equal(context.shiftPlan.length,12);assert.equal(plan.length,12);
- assert.equal(new Set(plan.map(p=>p.stop.name)).size,12,'a new place each hour when modeled areas are available');
- // Legs are measured from the previous stop, so they stay short instead of growing from home.
- assert.ok(plan.every(p=>p.legMiles<6),JSON.stringify(plan.map(p=>Math.round(p.legMiles))));
+ assert.equal(context.shiftPlan.length,12);assert.equal(plan.length,12,'every hour is still covered');
+ assert.equal(new Set(plan.map(p=>p.stop.name)).size,1,'one verified area, one stop: no hopping between history points');
+ assert.ok(plan.slice(1).every(p=>p.stay&&p.legMiles===0),'later hours say stay, with no drive');
  assert.equal(context.hourlyDestinations[3][0].name,plan[3].stop.name,'each hour lists its route stop first, then alternatives');
+});
+test('a dated event still moves the route away from a surge area it was staying in',()=>{
+ const {context}=routeFixture(),areas=[{name:'History area',cat:'neighborhood',lat:41.01,lon:-74,tags:{publicVenue:true,recurringPattern:true,patternDays:4}}],event={name:'Evening show',cat:'event',lat:41.05,lon:-74,eventStart:new Date(Date.now()+5.5*3600000),tags:{providerEvent:true}};
+ context.buildRoute([event,...areas],41,-74,'Local',[event,...areas]);
+ const names=context.shiftPlan.map(p=>p.stop?.name);
+ assert.equal(names[0],'History area');assert.ok(names.includes('Evening show'),JSON.stringify(names));
 });
 test('a dated event may repeat in the route for its arrival and exit windows',()=>{
  const {context}=routeFixture(),event={name:'Stadium game',cat:'event',lat:41.002,lon:-74,eventStart:new Date(Date.now()+30*60000),eventEnd:new Date(Date.now()+150*60000),tags:{providerEvent:true}};
