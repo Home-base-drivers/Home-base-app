@@ -53,6 +53,15 @@ Every published-bell school is placed on the map even when no mapped school poin
 matches it. Routine schools without bell times stay faint. `tests/scheduled-heat.test.mjs`
 enforces this.
 
+## Route stops on quiet days
+
+A route stop without a dated event, live signal or published schedule needs a strong surge
+pattern: 3+ past days around that time with a solid share of bonus readings
+(`HomeBaseRoutePolicy.strongHistory`). Weaker history stays on the heat map. Places within about
+1.2 km are one stop, and while the driver's surge area keeps its pattern the route stays there
+(one pin, "Stay" rows) instead of hopping between screenshot points. Hours with no evidence stay
+empty. `tests/route-quiet-week.test.mjs` enforces this with the stored history.
+
 ## Conversational AI contract
 
 Home Base AI is Claude (`supabase/functions/dispatch/agent.mjs`), not the phone's keyword

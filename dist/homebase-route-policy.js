@@ -136,11 +136,18 @@
   // surge seen here on 2+ past days around this time, a published schedule (bell times,
   // verified shift change, posted closing time), or staging within 5 km of a big event.
   // Generic "this kind of place is usually busy" is not enough.
+  // Surge history only makes a route stop when the pattern is strong: seen on 3+ past
+  // days around this time with a solid share of bonus readings. The route's history
+  // window is wide (two hours, any weekday), so a weaker bar found 150-500 points in
+  // every hour and filled all 12 hours with points from old screenshots (Nov 5, 2026:
+  // no events all week, twelve stops hopping around downtown). Weak patterns stay heat.
+  const ROUTE_HISTORY={minDates:3,minConfidence:.15,mergeKm:1.2,stayKm:1.5};
+  function strongHistory(h){return !!h&&Number(h.distinctDates)>=ROUTE_HISTORY.minDates&&Number(h.confidence)>=ROUTE_HISTORY.minConfidence;}
   function generalEvidence(source,parts,when,options={}){
     const tags=source.tags||{};
-    if(tags.recurringPattern)return{kind:'history',days:Number(tags.patternDays)||2};
+    if(tags.recurringPattern&&!(tags.patternConfidence!=null&&!strongHistory({distinctDates:tags.patternDays,confidence:tags.patternConfidence})))return{kind:'history',days:Number(tags.patternDays)||2};
     const h=typeof options.history==='function'?options.history(source,when):null;
-    if(h&&Number(h.distinctDates)>=2)return{kind:'history',days:Number(h.distinctDates),band:h.band||null};
+    if(strongHistory(h))return{kind:'history',days:Number(h.distinctDates),band:h.band||null};
     if((source.cat==='school'||source.cat==='k12')&&(source.schoolEnd||tags.bellSource)&&schoolWeight(source,parts,when)>0)return{kind:'school'};
     // Amazon buildings (listed or mapped) are shift-change stops: workers leaving at a
     // shift change often take long rides home ($20+), worth a short detour.
@@ -175,7 +182,26 @@
     const evidence=ranked.filter(source=>['verified_event','live_signal'].includes(source.routeBasis));
     if(evidence.length){const current=ranked.filter(s=>(evidence.includes(s)||s.amazonShift)&&(s.routeDemand==null||s.routeDemand>0));return [...current.filter(s=>s.routeBasis==='verified_event'||s.amazonShift),...current.filter(s=>s.routeBasis==='live_signal')];}
     // Six modeled points is the route hot-spot floor, not a live-demand claim.
-    return ranked.filter(source=>source.routeBasis==='general_area'&&Number(source.routeDemand??source.score)>=6);
+    // Places within about a kilometre are one stop for a driver: keep the best-ranked
+    // and drop the rest, so nearby screenshot points never show as separate stops.
+    const kept=[];
+    for(const source of ranked){
+      if(source.routeBasis!=='general_area'||!(Number(source.routeDemand??source.score)>=6))continue;
+      if(Number.isFinite(source.lat)&&Number.isFinite(source.lon)&&kept.some(k=>km([k.lat,k.lon],[source.lat,source.lon])<ROUTE_HISTORY.mergeKm))continue;
+      kept.push(source);
+    }
+    return kept;
+  }
+  // While the area the driver is already in keeps its surge pattern, the route stays
+  // there instead of hopping to another history point. Events, live signals and
+  // published schedules (bells, shift changes, closings) still move the route.
+  function stayOption(options,last,distance=(a,b)=>km(a,b)){
+    const lead=(options||[])[0],isHistory=o=>o&&o.routeBasis==='general_area'&&o.routeEvidence?.kind==='history';
+    if(!isHistory(lead)||!isHistory(last)||!Number.isFinite(last.lat)||!Number.isFinite(last.lon))return null;
+    const near=options.find(o=>isHistory(o)&&distance([o.lat,o.lon],[last.lat,last.lon])<=ROUTE_HISTORY.stayKm)||null;
+    // A clearly stronger pattern elsewhere (half again the score) is worth the move.
+    const score=o=>Number(o.planningScore??o.score??o.routeDemand)||0;
+    return near&&(near===lead||score(near)*1.5>=score(lead))?near:null;
   }
   // Large events justify a longer drive. Size comes from published attendance,
   // a professional league scoreboard, or a stadium/arena venue.
@@ -220,5 +246,5 @@
     if(near.some(e=>isHome(e.lat,e.lon)&&crowdTier(e)!=='local'))return near;
     return [...near,...(events||[]).filter(e=>far(e)&&awayEligible(e))];
   }
-  return {letOutProfile,letOutStrength,venueClass,crowdTier,awayEligible,routeEvents,eventSize,eventImpact,eventPhase,liveSignal,schoolStage,schoolWeight,warehouse,amazonSite,AMAZON_SHIFTS,workerWeight,mallClosingHours,fallbackEligible,generalEvidence,candidatesForHour,selectRanked};
+  return {ROUTE_HISTORY,strongHistory,stayOption,letOutProfile,letOutStrength,venueClass,crowdTier,awayEligible,routeEvents,eventSize,eventImpact,eventPhase,liveSignal,schoolStage,schoolWeight,warehouse,amazonSite,AMAZON_SHIFTS,workerWeight,mallClosingHours,fallbackEligible,generalEvidence,candidatesForHour,selectRanked};
 });
