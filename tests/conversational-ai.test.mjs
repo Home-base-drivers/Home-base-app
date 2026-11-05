@@ -111,7 +111,7 @@ test('everyday answers use the small model; only screenshots use the vision mode
     fetchImpl: async (u, init) => { bodies.push(JSON.parse(init.body)); return new Response(JSON.stringify({ stop_reason: 'end_turn', content: [{ type: 'text', text: 'ok' }] }), { status: 200 }); },
     loadMemory: async () => [], loadTurns: async () => Array.from({ length: 50 }, (_, i) => ({ role: i % 2 ? 'assistant' : 'user', content: 'turn ' + i })), saveTurn: async () => {}, upsertMemories: async () => {} });
   await agent({ userId: 'u', utterance: 'hi', channel: 'chat', webSearches: 0 });
-  assert.equal(bodies[0].model, 'claude-haiku-5-5'); assert.equal(bodies[0].max_tokens, 1024);
+  assert.equal(bodies[0].model, 'claude-haiku-5-5'); assert.equal(bodies[0].max_tokens, 4096); assert.equal(bodies[0].output_config.effort, 'medium');
   assert.ok(!bodies[0].tools.some(t => t.name === 'web_search'), 'no web search when the plan allows none');
   assert.ok(bodies[0].messages.length <= 13, 'only recent history is sent');
   await agent({ userId: 'u', utterance: 'read this', channel: 'chat', webSearches: 2, attachments: [{ dataUrl: 'data:image/png;base64,AAAA' }] });
