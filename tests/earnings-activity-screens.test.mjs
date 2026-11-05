@@ -60,3 +60,16 @@ test('trip CSV shows pay after gas when price and mpg are known',()=>{
  assert.equal(a,'2026-11-05,9:04 AM,Uber,13.31,24.85,10.74,1.24,32.14,a,screenshot,,1.88,11.43,1.06,27.6');
  assert.match(AI.tripsCsv(rows).split('\n')[1],/,screenshot,1\.75,,,,$/,'gas columns stay empty without price and mpg');
 });
+
+test('Thu Nov 5: three screenshots taken at 11:08 AM add up to the $75.08 day total',()=>{
+ const NOV5=[
+  head('11:08','11/5')+card('13.31','9:04 AM','24 min 51 sec · 10.74 mi','',true)+card('8.18','8:33 AM','11 min 36 sec · 1.47 mi','$0.39 Pro Perk',true)+card('10.07','7:53 AM','16 min 49 sec · 5.06 mi','$1.75 Surge $0.48 Pro Perk')+tabs,
+  head('11:08','11/5')+card('19.33','7:37 AM','27 min 40 sec · 7.13 mi','$3.75 Surge $0.92 Pro Perk',true)+card('9.16','6:45 AM','10 min 42 sec · 4.24 mi','$0.44 Pro Perk',true)+card('9.01','6:21 AM','13 min 36 sec · 3.94 mi','$0.43 Pro Perk')+tabs,
+  head('11:08','11/5')+'Sample Ct, Baltimore, MD, USA\n'+card('9.01','6:21 AM','13 min 36 sec · 3.94 mi','$0.43 Pro Perk')+card('6.02','6:15 AM','10 min 4 sec · 2.82 mi','$0.29 Pro Perk')+'End of activities during Nov 5, 2026 - Nov 5, 2026\n'+tabs
+ ];
+ const groups=AI.combineParsed(NOV5.map(t=>AI.parseScreenshotText(t,{now})));
+ assert.equal(groups.length,1);assert.equal(groups[0].date,'2026-11-05');
+ assert.equal(groups[0].trips.length,7,'the 6:21 AM trip on two screenshots counts once');
+ assert.equal(groups[0].tripSum,75.08);
+ assert.deepEqual(groups[0].trips.filter(t=>t.surge).map(t=>[t.time,t.surge]),[['7:37 AM',3.75],['7:53 AM',1.75]]);
+});
