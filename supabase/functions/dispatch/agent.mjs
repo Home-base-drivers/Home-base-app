@@ -37,6 +37,53 @@ export const HISTORY_TURNS=12;
 // Room for Claude's thinking plus the reply (thinking counts toward max_tokens).
 export const AGENT_MAX_TOKENS={voice:2048,typed:4096};
 function safe(value,limit=14000){try{return JSON.stringify(value??{}).slice(0,limit)}catch{return'{}'}}
+// The phone sends every market zone (56 in Baltimore, about 7 KB). Left as is,
+// that list filled the 8 KB state budget and cut off safety, events and the
+// forecast. Keep the strongest zones and drop their coordinates.
+export const STATE_ZONES=12;
+export function compactState(context){
+ if(!context||typeof context!=='object')return{};
+ const out={...context};
+ if(Array.isArray(context.zones)){
+  const zones=context.zones.filter(z=>z&&typeof z==='object');
+  out.zones=zones.slice().sort((a,b)=>(Number(b.score)||0)-(Number(a.score)||0)).slice(0,STATE_ZONES).map(z=>({name:z.name,score:Number.isFinite(Number(z.score))?Math.round(Number(z.score)*1000)/1000:null,provenance:z.provenance}));
+  if(zones.length>STATE_ZONES)out.zonesShown=`top ${STATE_ZONES} of ${zones.length} by score`;
+ }
+ return out;
+}
+function point(location){
+ const lat=Array.isArray(location)?location[0]:location?.lat??location?.latitude;
+ const lon=Array.isArray(location)?location[1]:location?.lng??location?.lon??location?.longitude;
+ return Number.isFinite(Number(lat))&&Number.isFinite(Number(lon))&&Math.abs(lat)<=90&&Math.abs(lon)<=180?[Number(lat),Number(lon)]:null;
+}
+// The model has no clock. Give it the driver's local date and time so it can
+// tell "tonight" from "already over". Falls back to Eastern (the launch market).
+export function localNow(timeZone,now=new Date()){
+ for(const tz of [timeZone,'America/New_York']){
+  if(typeof tz!=='string'||!tz)continue;
+  try{return{timeZone:tz,text:new Intl.DateTimeFormat('en-US',{timeZone:tz,weekday:'long',year:'numeric',month:'long',day:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'}).format(now)}}catch{}
+ }
+ return{timeZone:'UTC',text:now.toISOString()};
+}
+// Hourly and daily forecast for the driver's location from Open-Meteo (free,
+// no key; already credited in data-attributions.txt). Best effort: null on
+// any failure or after timeoutMs, so a slow weather service never delays an answer much.
+export async function loadOpenMeteoForecast(location,{fetchImpl=fetch,timeoutMs=2000,hours=18}={}){
+ const at=point(location);if(!at)return null;
+ const url='https://api.open-meteo.com/v1/forecast?latitude='+at[0].toFixed(3)+'&longitude='+at[1].toFixed(3)
+  +'&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,snowfall,weather_code,wind_speed_10m'
+  +'&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,weather_code'
+  +'&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto&forecast_days=2&forecast_hours='+hours;
+ const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),timeoutMs);
+ try{
+  const res=await fetchImpl(url,{signal:ctrl.signal});if(!res.ok)return null;
+  const w=await res.json(),h=w?.hourly||{},d=w?.daily||{},n=v=>v==null||!Number.isFinite(Number(v))?null:Math.round(Number(v)*10)/10;
+  const hourly=(h.time||[]).slice(0,hours).map((time,i)=>({time,tempF:n(h.temperature_2m?.[i]),feelsLikeF:n(h.apparent_temperature?.[i]),rainChance:n(h.precipitation_probability?.[i]),precipIn:n(h.precipitation?.[i]),snowIn:n(h.snowfall?.[i]),windMph:n(h.wind_speed_10m?.[i]),code:h.weather_code?.[i]??null}));
+  const daily=(d.time||[]).slice(0,2).map((date,i)=>({date,highF:n(d.temperature_2m_max?.[i]),lowF:n(d.temperature_2m_min?.[i]),rainChance:n(d.precipitation_probability_max?.[i]),precipIn:n(d.precipitation_sum?.[i]),code:d.weather_code?.[i]??null}));
+  if(!hourly.length&&!daily.length)return null;
+  return{source:'Open-Meteo',timezone:w.timezone||null,codes:'WMO weather codes: 0 clear, 1-3 partly cloudy to overcast, 45-48 fog, 51-57 drizzle, 61-67 rain, 71-77 snow, 80-82 showers, 85-86 snow showers, 95-99 thunderstorm',daily,hourly};
+ }catch{return null}finally{clearTimeout(timer)}
+}
 function outputText(payload){return(payload?.output||[]).flatMap(x=>x.content||[]).filter(x=>x.type==='output_text').map(x=>x.text||'').join('\n').trim()}
 function actionCalls(payload){return(payload?.output||[]).filter(x=>x?.type==='function_call').flatMap(x=>{try{return[{callId:x.call_id||x.id,name:x.name,arguments:JSON.parse(x.arguments||'{}')}]}catch{return[]}})}
 const ACTION_TOOLS=[
@@ -55,7 +102,7 @@ function cleanAttachments(attachments){
 }
 function errorWithCode(message,code){return Object.assign(new Error(message),{code})}
 
-export function makeHomeBaseAgent({provider='openai',apiKey,model='gpt-6-luna',visionModel,fastModel,fetchImpl=fetch,loadMemory,loadTurns,saveTurn,upsertMemories,forgetMemories=async()=>{},timeoutMs=60000}={}){
+export function makeHomeBaseAgent({provider='openai',apiKey,model='gpt-6-luna',visionModel,fastModel,fetchImpl=fetch,loadMemory,loadTurns,saveTurn,upsertMemories,forgetMemories=async()=>{},loadForecast=async()=>null,timeoutMs=60000}={}){
  // Cost bounds per message (we pay per message): recent history only, compact
  // context, short replies, and the plan's web-search allowance.
  return async({userId,utterance,context={},conversationId='default',capabilities=[],actionResults=[],channel='voice',attachments=[],webSearches}={})=>{
@@ -65,8 +112,9 @@ export function makeHomeBaseAgent({provider='openai',apiKey,model='gpt-6-luna',v
   if(typeof utterance!=='string'||utterance.length>8000)throw Error('Ask Home Base a shorter question.');
   if(!utterance.trim()&&!images.length)throw Error('Ask Home Base a question.');
   const typed=channel==='chat';
-  const memories=await loadMemory(userId);
-  const turns=await loadTurns(userId,conversationId);
+  const [memories,turns,forecast]=await Promise.all([loadMemory(userId),loadTurns(userId,conversationId),Promise.resolve().then(()=>loadForecast(context?.location)).catch(()=>null)]);
+  const state=compactState(context);if(forecast)state.forecast=forecast;
+  const clock=localNow(forecast?.timezone||context?.tz);
   const instructions=`You are Home Base Copilot, a persistent learning AI dispatcher and a full general-purpose assistant. You are the primary intelligence, not a command parser. Use the project brain below as durable product knowledge.
 
 ${PROJECT_KNOWLEDGE}
@@ -77,8 +125,10 @@ ${memoryLines(memories,4000)}
 HOW THIS DRIVER USES HOME BASE (measured on the phone):
 ${safe(context?.driverProfile||{},3000)}
 
+CURRENT LOCAL TIME FOR THE DRIVER: ${clock.text} (${clock.timeZone})
+
 CURRENT HOME BASE STATE:
-${safe(context,8000)}
+${safe(state,12000)}
 
 Behavior:
 - Hold a real back-and-forth conversation. Use the earlier turns in this conversation; resolve "it", "there", "that one" from them. Ask a short follow-up question only when you truly cannot answer.
@@ -89,6 +139,8 @@ Behavior:
 - If the driver attaches a photo (for example a driver-app screenshot), read it carefully and use what it shows; say plainly if something is unreadable.
 - Never present a prediction as live platform data.
 - Do not fabricate demand, surge, earnings, events, traffic, weather, airport conditions, or platform capabilities.
+- Weather: CURRENT HOME BASE STATE.forecast is the live hourly and daily forecast for the driver's location (Open-Meteo). Answer weather questions from it with real numbers (high and low, rain chance and timing, feels-like, wind) in the driver's local time, and say it comes from Open-Meteo. Use web search for weather only when forecast is missing.
+- Time: CURRENT LOCAL TIME FOR THE DRIVER is now. Say times in that zone. Events that have already ended are not "tonight"; check event times against the current time before calling anything upcoming.
 - For general knowledge questions, answer normally. Driving advice is optional unless relevant.
 - Learn from outcomes and explicit preferences, but do not treat one observation as a permanent truth. Prefer repeated evidence.
 - Personalize. Use what you have learned and how this driver works (usual hours, areas, platforms, goals, pay rules) without making them repeat it. If they ask what you know about them, tell them plainly and say they can ask you to forget anything.

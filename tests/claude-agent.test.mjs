@@ -80,3 +80,25 @@ test('thinking that fills the token cap no longer leaves the driver with a blank
  assert.ok(f.calls[0].body.max_tokens>=2048,'room for thinking plus a spoken reply');
  assert.equal(f.calls[1].body.max_tokens,4096);assert.deepEqual(f.calls[1].body.output_config,{effort:'low'});assert.equal(f.calls[1].body.tools,undefined);
 });
+
+test('state sent to Home Base AI keeps the strongest zones, adds the live forecast and the local time',async()=>{
+ const {compactState,loadOpenMeteoForecast,localNow}=await import('../supabase/functions/dispatch/agent.mjs');
+ const zones=Array.from({length:56},(_,i)=>({name:'Zone '+i,score:i/100,location:[39.2,-76.6],provenance:'PREDICTED'}));
+ const s=compactState({zones,safety:{weatherAlerts:[]},market:'Baltimore'});
+ assert.equal(s.zones.length,12);assert.equal(s.zones[0].name,'Zone 55');assert.equal(s.zones[0].location,undefined);assert.match(s.zonesShown,/top 12 of 56/);assert.deepEqual(s.safety,{weatherAlerts:[]});
+ assert.ok(JSON.stringify(s).length<2500);
+ let asked;const weather={timezone:'America/New_York',hourly:{time:['2026-11-09T01:00'],temperature_2m:[41.26],apparent_temperature:[36],precipitation_probability:[20],precipitation:[0],snowfall:[0],weather_code:[3],wind_speed_10m:[7]},daily:{time:['2026-11-09'],temperature_2m_max:[55],temperature_2m_min:[38],precipitation_probability_max:[40],precipitation_sum:[0.05],weather_code:[61]}};
+ const f=await loadOpenMeteoForecast([39.29,-76.61],{fetchImpl:async url=>{asked=url;return new Response(JSON.stringify(weather))}});
+ assert.match(asked,/^https:\/\/api\.open-meteo\.com\/v1\/forecast\?latitude=39\.290&longitude=-76\.610/);assert.match(asked,/temperature_unit=fahrenheit/);
+ assert.equal(f.source,'Open-Meteo');assert.equal(f.hourly[0].tempF,41.3);assert.equal(f.daily[0].highF,55);assert.equal(f.daily[0].rainChance,40);
+ assert.equal(await loadOpenMeteoForecast(null),null);
+ assert.equal(await loadOpenMeteoForecast([39,-76],{fetchImpl:async()=>{throw Error('down')}}),null);
+ assert.equal(await loadOpenMeteoForecast([39,-76],{fetchImpl:(u,{signal})=>new Promise((_,no)=>signal.addEventListener('abort',()=>no(Error('abort')))),timeoutMs:20}),null);
+ assert.match(localNow('America/New_York',new Date('2026-11-09T06:21:00Z')).text,/Monday, November 9, 2026.*1:21\sAM/);
+ assert.equal(localNow('Not/AZone').timeZone,'America/New_York');
+ const m=memory(),c=fakeClaude([{body:{stop_reason:'end_turn',content:[{type:'text',text:'High of 55, 40% rain chance this afternoon.'}]}},{body:{stop_reason:'tool_use',content:[{type:'tool_use',id:'t',name:'save_memories',input:{memories:[],forget:[]}}]}}]);
+ const agent=makeHomeBaseAgent({provider:'anthropic',apiKey:'k',model:'claude-haiku-5-5',fetchImpl:c.fetchImpl,loadForecast:async loc=>{assert.deepEqual(loc,[39.29,-76.61]);return f},...m});
+ const r=await agent({userId:'u1',utterance:"What's the weather today",context:{location:[39.29,-76.61],zones},channel:'voice'});
+ assert.match(r.answer,/High of 55/);const sys=c.calls[0].body.system;
+ assert.match(sys,/CURRENT LOCAL TIME FOR THE DRIVER: .*\(America\/New_York\)/);assert.match(sys,/"forecast":\{"source":"Open-Meteo"/);assert.match(sys,/"zonesShown":"top 12 of 56 by score"/);
+});
