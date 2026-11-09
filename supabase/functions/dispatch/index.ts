@@ -4,7 +4,7 @@ import {makeLanguageParser,makeLanguageTranslator} from './language.mjs';
 import {makeDispatchHandler} from './handler.mjs';
 import {makeVoiceSynthesizer} from './voice.mjs';
 import {makeLiveSessionCreator} from './live.mjs';
-import {makeHomeBaseAgent} from './agent.mjs';
+import {makeHomeBaseAgent,loadOpenMeteoForecast} from './agent.mjs';
 import {withAllowedOrigin} from './cors.mjs';
 const engine=(globalThis as any).HomeBaseDispatch;
 // Text intelligence runs on Claude when ANTHROPIC_API_KEY is set (AI_PROVIDER=openai forces OpenAI).
@@ -33,6 +33,7 @@ Deno.serve(withAllowedOrigin(async(request:Request)=>{
  const agent=makeHomeBaseAgent({provider,apiKey:textKey,fastModel:claudeFastModel,visionModel:provider==='anthropic'?claudeVisionModel:undefined,model:provider==='anthropic'?claudeModel:Deno.env.get('OPENAI_AGENT_MODEL')||Deno.env.get('OPENAI_LIVE_BACKEND_MODEL')||'gpt-6-luna',
   loadMemory:async(userId:string)=>{const {data,error}=await client.from('homebase_agent_memory').select('memory_key,memory_type,content,confidence,source,learned_at').eq('user_id',userId).eq('active',true).order('learned_at',{ascending:false}).limit(80);if(error)throw error;return data||[];},
   loadTurns:async(userId:string,conversationId:string)=>{const {data,error}=await client.from('homebase_agent_turns').select('role,content,created_at').eq('user_id',userId).eq('conversation_id',conversationId).order('created_at',{ascending:false}).limit(60);if(error)throw error;return(data||[]).reverse();},
+  loadForecast:(location:unknown)=>loadOpenMeteoForecast(location),
   saveTurn:async(userId:string,conversationId:string,role:string,content:string,context:any)=>{const {error}=await client.from('homebase_agent_turns').insert({user_id:userId,conversation_id:conversationId,role,content,context});if(error)throw error;},
   forgetMemories:async(userId:string,keys:string[])=>{const {error}=await client.from('homebase_agent_memory').update({active:false}).eq('user_id',userId).in('memory_key',keys.map(k=>String(k).slice(0,160)));if(error)throw error;},
   upsertMemories:async(userId:string,memories:any[])=>{for(const m of memories){const {error}=await client.from('homebase_agent_memory').upsert({user_id:userId,memory_key:String(m.key).slice(0,160),memory_type:m.type,content:{summary:String(m.summary).slice(0,1200)},confidence:Math.max(0,Math.min(1,Number(m.confidence)||.7)),source:'agent_learning',active:true,learned_at:new Date().toISOString()},{onConflict:'user_id,memory_key'});if(error)throw error;}}
