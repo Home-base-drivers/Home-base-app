@@ -102,3 +102,22 @@ test('state sent to Home Base AI keeps the strongest zones, adds the live foreca
  assert.match(r.answer,/High of 55/);const sys=c.calls[0].body.system;
  assert.match(sys,/CURRENT LOCAL TIME FOR THE DRIVER: .*\(America\/New_York\)/);assert.match(sys,/"forecast":\{"source":"Open-Meteo"/);assert.match(sys,/"zonesShown":"top 12 of 56 by score"/);
 });
+
+test('the driver gets the answer without waiting for memory learning when the runtime can finish it later',async()=>{
+ const m=memory();let releaseLearning;const learningGate=new Promise(r=>{releaseLearning=r;});
+ const responses=[{body:{stop_reason:'end_turn',content:[{type:'text',text:'Head to Federal Hill.'}]}},{body:{stop_reason:'tool_use',content:[{type:'tool_use',id:'tu_1',name:'save_memories',input:{memories:[{key:'area',type:'preference',summary:'Likes Federal Hill',confidence:.7}]}}]}}];
+ let calls=0;const fetchImpl=async()=>{calls++;if(calls===2)await learningGate;return new Response(JSON.stringify(responses.shift().body),{status:200});};
+ const deferred=[];
+ const agent=makeHomeBaseAgent({provider:'anthropic',apiKey:'sk-ant-x',model:'claude-haiku-5-5',fetchImpl,background:work=>deferred.push(work),...m});
+ const r=await agent({userId:'u1',utterance:'Where should I drive?',channel:'voice'});
+ assert.equal(r.answer,'Head to Federal Hill.');assert.equal(m.turns.length,2);
+ assert.equal(deferred.length,1);assert.equal(m.mem.length,0,'learning is still running after the answer returned');
+ releaseLearning();await deferred[0];assert.equal(m.mem[0].summary,'Likes Federal Hill');
+});
+
+test('without a background runner, learning still finishes before the answer returns',async()=>{
+ const m=memory(),f=fakeClaude([{body:{stop_reason:'end_turn',content:[{type:'text',text:'Dry tonight.'}]}},{body:{stop_reason:'tool_use',content:[{type:'tool_use',id:'tu_1',name:'save_memories',input:{memories:[{key:'w',type:'preference',summary:'Asks about weather',confidence:.6}]}}]}}]);
+ const agent=makeHomeBaseAgent({provider:'anthropic',apiKey:'sk-ant-x',model:'claude-haiku-5-5',fetchImpl:f.fetchImpl,...m});
+ const r=await agent({userId:'u1',utterance:'Weather?',channel:'chat'});
+ assert.equal(r.answer,'Dry tonight.');assert.equal(m.mem[0].summary,'Asks about weather');
+});
