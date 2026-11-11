@@ -21,7 +21,7 @@ function harness(){
  };
  context.HomeBaseCloud.syncStatus=()=>({state:'signed-out',detail:'Signed out.'});
  vm.runInNewContext(source,context);context.module.exports.boot();
- return {context,backend,account:()=>account,setUser:v=>{user=v;},setIdentityError:v=>{identityError=v;},setCloudError:v=>{cloudError=v;},event:e=>callback(e),nav:()=>nav,async flush(){for(let i=0;i<40;i++)await Promise.resolve();while(timers.length){timers.shift()();for(let i=0;i<40;i++)await Promise.resolve();}}};
+ return {context,backend,account:()=>account,setUser:v=>{user=v;},setIdentityError:v=>{identityError=v;},setCloudError:v=>{cloudError=v;},event:(e,u)=>callback(e,u),nav:()=>nav,async flush(){for(let i=0;i<40;i++)await Promise.resolve();while(timers.length){timers.shift()();for(let i=0;i<40;i++)await Promise.resolve();}}};
 }
 test('recovery link opens the password reset account screen without manual navigation',async()=>{
  const h=harness();await h.flush();h.setUser({id:'driver',email:'driver@example.test'});h.event('PASSWORD_RECOVERY');await h.flush();assert.equal(h.nav(),1);assert.equal(h.context.HomeBaseCloudState.signedIn,true);
@@ -66,4 +66,13 @@ test('email OTP signs in inside the current app and rejected codes never claim s
  h.backend.verifyEmailCode=async(email,code)=>{assert.equal(email,'driver@example.test');assert.equal(code,'000000');h.setUser({id:'driver',email});};
  h.account().querySelector('#cloudCode').submit({preventDefault(){},target:{values:{code:'000000'}}});await h.flush();
  assert.equal(h.context.HomeBaseCloudState.signedIn,true);h.context.renderProfile();assert.doesNotMatch(h.account().innerHTML,/id="cloudCode"/);assert.match(h.account().innerHTML,/Signed in on this device/);
+});
+
+test('a repeated sign-in for the same driver does not restart the school calendar search',async()=>{
+ const h=harness();const fired=[];h.context.Event=class{constructor(type){this.type=type;}};h.context.dispatchEvent=e=>{if(e?.type==='homebase-calendar-identity')fired.push(e.type);};
+ await h.flush();const driver={id:'driver',email:'driver@example.test'};h.setUser(driver);
+ h.event('INITIAL_SESSION',driver);await h.flush();assert.equal(fired.length,1);
+ h.event('SIGNED_IN',driver);h.event('SIGNED_IN',driver);await h.flush();assert.equal(fired.length,1,'same driver: no new calendar identity');
+ h.event('SIGNED_OUT',null);await h.flush();assert.equal(fired.length,2);
+ h.event('SIGNED_IN',{id:'other'});await h.flush();assert.equal(fired.length,3);
 });

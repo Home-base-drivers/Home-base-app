@@ -275,12 +275,16 @@
       }
       try{await collectLearning();}catch(error){fail(error);}
     }
-    backend.onAuthChange((event)=>{if(event==='PASSWORD_RECOVERY'){
+    // Announce a calendar identity change only when the signed-in person actually changes.
+    // Supabase repeats SIGNED_IN for the same person (tab focus, microphone prompt, token
+    // recovery); each repeat used to wipe and re-run the school calendar search mid-question.
+    let calendarIdentity;
+    backend.onAuthChange((event,user)=>{if(event==='PASSWORD_RECOVERY'){
       recovery=true;message='Choose a new password below and tap Update password to finish the reset.';
       // Email links open the map first; make the final reset step visible immediately.
       setTimeout(()=>document.getElementById('navProfile')?.click(),0);
     }
-      if(['INITIAL_SESSION','SIGNED_IN','SIGNED_OUT'].includes(event))setTimeout(()=>window.dispatchEvent(new Event('homebase-calendar-identity')),0);
+      if(['INITIAL_SESSION','SIGNED_IN','SIGNED_OUT'].includes(event)){const id=event==='SIGNED_OUT'||!user?.id||user.is_anonymous?null:user.id;if(id!==calendarIdentity){calendarIdentity=id;setTimeout(()=>window.dispatchEvent(new Event('homebase-calendar-identity')),0);}}
       if(['INITIAL_SESSION','SIGNED_IN','SIGNED_OUT','PASSWORD_RECOVERY'].includes(event))setTimeout(()=>refreshIdentity().catch(fail),0);});
     fetch('baltimore-demand-areas.geojson').then(r=>r.json()).then(data=>{areas=data.features||[];}).catch(()=>{});
     backend.sponsors().then(rows=>{sponsors=rows;}).catch(()=>{});

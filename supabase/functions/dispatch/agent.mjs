@@ -102,7 +102,7 @@ function cleanAttachments(attachments){
 }
 function errorWithCode(message,code){return Object.assign(new Error(message),{code})}
 
-export function makeHomeBaseAgent({provider='openai',apiKey,model='gpt-6-luna',visionModel,fastModel,fetchImpl=fetch,loadMemory,loadTurns,saveTurn,upsertMemories,forgetMemories=async()=>{},loadForecast=async()=>null,timeoutMs=60000}={}){
+export function makeHomeBaseAgent({provider='openai',apiKey,model='gpt-6-luna',visionModel,fastModel,fetchImpl=fetch,loadMemory,loadTurns,saveTurn,upsertMemories,forgetMemories=async()=>{},loadForecast=async()=>null,background=null,timeoutMs=60000}={}){
  // Cost bounds per message (we pay per message): recent history only, compact
  // context, short replies, and the plan's web-search allowance.
  return async({userId,utterance,context={},conversationId='default',capabilities=[],actionResults=[],channel='voice',attachments=[],webSearches}={})=>{
@@ -177,14 +177,18 @@ ${typed?'- This message was TYPED in the Home Base chat screen. Reply like a cap
    const savedUtterance=(utterance.trim()||'(photo)')+(images.length&&utterance.trim()?' [photo attached]':'');
    await saveTurn(userId,conversationId,'user',savedUtterance,context);
    await saveTurn(userId,conversationId,'assistant',answer,{channel});
-   try{
+   // Learning from the turn is a second Claude call (up to 12 s). The driver should not wait
+   // for it: when the runtime can finish work after the response (EdgeRuntime.waitUntil),
+   // answer first and learn in the background.
+   const learn=(async()=>{try{
     const learned=await claudeJson({apiKey,fetchImpl,timeoutMs:12000,stage:'memory',model:fastModel||model,maxTokens:600,name:'save_memories',system:LEARN_SYSTEM,
      user:'Existing memory:\n'+memoryLines(memories,3000)+'\n\nDriver said: '+savedUtterance+'\nHome Base answered: '+answer.slice(0,3000),schema:LEARN_SCHEMA});
     const known=new Set((memories||[]).map(m=>m.memory_key||m.key));
     const forget=(Array.isArray(learned.forget)?learned.forget:[]).filter(k=>known.has(k));
     if(forget.length)await forgetMemories(userId,forget);
     if(Array.isArray(learned.memories)&&learned.memories.length)await upsertMemories(userId,learned.memories);
-   }catch{}
+   }catch{}})();
+   if(typeof background==='function')background(learn);else await learn;
    return{answer,sources,provider:'Claude',agent:true,channel,conversationId,execution:verifiedResults.length?'verified_action_result':'advisory'};
   }
   let response;
