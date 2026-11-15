@@ -126,10 +126,30 @@ function fakeStripe(){
 const liveEnv=(key,extra={})=>k=>({SUPABASE_URL:'u',SUPABASE_SERVICE_ROLE_KEY:'s',STRIPE_SECRET_KEY:key,...extra})[k];
 const call=(handler,body,headers={})=>handler(new Request('https://x/billing',{method:'POST',headers:{Origin:'https://home-base-drivers.github.io',...headers},body:JSON.stringify(body)}));
 
-test('live key alone: server creates products, prices, webhook and portal once, and finds them again',async()=>{
+const writes=f=>f.st.calls.filter(([m,p])=>m==='POST'&&/^\/(products|prices|webhook_endpoints|billing_portal\/configurations)/.test(p));
+const ownerDb=()=>{const db=fakeDb();db.tables.ai_entitlements.push({user_id:USER,plan:'pro',source:'owner',current_period_end:null,extra_voice_seconds:0,extra_month:null});return db;};
+const ownerSetup=async(f,key,extra={})=>(await call(billingHandler(()=>ownerDb(),liveEnv(key,extra),f.fetchImpl),{operation:'setup'},{Authorization:'Bearer good'})).json();
+
+test('public health never changes Stripe: it only looks things up and returns no ids',async()=>{
  const f=fakeStripe();
- const h1=billingHandler(()=>fakeDb(),liveEnv('sk_live_setupA'),f.fetchImpl);
- const r=await (await call(h1,{operation:'health'})).json();
+ const h=billingHandler(()=>fakeDb(),liveEnv('sk_live_healthA'),f.fetchImpl);
+ const r=await (await call(h,{operation:'health'})).json();
+ assert.equal(r.ready,false);assert.deepEqual(r.missing,['price_plus','price_pro','price_minutes','webhook','portal']);
+ assert.equal((await (await h(new Request('https://x/billing?health=1'))).json()).ready,false);
+ assert.deepEqual(writes(f),[],'health created nothing in Stripe');
+ // A disabled webhook is reported, not re-enabled.
+ f.st.hooks.push({id:'we_off',url:WEBHOOK_URL,enabled_events:['checkout.session.completed'],status:'disabled'});
+ const r2=await (await call(h,{operation:'health'})).json();
+ assert.ok(r2.missing.includes('webhook_events'));assert.deepEqual(writes(f),[]);
+ assert.ok(!('prices' in r2)&&!('webhook' in r2)&&!('portal' in r2),'no Stripe ids in the public answer');
+});
+
+test('only a signed-in owner can run setup; it creates products, prices, webhook and portal once',async()=>{
+ const f=fakeStripe();
+ assert.equal((await call(billingHandler(()=>fakeDb(),liveEnv('sk_live_setupA'),f.fetchImpl),{operation:'setup'})).status,401,'sign-in required');
+ const driver=await call(billingHandler(()=>fakeDb(),liveEnv('sk_live_setupA'),f.fetchImpl),{operation:'setup'},{Authorization:'Bearer good'});
+ assert.equal(driver.status,403);assert.equal((await driver.json()).code,'owner_only');assert.deepEqual(writes(f),[]);
+ const r=await ownerSetup(f,'sk_live_setupA');
  assert.equal(r.mode,'live');assert.equal(r.ready,true);assert.equal(r.open,false,'sales stay closed without BILLING_ENABLED');
  assert.equal(f.st.prices.length,3);assert.deepEqual(f.st.prices.map(p=>[p.lookup_key,p.unit_amount,p.recurring]),[['homebase_plus_monthly',1999,'month'],['homebase_pro_monthly',3999,'month'],['homebase_minutes_100',1499,null]]);
  assert.equal(f.st.hooks.length,1);assert.equal(f.st.hooks[0].url,WEBHOOK_URL);assert.deepEqual(f.st.hooks[0].enabled_events.sort(),['checkout.session.completed','customer.subscription.created','customer.subscription.deleted','customer.subscription.updated']);
@@ -137,16 +157,29 @@ test('live key alone: server creates products, prices, webhook and portal once, 
  assert.equal(f.st.portals[0].body['features[subscription_update][products][1][prices][0]'],f.st.prices[1].id);
  assert.ok(!JSON.stringify(r).includes('sk_live'),'no secret in the response');
  // A new server instance (different cache key) reuses everything instead of duplicating it.
- const h2=billingHandler(()=>fakeDb(),liveEnv('sk_live_setupB'),f.fetchImpl);
- const r2=await (await call(h2,{operation:'health'})).json();
+ const r2=await ownerSetup(f,'sk_live_setupB');
  assert.equal(r2.ready,true);assert.equal(f.st.prices.length,3);assert.equal(f.st.hooks.length,1);assert.equal(f.st.portals.length,1);
  assert.deepEqual(r2.prices,r.prices);
+ // And the public health check now reports ready, without writing anything.
+ const before=writes(f).length;
+ const h=await (await call(billingHandler(()=>fakeDb(),liveEnv('sk_live_setupC'),f.fetchImpl),{operation:'health'})).json();
+ assert.equal(h.ready,true);assert.deepEqual(h.missing,[]);assert.equal(writes(f).length,before);
+});
+
+test('signed-in driver requests never create Stripe objects; checkout waits for setup',async()=>{
+ const f=fakeStripe();
+ const h=billingHandler(()=>fakeDb(),liveEnv('sk_live_driverG',{BILLING_ENABLED:'true'}),f.fetchImpl);
+ const st=await h(new Request('https://x/billing',{method:'POST',headers:{Authorization:'Bearer good',Origin:'https://home-base-drivers.github.io'},body:JSON.stringify({operation:'status'})}));
+ assert.equal(st.status,200);
+ const c=await h(new Request('https://x/billing',{method:'POST',headers:{Authorization:'Bearer good',Origin:'https://home-base-drivers.github.io'},body:JSON.stringify({operation:'checkout',plan:'plus'})}));
+ assert.equal(c.status,503);assert.equal((await c.json()).code,'billing_not_set_up');
+ assert.deepEqual(writes(f),[]);
 });
 
 test('without a signing secret, webhooks use Stripe\'s own copy of the event; forged bodies change nothing',async()=>{
  const f=fakeStripe(),db=fakeDb();
- const h=billingHandler(()=>db,liveEnv('sk_live_hookC',{BILLING_ENABLED:'true'}),f.fetchImpl);
- await call(h,{operation:'health'});
+ await ownerSetup(f,'sk_live_hookC');
+ const h=billingHandler(()=>db,liveEnv('sk_live_hookC2',{BILLING_ENABLED:'true'}),f.fetchImpl);
  f.st.events.evt_real={id:'evt_real',type:'checkout.session.completed',data:{object:{mode:'subscription',subscription:'sub_live',client_reference_id:USER}}};
  // Attacker posts a body claiming a different user and plan; only the id is used.
  const forged=await h(new Request('https://x/billing',{method:'POST',headers:{'Stripe-Signature':'t=1,v1=00'},body:JSON.stringify({id:'evt_real',type:'checkout.session.completed',data:{object:{client_reference_id:'someone-else'}}})}));
@@ -154,11 +187,15 @@ test('without a signing secret, webhooks use Stripe\'s own copy of the event; fo
  assert.equal(db.tables.ai_entitlements[0].user_id,USER);assert.equal(db.tables.ai_entitlements[0].plan,'pro');
  const fake=await h(new Request('https://x/billing',{method:'POST',headers:{'Stripe-Signature':'x'},body:JSON.stringify({id:'evt_made_up'})}));assert.equal(fake.status,400);
  const junk=await h(new Request('https://x/billing',{method:'POST',headers:{'Stripe-Signature':'x'},body:'{"id":"../customers"}'}));assert.equal(junk.status,400);
+ // Replaying the same real event changes the plan only once.
+ const again=await h(new Request('https://x/billing',{method:'POST',headers:{'Stripe-Signature':'t=1,v1=00'},body:JSON.stringify({id:'evt_real'})}));
+ assert.equal((await again.json()).duplicate,true);
 });
 
 test('live checkout uses the created price, card/wallet methods from the dashboard, and links the terms',async()=>{
  const f=fakeStripe(),db=fakeDb();
- const h=billingHandler(()=>db,liveEnv('sk_live_checkD',{BILLING_ENABLED:'true',BILLING_TEST_EMAILS:'driver@example.test'}),f.fetchImpl);
+ await ownerSetup(f,'sk_live_checkD');
+ const h=billingHandler(()=>db,liveEnv('sk_live_checkD2',{BILLING_ENABLED:'true',BILLING_TEST_EMAILS:'driver@example.test'}),f.fetchImpl);
  const st=await (await h(new Request('https://x/billing',{method:'POST',headers:{Authorization:'Bearer good',Origin:'https://home-base-drivers.github.io'},body:JSON.stringify({operation:'status'})}))).json();
  assert.equal(st.open,true);assert.equal(st.test,false);
  const r=await h(new Request('https://x/billing',{method:'POST',headers:{Authorization:'Bearer good',Origin:'https://home-base-drivers.github.io'},body:JSON.stringify({operation:'checkout',plan:'plus'})}));
@@ -172,7 +209,8 @@ test('live checkout uses the created price, card/wallet methods from the dashboa
 
 test('health is also readable with a plain GET and never needs sign-in',async()=>{
  const f=fakeStripe();
- const h=billingHandler(()=>fakeDb(),liveEnv('sk_live_getF'),f.fetchImpl);
+ await ownerSetup(f,'sk_live_getF');
+ const h=billingHandler(()=>fakeDb(),liveEnv('sk_live_getF2'),f.fetchImpl);
  const r=await h(new Request('https://x/billing?health=1'));assert.equal(r.status,200);
  const j=await r.json();assert.equal(j.ready,true);assert.equal(j.mode,'live');
  assert.equal((await billingHandler(()=>fakeDb(),()=>undefined)(new Request('https://x/billing?health=1'))).status,200);

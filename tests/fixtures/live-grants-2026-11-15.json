@@ -1,0 +1,165 @@
+{
+ "note": "anon/authenticated table grants on the live Home Base project, read from information_schema.role_table_grants on 2026-11-15 before the least-privilege migration. Used to prove the repository replays the same grants and that the rollback restores them exactly.",
+ "grants": [
+  {
+   "grantee": "authenticated",
+   "table_name": "account_connections",
+   "privs": "DELETE,SELECT"
+  },
+  {
+   "grantee": "authenticated",
+   "table_name": "ai_entitlements",
+   "privs": "SELECT"
+  },
+  {
+   "grantee": "authenticated",
+   "table_name": "ai_plan_limits",
+   "privs": "SELECT"
+  },
+  {
+   "grantee": "authenticated",
+   "table_name": "ai_usage",
+   "privs": "SELECT"
+  },
+  {
+   "grantee": "authenticated",
+   "table_name": "billing_customers",
+   "privs": "SELECT"
+  },
+  {
+   "grantee": "authenticated",
+   "table_name": "consent_receipts",
+   "privs": "SELECT"
+  },
+  {
+   "grantee": "authenticated",
+   "table_name": "dispatch_recommendations",
+   "privs": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+  },
+  {
+   "grantee": "authenticated",
+   "table_name": "driver_dispatch_state",
+   "privs": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+  },
+  {
+   "grantee": "authenticated",
+   "table_name": "earnings_records",
+   "privs": "DELETE,INSERT,SELECT,UPDATE"
+  },
+  {
+   "grantee": "anon",
+   "table_name": "homebase_agent_memory",
+   "privs": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+  },
+  {
+   "grantee": "authenticated",
+   "table_name": "homebase_agent_memory",
+   "privs": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+  },
+  {
+   "grantee": "anon",
+   "table_name": "homebase_agent_turns",
+   "privs": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+  },
+  {
+   "grantee": "authenticated",
+   "table_name": "homebase_agent_turns",
+   "privs": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+  },
+  {
+   "grantee": "authenticated",
+   "table_name": "model_predictions",
+   "privs": "INSERT,SELECT"
+  },
+  {
+   "grantee": "anon",
+   "table_name": "platform_capabilities",
+   "privs": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+  },
+  {
+   "grantee": "authenticated",
+   "table_name": "platform_capabilities",
+   "privs": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+  },
+  {
+   "grantee": "anon",
+   "table_name": "platform_service_areas",
+   "privs": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+  },
+  {
+   "grantee": "authenticated",
+   "table_name": "platform_service_areas",
+   "privs": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+  },
+  {
+   "grantee": "authenticated",
+   "table_name": "privacy_preferences",
+   "privs": "SELECT"
+  },
+  {
+   "grantee": "authenticated",
+   "table_name": "profiles",
+   "privs": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+  },
+  {
+   "grantee": "authenticated",
+   "table_name": "progress_events",
+   "privs": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+  },
+  {
+   "grantee": "authenticated",
+   "table_name": "shift_observations",
+   "privs": "INSERT,SELECT"
+  },
+  {
+   "grantee": "anon",
+   "table_name": "sponsor_campaigns",
+   "privs": "SELECT"
+  },
+  {
+   "grantee": "authenticated",
+   "table_name": "sponsor_campaigns",
+   "privs": "SELECT"
+  },
+  {
+   "grantee": "authenticated",
+   "table_name": "subscriptions",
+   "privs": "SELECT"
+  },
+  {
+   "grantee": "authenticated",
+   "table_name": "trip_rows",
+   "privs": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+  },
+  {
+   "grantee": "authenticated",
+   "table_name": "trip_uploads",
+   "privs": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+  },
+  {
+   "grantee": "authenticated",
+   "table_name": "usage_events",
+   "privs": "INSERT,SELECT"
+  },
+  {
+   "grantee": "authenticated",
+   "table_name": "user_calendar_areas",
+   "privs": "DELETE,INSERT,SELECT,UPDATE"
+  },
+  {
+   "grantee": "authenticated",
+   "table_name": "user_calendar_sources",
+   "privs": "DELETE,INSERT,SELECT,UPDATE"
+  },
+  {
+   "grantee": "authenticated",
+   "table_name": "user_state",
+   "privs": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+  },
+  {
+   "grantee": "authenticated",
+   "table_name": "voice_sessions",
+   "privs": "SELECT"
+  }
+ ]
+}

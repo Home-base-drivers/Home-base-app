@@ -252,13 +252,13 @@ var require_homebase_public_data = __commonJS({
         return (payload?.markets || []).filter((m) => point(m.center) && distance([lat, lon], [Number(m.center.lat), Number(m.center.lon)]) <= Number(m.radiusKm || 0) + 70).sort((a, b) => distance([lat, lon], [a.center.lat, a.center.lon]) - distance([lat, lon], [b.center.lat, b.center.lon])).map((m) => m.id);
       }
       let lastActivity = { key: "", at: 0 };
-      async function reportActivity(config, payload, lat, lon, request = globalThis.fetch, now = Date.now(), force = false) {
+      async function reportActivity(config, payload, lat, lon, request = globalThis.fetch, now = Date.now(), force = false, authorization = "") {
         const ids = activeMarketIds(payload, lat, lon), key = ids.join(",");
         if (!ids.length || !/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(config?.supabaseUrl || "") || !config?.supabasePublishableKey || typeof request !== "function") return null;
         if (!force && key === lastActivity.key && now - lastActivity.at < 10 * 6e4) return null;
         lastActivity = { key, at: now };
         try {
-          const r = await request(config.supabaseUrl + "/functions/v1/market-activity", { method: "POST", headers: { apikey: config.supabasePublishableKey, "Content-Type": "application/json" }, body: JSON.stringify({ markets: ids }), keepalive: true });
+          const r = await request(config.supabaseUrl + "/functions/v1/market-activity", { method: "POST", headers: { apikey: config.supabasePublishableKey, "Content-Type": "application/json", .../^Bearer [A-Za-z0-9._-]+$/.test(authorization || "") ? { Authorization: authorization } : {} }, body: JSON.stringify({ markets: ids }), keepalive: true });
           return r && r.ok ? await r.json() : null;
         } catch {
           return null;
