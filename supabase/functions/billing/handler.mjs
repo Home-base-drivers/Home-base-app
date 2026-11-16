@@ -6,9 +6,10 @@
 // (sk_test_...), accounts listed in BILLING_TEST_EMAILS may check out. No real money
 // moves, everyone else still sees "Opens soon", and a live key never opens this way.
 // Owner/complimentary plans are never changed by Stripe.
-// Live setup needs only STRIPE_SECRET_KEY: the server creates (once, idempotently) the
-// products and prices (found again by lookup key), the webhook endpoint and the customer
-// portal configuration. Without STRIPE_WEBHOOK_SECRET, each webhook is verified by
+// Live setup needs only STRIPE_SECRET_KEY: an owner runs {operation:'setup'} once, signed in,
+// and the server creates (idempotently) the products and prices (found again by lookup key),
+// the webhook endpoint and the customer portal configuration. Everything else, including the
+// public health check, only looks those up and never changes Stripe. Without STRIPE_WEBHOOK_SECRET, each webhook is verified by
 // fetching the event back from Stripe with the secret key and using Stripe's copy.
 
 import { isAllowedOrigin } from './cors.mjs';
@@ -70,19 +71,21 @@ export function billingHandler(createClient, env, fetchImpl = fetch) {
   };
   const mode = () => String(env('STRIPE_SECRET_KEY') || '').startsWith('sk_live_') || String(env('STRIPE_SECRET_KEY') || '').startsWith('rk_live_') ? 'live' : 'test';
 
-  // Create-or-find everything Stripe needs. Safe to run repeatedly and concurrently:
-  // fixed product ids, unique price lookup keys, endpoint/portal found by URL/metadata.
-  async function ensureSetup() {
+  // Find everything Stripe needs; with create, also make what is missing. create is used only
+  // by the owner-only setup operation. Safe to run repeatedly and concurrently: fixed product
+  // ids, unique price lookup keys, endpoint/portal found by URL/metadata. Only a complete setup
+  // is cached, so a missing piece is looked for again (never created) on the next request.
+  async function ensureSetup({ create = false } = {}) {
     const cacheKey = mode() + ':' + String(env('STRIPE_SECRET_KEY') || '').slice(-6);
     if (setupCache.has(cacheKey)) return (resolved = setupCache.get(cacheKey));
-    const out = { prices: {}, portal: null, webhook: null, mode: mode() };
+    const out = { prices: {}, portal: null, webhook: null, webhookOutdated: false, mode: mode() };
     const env0 = envPrices();
     const needLookup = Object.keys(CATALOG).filter(k => !env0[k]);
     if (needLookup.length) {
       const q = needLookup.map(k => 'lookup_keys[]=' + CATALOG[k].lookup).join('&');
       const found = await stripe('GET', '/prices?active=true&limit=10&' + q);
       for (const pr of found.data || []) { const k = needLookup.find(x => CATALOG[x].lookup === pr.lookup_key); if (k) out.prices[k] = pr.id; }
-      for (const k of needLookup.filter(x => !out.prices[x])) {
+      for (const k of needLookup.filter(x => !out.prices[x] && create)) {
         const c = CATALOG[k];
         try { await stripe('GET', '/products/' + c.product); }
         catch (e) {
@@ -98,13 +101,15 @@ export function billingHandler(createClient, env, fetchImpl = fetch) {
     const all = { ...out.prices, ...Object.fromEntries(Object.entries(env0).filter(([, v]) => v)) };
     const hooks = await stripe('GET', '/webhook_endpoints?limit=100');
     let hook = (hooks.data || []).find(h => h.url === WEBHOOK_URL);
-    if (!hook) hook = await stripe('POST', '/webhook_endpoints', { url: WEBHOOK_URL, enabled_events: WEBHOOK_EVENTS, description: 'Home Base billing', metadata: { app: 'homebase' } }, 'homebase-webhook-v1');
-    else if (WEBHOOK_EVENTS.some(e => !(hook.enabled_events || []).includes(e) && !(hook.enabled_events || []).includes('*')) || hook.status === 'disabled')
+    const outdated = h => WEBHOOK_EVENTS.some(e => !(h.enabled_events || []).includes(e) && !(h.enabled_events || []).includes('*')) || h.status === 'disabled';
+    if (!create) out.webhookOutdated = !!hook && outdated(hook);
+    else if (!hook) hook = await stripe('POST', '/webhook_endpoints', { url: WEBHOOK_URL, enabled_events: WEBHOOK_EVENTS, description: 'Home Base billing', metadata: { app: 'homebase' } }, 'homebase-webhook-v1');
+    else if (outdated(hook))
       hook = await stripe('POST', '/webhook_endpoints/' + hook.id, { enabled_events: WEBHOOK_EVENTS, disabled: 'false' });
-    out.webhook = hook.id;
+    out.webhook = hook?.id || null;
     const portals = await stripe('GET', '/billing_portal/configurations?active=true&limit=100');
     let portal = (portals.data || []).find(c => c.metadata?.app === 'homebase');
-    if (!portal) portal = await stripe('POST', '/billing_portal/configurations', {
+    if (!portal && create && all.plus && all.pro) portal = await stripe('POST', '/billing_portal/configurations', {
       business_profile: { headline: 'Manage your Home Base plan', privacy_policy_url: LEGAL_URL + '#privacy', terms_of_service_url: LEGAL_URL + '#terms' },
       default_return_url: APP_URL + '?billing=portal',
       features: { invoice_history: { enabled: 'true' }, payment_method_update: { enabled: 'true' }, customer_update: { enabled: 'true', allowed_updates: { 0: 'email', 1: 'address' } },
@@ -112,9 +117,10 @@ export function billingHandler(createClient, env, fetchImpl = fetch) {
         subscription_update: { enabled: 'true', default_allowed_updates: { 0: 'price' }, proration_behavior: 'create_prorations',
           products: { 0: { product: CATALOG.plus.product, prices: { 0: all.plus } }, 1: { product: CATALOG.pro.product, prices: { 0: all.pro } } } } },
       metadata: { app: 'homebase' } }, 'homebase-portal-v1-' + all.plus + all.pro);
-    out.portal = portal.id;
-    setupCache.set(cacheKey, out);
-    return (resolved = out);
+    out.portal = portal?.id || null;
+    resolved = out;
+    if (complete(out)) setupCache.set(cacheKey, out);
+    return out;
   }
   // Default origin; withAllowedOrigin (index.ts) echoes the caller's allowed origin per request.
   const cors = { 'Access-Control-Allow-Origin': 'https://homebasedrivers.com', 'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Vary': 'Origin' };
@@ -127,6 +133,8 @@ export function billingHandler(createClient, env, fetchImpl = fetch) {
   const isTester = user => configured() && testMode() && !!user?.email && testers().includes(String(user.email).toLowerCase());
   const canBuy = user => open() || isTester(user);
   const PROTECTED = ['owner', 'comp'];
+  const complete = setup => !!setup && !!prices().plus && !!prices().pro && !!prices().minutes && !!setup.portal && !!setup.webhook && !setup.webhookOutdated;
+  const missing = setup => [...['plus', 'pro', 'minutes'].filter(k => !prices()[k]).map(k => 'price_' + k), ...(!setup?.webhook ? ['webhook'] : setup.webhookOutdated ? ['webhook_events'] : []), ...(!setup?.portal ? ['portal'] : [])];
   const entitlement = async (db, userId) => (await db.from('ai_entitlements').select('plan,source,current_period_end,extra_voice_seconds,extra_month').eq('user_id', userId).maybeSingle()).data || null;
 
   async function setPlan(db, userId, plan, periodEnd, extra) {
@@ -194,14 +202,24 @@ export function billingHandler(createClient, env, fetchImpl = fetch) {
     return reply(200, { received: true, result });
   }
 
-  // Public, secret-free readiness check; also performs first-time Stripe setup.
+  // Public, secret-free readiness check. Read-only: it only looks things up in Stripe and
+  // returns yes/no answers, never ids. Setup is the owner-only {operation:'setup'}.
   async function health() {
     if (!configured()) return reply(200, { configured: false, mode: null, ready: false, open: false });
     let setup = null, problem = null;
-    try { setup = await ensureSetup(); } catch (e) { problem = e?.stripeCode || 'setup_failed'; }
-    const ready = !!setup && !!prices().plus && !!prices().pro && !!prices().minutes && !!setup.portal && !!setup.webhook;
+    try { setup = await ensureSetup(); } catch (e) { problem = e?.stripeCode || 'lookup_failed'; }
+    const ready = complete(setup);
     console.log(JSON.stringify({ event: 'homebase_billing_health', mode: mode(), ready, open: open(), problem }));
-    return reply(200, { configured: true, mode: mode(), ready, open: open(), problem, prices: setup ? prices() : null, webhook: setup?.webhook || null, portal: setup?.portal || null });
+    return reply(200, { configured: true, mode: mode(), ready, open: open(), problem, missing: setup ? missing(setup) : null });
+  }
+
+  // Owner-only, signed in: create whatever Stripe setup is missing and report the ids.
+  async function setup(db, user) {
+    if ((await entitlement(db, user.id))?.source !== 'owner') return reply(403, { error: 'Only a Home Base owner can set up payments.', code: 'owner_only' });
+    if (!configured()) return reply(503, { error: 'Add the Stripe key first.', code: 'billing_closed' });
+    const out = await ensureSetup({ create: true });
+    console.log(JSON.stringify({ event: 'homebase_billing_setup', mode: mode(), ready: complete(out) }));
+    return reply(200, { configured: true, mode: mode(), ready: complete(out), open: open(), missing: missing(out), prices: prices(), webhook: out.webhook, portal: out.portal });
   }
 
   return async request => {
@@ -221,6 +239,7 @@ export function billingHandler(createClient, env, fetchImpl = fetch) {
       if (error || !data?.user?.id || data.user.is_anonymous) return reply(401, { error: 'Sign in again' });
       const user = data.user, body = await request.json().catch(() => ({}));
       const { data: customer } = await db.from('billing_customers').select('*').eq('user_id', user.id).maybeSingle();
+      if (body.operation === 'setup') return await setup(db, user);
       if (configured()) { try { await ensureSetup(); } catch (e) { if (body.operation !== 'status') throw e; } }
       if (body.operation === 'status') {
         const { data: plans } = await db.from('ai_plan_limits').select('plan,included_voice_seconds,monthly_price_usd');
@@ -236,7 +255,8 @@ export function billingHandler(createClient, env, fetchImpl = fetch) {
         if (!canBuy(user)) return reply(503, { error: 'Home Base Plus opens soon. The built-in AI stays free.', code: 'billing_closed' });
         const kind = ['plus', 'pro', 'minutes'].includes(body.plan) ? body.plan : null;
         if (PROTECTED.includes((await entitlement(db, user.id))?.source)) return reply(409, { error: 'Your account already has Pro access as an owner. Use a separate account to test purchases.', code: 'owner_plan' });
-        if (!kind || !prices()[kind]) return reply(400, { error: 'Choose Plus, Pro or extra minutes.' });
+        if (!kind) return reply(400, { error: 'Choose Plus, Pro or extra minutes.' });
+        if (!prices()[kind]) return reply(503, { error: 'Subscriptions are not set up yet.', code: 'billing_not_set_up' });
         // GPT Live is Pro only, so minute packs are too (a Plus driver could not use them).
         if (kind === 'minutes' && customer?.plan !== 'pro') return reply(400, { error: 'Extra GPT Live minutes are for Pro members.' });
         if (kind !== 'minutes' && ['plus', 'pro'].includes(customer?.plan) && ['active', 'trialing', 'past_due'].includes(customer?.subscription_status))

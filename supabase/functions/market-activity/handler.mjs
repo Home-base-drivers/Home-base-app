@@ -4,6 +4,9 @@ import { isAllowedOrigin } from './cors.mjs';
 // recently, starts the live-signals refresh for the active markets. Feeds that cost
 // money or quota (Ticketmaster, Uber, FlightAware, Booking) are then called only
 // where drivers are working.
+// Anyone with the app may record activity (it is only a market id), but only a signed-in
+// driver's ping can start a refresh: the Supabase sign-in token is verified here before the
+// server-held GitHub token is used. An Origin header is not proof of anything; this is.
 export const MARKETS = ['baltimore', 'north-jersey', 'new-york', 'london', 'washington-dc', 'miami'];
 export const REPO = 'Home-base-drivers/Home-base-app';
 export const WORKFLOW = 'live-signals.yml';
@@ -29,6 +32,11 @@ export function marketActivityHandler(createClient, env, request = fetch) {
     if (touched.error) return reply(503, { error: 'Activity not recorded' });
     const token = env('GITHUB_DISPATCH_TOKEN');
     if (!token) return reply(200, { recorded: markets, refresh: 'scheduled' });
+    const session = req.headers.get('Authorization')?.match(/^Bearer (.+)$/)?.[1];
+    if (!session) return reply(200, { recorded: markets, refresh: 'scheduled' });
+    let driver = null;
+    try { const { data, error } = await admin.auth.getUser(session); if (!error && data?.user?.id && !data.user.is_anonymous) driver = data.user; } catch { driver = null; }
+    if (!driver) return reply(200, { recorded: markets, refresh: 'scheduled' });
     const claim = await admin.rpc('claim_market_refresh', { p_market: markets[0], p_market_minutes: MARKET_MINUTES, p_global_minutes: GLOBAL_MINUTES });
     if (claim.error) return reply(200, { recorded: markets, refresh: 'scheduled' });
     if (claim.data !== true) return reply(200, { recorded: markets, refresh: 'recent' });

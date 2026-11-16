@@ -23,11 +23,17 @@ webhooks are verified by signature; app calls verify the Supabase session inside
    Stripe review: `https://home-base-drivers.github.io/Home-base-app/legal.html`.
 2. Supabase secret `STRIPE_SECRET_KEY` = the **live** secret key. Do not set STRIPE_PRICE_* or
    STRIPE_WEBHOOK_SECRET for live; leave them unset.
-3. Open `https://nixihmurdtfcbffgvpij.supabase.co/functions/v1/billing?health=1` (or POST `{"operation":"health"}`) once. The server creates, idempotently: products
+3. An owner (an account whose plan source is `owner`), signed in, sends POST `{"operation":"setup"}`
+   to the `billing` function once. The server creates, idempotently: products
    `homebase_plus`, `homebase_pro`, `homebase_minutes_100`; prices with lookup keys
    `homebase_plus_monthly` ($19.99/mo), `homebase_pro_monthly` ($39.99/mo), `homebase_minutes_100`
    ($14.99); the webhook endpoint (4 events); and a customer-portal configuration (cancel at period
-   end, switch Plus/Pro, update card, invoices). It returns `ready:true` and ids, never secrets.
+   end, switch Plus/Pro, update card, invoices). It returns `ready:true` and the ids, never secrets.
+   Anyone else gets 401/403 and nothing is created.
+   `https://nixihmurdtfcbffgvpij.supabase.co/functions/v1/billing?health=1` (or POST
+   `{"operation":"health"}`) is public and **read-only** since the 2026-11-15 security review: it only
+   looks those objects up and answers `ready` plus a `missing` list (no ids). Driver requests and
+   webhooks also only look them up; checkout answers `billing_not_set_up` until setup has run.
 4. Webhooks without `STRIPE_WEBHOOK_SECRET` are verified by fetching the event back from Stripe by id
    and using Stripe's copy, so a forged request cannot change a plan.
 5. `BILLING_ENABLED=true` opens sales. Owners decided: only after OpenAI has credit.

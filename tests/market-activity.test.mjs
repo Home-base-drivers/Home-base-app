@@ -30,15 +30,15 @@ test('activity is recorded by market id only; unknown markets are refused', asyn
   assert.equal((await handler(new Request('https://x', { method: 'POST', headers: { Origin: 'https://evil.example' }, body: '{}' }))).status, 403);
 });
 
-test('with a GitHub token a stale market starts one refresh for all active markets', async () => {
-  const a = fakeAdmin(), sent = [];
+test('with a GitHub token a signed-in driver in a stale market starts one refresh for all active markets', async () => {
+  const a = fakeAdminWithAuth(), sent = [];
   const handler = marketActivityHandler(a.client, n => n === 'GITHUB_DISPATCH_TOKEN' ? 'token' : undefined, async (url, init) => { sent.push([url, JSON.parse(init.body)]); return { status: 204 }; });
-  const r = await (await handler(post({ markets: ['baltimore'] }))).json();
+  const r = await (await handler(postAs({ markets: ['baltimore'] }, 'good'))).json();
   assert.equal(r.refresh, 'started');
   assert.match(sent[0][0], /actions\/workflows\/live-signals\.yml\/dispatches$/);
   assert.deepEqual(sent[0][1], { ref: 'main', inputs: { markets: 'baltimore,new-york' } });
-  const b = fakeAdmin({ claim: false }), none = [];
-  const recent = await (await marketActivityHandler(b.client, () => 'token', async () => { none.push(1); return { status: 204 }; })(post({ markets: ['baltimore'] }))).json();
+  const b = fakeAdminWithAuth({ claim: false }), none = [];
+  const recent = await (await marketActivityHandler(b.client, () => 'token', async () => { none.push(1); return { status: 204 }; })(postAs({ markets: ['baltimore'] }, 'good'))).json();
   assert.equal(recent.refresh, 'recent'); assert.equal(none.length, 0);
 });
 
@@ -75,4 +75,43 @@ test('activity table: private rows, throttled refresh claims, public active list
   await assert.rejects(db.query("select public.touch_markets(array['miami'])"), { code: '42501' });
   assert.equal((await db.query('select * from public.active_markets(120)')).rows.length, 2);
   await db.close();
+});
+
+function fakeAdminWithAuth(opts = {}) {
+  const a = fakeAdmin(opts), users = { good: { id: 'u1' }, guest: { id: 'u2', is_anonymous: true } };
+  return { calls: a.calls, client: (...args) => ({ ...a.client(...args), auth: { getUser: async t => users[t] ? { data: { user: users[t] }, error: null } : { data: null, error: { message: 'bad' } } } }) };
+}
+const postAs = (body, token) => new Request('https://x.supabase.co/functions/v1/market-activity', { method: 'POST', headers: { Origin: 'https://homebasedrivers.com', 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) }, body: JSON.stringify(body) });
+
+test('only a signed-in driver can start a refresh; anyone else just records the market', async () => {
+  const env = n => n === 'GITHUB_DISPATCH_TOKEN' ? 'token' : undefined;
+  for (const token of [null, 'forged', 'guest']) {
+    const a = fakeAdminWithAuth(), sent = [];
+    const r = await (await marketActivityHandler(a.client, env, async () => { sent.push(1); return { status: 204 }; })(postAs({ markets: ['baltimore'] }, token))).json();
+    assert.deepEqual(r, { recorded: ['baltimore'], refresh: 'scheduled' }, String(token));
+    assert.equal(sent.length, 0, 'no GitHub dispatch for ' + token);
+    assert.deepEqual(a.calls.map(c => c[0]), ['touch_markets'], 'no refresh claim used up by ' + token);
+  }
+  // Origin alone (spoofable) never counts as sign-in.
+  const noOrigin = fakeAdminWithAuth(), none = [];
+  await marketActivityHandler(noOrigin.client, env, async () => { none.push(1); return { status: 204 }; })(new Request('https://x', { method: 'POST', body: JSON.stringify({ markets: ['baltimore'] }) }));
+  assert.equal(none.length, 0);
+  const a = fakeAdminWithAuth(), sent = [];
+  const ok = await (await marketActivityHandler(a.client, env, async (url, init) => { sent.push([url, init.headers.Authorization]); return { status: 204 }; })(postAs({ markets: ['baltimore'] }, 'good'))).json();
+  assert.equal(ok.refresh, 'started'); assert.equal(sent.length, 1);
+  assert.equal(sent[0][1], 'Bearer token', 'the GitHub token is the server\'s, never the driver\'s');
+});
+
+test('the app sends the driver\'s sign-in with the ping only when there is one', async () => {
+  const payload = { markets: [{ id: 'miami', center: { lat: 25.77, lon: -80.19 }, radiusKm: 60 }] };
+  const seen = [], request = async (url, init) => { seen.push(init.headers); return { ok: true, json: async () => ({}) }; };
+  const config = { supabaseUrl: 'https://abc.supabase.co', supabasePublishableKey: 'sb_publishable_x' };
+  await P.reportActivity(config, payload, 25.77, -80.19, request, 2e12, true, 'Bearer eyJhbGciOi.abc.def');
+  await P.reportActivity(config, payload, 25.77, -80.19, request, 2e12, true);
+  await P.reportActivity(config, payload, 25.77, -80.19, request, 2e12, true, 'Bearer bad token\r\nX: 1');
+  assert.equal(seen[0].Authorization, 'Bearer eyJhbGciOi.abc.def');
+  assert.equal(seen[1].Authorization, undefined);
+  assert.equal(seen[2].Authorization, undefined, 'malformed values are not sent');
+  const html = await readFile(new URL('../dist/index.html', import.meta.url), 'utf8');
+  assert.match(html, /HomeBaseAccounts\?\.backend\?\.calendarSession\?\.\(\)\)\.catch\(\(\)=>null\)\.then\(session=>HomeBasePublicData\.reportActivity\(globalThis\.HomeBaseConfig,payload,lat,lon,undefined,undefined,false,session\?\.authorization\|\|''\)\)/);
 });

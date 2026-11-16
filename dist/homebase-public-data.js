@@ -153,12 +153,14 @@
   // Tell the server which markets have a driver right now (market ids only), at most
   // every 10 minutes per set, so live feeds are refreshed only where drivers are.
   let lastActivity={key:'',at:0};
-  async function reportActivity(config,payload,lat,lon,request=globalThis.fetch,now=Date.now(),force=false){
+  // A signed-in driver's ping carries their sign-in so the server may start a refresh;
+  // signed-out pings still count the market as active for the scheduled refresh.
+  async function reportActivity(config,payload,lat,lon,request=globalThis.fetch,now=Date.now(),force=false,authorization=''){
     const ids=activeMarketIds(payload,lat,lon),key=ids.join(',');
     if(!ids.length||!/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(config?.supabaseUrl||'')||!config?.supabasePublishableKey||typeof request!=='function')return null;
     if(!force&&key===lastActivity.key&&now-lastActivity.at<10*60000)return null;
     lastActivity={key,at:now};
-    try{const r=await request(config.supabaseUrl+'/functions/v1/market-activity',{method:'POST',headers:{apikey:config.supabasePublishableKey,'Content-Type':'application/json'},body:JSON.stringify({markets:ids}),keepalive:true});return r&&r.ok?await r.json():null;}catch{return null;}
+    try{const r=await request(config.supabaseUrl+'/functions/v1/market-activity',{method:'POST',headers:{apikey:config.supabasePublishableKey,'Content-Type':'application/json',...(/^Bearer [A-Za-z0-9._-]+$/.test(authorization||'')?{Authorization:authorization}:{})},body:JSON.stringify({markets:ids}),keepalive:true});return r&&r.ok?await r.json():null;}catch{return null;}
   }
   return{LIVE_SIGNALS_URL,reportActivity,activeMarketIds,newestSnapshot,loadSnapshot,alertsForLocation,incidentsForLocation,bellTimesForLocation,bellMatch,matchingMarkets,eventsForLocation,placesForLocation,calendarCoverage,isTicketAddon,eventIdentity,consolidateEvents,sameEvent};
 });

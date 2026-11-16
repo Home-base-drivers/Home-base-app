@@ -17,7 +17,9 @@ const textKey=provider==='anthropic'?claudeKey:openaiKey;
 // (photos) use the larger vision model. CLAUDE_MODEL is no longer used for chat so an
 // old setting cannot quietly raise the cost of every message.
 const claudeModel=Deno.env.get('CLAUDE_CHAT_MODEL')||'claude-haiku-5-5',claudeVisionModel=Deno.env.get('CLAUDE_VISION_MODEL')||'claude-sonnet-5-5',claudeFastModel=Deno.env.get('CLAUDE_FAST_MODEL')||'claude-haiku-5-5';
-// Usage is recorded with the service role only; drivers cannot write or erase it.
+// Usage, AI memory and conversation turns are written with the service role only, for the
+// driver whose sign-in the handler has already verified; drivers cannot write or erase them
+// (migration 20261116000000_least_privilege_grants.sql). Reads stay on the driver's own client.
 const usageDb=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,{auth:{persistSession:false,autoRefreshToken:false}});
 const fastModel=provider==='anthropic'?claudeFastModel:Deno.env.get('OPENAI_COPILOT_MODEL');
 const parseLanguage=makeLanguageParser({engine,provider,apiKey:textKey,model:fastModel});
@@ -34,9 +36,9 @@ Deno.serve(withAllowedOrigin(async(request:Request)=>{
   loadMemory:async(userId:string)=>{const {data,error}=await client.from('homebase_agent_memory').select('memory_key,memory_type,content,confidence,source,learned_at').eq('user_id',userId).eq('active',true).order('learned_at',{ascending:false}).limit(80);if(error)throw error;return data||[];},
   loadTurns:async(userId:string,conversationId:string)=>{const {data,error}=await client.from('homebase_agent_turns').select('role,content,created_at').eq('user_id',userId).eq('conversation_id',conversationId).order('created_at',{ascending:false}).limit(60);if(error)throw error;return(data||[]).reverse();},
   loadForecast:(location:unknown)=>loadOpenMeteoForecast(location),
-  saveTurn:async(userId:string,conversationId:string,role:string,content:string,context:any)=>{const {error}=await client.from('homebase_agent_turns').insert({user_id:userId,conversation_id:conversationId,role,content,context});if(error)throw error;},
-  forgetMemories:async(userId:string,keys:string[])=>{const {error}=await client.from('homebase_agent_memory').update({active:false}).eq('user_id',userId).in('memory_key',keys.map(k=>String(k).slice(0,160)));if(error)throw error;},
-  upsertMemories:async(userId:string,memories:any[])=>{for(const m of memories){const {error}=await client.from('homebase_agent_memory').upsert({user_id:userId,memory_key:String(m.key).slice(0,160),memory_type:m.type,content:{summary:String(m.summary).slice(0,1200)},confidence:Math.max(0,Math.min(1,Number(m.confidence)||.7)),source:'agent_learning',active:true,learned_at:new Date().toISOString()},{onConflict:'user_id,memory_key'});if(error)throw error;}}
+  saveTurn:async(userId:string,conversationId:string,role:string,content:string,context:any)=>{const {error}=await usageDb.from('homebase_agent_turns').insert({user_id:userId,conversation_id:conversationId,role,content,context});if(error)throw error;},
+  forgetMemories:async(userId:string,keys:string[])=>{const {error}=await usageDb.from('homebase_agent_memory').update({active:false}).eq('user_id',userId).in('memory_key',keys.map(k=>String(k).slice(0,160)));if(error)throw error;},
+  upsertMemories:async(userId:string,memories:any[])=>{for(const m of memories){const {error}=await usageDb.from('homebase_agent_memory').upsert({user_id:userId,memory_key:String(m.key).slice(0,160),memory_type:m.type,content:{summary:String(m.summary).slice(0,1200)},confidence:Math.max(0,Math.min(1,Number(m.confidence)||.7)),source:'agent_learning',active:true,learned_at:new Date().toISOString()},{onConflict:'user_id,memory_key'});if(error)throw error;}}
  });
  // Plan checks and GPT Live minutes run as the signed-in driver through
  // security-definer functions; the phone cannot change its own plan or usage.
