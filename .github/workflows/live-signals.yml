@@ -3,11 +3,18 @@ name: Refresh live demand signals
 # Data-only refresh. It never changes main or the deployed app code: each run
 # rebuilds provider-signals.json from public sources and connected provider
 # feeds, then replaces the single commit on the machine-owned `signals` branch.
-# Only markets with a driver in the app in the last 2 hours are refreshed
+# Only markets with a driver in the app in the last 24 hours are refreshed
 # (market-activity table); other markets keep their last data and make no feed
 # calls, and a pass with no active market stops before doing anything. A driver
-# opening the app in a stale market starts a run through the market-activity
-# Edge Function (workflow_dispatch with `markets`).
+# opening the app in a stale market can also start a run through the
+# market-activity Edge Function (workflow_dispatch with `markets`).
+#
+# Why 24 hours: GitHub runs this schedule far less often than asked (every 4-9 h
+# in practice, not every 10 min), and the app hides any calendar older than 24 h.
+# With a 2 h window a run only refreshed a market if a driver happened to have the
+# app open in the 2 h before it, so from Nov 16 to Nov 19 2026 every run skipped
+# Baltimore and the app showed no events at all. Counting a market as active for a
+# day keeps each driver's market fresh on every scheduled run.
 on:
   schedule:
     - cron: '4-59/10 * * * *'
@@ -50,7 +57,7 @@ jobs:
             SUPABASE_PUBLISHABLE_KEY="$(printf '%s' "$cfg" | grep -o "sb_publishable_[A-Za-z0-9_-]*" | head -1)"
           fi
           if [ -n "${SUPABASE_URL:-}" ] && [ -n "${SUPABASE_PUBLISHABLE_KEY:-}" ]; then
-            if body="$(curl -sf --max-time 15 -X POST "$SUPABASE_URL/rest/v1/rpc/active_markets" -H "apikey: $SUPABASE_PUBLISHABLE_KEY" -H 'Content-Type: application/json' -d '{"p_minutes":120}')"; then
+            if body="$(curl -sf --max-time 15 -X POST "$SUPABASE_URL/rest/v1/rpc/active_markets" -H "apikey: $SUPABASE_PUBLISHABLE_KEY" -H 'Content-Type: application/json' -d '{"p_minutes":1440}')"; then
               active="$(printf '%s' "$body" | tr -d '[]" ' | tr -cd 'a-z0-9,_-')"
             else
               # Activity list unreachable: refresh everything rather than go dark.
